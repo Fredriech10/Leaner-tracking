@@ -395,6 +395,39 @@ def get_overall_average(username):
 
     return round(result[0], 1) if result[0] else 0
 
+def get_low_attendance_learners(limit=10):
+    days = get_last_21_days()
+    conn = get_db()
+    cursor = conn.cursor()
+
+    # Get excluded dates (global only for cross-group summary)
+    cursor.execute("SELECT date FROM excluded_dates WHERE group_name IS NULL")
+    excluded = {row[0] for row in cursor.fetchall()}
+    days = [d for d in days if d not in excluded]
+
+    cursor.execute("SELECT username, full_name FROM users WHERE role = 'student'")
+    learners = cursor.fetchall()
+
+    results = []
+    for username, full_name in learners:
+        present = 0
+        for day in days:
+            cursor.execute("SELECT 1 FROM login_history WHERE username = ? AND date = ?", (username, day))
+            if cursor.fetchone():
+                present += 1
+                continue
+            cursor.execute("SELECT status FROM attendance_override WHERE username = ? AND date = ?", (username, day))
+            override = cursor.fetchone()
+            if override and override[0] == "present":
+                present += 1
+
+        absent = len(days) - present
+        results.append((full_name or username, absent))
+
+    conn.close()
+    results.sort(key=lambda x: x[1], reverse=True)
+    return results[:limit]
+
 def get_groups():
     conn = get_db()
     cursor = conn.cursor()
@@ -622,6 +655,7 @@ def student_dashboard():
 
     return render_template(
         "dashboard.html",
+        username=username,
         display_name=display_name,
         averages=averages,
         overall=overall,
@@ -948,13 +982,16 @@ def teacher_dashboard():
     """)
     recent_activities = cursor.fetchall()
 
+    low_attendance = get_low_attendance_learners()
+
     conn.close()
 
     return render_template(
         "teacher_dashboard.html",
         results=all_results,
         weaknesses=all_weaknesses,
-        recent_activities=recent_activities
+        recent_activities=recent_activities,
+        low_attendance=low_attendance
     )
 
 

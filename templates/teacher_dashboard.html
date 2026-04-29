@@ -24,6 +24,20 @@
     {% endfor %}
 </table>
 
+<h2>🔴 Lowest Attendance (Last 21 Working Days)</h2>
+<table border="1" style="border-collapse: collapse; width: 100%;">
+    <tr>
+        <th>Full Name</th>
+        <th>Days Absent</th>
+    </tr>
+    {% for name, absent in low_attendance %}
+    <tr>
+        <td>{{ name }}</td>
+        <td>{{ absent }}</td>
+    </tr>
+    {% endfor %}
+</table>
+
 <h2>⚠️ Weakness Summary</h2>
 <table border="1" style="border-collapse: collapse; width: 100%;">
     <tr>
@@ -60,4 +74,4 @@
 
 </table>
 
-<a href="/export/results">📥 Export Results</a>
+<a href="/export/results">📥 Export Results</a> | <a href="/export_attendance_form">📥 Export Attendance</a>

@@ -1,0 +1,14 @@
+<!DOCTYPE html>
+<html>
+<head><title>Active Users</title></head>
+<body>
+    <p><a href="/student_dashboard">← Back to Dashboard</a></p>
+    <h2>Active Users</h2>
+    <ul>
+        {% for user in users %}
+            <li>{{ user }}</li>
+        {% endfor %}
+    </ul>
+    <a href="/">Login</a> | <a href="/active">Refresh</a>
+</body>
+</html>

@@ -1,0 +1,451 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <title>Attendance Tracker</title>
+    <meta charset="UTF-8">
+    <style>
+        .date-range-options {
+            margin: 20px 0;
+            padding: 15px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+        }
+        .radio-group {
+            margin: 10px 0;
+        }
+        .custom-dates {
+            margin-top: 15px;
+            padding: 10px;
+            background-color: #f5f5f5;
+            border-radius: 3px;
+        }
+        .date-input {
+            margin: 5px 10px 5px 0;
+        }
+        #attendanceTable {
+            margin-top: 30px;
+        }
+        .loading {
+            color: #666;
+            font-style: italic;
+        }
+    </style>
+</head>
+<body>
+
+<p><a href="/student_dashboard">← Back to Dashboard</a></p>
+
+<h2>Select Group</h2>
+
+<form method="get" id="groupForm">
+    <select name="group" id="groupSelect">
+        <option value="">-- Select Group --</option>
+        {% for g in groups %}
+            <option value="{{ g }}" {% if g == selected_group %}selected{% endif %}>
+                {{ g }}
+            </option>
+        {% endfor %}
+    </select>
+    {% if edit_mode %}
+        <input type="hidden" name="edit" value="1">
+    {% endif %}
+
+    <button type="submit">Load</button>
+</form>
+
+{% if selected_group %}
+
+<div class="date-range-options">
+    <h3>📅 Date Range</h3>
+    
+    <div class="radio-group">
+        <input type="radio" id="range_week" name="dateRange" value="week" checked onchange="updateDateRange()">
+        <label for="range_week">Last 7 Days</label>
+    </div>
+    
+    <div class="radio-group">
+        <input type="radio" id="range_2weeks" name="dateRange" value="2weeks" onchange="updateDateRange()">
+        <label for="range_2weeks">Last 2 Weeks</label>
+    </div>
+    
+    <div class="radio-group">
+        <input type="radio" id="range_month" name="dateRange" value="month" onchange="updateDateRange()">
+        <label for="range_month">Last Month</label>
+    </div>
+    
+    <div class="radio-group">
+        <input type="radio" id="range_custom" name="dateRange" value="custom" onchange="updateDateRange()">
+        <label for="range_custom">Custom Date Range</label>
+    </div>
+    
+    <div class="custom-dates" id="customDatesDiv" style="display:none;">
+        <label for="startDate" class="date-input">Start Date:</label>
+        <input type="date" id="startDate" class="date-input" onchange="updateDateRange()">
+        
+        <label for="endDate" class="date-input">End Date:</label>
+        <input type="date" id="endDate" class="date-input" onchange="updateDateRange()">
+    </div>
+</div>
+
+<div id="loadingIndicator" class="loading" style="display:none;">Loading attendance data...</div>
+
+{% endif %}
+
+{% if not selected_group %}
+    <p>Please select a group to view attendance.</p>
+
+{% elif not data %}
+    <p>No attendance data found for this group.</p>
+
+{% else %}
+
+<!-- Legend -->
+<p>
+    <span style="background:#c8f7c5; padding:5px;">✔ Present</span>
+    <span style="background:#f7c5c5; padding:5px; margin-left:10px;">✖ Absent</span>
+    <span style="background:#ffe0b2; padding:5px; margin-left:10px;">⏰ Late</span>
+</p>
+
+<!-- Toggle Button -->
+{% if not edit_mode %}
+    <a href="/attendance?group={{ selected_group }}&edit=1">✏️ Edit Attendance</a>
+{% else %}
+    <a href="/attendance?group={{ selected_group }}">🔍 View Attendance</a>
+{% endif %}
+
+<!-- Export Button -->
+<a href="/export_attendance_form" style="margin-left:20px;">📊 Export Attendance</a>
+
+<br><br>
+
+<!-- Shared Date Selector -->
+<div id="sharedDateSelector" style="margin: 20px 0; padding: 15px; border: 1px solid #ddd; border-radius: 5px; background-color: #f9f9f9;">
+    <h3>📅 Select Date for Actions</h3>
+    <label for="actionDate">Date:</label>
+    <input type="date" id="actionDate" value="{{ today }}" style="margin-left: 10px;">
+</div>
+
+<hr>
+<h3>⚠️ Reset Attendance</h3>
+
+<form method="POST" action="/reset_attendance" style="margin-bottom:20px;">
+    <input type="hidden" name="group" value="{{ selected_group }}">
+    <input type="hidden" name="date" id="resetDate">
+
+    <button type="submit"
+        onclick="setDateAndConfirm('resetDate', 'Are you sure you want to reset this day? This cannot be undone!')"
+        style="background-color:red; color:white; padding:5px 10px;">
+        🔥 Reset Day
+    </button>
+</form>
+
+<h3>✅ Mark All as Present</h3>
+
+<form method="POST" action="/mark_all_present" style="margin-bottom:20px;">
+    <input type="hidden" name="group" value="{{ selected_group }}">
+    <input type="hidden" name="date" id="presentDate">
+
+    <button type="submit"
+        onclick="setDateAndConfirm('presentDate', 'Are you sure you want to mark all students as present for this day?')"
+        style="background-color:green; color:white; padding:5px 10px;">
+        ✅ Mark All Present
+    </button>
+</form>
+
+<h3>❌ Mark All as Absent</h3>
+
+<form method="POST" action="/mark_all_absent" style="margin-bottom:20px;">
+    <input type="hidden" name="group" value="{{ selected_group }}">
+    <input type="hidden" name="date" id="absentDate">
+
+    <button type="submit"
+        onclick="setDateAndConfirm('absentDate', 'Are you sure you want to mark all students as absent for this day?')"
+        style="background-color:orange; color:white; padding:5px 10px;">
+        ❌ Mark All Absent
+    </button>
+</form>
+<h3>🚫 Exclude Date</h3>
+
+<form method="POST" action="/exclude_date" style="margin-bottom:20px;">
+    <input type="hidden" name="selected_group" value="{{ selected_group }}">
+    <input type="hidden" name="date" id="excludeDate">
+
+    <label for="excludeGroup" style="margin-left: 10px;">Apply to:</label>
+    <select id="excludeGroup" name="group" style="margin-left: 5px;">
+        <option value="">All Groups (Global)</option>
+        <option value="{{ selected_group }}" selected>Only {{ selected_group }} Group</option>
+    </select>
+
+    <label for="excludeReason" style="margin-left: 10px;">Reason (optional):</label>
+    <input type="text" id="excludeReason" name="reason" placeholder="e.g., Public holiday, Group not present" style="margin-left: 5px; width: 200px;">
+
+    <button type="submit"
+        onclick="setDate('excludeDate')"
+        style="background-color:#666; color:white; padding:5px 10px; margin-left: 10px;">
+        🚫 Exclude Date
+    </button>
+</form>
+<h3>� Excluded Dates</h3>
+
+<div id="excludedDatesList" style="margin-bottom:20px;">
+    {% if excluded_dates %}
+        <ul>
+        {% for date_info in excluded_dates %}
+            <li>{{ date_info[0] }} - {{ 'All Groups' if not date_info[1] else date_info[1] }} - {{ date_info[2] or 'No reason' }} 
+                <form method="POST" action="/include_date" style="display:inline;">
+                    <input type="hidden" name="selected_group" value="{{ selected_group }}">
+                    <input type="hidden" name="group" value="{{ date_info[1] }}">
+                    <input type="hidden" name="date" value="{{ date_info[0] }}">
+                    <button type="submit" onclick="return confirm('Include this date back in attendance calculations?')" 
+                        style="background-color:#4CAF50; color:white; border:none; padding:2px 6px; margin-left:10px;">
+                        Include
+                    </button>
+                </form>
+            </li>
+        {% endfor %}
+        </ul>
+    {% else %}
+        <p>No dates are currently excluded.</p>
+    {% endif %}
+</div>
+
+
+
+<!-- Save Attendance Form -->
+<form method="POST" action="/save_attendance">
+    <input type="hidden" name="group" value="{{ selected_group }}">
+<table border="1" style="border-collapse: collapse; width: 100%;" id="attendanceTable">
+
+<tr>
+    <th>Username</th>
+    <th>Name</th>
+    <th>Group</th>
+    <th>Attendance %</th>
+
+    {% for day in days %}
+        <th>{{ day[5:] }}</th>
+    {% endfor %}
+</tr>
+
+{% for row in data %}
+<tr>
+    <td>{{ row.username }}</td>
+    <td>{{ row.name or row.username }}</td>
+    <td>{{ row.group or "-" }}</td>
+    <td>{{ row.attendance_pct }}%</td>
+
+    {% for day in days %}
+        {% set value = row.days.get(day) %}
+        {% if value and value.late %}{% set bg = "#ffe0b2" %}{% elif value %}{% set bg = "#c8f7c5" %}{% else %}{% set bg = "#f7c5c5" %}{% endif %}
+        <!-- stylelint-disable -->
+        <td style="text-align:center; background-color:{{ bg }};">
+        <!-- stylelint-enable -->
+
+        {% if edit_mode %}
+            <!-- EDIT MODE -->
+            <input type="text"
+                   name="att_{{ row.username }}|{{ day }}"
+                   value="{% if value %}✔{% else %}x{% endif %}"
+                   placeholder="(✔ or x)"
+                   style="width:40px; text-align:center;">
+        {% else %}
+            <!-- VIEW MODE -->
+            {% if value %}
+                ✔ {{ value.time }}
+            {% else %}
+                ✖
+            {% endif %}
+        {% endif %}
+
+        </td>
+    {% endfor %}
+</tr>
+{% endfor %}
+
+</table>
+
+<br>
+
+{% if edit_mode %}
+    <button type="submit">💾 Save Attendance</button>
+{% endif %}
+
+</form>
+
+{% endif %}
+
+<script>
+const editMode = {{ "true" if edit_mode else "false" }};
+
+function getDateRange() {
+    const today = new Date();
+    const range = document.querySelector('input[name="dateRange"]:checked').value;
+    let startDate, endDate;
+
+    if (range === 'week') {
+        startDate = new Date(today);
+        startDate.setDate(today.getDate() - 7);
+    } else if (range === '2weeks') {
+        startDate = new Date(today);
+        startDate.setDate(today.getDate() - 14);
+    } else if (range === 'month') {
+        startDate = new Date(today);
+        startDate.setMonth(today.getMonth() - 1);
+    } else if (range === 'custom') {
+        const startInput = document.getElementById('startDate').value;
+        const endInput = document.getElementById('endDate').value;
+        if (!startInput || !endInput) {
+            alert('Please select both start and end dates');
+            return null;
+        }
+        return { start: startInput, end: endInput };
+    }
+
+    endDate = new Date(today);
+    
+    return {
+        start: startDate.toISOString().split('T')[0],
+        end: endDate.toISOString().split('T')[0]
+    };
+}
+
+function updateDateRange() {
+    const customDiv = document.getElementById('customDatesDiv');
+    const range = document.querySelector('input[name="dateRange"]:checked').value;
+    
+    if (range === 'custom') {
+        customDiv.style.display = 'block';
+        // Set default dates
+        const today = new Date();
+        const weekAgo = new Date(today);
+        weekAgo.setDate(today.getDate() - 7);
+        
+        document.getElementById('startDate').valueAsDate = weekAgo;
+        document.getElementById('endDate').valueAsDate = today;
+        loadAttendanceData();
+    } else {
+        customDiv.style.display = 'none';
+        loadAttendanceData();
+    }
+}
+
+function loadAttendanceData() {
+    const group = document.getElementById('groupSelect').value;
+    if (!group) return;
+
+    const dateRange = getDateRange();
+    if (!dateRange) return;
+
+    const loadingDiv = document.getElementById('loadingIndicator');
+    loadingDiv.style.display = 'block';
+
+    const url = new URL('/api/attendance_data', window.location.origin);
+    url.searchParams.append('group', group);
+    url.searchParams.append('start_date', dateRange.start);
+    url.searchParams.append('end_date', dateRange.end);
+
+    fetch(url)
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                updateTable(data.days, data.data);
+            } else {
+                alert('Error loading data: ' + (data.error || 'Unknown error'));
+            }
+            loadingDiv.style.display = 'none';
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            alert('Error loading attendance data');
+            loadingDiv.style.display = 'none';
+        });
+}
+
+function updateTable(days, data) {
+    const table = document.getElementById('attendanceTable');
+    
+    // Clear existing table
+    table.innerHTML = '';
+    
+    // Create header
+    const headerRow = table.insertRow();
+    headerRow.innerHTML = `
+        <th>Username</th>
+        <th>Name</th>
+        <th>Group</th>
+        <th>Attendance %</th>
+        ${days.map(day => `<th>${day.substring(5)}</th>`).join('')}
+    `;
+    
+    // Add data rows
+    data.forEach(row => {
+        const tr = table.insertRow();
+        let html = `
+            <td>${row.username}</td>
+            <td>${row.name || row.username}</td>
+            <td>${row.group || '-'}</td>
+            <td>${row.attendance_pct}%</td>
+        `;
+        
+        days.forEach(day => {
+            const value = row.days[day];
+            let bg = '#f7c5c5'; // absent (red)
+            let content = '✖';
+            
+            if (value) {
+                if (value.late) {
+                    bg = '#ffe0b2'; // late (orange)
+                } else {
+                    bg = '#c8f7c5'; // present (green)
+                }
+                content = `✔ ${value.time}`;
+            }
+            
+            if (editMode) {
+                const inputValue = value ? '✔' : 'x';
+                content = `<input type="text" name="att_${row.username}|${day}" value="${inputValue}" placeholder="(✔ or x)" style="width:40px; text-align:center;">`;
+            }
+            
+            html += `<td style="text-align:center; background-color:${bg};">${content}</td>`;
+        });
+        
+        tr.innerHTML = html;
+    });
+}
+
+// Initialize: set up default date inputs
+document.addEventListener('DOMContentLoaded', function() {
+    const today = new Date();
+    const weekAgo = new Date(today);
+    weekAgo.setDate(today.getDate() - 7);
+    
+    const startDateInput = document.getElementById('startDate');
+    const endDateInput = document.getElementById('endDate');
+    
+    if (startDateInput) startDateInput.valueAsDate = weekAgo;
+    if (endDateInput) endDateInput.valueAsDate = today;
+});
+
+function setDate(hiddenFieldId) {
+    const selectedDate = document.getElementById('actionDate').value;
+    document.getElementById(hiddenFieldId).value = selectedDate;
+    return true;
+}
+
+function setDateAndConfirm(hiddenFieldId, confirmMessage) {
+    const selectedDate = document.getElementById('actionDate').value;
+    if (!selectedDate) {
+        alert('Please select a date first');
+        return false;
+    }
+    
+    if (confirm(confirmMessage)) {
+        document.getElementById(hiddenFieldId).value = selectedDate;
+        return true;
+    }
+    return false;
+}
+</script>
+
+</body>
+</html>

@@ -1,0 +1,20 @@
+<h2>Welcome {{ username }}</h2>
+<a href="/export/results">📥 Export Results</a>
+<h3>Subject Averages</h3>
+<ul>
+    {% for subject, avg in averages %}
+        <li>{{ subject }}: {{ avg }}%</li>
+    {% endfor %}
+</ul>
+
+<h3>Overall Average</h3>
+<p>{{ overall }}%</p>
+
+<h3>Recent Results</h3>
+<ul>
+    {% for subject, task, score in recent %}
+        <li>{{ subject }} - {{ task }}: {{ score }}%</li>
+    {% endfor %}
+</ul>
+
+<a href="/subjects/{{ username }}">Go to Subjects</a>

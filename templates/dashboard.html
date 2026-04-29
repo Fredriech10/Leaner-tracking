@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html>
+<head><title>Dashboard</title></head>
+<body>
+    <h2>Welcome {{ display_name }}</h2>
+    <p>You are active.</p>
+    
+    <a href="/active">See active users</a><br>
+    
+    <a href="/admin">Admin</a><br>
+    <a href="/attendance">Attendance</a><br>
+    <a href="/logout/{{ username }}">Logout</a><br>
+    <a href="/student_dashboard">View My Dashboard</a><br>
+    <a href="/subjects/{{ username }}">Go to Subjects</a><br>
+    <a href="/teacher_dashboard">Teacher Dashboard</a><br>
+    <script>
+        setInterval(function() {
+            fetch('/heartbeat/{{ username }}');
+        }, 30000);
+    </script>
+    <h3>Areas to Improve</h3>
+        <ul>
+        {% for skill, count in weaknesses %}
+            <li>{{ skill }} ({{ count }} times)</li>
+        {% endfor %}
+        </ul>
+    <h3>Subject Averages</h3>
+<ul>
+    {% for subject, avg in averages %}
+        <li>{{ subject }}: {{ avg }}%</li>
+    {% endfor %}
+</ul>
+
+<h3>Overall Average</h3>
+<p>{{ overall }}%</p>
+
+<h3>Recent Results</h3>
+<ul>
+    {% for subject, task, score in recent %}
+        <li>{{ subject }} - {{ task }}: {{ score }}%</li>
+    {% endfor %}
+</ul>
+
+<a href="/subjects/{{ username }}">Go to Subjects</a>
+</body>
+</html>

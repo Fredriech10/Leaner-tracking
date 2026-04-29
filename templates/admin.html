@@ -1,0 +1,99 @@
+<h1>Admin Panel</h1>
+<p><a href="/student_dashboard">← Back to Dashboard</a></p>
+
+<form method="get" action="/admin" style="margin-bottom: 1rem; display: flex; gap: 0.5rem; flex-wrap: wrap; align-items: center;">
+    <label>
+        Search:
+        <input type="search" name="search" value="{{ search or "" }}" placeholder="username, name, group, role">
+    </label>
+    <label>
+        Group:
+        <select name="group">
+            <option value="">All Groups</option>
+            {% for group_name in groups %}
+                <option value="{{ group_name }}" {% if group_name == selected_group %}selected{% endif %}>{{ group_name }}</option>
+            {% endfor %}
+        </select>
+    </label>
+    <input type="hidden" name="sort" value="{{ sort }}">
+    <input type="hidden" name="order" value="{{ order }}">
+    <button type="submit">Apply</button>
+    <a href="/admin" style="margin-left: 1rem;">Reset</a>
+</form>
+
+<table border="1" style="border-collapse: collapse; width: 100%;">
+    <tr>
+        <th><a href="/admin?sort=username&order={% if sort == 'username' and order == 'asc' %}desc{% else %}asc{% endif %}{% if search %}&search={{ search }}{% endif %}{% if selected_group %}&group={{ selected_group }}{% endif %}">Username{% if sort == 'username' %} {{ '↑' if order == 'asc' else '↓' }}{% endif %}</a></th>
+        <th><a href="/admin?sort=full_name&order={% if sort == 'full_name' and order == 'asc' %}desc{% else %}asc{% endif %}{% if search %}&search={{ search }}{% endif %}{% if selected_group %}&group={{ selected_group }}{% endif %}">Full Name{% if sort == 'full_name' %} {{ '↑' if order == 'asc' else '↓' }}{% endif %}</a></th>
+        <th><a href="/admin?sort=group_name&order={% if sort == 'group_name' and order == 'asc' %}desc{% else %}asc{% endif %}{% if search %}&search={{ search }}{% endif %}{% if selected_group %}&group={{ selected_group }}{% endif %}">Group{% if sort == 'group_name' %} {{ '↑' if order == 'asc' else '↓' }}{% endif %}</a></th>
+        <th><a href="/admin?sort=role&order={% if sort == 'role' and order == 'asc' %}desc{% else %}asc{% endif %}{% if search %}&search={{ search }}{% endif %}{% if selected_group %}&group={{ selected_group }}{% endif %}">Role{% if sort == 'role' %} {{ '↑' if order == 'asc' else '↓' }}{% endif %}</a></th>
+        <th><a href="/admin?sort=last_active&order={% if sort == 'last_active' and order == 'asc' %}desc{% else %}asc{% endif %}{% if search %}&search={{ search }}{% endif %}{% if selected_group %}&group={{ selected_group }}{% endif %}">Last Active{% if sort == 'last_active' %} {{ '↑' if order == 'asc' else '↓' }}{% endif %}</a></th>
+        <th>Actions</th>
+    </tr>
+
+{% for user in users %}
+<tr>
+    <td><a href="/learner_record/{{ user[0] }}">{{ user[0] }}</a></td>
+    <td>{{ user[1] or "—" }}</td>
+    <td>{{ user[2] or "—" }}</td>
+    <td>{{ user[3] }}</td>
+    <td>{{ user[4] }}</td>
+    <td>
+        <a href="/edit_user/{{ user[0] }}">Edit</a> |
+        {% if user[3] != "teacher" %}
+            <a href="/promote/{{ user[0] }}">Promote</a>
+        {% else %}
+            <a href="/demote/{{ user[0] }}">Demote</a>
+        {% endif %}
+    </td>
+</tr>
+{% else %}
+<tr>
+    <td colspan="6" style="text-align:center;">No users found.</td>
+</tr>
+{% endfor %}
+</table>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const searchInput = document.querySelector('input[name="search"]');
+    const table = document.querySelector('table');
+    const rows = table.querySelectorAll('tbody tr'); // Assuming tbody, but since no tbody, it will be all tr except first
+
+    // Actually, since no tbody, rows are all tr, first is header
+    const userRows = Array.from(table.querySelectorAll('tr')).slice(1); // Skip header row
+
+    searchInput.addEventListener('input', function() {
+        const searchTerm = this.value.toLowerCase().trim();
+        let hasVisibleRows = false;
+
+        userRows.forEach(row => {
+            const cells = row.querySelectorAll('td');
+            if (cells.length < 5) return; // Skip the "No users found" row or others
+
+            const username = cells[0].textContent.toLowerCase();
+            const fullName = cells[1].textContent.toLowerCase();
+            const group = cells[2].textContent.toLowerCase();
+            const role = cells[3].textContent.toLowerCase();
+
+            const matches = username.includes(searchTerm) ||
+                            fullName.includes(searchTerm) ||
+                            group.includes(searchTerm) ||
+                            role.includes(searchTerm);
+
+            if (matches) {
+                row.style.display = '';
+                hasVisibleRows = true;
+            } else {
+                row.style.display = 'none';
+            }
+        });
+
+        // Handle the "No users found" row
+        const noUsersRow = table.querySelector('tr td[colspan="6"]');
+        if (noUsersRow) {
+            noUsersRow.parentElement.style.display = hasVisibleRows ? 'none' : '';
+        }
+    });
+});
+</script>

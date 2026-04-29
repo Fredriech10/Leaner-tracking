@@ -1,0 +1,15 @@
+{
+  "[html]": {
+    "editor.defaultFormatter": "esbenp.prettier-vscode"
+  },
+  "css.lint.compatibleVendorPrefixes": "warning",
+  "css.lint.vendorPrefix": "warning",
+  "css.lint.duplicateProperties": "ignore",
+  "html.validate.styles": false,
+  "[jinja]": {
+    "editor.defaultFormatter": null
+  },
+  "[jinja-html]": {
+    "editor.defaultFormatter": null
+  }
+}

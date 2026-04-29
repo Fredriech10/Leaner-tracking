@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Learner Record</title>
+</head>
+<body>
+
+<p>
+    <a href="/admin">← Back to Admin</a> |
+    <a href="/edit_user/{{ user[0] }}?next=/learner_record/{{ user[0] }}">Edit learner details</a>
+</p>
+
+<h2>Learner Record: {{ user[0] }}</h2>
+<p><strong>Full name:</strong> {{ user[1] or '—' }}<br>
+<strong>Group:</strong> {{ user[2] or '—' }}<br>
+<strong>Role:</strong> {{ user[3] }}</p>
+
+<h3>Attendance History</h3>
+<table border="1" style="border-collapse: collapse; width: 100%;">
+    <tr>
+        <th>Date</th>
+        <th>Status</th>
+        <th>Time</th>
+        <th>Late</th>
+        <th>Source</th>
+    </tr>
+    {% for row in history %}
+    <tr>
+        <td>{{ row.date }}</td>
+        <td>{{ row.status }}</td>
+        <td>{{ row.time or '—' }}</td>
+        <td>{% if row.late %}Yes{% else %}No{% endif %}</td>
+        <td>{{ row.note }}</td>
+    </tr>
+    {% endfor %}
+</table>
+
+<h3>Task / Assignment Records</h3>
+<p><strong>Average score:</strong> {{ average }}%</p>
+<table border="1" style="border-collapse: collapse; width: 100%;">
+    <tr>
+        <th>Subject</th>
+        <th>Task</th>
+        <th>Status</th>
+        <th>Score</th>
+        <th>Feedback</th>
+        <th>Submitted</th>
+    </tr>
+    {% for task in task_rows %}
+    <tr>
+        <td>{{ task.subject }}</td>
+        <td>{{ task.task }}</td>
+        <td>{{ task.status }}</td>
+        <td>{% if task.score is not none %}{{ task.score }}%{% else %}—{% endif %}</td>
+        <td>{{ task.feedback or '—' }}</td>
+        <td>{{ task.timestamp or 'Not submitted' }}</td>
+    </tr>
+    {% endfor %}
+</table>
+
+</body>
+</html>

@@ -1,0 +1,63 @@
+<h1>Teacher Dashboard</h1>
+<p><a href="/student_dashboard">← Back to Dashboard</a> | <a href="/recent_activity">Recent Activity</a> | <a href="/manage_subjects">Manage Subjects</a></p>
+
+<h2>📊 All Submissions</h2>
+<table border="1">
+    <tr>
+        <th>Student</th>
+        <th>Subject</th>
+        <th>Task</th>
+        <th>Score</th>
+        <th>Feedback</th>
+        <th>Time</th>
+    </tr>
+
+    {% for row in results %}
+    <tr>
+        <td>{{ row[0] }}</td>
+        <td>{{ row[1] }}</td>
+        <td>{{ row[2] }}</td>
+        <td>{{ row[3] }}</td>
+        <td>{{ row[4] }}</td>
+        <td>{{ row[5] }}</td>
+    </tr>
+    {% endfor %}
+</table>
+
+<h2>⚠️ Weakness Summary</h2>
+<table border="1" style="border-collapse: collapse; width: 100%;">
+    <tr>
+        <th>Student</th>
+        <th>Skill</th>
+        <th>Count</th>
+    </tr>
+
+    {% for row in weaknesses %}
+    <tr>
+        <td>{{ row[0] }}</td>
+        <td>{{ row[1] }}</td>
+        <td>{{ row[2] }}</td>
+    </tr>
+    {% endfor %}
+
+</table>
+
+<h2>📝 Recent Activities</h2>
+<table border="1" style="border-collapse: collapse; width: 100%;">
+    <tr>
+        <th>User</th>
+        <th>Action</th>
+        <th>Timestamp</th>
+    </tr>
+
+    {% for activity in recent_activities %}
+    <tr>
+        <td>{{ activity[0] }}</td>
+        <td>{{ activity[1] }}</td>
+        <td>{{ activity[2] }}</td>
+    </tr>
+    {% endfor %}
+
+</table>
+
+<a href="/export/results">📥 Export Results</a>

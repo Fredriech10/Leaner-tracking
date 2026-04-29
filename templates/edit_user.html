@@ -1,0 +1,30 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Edit Learner</title>
+</head>
+<body>
+
+<p>
+    <a href="/learner_record/{{ user[0] }}">← Back to Learner Record</a> |
+    <a href="/admin">← Back to Admin</a>
+</p>
+
+<h2>Edit Learner {{ user[0] }}</h2>
+
+<form method="POST" action="">
+    <input type="hidden" name="next" value="{{ next_url or '' }}">
+    <label>Full Name:<br>
+        <input type="text" name="full_name" value="{{ user[1] or '' }}" style="width: 300px;">
+    </label>
+    <br><br>
+    <label>Group:<br>
+        <input type="text" name="group_name" value="{{ user[2] or '' }}" style="width: 300px;">
+    </label>
+    <br><br>
+    <button type="submit" style="padding: 8px 14px;">Save learner details</button>
+</form>
+
+</body>
+</html>

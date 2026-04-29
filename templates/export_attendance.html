@@ -1,0 +1,35 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <title>Export Attendance</title>
+    <meta charset="UTF-8">
+</head>
+<body>
+
+<p><a href="/student_dashboard">← Back to Dashboard</a></p>
+
+<h2>📊 Export Attendance Data</h2>
+
+<p>Select the groups you want to export. Each group will be saved as a separate sheet in the Excel file.</p>
+
+<form method="POST" action="/export_attendance_multi">
+    <h3>Select Date Range:</h3>
+    <label>Start Date: <input type="date" name="start_date" required></label>
+    <label style="margin-left:20px;">End Date: <input type="date" name="end_date" required></label>
+
+    <h3>Select Groups:</h3>
+    {% for group in all_groups %}
+    <label style="display:block; margin:5px 0;">
+        <input type="checkbox" name="groups" value="{{ group }}" checked>
+        {{ group }}
+    </label>
+    {% endfor %}
+
+    <br>
+    <button type="submit" style="background-color:#4CAF50; color:white; padding:10px 20px; border:none; border-radius:4px;">
+        📊 Export Selected Groups
+    </button>
+</form>
+
+</body>
+</html>

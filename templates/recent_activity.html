@@ -1,0 +1,11 @@
+<h1>Recent Activity</h1>
+<p><a href="/teacher_dashboard">← Back to Dashboard</a></p>
+
+<h2>Activity Log</h2>
+<ul>
+{% for activity in activities %}
+<li>{{ activity[2] }} - {{ activity[0] }} {{ activity[1] }}</li>
+{% else %}
+<li>No recent activity.</li>
+{% endfor %}
+</ul>

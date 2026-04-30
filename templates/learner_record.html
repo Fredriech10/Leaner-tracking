@@ -2,62 +2,351 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>Learner Record</title>
+    <title>Learner Record — {{ user[1] or user[0] }}</title>
+    <style>
+        * { box-sizing: border-box; }
+        body { font-family: Arial, sans-serif; padding: 20px; max-width: 1100px; margin: 0 auto; background: #f5f5f5; color: #222; }
+        h2 { margin-bottom: 4px; }
+        .subtitle { color: #666; font-size: 0.95em; margin-bottom: 20px; }
+
+        /* Grid layout */
+        .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 18px; }
+        .grid-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 18px; }
+        .full { grid-column: 1 / -1; }
+
+        /* Cards */
+        .card { background: white; border-radius: 8px; padding: 18px; border: 1px solid #ddd; }
+        .card h3 { margin: 0 0 14px 0; font-size: 1em; color: #0078D4; border-bottom: 2px solid #eee; padding-bottom: 6px; }
+
+        /* Stat boxes */
+        .stat-row { display: flex; gap: 12px; flex-wrap: wrap; margin-bottom: 10px; }
+        .stat { background: #f0f4ff; border-radius: 6px; padding: 10px 16px; text-align: center; flex: 1; min-width: 80px; }
+        .stat .val { font-size: 1.6em; font-weight: bold; color: #0078D4; }
+        .stat .lbl { font-size: 0.78em; color: #555; margin-top: 2px; }
+        .stat.green .val { color: #107C10; }
+        .stat.red .val { color: #A4262C; }
+        .stat.orange .val { color: #ff8c00; }
+
+        /* Tables */
+        table { border-collapse: collapse; width: 100%; font-size: 0.88em; }
+        th { background: #f0f0f0; padding: 7px 10px; text-align: left; }
+        td { padding: 6px 10px; border-bottom: 1px solid #eee; }
+        tr:last-child td { border-bottom: none; }
+
+        /* Badges */
+        .badge { padding: 2px 8px; border-radius: 10px; font-size: 0.8em; font-weight: bold; }
+        .badge-present { background: #c8f7c5; color: #107C10; }
+        .badge-absent { background: #f7c5c5; color: #A4262C; }
+        .badge-late { background: #ffe0b2; color: #b36b00; }
+        .badge-submitted { background: #c8f7c5; color: #107C10; }
+        .badge-missing { background: #f7c5c5; color: #A4262C; }
+        .badge-flag { background: #fff3cd; color: #856404; }
+        .badge-support { background: #f7c5c5; color: #A4262C; }
+
+        /* Trend */
+        .trend-improving { color: #107C10; font-weight: bold; }
+        .trend-dropping { color: #A4262C; font-weight: bold; }
+        .trend-stable { color: #ff8c00; font-weight: bold; }
+
+        /* Weakness bar */
+        .skill-bar { display: flex; align-items: center; gap: 10px; margin-bottom: 6px; }
+        .skill-bar .name { width: 160px; font-size: 0.88em; }
+        .skill-bar .bar-bg { flex: 1; background: #eee; border-radius: 4px; height: 10px; }
+        .skill-bar .bar-fill { background: #A4262C; border-radius: 4px; height: 10px; }
+        .skill-bar .count { font-size: 0.8em; color: #555; width: 30px; text-align: right; }
+
+        /* Note cards */
+        .note-card { background: #fffbe6; border: 1px solid #ffe58f; border-radius: 6px; padding: 10px 14px; margin-bottom: 8px; }
+        .note-card .note-meta { font-size: 0.8em; color: #888; margin-top: 4px; }
+
+        /* Action buttons */
+        .btn { padding: 7px 14px; border: none; border-radius: 4px; cursor: pointer; text-decoration: none; font-size: 0.9em; display: inline-block; }
+        .btn-primary { background: #0078D4; color: white; }
+        .btn-danger { background: #A4262C; color: white; }
+        .btn-secondary { background: #eee; color: #333; }
+
+        /* Info list */
+        .info-list { list-style: none; padding: 0; margin: 0; }
+        .info-list li { padding: 5px 0; border-bottom: 1px solid #f0f0f0; font-size: 0.92em; }
+        .info-list li:last-child { border-bottom: none; }
+        .info-list strong { display: inline-block; width: 110px; color: #555; }
+    </style>
 </head>
 <body>
 
 <p>
-    <a href="/admin">← Back to Admin</a> |
-    <a href="/edit_user/{{ user[0] }}?next=/learner_record/{{ user[0] }}">Edit learner details</a>
+    <a href="/admin" class="btn btn-secondary">← Admin Panel</a>
+    &nbsp;
+    <a href="/attendance?group={{ user[2] }}" class="btn btn-secondary">📅 Full Attendance</a>
+    &nbsp;
+    <a href="/edit_user/{{ user[0] }}?next=/learner_record/{{ user[0] }}" class="btn btn-primary">✏️ Edit Learner</a>
 </p>
 
-<h2>Learner Record: {{ user[0] }}</h2>
-<p><strong>Full name:</strong> {{ user[1] or '—' }}<br>
-<strong>Group:</strong> {{ user[2] or '—' }}<br>
-<strong>Role:</strong> {{ user[3] }}</p>
+<h2>{{ user[1] or user[0] }}</h2>
+<p class="subtitle">Learner Record &nbsp;|&nbsp; {{ user[2] or 'No group' }} &nbsp;|&nbsp; {{ user[3] | capitalize }}</p>
 
-<h3>Attendance History</h3>
-<table border="1" style="border-collapse: collapse; width: 100%;">
-    <tr>
-        <th>Date</th>
-        <th>Status</th>
-        <th>Time</th>
-        <th>Late</th>
-        <th>Source</th>
-    </tr>
-    {% for row in history %}
-    <tr>
-        <td>{{ row.date }}</td>
-        <td>{{ row.status }}</td>
-        <td>{{ row.time or '—' }}</td>
-        <td>{% if row.late %}Yes{% else %}No{% endif %}</td>
-        <td>{{ row.note }}</td>
-    </tr>
-    {% endfor %}
-</table>
+<!-- ── Row 1: Info + Attendance Stats ──────────────────────────────── -->
+<div class="grid" style="margin-bottom:18px;">
 
-<h3>Task / Assignment Records</h3>
-<p><strong>Average score:</strong> {{ average }}%</p>
-<table border="1" style="border-collapse: collapse; width: 100%;">
-    <tr>
-        <th>Subject</th>
-        <th>Task</th>
-        <th>Status</th>
-        <th>Score</th>
-        <th>Feedback</th>
-        <th>Submitted</th>
-    </tr>
-    {% for task in task_rows %}
-    <tr>
-        <td>{{ task.subject }}</td>
-        <td>{{ task.task }}</td>
-        <td>{{ task.status }}</td>
-        <td>{% if task.score is not none %}{{ task.score }}%{% else %}—{% endif %}</td>
-        <td>{{ task.feedback or '—' }}</td>
-        <td>{{ task.timestamp or 'Not submitted' }}</td>
-    </tr>
-    {% endfor %}
-</table>
+    <!-- Basic Info -->
+    <div class="card">
+        <h3>👤 Basic Info</h3>
+        <ul class="info-list">
+            <li><strong>Username</strong> {{ user[0] }}</li>
+            <li><strong>Full Name</strong> {{ user[1] or '—' }}</li>
+            <li><strong>Group</strong> {{ user[2] or '—' }}</li>
+            <li><strong>Role</strong> {{ user[3] | capitalize }}</li>
+            <li><strong>Last Active</strong> {{ user[4][:16] if user[4] else '—' }}</li>
+        </ul>
+    </div>
+
+    <!-- Attendance Stats -->
+    <div class="card">
+        <h3>📅 Attendance (Last {{ total_days }} Working Days)</h3>
+        <div class="stat-row">
+            <div class="stat {{ 'green' if attendance_pct >= 80 else ('orange' if attendance_pct >= 60 else 'red') }}">
+                <div class="val">{{ attendance_pct }}%</div>
+                <div class="lbl">Attendance</div>
+            </div>
+            <div class="stat green">
+                <div class="val">{{ present_days }}</div>
+                <div class="lbl">Present</div>
+            </div>
+            <div class="stat red">
+                <div class="val">{{ absent_days }}</div>
+                <div class="lbl">Absent</div>
+            </div>
+            <div class="stat orange">
+                <div class="val">{{ late_days }}</div>
+                <div class="lbl">Late</div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- ── Row 2: Academic + Trend ─────────────────────────────────────── -->
+<div class="grid" style="margin-bottom:18px;">
+
+    <!-- Academic Performance -->
+    <div class="card">
+        <h3>📊 Academic Performance</h3>
+        <div class="stat-row" style="margin-bottom:14px;">
+            <div class="stat {{ 'green' if overall_avg >= 60 else ('orange' if overall_avg >= 40 else 'red') }}">
+                <div class="val">{{ overall_avg }}%</div>
+                <div class="lbl">Overall Avg</div>
+            </div>
+            <div class="stat">
+                <div class="val
+                    {% if trend == 'improving' %} trend-improving
+                    {% elif trend == 'dropping' %} trend-dropping
+                    {% else %} trend-stable{% endif %}">
+                    {% if trend == 'improving' %}↑{% elif trend == 'dropping' %}↓{% else %}→{% endif %}
+                </div>
+                <div class="lbl">Trend</div>
+            </div>
+        </div>
+        {% if subject_avgs %}
+        <table>
+            <tr><th>Subject</th><th>Average</th></tr>
+            {% for subj, avg in subject_avgs %}
+            <tr>
+                <td>{{ subj }}</td>
+                <td>
+                    <span style="color: {{ '#107C10' if avg >= 60 else ('#ff8c00' if avg >= 40 else '#A4262C') }}; font-weight:bold;">
+                        {{ avg }}%
+                    </span>
+                </td>
+            </tr>
+            {% endfor %}
+        </table>
+        {% else %}
+        <p style="color:#888; font-size:0.9em;">No results yet.</p>
+        {% endif %}
+    </div>
+
+    <!-- Recent Attendance -->
+    <div class="card">
+        <h3>🗓 Recent Attendance (Last 10 Days)</h3>
+        <table>
+            <tr><th>Date</th><th>Status</th><th>Time</th></tr>
+            {% for row in history %}
+            <tr>
+                <td>{{ row.date[5:] }}</td>
+                <td>
+                    {% if row.status == 'Present' and row.late %}
+                        <span class="badge badge-late">Late</span>
+                    {% elif row.status == 'Present' %}
+                        <span class="badge badge-present">Present</span>
+                    {% else %}
+                        <span class="badge badge-absent">Absent</span>
+                    {% endif %}
+                </td>
+                <td>{{ row.time or '—' }}</td>
+            </tr>
+            {% endfor %}
+        </table>
+    </div>
+</div>
+
+<!-- ── Row 3: Recent Results + Theory ──────────────────────────────── -->
+<div class="grid" style="margin-bottom:18px;">
+
+    <!-- Recent Practical Results -->
+    <div class="card">
+        <h3>📁 Recent Practical Submissions</h3>
+        {% if recent_results %}
+        <table>
+            <tr><th>Subject</th><th>Task</th><th>Score</th><th>Date</th></tr>
+            {% for r in recent_results %}
+            <tr>
+                <td>{{ r[0] }}</td>
+                <td>{{ r[1] }}</td>
+                <td>
+                    <span style="color: {{ '#107C10' if r[2] >= 60 else ('#ff8c00' if r[2] >= 40 else '#A4262C') }}; font-weight:bold;">
+                        {{ r[2] }}%
+                    </span>
+                </td>
+                <td>{{ r[4][:10] if r[4] else '—' }}</td>
+            </tr>
+            {% endfor %}
+        </table>
+        {% else %}
+        <p style="color:#888; font-size:0.9em;">No submissions yet.</p>
+        {% endif %}
+    </div>
+
+    <!-- Theory Test Results -->
+    <div class="card">
+        <h3>📝 Theory Test Results</h3>
+        {% if theory_results %}
+        <table>
+            <tr><th>Test</th><th>Score</th><th>%</th><th>Date</th></tr>
+            {% for r in theory_results %}
+            <tr>
+                <td>{{ r[0] }}</td>
+                <td>{{ r[1] }}/{{ r[2] }}</td>
+                <td>
+                    <span style="color: {{ '#107C10' if r[3] >= 60 else ('#ff8c00' if r[3] >= 40 else '#A4262C') }}; font-weight:bold;">
+                        {{ r[3] }}%
+                    </span>
+                </td>
+                <td>{{ r[4][:10] if r[4] else '—' }}</td>
+            </tr>
+            {% endfor %}
+        </table>
+        {% else %}
+        <p style="color:#888; font-size:0.9em;">No theory tests completed yet.</p>
+        {% endif %}
+    </div>
+</div>
+
+<!-- ── Row 4: Task Status ───────────────────────────────────────────── -->
+<div class="card full" style="margin-bottom:18px;">
+    <h3>📋 Task Status</h3>
+    <table>
+        <tr><th>Subject</th><th>Task</th><th>Status</th><th>Score</th><th>Feedback</th><th>Submitted</th></tr>
+        {% for task in task_rows %}
+        <tr>
+            <td>{{ task.subject }}</td>
+            <td>{{ task.task }}</td>
+            <td>
+                <span class="badge {{ 'badge-submitted' if task.status == 'Submitted' else 'badge-missing' }}">
+                    {{ task.status }}
+                </span>
+            </td>
+            <td>{% if task.score is not none %}{{ task.score }}%{% else %}—{% endif %}</td>
+            <td>{{ task.feedback or '—' }}</td>
+            <td>{{ task.timestamp[:10] if task.timestamp else '—' }}</td>
+        </tr>
+        {% endfor %}
+    </table>
+</div>
+
+<!-- ── Row 5: Weaknesses + Activity ────────────────────────────────── -->
+<div class="grid" style="margin-bottom:18px;">
+
+    <!-- Weakness Tracking -->
+    <div class="card">
+        <h3>⚠️ Weakness Tracking</h3>
+        {% if weaknesses %}
+        {% set max_count = weaknesses[0][1] %}
+        {% for skill, count in weaknesses %}
+        <div class="skill-bar">
+            <div class="name">{{ skill }}</div>
+            <div class="bar-bg">
+                <div class="bar-fill" style="width: {{ (count / max_count * 100) | int }}%;"></div>
+            </div>
+            <div class="count">{{ count }}×</div>
+        </div>
+        {% endfor %}
+        {% else %}
+        <p style="color:#888; font-size:0.9em;">No weaknesses recorded yet.</p>
+        {% endif %}
+    </div>
+
+    <!-- Recent Activity -->
+    <div class="card">
+        <h3>🕐 Recent Activity</h3>
+        {% if recent_activity %}
+        <table>
+            <tr><th>Action</th><th>Time</th></tr>
+            {% for action, ts in recent_activity %}
+            <tr>
+                <td>{{ action }}</td>
+                <td style="color:#888; font-size:0.85em;">{{ ts[:16] if ts else '—' }}</td>
+            </tr>
+            {% endfor %}
+        </table>
+        {% else %}
+        <p style="color:#888; font-size:0.9em;">No activity recorded.</p>
+        {% endif %}
+    </div>
+</div>
+
+<!-- ── Row 6: Teacher Notes ─────────────────────────────────────────── -->
+<div class="card full" style="margin-bottom:18px;">
+    <h3>📌 Teacher Notes</h3>
+
+    {% if notes %}
+        {% for note in notes %}
+        <div class="note-card">
+            <div style="display:flex; justify-content:space-between; align-items:flex-start;">
+                <div>
+                    {% if note[2] %}
+                        <span class="badge {{ 'badge-support' if note[2] == 'needs_support' else 'badge-flag' }}" style="margin-right:8px;">
+                            {{ '🚨 Needs Support' if note[2] == 'needs_support' else '🚩 Flagged' }}
+                        </span>
+                    {% endif %}
+                    {{ note[1] }}
+                    <div class="note-meta">By {{ note[3] }} &nbsp;|&nbsp; {{ note[4][:16] if note[4] else '' }}</div>
+                </div>
+                <form method="post" action="/learner_record/{{ user[0] }}/delete_note/{{ note[0] }}"
+                      onsubmit="return confirm('Delete this note?')" style="margin-left:10px;">
+                    <button type="submit" class="btn btn-danger" style="padding:3px 8px; font-size:0.8em;">✕</button>
+                </form>
+            </div>
+        </div>
+        {% endfor %}
+    {% else %}
+        <p style="color:#888; font-size:0.9em;">No notes yet.</p>
+    {% endif %}
+
+    <form method="post" action="/learner_record/{{ user[0] }}/add_note" style="margin-top:14px; display:flex; gap:10px; flex-wrap:wrap; align-items:flex-end;">
+        <div style="flex:1; min-width:200px;">
+            <label style="font-size:0.85em; font-weight:bold; display:block; margin-bottom:4px;">Add Note</label>
+            <input type="text" name="note" required placeholder="Type a note..." style="width:100%; padding:7px; border:1px solid #ccc; border-radius:4px;">
+        </div>
+        <div>
+            <label style="font-size:0.85em; font-weight:bold; display:block; margin-bottom:4px;">Flag</label>
+            <select name="flag" style="padding:7px; border:1px solid #ccc; border-radius:4px;">
+                <option value="">None</option>
+                <option value="flagged">🚩 Flagged</option>
+                <option value="needs_support">🚨 Needs Support</option>
+            </select>
+        </div>
+        <button type="submit" class="btn btn-primary">Add Note</button>
+    </form>
+</div>
 
 </body>
 </html>

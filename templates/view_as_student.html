@@ -1,0 +1,250 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Group View — {{ group_name }}</title>
+    <style>
+        * { box-sizing: border-box; }
+        body { font-family: Arial, sans-serif; margin: 0; padding: 0; background: #f0f2f5; color: #222; }
+
+        .topbar { background: #005a9e; color: white; padding: 14px 24px; display: flex; justify-content: space-between; align-items: center; }
+        .topbar h1 { margin: 0; font-size: 1.1em; }
+        .topbar a { color: white; text-decoration: none; font-size: 0.88em; opacity: 0.85; }
+        .topbar a:hover { opacity: 1; }
+
+        .page { padding: 20px 24px; max-width: 1100px; margin: 0 auto; }
+        .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+        .grid-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 16px; }
+        .mb { margin-bottom: 16px; }
+
+        .banner { background: linear-gradient(135deg, #005a9e, #003f6e); color: white; border-radius: 10px; padding: 20px 24px; margin-bottom: 18px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px; }
+        .banner h2 { margin: 0 0 4px 0; font-size: 1.3em; }
+        .banner p { margin: 0; opacity: 0.85; font-size: 0.9em; }
+        .avg-circle { background: rgba(255,255,255,0.2); border-radius: 50%; width: 75px; height: 75px; display: flex; flex-direction: column; align-items: center; justify-content: center; flex-shrink: 0; }
+        .avg-circle .num { font-size: 1.5em; font-weight: bold; line-height: 1; }
+        .avg-circle .lbl { font-size: 0.68em; opacity: 0.85; }
+
+        .card { background: white; border-radius: 8px; padding: 18px; border: 1px solid #ddd; }
+        .card h3 { margin: 0 0 14px 0; font-size: 0.95em; color: #005a9e; border-bottom: 2px solid #f0f0f0; padding-bottom: 6px; }
+
+        table { width: 100%; border-collapse: collapse; font-size: 0.87em; }
+        th { background: #f5f5f5; padding: 7px 10px; text-align: left; font-size: 0.83em; color: #555; }
+        td { padding: 6px 10px; border-bottom: 1px solid #f0f0f0; }
+        tr:last-child td { border-bottom: none; }
+        tr:hover td { background: #fafafa; }
+
+        .score-high { color: #107C10; font-weight: bold; }
+        .score-mid { color: #ff8c00; font-weight: bold; }
+        .score-low { color: #A4262C; font-weight: bold; }
+
+        .badge { padding: 2px 8px; border-radius: 10px; font-size: 0.78em; font-weight: bold; }
+        .badge-missing { background: #f7c5c5; color: #A4262C; }
+        .badge-ok { background: #c8f7c5; color: #107C10; }
+
+        /* Att bar */
+        .att-row { display: flex; align-items: center; gap: 10px; margin-bottom: 7px; font-size: 0.87em; }
+        .att-row .date { width: 70px; color: #555; }
+        .att-row .bar-bg { flex: 1; background: #eee; border-radius: 4px; height: 12px; }
+        .att-row .bar-fill { border-radius: 4px; height: 12px; }
+        .att-row .pct { width: 40px; text-align: right; font-weight: bold; }
+
+        /* Skill bars */
+        .skill-bar { display: flex; align-items: center; gap: 8px; margin-bottom: 6px; }
+        .skill-bar .name { font-size: 0.85em; width: 150px; }
+        .skill-bar .bg { flex: 1; background: #eee; border-radius: 4px; height: 8px; }
+        .skill-bar .fill { background: #A4262C; border-radius: 4px; height: 8px; }
+        .skill-bar .cnt { font-size: 0.78em; color: #888; width: 30px; text-align: right; }
+
+        /* Student list */
+        .student-chips { display: flex; flex-wrap: wrap; gap: 6px; }
+        .chip { background: #f0f4ff; border: 1px solid #b0c4ff; border-radius: 20px; padding: 4px 12px; font-size: 0.82em; text-decoration: none; color: #005a9e; }
+        .chip:hover { background: #dce8ff; }
+
+        .note { background: #fffbe6; border: 1px solid #ffe58f; border-radius: 6px; padding: 10px 14px; font-size: 0.85em; color: #555; margin-bottom: 12px; }
+    </style>
+</head>
+<body>
+
+<div class="topbar">
+    <h1>👁 Viewing as: Group {{ group_name }}</h1>
+    <a href="/teacher_dashboard">← Back to Teacher Dashboard</a>
+</div>
+
+<div class="page">
+
+    <div class="note">
+        ℹ️ You are viewing this group's dashboard as a teacher. This shows aggregated data for all {{ student_count }} students in <strong>{{ group_name }}</strong>.
+    </div>
+
+    <!-- Banner -->
+    <div class="banner">
+        <div>
+            <h2>📚 Group {{ group_name }}</h2>
+            <p>{{ student_count }} student{{ 's' if student_count != 1 }}</p>
+        </div>
+        <div class="avg-circle">
+            <span class="num">{{ overall_avg }}%</span>
+            <span class="lbl">Group Avg</span>
+        </div>
+    </div>
+
+    <!-- Row 1: Attendance + Subject Averages -->
+    <div class="grid-2 mb">
+
+        <!-- Attendance -->
+        <div class="card">
+            <h3>📅 Group Attendance (Last 7 Days)</h3>
+            {% if att_summary %}
+            {% for day in att_summary %}
+            <div class="att-row">
+                <div class="date">{{ day.date[5:] }}</div>
+                <div class="bar-bg">
+                    <div class="bar-fill"
+                         style="width:{{ day.pct }}%;
+                                background: {{ '#107C10' if day.pct >= 80 else ('#ff8c00' if day.pct >= 60 else '#A4262C') }};">
+                    </div>
+                </div>
+                <div class="pct" style="color: {{ '#107C10' if day.pct >= 80 else ('#ff8c00' if day.pct >= 60 else '#A4262C') }};">
+                    {{ day.pct }}%
+                </div>
+                <div style="font-size:0.8em; color:#888;">{{ day.present }}/{{ day.total }}</div>
+            </div>
+            {% endfor %}
+            <div style="margin-top:10px;">
+                <a href="/attendance?group={{ group_name }}" style="font-size:0.85em; color:#005a9e;">View full attendance →</a>
+            </div>
+            {% else %}
+            <p style="color:#888; font-size:0.9em;">No attendance data.</p>
+            {% endif %}
+        </div>
+
+        <!-- Subject Averages -->
+        <div class="card">
+            <h3>📊 Subject Averages</h3>
+            {% if subject_avgs %}
+            <table>
+                <tr><th>Subject</th><th>Group Average</th></tr>
+                {% for subj, avg in subject_avgs %}
+                <tr>
+                    <td>{{ subj }}</td>
+                    <td>
+                        <span class="{{ 'score-high' if avg >= 60 else ('score-mid' if avg >= 40 else 'score-low') }}">
+                            {{ avg }}%
+                        </span>
+                    </td>
+                </tr>
+                {% endfor %}
+            </table>
+            {% else %}
+            <p style="color:#888; font-size:0.9em;">No results yet.</p>
+            {% endif %}
+        </div>
+    </div>
+
+    <!-- Row 2: Recent Results + Missing Tasks -->
+    <div class="grid-2 mb">
+
+        <!-- Recent Results -->
+        <div class="card">
+            <h3>🏆 Recent Submissions</h3>
+            {% if recent_results %}
+            <table>
+                <tr><th>Student</th><th>Subject</th><th>Task</th><th>Score</th></tr>
+                {% for name, subj, task, score, ts in recent_results %}
+                <tr>
+                    <td>{{ name or '—' }}</td>
+                    <td>{{ subj }}</td>
+                    <td>{{ task }}</td>
+                    <td>
+                        <span class="{{ 'score-high' if score >= 60 else ('score-mid' if score >= 40 else 'score-low') }}">
+                            {{ score }}%
+                        </span>
+                    </td>
+                </tr>
+                {% endfor %}
+            </table>
+            {% else %}
+            <p style="color:#888; font-size:0.9em;">No submissions yet.</p>
+            {% endif %}
+        </div>
+
+        <!-- Missing Tasks -->
+        <div class="card">
+            <h3>⏰ Missing Tasks</h3>
+            {% if missing_tasks %}
+            <table>
+                <tr><th>Subject</th><th>Task</th><th>Due</th><th>Missing</th></tr>
+                {% for subj, task, due, cnt in missing_tasks %}
+                <tr>
+                    <td>{{ subj }}</td>
+                    <td>{{ task }}</td>
+                    <td>{{ due }}</td>
+                    <td><span class="badge badge-missing">{{ cnt }} student{{ 's' if cnt != 1 }}</span></td>
+                </tr>
+                {% endfor %}
+            </table>
+            {% else %}
+            <p style="color:#107C10; font-size:0.9em;">✔ All tasks submitted!</p>
+            {% endif %}
+        </div>
+    </div>
+
+    <!-- Row 3: Weaknesses + Theory -->
+    <div class="grid-2 mb">
+
+        <!-- Weak Areas -->
+        <div class="card">
+            <h3>⚠️ Group Weak Areas</h3>
+            {% if weaknesses %}
+            {% set max_c = weaknesses[0][1] %}
+            {% for skill, count in weaknesses %}
+            <div class="skill-bar">
+                <div class="name">{{ skill }}</div>
+                <div class="bg"><div class="fill" style="width:{{ (count / max_c * 100)|int }}%;"></div></div>
+                <div class="cnt">{{ count }}×</div>
+            </div>
+            {% endfor %}
+            {% else %}
+            <p style="color:#107C10; font-size:0.9em;">✔ No weak areas recorded.</p>
+            {% endif %}
+        </div>
+
+        <!-- Theory Test Averages -->
+        <div class="card">
+            <h3>📝 Theory Test Averages</h3>
+            {% if theory_avgs %}
+            <table>
+                <tr><th>Test</th><th>Group Avg</th><th>Completed</th></tr>
+                {% for title, avg, cnt in theory_avgs %}
+                <tr>
+                    <td>{{ title }}</td>
+                    <td>
+                        <span class="{{ 'score-high' if avg >= 60 else ('score-mid' if avg >= 40 else 'score-low') }}">
+                            {{ avg }}%
+                        </span>
+                    </td>
+                    <td style="color:#888;">{{ cnt }} student{{ 's' if cnt != 1 }}</td>
+                </tr>
+                {% endfor %}
+            </table>
+            {% else %}
+            <p style="color:#888; font-size:0.9em;">No theory tests completed yet.</p>
+            {% endif %}
+        </div>
+    </div>
+
+    <!-- Students in Group -->
+    <div class="card mb">
+        <h3>👥 Students in {{ group_name }}</h3>
+        <div class="student-chips">
+            {% for uname, fname in students %}
+            <a href="/learner_record/{{ uname }}" class="chip">
+                {{ fname or uname }}
+            </a>
+            {% endfor %}
+        </div>
+    </div>
+
+</div>
+</body>
+</html>

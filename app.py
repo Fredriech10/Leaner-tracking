@@ -275,6 +275,7 @@ def init_db():
         marking_script TEXT,
         theory_test_id INTEGER,
         task_type TEXT DEFAULT 'practical',
+        is_active INTEGER DEFAULT 1,
         created_by TEXT,
         created_at TEXT,
         FOREIGN KEY (subject_id) REFERENCES subjects (id)
@@ -294,8 +295,22 @@ def init_db():
         if "task_type" not in columns:
             cursor.execute("ALTER TABLE tasks ADD COLUMN task_type TEXT DEFAULT 'practical'")
             print("Migration: added task_type column to tasks")
+        if "is_active" not in columns:
+            cursor.execute("ALTER TABLE tasks ADD COLUMN is_active INTEGER DEFAULT 1")
+            print("Migration: added is_active column to tasks")
     except Exception as e:
         print(f"Note: tasks migration check: {e}")
+
+    cursor.execute("""
+    CREATE TABLE IF NOT EXISTS learner_notes (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        username TEXT,
+        note TEXT,
+        flag TEXT,
+        created_by TEXT,
+        created_at TEXT
+    )
+    """)
 
     cursor.execute("""
     CREATE TABLE IF NOT EXISTS task_groups (
@@ -752,6 +767,9 @@ def login():
             with lock:
                 active_users[username] = datetime.now()
 
+            role = get_user_role(username)
+            if role in ["teacher", "admin"]:
+                return redirect(url_for("teacher_dashboard"))
             return redirect(url_for("student_dashboard"))
         else:
             return "Invalid username", 400
@@ -790,32 +808,105 @@ def student_dashboard():
     if not username:
         return redirect(url_for("login"))
 
-    # Update active user timestamp
     update_active_user(username)
+    role = get_user_role(username)
 
-    # Get user's full name
+    # Teachers go to teacher dashboard
+    if role in ["teacher", "admin"]:
+        return redirect(url_for("teacher_dashboard"))
+
     conn = get_db()
     cursor = conn.cursor()
-    cursor.execute("SELECT full_name FROM users WHERE username = ?", (username,))
+
+    cursor.execute("SELECT full_name, group_name FROM users WHERE username = ?", (username,))
     user_row = cursor.fetchone()
-    conn.close()
-    
     display_name = user_row[0] if user_row and user_row[0] else username
+    user_group = user_row[1] if user_row else None
 
-    averages, overall, recent_results = get_student_dashboard_data(username)
-    weaknesses = get_weaknesses(username)
+    # ─ Academic
+    cursor.execute("SELECT subject, ROUND(AVG(score),1) FROM results WHERE username = ? GROUP BY subject", (username,))
+    subject_avgs = cursor.fetchall()
 
+    cursor.execute("SELECT ROUND(AVG(score),1) FROM results WHERE username = ?", (username,))
+    overall_row = cursor.fetchone()
+    overall_avg = overall_row[0] if overall_row and overall_row[0] else 0
+
+    cursor.execute("""
+        SELECT subject, task, score, feedback, timestamp
+        FROM results WHERE username = ? ORDER BY timestamp DESC LIMIT 5
+    """, (username,))
+    recent_results = cursor.fetchall()
+
+    # ─ Attendance (last 7 working days)
+    days = get_last_7_days()
+    cursor.execute("SELECT date FROM excluded_dates WHERE group_name IS NULL OR group_name = ?", (user_group,))
+    excluded = {r[0] for r in cursor.fetchall()}
+    days = [d for d in days if d not in excluded]
+
+    att_history = []
+    cutoffs = {d: get_group_late_threshold(user_group, d) for d in days} if user_group else {}
+    for day in days:
+        cursor.execute("SELECT MIN(login_time) FROM login_history WHERE username = ? AND date = ?", (username, day))
+        lt = cursor.fetchone()[0]
+        if lt:
+            t = lt.split(" ")[1][:5]
+            late = cutoffs.get(day) is not None and t > cutoffs[day]
+            att_history.append({"date": day, "status": "present", "late": late, "time": t})
+        else:
+            cursor.execute("SELECT status FROM attendance_override WHERE username = ? AND date = ?", (username, day))
+            ov = cursor.fetchone()
+            if ov and ov[0] == "present":
+                att_history.append({"date": day, "status": "present", "late": False, "time": "12:00"})
+            else:
+                att_history.append({"date": day, "status": "absent", "late": False, "time": ""})
+
+    present = sum(1 for d in att_history if d["status"] == "present")
+    att_pct = round((present / len(att_history)) * 100) if att_history else 0
+
+    # ─ Missing tasks
+    today = datetime.now().date().isoformat()
+    cursor.execute("""
+        SELECT t.id, s.name as subject_name, t.name, t.assign_date
+        FROM tasks t
+        JOIN subjects s ON t.subject_id = s.id
+        JOIN task_groups tg ON t.id = tg.task_id
+        WHERE tg.group_name = ? AND t.assign_date <= ?
+        AND t.task_type = 'practical'
+        AND NOT EXISTS (
+            SELECT 1 FROM results r
+            WHERE r.username = ? AND r.subject = s.name AND r.task = t.name
+        )
+        ORDER BY t.assign_date
+        LIMIT 5
+    """, (user_group, today, username))
+    missing_tasks = cursor.fetchall()
+
+    # ─ Weaknesses
+    cursor.execute("SELECT skill, count FROM weaknesses WHERE username = ? ORDER BY count DESC LIMIT 5", (username,))
+    weaknesses = cursor.fetchall()
+
+    # ─ Recent feedback (non-empty)
+    cursor.execute("""
+        SELECT subject, task, feedback, timestamp
+        FROM results WHERE username = ? AND feedback IS NOT NULL AND feedback != ''
+        ORDER BY timestamp DESC LIMIT 3
+    """, (username,))
+    recent_feedback = cursor.fetchall()
+
+    conn.close()
     return render_template(
-        "dashboard.html",
+        "student_dashboard.html",
         username=username,
         display_name=display_name,
-        averages=averages,
-        overall=overall,
+        overall_avg=overall_avg,
+        subject_avgs=subject_avgs,
         recent_results=recent_results,
-        weaknesses=weaknesses
+        att_history=att_history,
+        att_pct=att_pct,
+        missing_tasks=missing_tasks,
+        weaknesses=weaknesses,
+        recent_feedback=recent_feedback
     )
-
-# 🔹 Auto-login for bat
 @app.route("/auto_login")
 def auto_login():
     username = request.args.get("username", "").strip().upper()
@@ -831,6 +922,9 @@ def auto_login():
         with lock:
             active_users[username] = datetime.now()
 
+        role = get_user_role(username)
+        if role in ["teacher", "admin"]:
+            return redirect(url_for("teacher_dashboard"))
         return redirect(url_for("student_dashboard"))
 
     return "Invalid auto-login", 400
@@ -895,6 +989,107 @@ def update_last_active(username):
     conn.commit()
     conn.close()
 
+@app.route("/tasks/<int:task_id>/edit", methods=["GET", "POST"])
+def edit_task(task_id):
+    username = session.get("username")
+    if not username or get_user_role(username) not in ["teacher", "admin"]:
+        return "Access denied", 403
+
+    conn = get_db()
+    cursor = conn.cursor()
+
+    cursor.execute("""
+        SELECT t.id, t.name, t.assign_date, t.marking_script, t.subject_id
+        FROM tasks t WHERE t.id = ? AND t.task_type = 'practical'
+    """, (task_id,))
+    task = cursor.fetchone()
+    if not task:
+        conn.close()
+        return "Task not found", 404
+
+    subject_id = task[4]
+
+    if request.method == "POST":
+        assign_date = request.form.get("assign_date")
+        marking_script = request.form.get("marking_script")
+        groups = request.form.getlist("groups")
+
+        cursor.execute("""
+            UPDATE tasks SET assign_date = ?, marking_script = ? WHERE id = ?
+        """, (assign_date, marking_script, task_id))
+
+        cursor.execute("DELETE FROM task_groups WHERE task_id = ?", (task_id,))
+        for g in groups:
+            if g.strip():
+                cursor.execute("INSERT INTO task_groups (task_id, group_name) VALUES (?, ?)", (task_id, g))
+
+        conn.commit()
+        conn.close()
+        log_activity(username, f"edited task {task[1]}")
+        return redirect(url_for("manage_tasks", subject_id=subject_id))
+
+    # GET — load current groups and scripts
+    cursor.execute("SELECT group_name FROM task_groups WHERE task_id = ?", (task_id,))
+    current_groups = {row[0] for row in cursor.fetchall()}
+    all_groups = get_groups()
+    available_scripts = get_marking_scripts()
+    conn.close()
+
+    return render_template(
+        "edit_task.html",
+        task=task,
+        current_groups=current_groups,
+        all_groups=all_groups,
+        available_scripts=available_scripts
+    )
+
+
+@app.route("/tasks/<int:task_id>/toggle", methods=["POST"])
+def toggle_task(task_id):
+    username = session.get("username")
+    if not username or get_user_role(username) not in ["teacher", "admin"]:
+        return "Access denied", 403
+    subject_id = request.form.get("subject_id")
+    conn = get_db()
+    cursor = conn.cursor()
+    cursor.execute("SELECT is_active FROM tasks WHERE id = ?", (task_id,))
+    row = cursor.fetchone()
+    if row:
+        new_state = 0 if row[0] else 1
+        cursor.execute("UPDATE tasks SET is_active = ? WHERE id = ?", (new_state, task_id))
+        conn.commit()
+        state_label = "activated" if new_state else "deactivated"
+        log_activity(username, f"{state_label} task {task_id}")
+    conn.close()
+    return redirect(url_for("manage_tasks", subject_id=subject_id))
+
+
+@app.route("/tasks/<int:task_id>/clear_uploads", methods=["POST"])
+def clear_task_uploads(task_id):
+    username = session.get("username")
+    if not username or get_user_role(username) not in ["teacher", "admin"]:
+        return "Access denied", 403
+    subject_id = request.form.get("subject_id")
+    conn = get_db()
+    cursor = conn.cursor()
+    # Get subject and task name to match results table
+    cursor.execute("""
+        SELECT t.name, s.name FROM tasks t
+        JOIN subjects s ON s.id = t.subject_id
+        WHERE t.id = ?
+    """, (task_id,))
+    row = cursor.fetchone()
+    if row:
+        task_name, subject_name = row
+        cursor.execute("""
+            DELETE FROM results WHERE subject = ? AND task = ?
+        """, (subject_name, task_name))
+        conn.commit()
+        log_activity(username, f"cleared uploads for {subject_name} {task_name}")
+    conn.close()
+    return redirect(url_for("manage_tasks", subject_id=subject_id))
+
+
 @app.route("/upload/<username>/<subject_id>/<task_id>", methods=["GET", "POST"])
 def upload(username, subject_id, task_id):
     # Verify the logged-in user is the one accessing
@@ -916,16 +1111,23 @@ def upload(username, subject_id, task_id):
         return "Subject not found", 404
     subject_name = subject_row[0]
 
-    # Get task with assign_date and marking_script
-    cursor.execute("SELECT name, assign_date, marking_script FROM tasks WHERE id = ?", (task_id,))
+    # Get task with assign_date, marking_script and is_active
+    cursor.execute("SELECT name, assign_date, marking_script, is_active FROM tasks WHERE id = ?", (task_id,))
     task_row = cursor.fetchone()
     if not task_row:
         conn.close()
         return "Task not found", 404
-    task_name, assign_date, marking_script = task_row
+    task_name, assign_date, marking_script, task_is_active = task_row
 
-    # Get user role and group
+    # Block upload if task is deactivated (students only)
     user_role = get_user_role(username)
+    if user_role not in ["teacher", "admin"] and not task_is_active:
+        conn.close()
+        return """
+        <p><a href="/student_dashboard">← Back to Dashboard</a></p>
+        <h2>Upload Closed</h2>
+        <p style="color:#A4262C;">This task is currently not accepting uploads. Please contact your teacher.</p>
+        """, 403
     cursor.execute("SELECT group_name FROM users WHERE username = ?", (username,))
     user_group_row = cursor.fetchone()
     user_group = user_group_row[0] if user_group_row else None
@@ -1098,56 +1300,301 @@ def tasks(username, subject_id):
     {task_links}
     """
 
+@app.route("/view_as_student/<group_name>")
+def view_as_student(group_name):
+    admin_user = session.get("username")
+    if not admin_user:
+        return redirect(url_for("login"))
+    if get_user_role(admin_user) not in ["teacher", "admin"]:
+        return "Access denied", 403
+
+    conn = get_db()
+    cursor = conn.cursor()
+
+    # Pick first student in the group as representative
+    cursor.execute("""
+        SELECT username, full_name, group_name FROM users
+        WHERE group_name = ? AND role = 'student' LIMIT 1
+    """, (group_name,))
+    rep = cursor.fetchone()
+
+    # Group student count
+    cursor.execute("SELECT COUNT(*) FROM users WHERE group_name = ? AND role = 'student'", (group_name,))
+    student_count = cursor.fetchone()[0]
+
+    # All students in group
+    cursor.execute("""
+        SELECT username, full_name FROM users
+        WHERE group_name = ? AND role = 'student' ORDER BY full_name
+    """, (group_name,))
+    students = cursor.fetchall()
+
+    # Subject averages for the group
+    cursor.execute("""
+        SELECT r.subject, ROUND(AVG(r.score), 1)
+        FROM results r
+        JOIN users u ON r.username = u.username
+        WHERE u.group_name = ?
+        GROUP BY r.subject
+    """, (group_name,))
+    subject_avgs = cursor.fetchall()
+
+    # Overall group average
+    cursor.execute("""
+        SELECT ROUND(AVG(r.score), 1)
+        FROM results r
+        JOIN users u ON r.username = u.username
+        WHERE u.group_name = ?
+    """, (group_name,))
+    overall_row = cursor.fetchone()
+    overall_avg = overall_row[0] if overall_row and overall_row[0] else 0
+
+    # Recent submissions for the group
+    cursor.execute("""
+        SELECT u.full_name, r.subject, r.task, r.score, r.timestamp
+        FROM results r
+        JOIN users u ON r.username = u.username
+        WHERE u.group_name = ?
+        ORDER BY r.timestamp DESC LIMIT 10
+    """, (group_name,))
+    recent_results = cursor.fetchall()
+
+    # Attendance last 7 days for the group
+    days = get_last_7_days()
+    cursor.execute("SELECT date FROM excluded_dates WHERE group_name IS NULL OR group_name = ?", (group_name,))
+    excluded = {r[0] for r in cursor.fetchall()}
+    days = [d for d in days if d not in excluded]
+
+    att_summary = []
+    for day in days:
+        cursor.execute("""
+            SELECT COUNT(DISTINCT username) FROM login_history
+            WHERE date = ? AND username IN (
+                SELECT username FROM users WHERE group_name = ? AND role = 'student'
+            )
+        """, (day, group_name))
+        present = cursor.fetchone()[0]
+        pct = round((present / student_count) * 100) if student_count else 0
+        att_summary.append({"date": day, "present": present, "total": student_count, "pct": pct})
+
+    # Missing tasks for the group
+    today = datetime.now().date().isoformat()
+    cursor.execute("""
+        SELECT s.name, t.name, t.assign_date,
+               COUNT(DISTINCT u.username) as missing_count
+        FROM tasks t
+        JOIN subjects s ON s.id = t.subject_id
+        JOIN task_groups tg ON tg.task_id = t.id
+        JOIN users u ON u.group_name = tg.group_name AND u.role = 'student'
+        WHERE tg.group_name = ? AND t.assign_date <= ? AND t.task_type = 'practical'
+          AND NOT EXISTS (
+              SELECT 1 FROM results r
+              WHERE r.username = u.username AND r.subject = s.name AND r.task = t.name
+          )
+        GROUP BY t.id
+        ORDER BY t.assign_date
+    """, (group_name, today))
+    missing_tasks = cursor.fetchall()
+
+    # Top weaknesses for the group
+    cursor.execute("""
+        SELECT w.skill, SUM(w.count) as total
+        FROM weaknesses w
+        JOIN users u ON w.username = u.username
+        WHERE u.group_name = ?
+        GROUP BY w.skill ORDER BY total DESC LIMIT 5
+    """, (group_name,))
+    weaknesses = cursor.fetchall()
+
+    # Theory test results for the group
+    cursor.execute("""
+        SELECT t.title, ROUND(AVG(s.percentage), 1), COUNT(DISTINCT s.username)
+        FROM theory_submissions s
+        JOIN theory_tests t ON s.test_id = t.id
+        JOIN users u ON s.username = u.username
+        WHERE u.group_name = ?
+        GROUP BY t.id ORDER BY s.submitted_at DESC LIMIT 5
+    """, (group_name,))
+    theory_avgs = cursor.fetchall()
+
+    conn.close()
+    return render_template(
+        "view_as_student.html",
+        group_name=group_name,
+        student_count=student_count,
+        students=students,
+        subject_avgs=subject_avgs,
+        overall_avg=overall_avg,
+        recent_results=recent_results,
+        att_summary=att_summary,
+        missing_tasks=missing_tasks,
+        weaknesses=weaknesses,
+        theory_avgs=theory_avgs
+    )
+
+
 @app.route("/teacher_dashboard")
 def teacher_dashboard():
     username = session.get("username")
     if not username:
         return redirect(url_for("login"))
 
-    if not username:
-        return redirect(url_for("login"))
-
     role = get_user_role(username)
-
     if role not in ["teacher", "admin"]:
         return "Access denied", 403
 
     conn = get_db()
     cursor = conn.cursor()
 
-    cursor.execute("""
-    SELECT u.full_name, u.group_name, r.subject, r.task, r.score, r.feedback, r.timestamp
-    FROM results r
-    JOIN users u ON r.username = u.username
-    ORDER BY r.timestamp DESC
-    """)
-    all_results = cursor.fetchall()
+    # ─ Quick stats
+    cursor.execute("SELECT COUNT(*) FROM users WHERE role = 'student'")
+    total_students = cursor.fetchone()[0]
 
-    cursor.execute("""
-    SELECT username, skill, count
-    FROM weaknesses
-    ORDER BY count DESC
-    """)
-    all_weaknesses = cursor.fetchall()
+    today = datetime.now().strftime("%Y-%m-%d")
+    cursor.execute("SELECT COUNT(DISTINCT username) FROM login_history WHERE date = ?", (today,))
+    active_today = cursor.fetchone()[0]
 
+    # Avg attendance % across all students (last 21 days)
+    days_21 = get_last_21_days()
+    cursor.execute("SELECT COUNT(DISTINCT username) FROM login_history WHERE date IN ({}) ".format(
+        ",".join(["?"]*len(days_21))), days_21)
+    total_present_slots = cursor.execute(
+        "SELECT COUNT(*) FROM login_history WHERE date IN ({})".format(",".join(["?"]*len(days_21))), days_21
+    ).fetchone()[0]
+    if total_students and len(days_21):
+        avg_att_pct = round((total_present_slots / (total_students * len(days_21))) * 100)
+    else:
+        avg_att_pct = 0
+
+    # ─ Group list
+    groups = get_groups()
+
+    # ─ Group attendance summary
+    group_att = []
+    for g in groups:
+        cursor.execute("SELECT COUNT(*) FROM users WHERE group_name = ?", (g,))
+        g_count = cursor.fetchone()[0]
+        if g_count and days_21:
+            cursor.execute(
+                "SELECT COUNT(DISTINCT username) FROM login_history WHERE date IN ({}) AND username IN "
+                "(SELECT username FROM users WHERE group_name = ?)".format(",".join(["?"]*len(days_21))),
+                days_21 + [g]
+            )
+            g_present = cursor.fetchone()[0]
+            g_pct = round((g_present / (g_count * len(days_21))) * 100)
+        else:
+            g_pct = 0
+        group_att.append({"group": g, "students": g_count, "att_pct": g_pct})
+
+    # ─ Low attendance learners
+    low_attendance = get_low_attendance_learners(10)
+
+    # ─ Recent activity (last 20)
     cursor.execute("""
-    SELECT username, action, timestamp
-    FROM activities
-    ORDER BY timestamp DESC
-    LIMIT 10
+        SELECT username, action, timestamp FROM activities
+        ORDER BY timestamp DESC LIMIT 20
     """)
     recent_activities = cursor.fetchall()
 
-    low_attendance = get_low_attendance_learners()
+    # ─ Recent submissions (last 15)
+    cursor.execute("""
+        SELECT u.full_name, u.group_name, r.subject, r.task, r.score, r.timestamp
+        FROM results r JOIN users u ON r.username = u.username
+        ORDER BY r.timestamp DESC LIMIT 15
+    """)
+    recent_submissions = cursor.fetchall()
+
+    # ─ Class averages per subject per group
+    cursor.execute("""
+        SELECT u.group_name, r.subject, ROUND(AVG(r.score),1), COUNT(*)
+        FROM results r
+        JOIN users u ON r.username = u.username
+        WHERE u.group_name IS NOT NULL
+        GROUP BY u.group_name, r.subject
+        ORDER BY u.group_name, r.subject
+    """)
+    class_avgs_raw = cursor.fetchall()
+
+    # Restructure into {group: [(subject, avg, count), ...]}
+    from collections import defaultdict
+    class_avgs = defaultdict(list)
+    for group_name, subject, avg, cnt in class_avgs_raw:
+        class_avgs[group_name].append((subject, avg, cnt))
+    class_avgs = dict(class_avgs)
+
+    # ─ Top performers (top 5 by avg score)
+    cursor.execute("""
+        SELECT u.full_name, u.group_name, ROUND(AVG(r.score),1) as avg
+        FROM results r JOIN users u ON r.username = u.username
+        WHERE u.role = 'student'
+        GROUP BY r.username HAVING COUNT(*) >= 1
+        ORDER BY avg DESC LIMIT 5
+    """)
+    top_performers = cursor.fetchall()
+
+    # ─ Bottom performers (bottom 5)
+    cursor.execute("""
+        SELECT u.full_name, u.group_name, ROUND(AVG(r.score),1) as avg
+        FROM results r JOIN users u ON r.username = u.username
+        WHERE u.role = 'student'
+        GROUP BY r.username HAVING COUNT(*) >= 1
+        ORDER BY avg ASC LIMIT 5
+    """)
+    bottom_performers = cursor.fetchall()
+
+    # ─ At-risk: low marks (<50%) OR low attendance (<60%)
+    cursor.execute("""
+        SELECT u.username, u.full_name, u.group_name,
+               ROUND(AVG(r.score),1) as avg_score
+        FROM users u
+        LEFT JOIN results r ON u.username = r.username
+        WHERE u.role = 'student'
+        GROUP BY u.username
+        HAVING avg_score < 50 OR avg_score IS NULL
+        ORDER BY avg_score ASC LIMIT 10
+    """)
+    at_risk_marks = cursor.fetchall()
+
+    # At-risk by attendance (< 60% in last 21 days)
+    at_risk_att = [(name, absent) for name, absent in low_attendance
+                   if len(days_21) > 0 and (len(days_21) - absent) / len(days_21) < 0.6]
+
+    # ─ Missing tasks count per group
+    cursor.execute("""
+        SELECT u.group_name, COUNT(*) as missing
+        FROM users u
+        JOIN task_groups tg ON tg.group_name = u.group_name
+        JOIN tasks t ON t.id = tg.task_id
+        JOIN subjects s ON s.id = t.subject_id
+        WHERE u.role = 'student'
+          AND t.assign_date <= ?
+          AND t.task_type = 'practical'
+          AND NOT EXISTS (
+              SELECT 1 FROM results r
+              WHERE r.username = u.username AND r.subject = s.name AND r.task = t.name
+          )
+        GROUP BY u.group_name
+    """, (today,))
+    missing_by_group = cursor.fetchall()
 
     conn.close()
-
     return render_template(
         "teacher_dashboard.html",
-        results=all_results,
-        weaknesses=all_weaknesses,
+        username=username,
+        total_students=total_students,
+        active_today=active_today,
+        avg_att_pct=avg_att_pct,
+        groups=groups,
+        group_att=group_att,
+        low_attendance=low_attendance,
         recent_activities=recent_activities,
-        low_attendance=low_attendance
+        recent_submissions=recent_submissions,
+        class_avgs=class_avgs,
+        top_performers=top_performers,
+        bottom_performers=bottom_performers,
+        at_risk_marks=at_risk_marks,
+        at_risk_att=at_risk_att,
+        missing_by_group=missing_by_group
     )
 
 
@@ -1386,15 +1833,15 @@ def learner_record(username):
     conn = get_db()
     cursor = conn.cursor()
 
-    cursor.execute("SELECT username, full_name, group_name, role FROM users WHERE username = ?", (username,))
+    cursor.execute("SELECT username, full_name, group_name, role, last_active FROM users WHERE username = ?", (username,))
     user = cursor.fetchone()
     if not user:
         conn.close()
         return "User not found", 404
 
+    # ── Attendance ────────────────────────────────────────────────────
     days = get_last_21_days()
     history = []
-
     cursor.execute("SELECT group_name FROM users WHERE username = ?", (username,))
     group_row = cursor.fetchone()
     user_group = group_row[0] if group_row else None
@@ -1402,80 +1849,155 @@ def learner_record(username):
     for day in days:
         cursor.execute("SELECT MIN(login_time) FROM login_history WHERE username = ? AND date = ?", (username, day))
         login_time = cursor.fetchone()[0]
-
-        cutoff = None
-        if user_group:
-            cutoff = get_group_late_threshold(user_group, day)
-
+        cutoff = get_group_late_threshold(user_group, day) if user_group else None
         if login_time:
             time_str = login_time.split(" ")[1][:5]
             late = cutoff is not None and time_str > cutoff
-            history.append({
-                "date": day,
-                "status": "Present",
-                "time": time_str,
-                "late": late,
-                "note": "Auto"
-            })
+            history.append({"date": day, "status": "Present", "time": time_str, "late": late, "note": "Auto"})
         else:
             cursor.execute("SELECT status FROM attendance_override WHERE username = ? AND date = ?", (username, day))
             override = cursor.fetchone()
-
             if override and override[0] == "present":
-                history.append({
-                    "date": day,
-                    "status": "Present",
-                    "time": "12:00",
-                    "late": False,
-                    "note": "Manual"
-                })
+                history.append({"date": day, "status": "Present", "time": "12:00", "late": False, "note": "Manual"})
             else:
-                history.append({
-                    "date": day,
-                    "status": "Absent",
-                    "time": "",
-                    "late": False,
-                    "note": "Manual" if override else "None"
-                })
+                history.append({"date": day, "status": "Absent", "time": "", "late": False, "note": "Manual" if override else "Auto"})
 
-    cursor.execute(
-        "SELECT subject, task, score, feedback, timestamp FROM results WHERE username = ? ORDER BY timestamp DESC",
-        (username,)
-    )
-    results = cursor.fetchall()
+    total_days = len(history)
+    present_days = sum(1 for h in history if h["status"] == "Present")
+    absent_days = total_days - present_days
+    late_days = sum(1 for h in history if h["late"])
+    attendance_pct = round((present_days / total_days) * 100) if total_days else 0
+    recent_history = history[-10:]  # last 10 days
 
-    results_map = {
-        (row[0], row[1]): {
-            "score": row[2],
-            "feedback": row[3],
-            "timestamp": row[4]
-        }
-        for row in results
-    }
+    # ── Academic results ──────────────────────────────────────────────
+    cursor.execute("""
+        SELECT subject, task, score, feedback, timestamp
+        FROM results WHERE username = ? ORDER BY timestamp DESC
+    """, (username,))
+    all_results = cursor.fetchall()
 
+    cursor.execute("""
+        SELECT subject, ROUND(AVG(score), 1)
+        FROM results WHERE username = ? GROUP BY subject
+    """, (username,))
+    subject_avgs = cursor.fetchall()
+
+    cursor.execute("SELECT ROUND(AVG(score), 1) FROM results WHERE username = ?", (username,))
+    overall_avg_row = cursor.fetchone()
+    overall_avg = overall_avg_row[0] if overall_avg_row and overall_avg_row[0] else 0
+
+    recent_results = all_results[:10]
+
+    # Trend: compare last 5 vs previous 5
+    scores = [r[2] for r in all_results if r[2] is not None]
+    if len(scores) >= 6:
+        recent_avg = sum(scores[:3]) / 3
+        older_avg = sum(scores[3:6]) / 3
+        if recent_avg > older_avg + 2:
+            trend = "improving"
+        elif recent_avg < older_avg - 2:
+            trend = "dropping"
+        else:
+            trend = "stable"
+    else:
+        trend = "not enough data"
+
+    # Task status rows
+    results_map = {(r[0], r[1]): {"score": r[2], "feedback": r[3], "timestamp": r[4]} for r in all_results}
     task_rows = []
     for subject, task in TASK_DEFINITIONS:
         row = results_map.get((subject, task))
         task_rows.append({
-            "subject": subject,
-            "task": task,
+            "subject": subject, "task": task,
             "score": row["score"] if row else None,
             "feedback": row["feedback"] if row else None,
             "timestamp": row["timestamp"] if row else None,
             "status": "Submitted" if row else "Not submitted"
         })
+    average = round(sum(t["score"] for t in task_rows if t["score"] is not None) /
+                    max(1, sum(1 for t in task_rows if t["score"] is not None)), 1) \
+              if any(t["score"] is not None for t in task_rows) else 0
 
-    submitted_scores = [task["score"] for task in task_rows if task["score"] is not None]
-    average = round(sum(submitted_scores) / len(submitted_scores), 1) if submitted_scores else 0
+    # ── Theory test results ───────────────────────────────────────────
+    cursor.execute("""
+        SELECT t.title, s.score, s.total, s.percentage, s.submitted_at
+        FROM theory_submissions s
+        JOIN theory_tests t ON s.test_id = t.id
+        WHERE s.username = ? ORDER BY s.submitted_at DESC LIMIT 10
+    """, (username,))
+    theory_results = cursor.fetchall()
+
+    # ── Weaknesses ────────────────────────────────────────────────────
+    cursor.execute("""
+        SELECT skill, count FROM weaknesses
+        WHERE username = ? ORDER BY count DESC LIMIT 10
+    """, (username,))
+    weaknesses = cursor.fetchall()
+
+    # ── Recent activity ───────────────────────────────────────────────
+    cursor.execute("""
+        SELECT action, timestamp FROM activities
+        WHERE username = ? ORDER BY timestamp DESC LIMIT 10
+    """, (username,))
+    recent_activity = cursor.fetchall()
+
+    # ── Teacher notes ─────────────────────────────────────────────────
+    cursor.execute("SELECT id, note, flag, created_by, created_at FROM learner_notes WHERE username = ? ORDER BY created_at DESC", (username,))
+    notes = cursor.fetchall()
 
     conn.close()
     return render_template(
         "learner_record.html",
         user=user,
-        history=history,
+        history=recent_history,
+        attendance_pct=attendance_pct,
+        present_days=present_days,
+        absent_days=absent_days,
+        late_days=late_days,
+        total_days=total_days,
         task_rows=task_rows,
-        average=average
+        average=average,
+        overall_avg=overall_avg,
+        subject_avgs=subject_avgs,
+        recent_results=recent_results,
+        theory_results=theory_results,
+        trend=trend,
+        weaknesses=weaknesses,
+        recent_activity=recent_activity,
+        notes=notes
     )
+
+@app.route("/learner_record/<username>/add_note", methods=["POST"])
+def add_learner_note(username):
+    admin_user = session.get("username")
+    if get_user_role(admin_user) not in ["teacher", "admin"]:
+        return "Access denied", 403
+    note = request.form.get("note", "").strip()
+    flag = request.form.get("flag", "").strip()
+    if note:
+        conn = get_db()
+        cursor = conn.cursor()
+        cursor.execute("""
+            INSERT INTO learner_notes (username, note, flag, created_by, created_at)
+            VALUES (?, ?, ?, ?, ?)
+        """, (username, note, flag, admin_user, datetime.now().isoformat()))
+        conn.commit()
+        conn.close()
+    return redirect(url_for("learner_record", username=username))
+
+
+@app.route("/learner_record/<username>/delete_note/<int:note_id>", methods=["POST"])
+def delete_learner_note(username, note_id):
+    admin_user = session.get("username")
+    if get_user_role(admin_user) not in ["teacher", "admin"]:
+        return "Access denied", 403
+    conn = get_db()
+    cursor = conn.cursor()
+    cursor.execute("DELETE FROM learner_notes WHERE id = ? AND username = ?", (note_id, username))
+    conn.commit()
+    conn.close()
+    return redirect(url_for("learner_record", username=username))
+
 
 @app.route("/export/results")
 def export_results():
@@ -2063,7 +2585,7 @@ def manage_tasks(subject_id):
 
     # Get tasks
     cursor.execute("""
-    SELECT t.id, t.name, t.assign_date, t.marking_script, t.task_type, t.theory_test_id, GROUP_CONCAT(tg.group_name, ', ')
+    SELECT t.id, t.name, t.assign_date, t.marking_script, t.task_type, t.theory_test_id, t.is_active, GROUP_CONCAT(tg.group_name, ', ')
     FROM tasks t
     LEFT JOIN task_groups tg ON t.id = tg.task_id
     WHERE t.subject_id = ?
@@ -2074,24 +2596,40 @@ def manage_tasks(subject_id):
     conn.close()
 
     task_list = ""
-    for task_id, task_name, assign_date, marking_script, task_type, theory_test_id, group_list in tasks:
+    for task_id, task_name, assign_date, marking_script, task_type, theory_test_id, is_active, group_list in tasks:
         if task_type == "theory":
             type_label = '<span style="background:#0078D4;color:white;padding:2px 6px;border-radius:10px;font-size:0.8em;">📝 Theory</span>'
             script_label = f'Test ID: {theory_test_id}'
         else:
             type_label = '<span style="background:#107C10;color:white;padding:2px 6px;border-radius:10px;font-size:0.8em;">📁 Practical</span>'
             script_label = marking_script if marking_script else '<span style="color:red;">None assigned</span>'
+
+        status_badge = '<span style="background:#c8f7c5;color:#107C10;padding:2px 8px;border-radius:10px;font-size:0.8em;">Active</span>' if is_active else '<span style="background:#f7c5c5;color:#A4262C;padding:2px 8px;border-radius:10px;font-size:0.8em;">Inactive</span>'
+        toggle_label = '⏸ Deactivate' if is_active else '▶ Activate'
+        toggle_style = 'background:#ff8c00;color:white;' if is_active else 'background:#107C10;color:white;'
+
         task_list += f"""
         <tr>
             <td>{escape(task_name)} {type_label}</td>
             <td>{assign_date}</td>
             <td>{group_list or 'None'}</td>
             <td>{script_label}</td>
-            <td>
-                <form method="post" style="display:inline;">
+            <td>{status_badge}</td>
+            <td style="display:flex;gap:5px;flex-wrap:wrap;">
+                {'<a href="/tasks/' + str(task_id) + '/edit" style="padding:4px 10px;border:none;border-radius:4px;cursor:pointer;font-size:0.85em;background:#0078D4;color:white;text-decoration:none;">✏️ Edit</a>' if task_type == 'practical' else ''}
+                <form method="post" action="/tasks/{task_id}/toggle" style="display:inline;">
+                    <input type="hidden" name="subject_id" value="{subject_id}">
+                    <button type="submit" style="padding:4px 10px;border:none;border-radius:4px;cursor:pointer;font-size:0.85em;{toggle_style}">{toggle_label}</button>
+                </form>
+                <form method="post" action="/tasks/{task_id}/clear_uploads" style="display:inline;"
+                      onsubmit="return confirm('Clear ALL uploads for {escape(task_name)}? This cannot be undone.')">
+                    <input type="hidden" name="subject_id" value="{subject_id}">
+                    <button type="submit" style="padding:4px 10px;border:none;border-radius:4px;cursor:pointer;font-size:0.85em;background:#A4262C;color:white;">🗑 Clear Uploads</button>
+                </form>
+                <form method="post" style="display:inline;" onsubmit="return confirm('Delete task {escape(task_name)}?')">
                     <input type="hidden" name="action" value="delete">
                     <input type="hidden" name="task_id" value="{task_id}">
-                    <button type="submit" onclick="return confirm('Delete task {escape(task_name)}?')">Delete</button>
+                    <button type="submit" style="padding:4px 10px;border:none;border-radius:4px;cursor:pointer;font-size:0.85em;background:#555;color:white;">Delete</button>
                 </form>
             </td>
         </tr>
@@ -2111,7 +2649,7 @@ def manage_tasks(subject_id):
         theory_test_options += f'<option value="{tt_id}">{escape(label)}</option>'
 
     return f"""
-    <p><a href="/manage_subjects">← Back to Subjects</a> | <a href="/manage_tests">📝 Manage Theory Tests</a></p>
+    <p><a href="/manage_subjects">← Back to Subjects</a></p>
     <h2>Manage Tasks for {escape(subject_name)}</h2>
 
     <h3>Add New Task</h3>
@@ -2120,10 +2658,10 @@ def manage_tasks(subject_id):
                 style="padding:8px 18px;background:#0078D4;color:white;border:none;border-radius:4px 0 0 4px;cursor:pointer;font-size:0.95em;">
             📁 Practical Task
         </button>
-        <button type="button" onclick="showPanel('theory')" id="btn_theory"
-                style="padding:8px 18px;background:#ccc;color:#333;border:none;border-radius:0 4px 4px 0;cursor:pointer;font-size:0.95em;">
-            📝 Theory Test
-        </button>
+        <a href="/manage_tests"
+           style="padding:8px 18px;background:#ccc;color:#333;border:none;border-radius:0 4px 4px 0;cursor:pointer;font-size:0.95em;text-decoration:none;display:inline-block;">
+            📝 Theory Tests →
+        </a>
     </div>
 
     <div id="panel_practical" style="background:#f9f9f9;border:1px solid #ddd;padding:20px;border-radius:6px;">
@@ -2141,29 +2679,11 @@ def manage_tasks(subject_id):
         </form>
     </div>
 
-    <div id="panel_theory" style="display:none;background:#f0f4ff;border:1px solid #b0c4ff;padding:20px;border-radius:6px;">
-        <form method="post">
-            <input type="hidden" name="action" value="assign_theory">
-            <label>Task Name:</label><br>
-            <input type="text" name="task_name" required style="padding:7px;width:300px;margin-bottom:10px;"><br>
-            <label>Assign Date:</label><br>
-            <input type="date" name="assign_date" required style="padding:7px;margin-bottom:10px;"><br>
-            <label>Theory Test:</label><br>
-            <select name="theory_test_id" required style="padding:7px;margin-bottom:10px;">{theory_test_options}</select><br>
-            <label>Assigned Groups:</label><br>
-            <div style="margin:8px 0;">{group_checkboxes}</div>
-            <button type="submit" style="padding:8px 16px;background:#0078D4;color:white;border:none;border-radius:4px;cursor:pointer;">Assign Theory Test</button>
-        </form>
-    </div>
-
     <script>
     function showPanel(type) {{
         document.getElementById('panel_practical').style.display = type === 'practical' ? 'block' : 'none';
-        document.getElementById('panel_theory').style.display = type === 'theory' ? 'block' : 'none';
         document.getElementById('btn_practical').style.background = type === 'practical' ? '#0078D4' : '#ccc';
         document.getElementById('btn_practical').style.color = type === 'practical' ? 'white' : '#333';
-        document.getElementById('btn_theory').style.background = type === 'theory' ? '#0078D4' : '#ccc';
-        document.getElementById('btn_theory').style.color = type === 'theory' ? 'white' : '#333';
     }}
     </script>
 
@@ -2174,6 +2694,7 @@ def manage_tasks(subject_id):
             <th>Assign Date</th>
             <th>Groups</th>
             <th>Marking / Test</th>
+            <th>Status</th>
             <th>Actions</th>
         </tr>
         {task_list}
@@ -2645,7 +3166,7 @@ def take_test(test_id):
             correction_term = correction_row[0] if correction_row else None
             if selected == correct_option:
                 if selected == "False" and correction_term:
-                    if correction_submitted.upper() == correction_term.upper():
+                    if correction_submitted.strip().upper() == correction_term.strip().upper():
                         awarded = effective_marks
                 else:
                     awarded = effective_marks

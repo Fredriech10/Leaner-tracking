@@ -105,10 +105,12 @@
         </ul>
     {% elif q_type == 'true_false' %}
         {% for o in opts %}
-            {% if o[3] != 'correction' %}
+            {% if o[3] not in ('correction', 'underline') %}
                 <span {% if o[2] %}class="correct"{% endif %}>{{ o[1] }} {% if o[2] %}✔{% endif %}</span> &nbsp;
-            {% else %}
-                <span style="color:#555; font-size:0.9em;">Correction term: <em>{{ o[1] }}</em></span>
+            {% elif o[3] == 'underline' %}
+                <span style="color:#555; font-size:0.9em;">Underlined word: <u><strong>{{ o[1] }}</strong></u></span> &nbsp;
+            {% elif o[3] == 'correction' %}
+                <span style="color:#555; font-size:0.9em;">Correct replacement: <em>{{ o[1] }}</em></span>
             {% endif %}
         {% endfor %}
     {% elif q_type == 'fill_in' %}
@@ -179,6 +181,7 @@
             {% elif q_type == 'true_false' %}
             {% set correct_tf = opts | selectattr('2', 'equalto', 1) | list %}
             {% set correction_opt = opts | selectattr('3', 'equalto', 'correction') | list %}
+            {% set underline_opt = opts | selectattr('3', 'equalto', 'underline') | list %}
             <div class="form-group">
                 <label>Correct Answer</label>
                 <select name="tf_correct">
@@ -187,10 +190,18 @@
                 </select>
             </div>
             <div class="form-group">
-                <label>Correction Term <small style="color:gray; font-weight:normal;">(optional — shown when answer is False)</small></label>
+                <label>Word to Underline <small style="color:gray; font-weight:normal;">(incorrect word shown underlined — one word)</small></label>
+                <input type="text" name="underline_word"
+                       value="{{ underline_opt[0][1] if underline_opt else '' }}"
+                       placeholder="e.g. Python"
+                       pattern="\S+" title="One word only — no spaces">
+            </div>
+            <div class="form-group">
+                <label>Correct Replacement Word <small style="color:gray; font-weight:normal;">(what learner must type if False — one word)</small></label>
                 <input type="text" name="correction_term"
                        value="{{ correction_opt[0][1] if correction_opt else '' }}"
-                       placeholder="e.g. The correct word is...">
+                       placeholder="e.g. Java"
+                       pattern="\S+" title="One word only — no spaces">
             </div>
 
             <!-- Fill in the Blank -->
@@ -266,8 +277,16 @@ function showFields(containerId, type) {
                 </select>
             </div>
             <div class="form-group">
-                <label>If False — provide the correct term <small style="color:gray;">(optional)</small></label>
-                <input type="text" name="correction_term" placeholder="e.g. The correct word is...">
+                <label>Word to Underline <small style="color:gray;">(the incorrect word in the statement — one word, no spaces)</small></label>
+                <input type="text" name="underline_word" placeholder="e.g. Python"
+                       pattern="\\S+" title="One word only — no spaces">
+                <small style="color:#888; margin-top:3px; display:block;">This word will appear <u>underlined</u> in the question to show learners which word may be wrong.</small>
+            </div>
+            <div class="form-group">
+                <label>Correct Replacement Word <small style="color:gray;">(what the learner must type if they select False — one word)</small></label>
+                <input type="text" name="correction_term" placeholder="e.g. Java"
+                       pattern="\\S+" title="One word only — no spaces">
+                <small style="color:#888; margin-top:3px; display:block;">Leave blank if the statement is True (no correction needed).</small>
             </div>
         `;
     } else if (type === 'fill_in') {

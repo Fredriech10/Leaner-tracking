@@ -78,10 +78,15 @@
 
     {# ── True / False ── #}
     {% elif q_type == 'true_false' %}
-        {% set has_correction = opts | selectattr('3', 'equalto', 'correction') | list | length > 0 %}
-        {% if has_correction %}
-            <p style="font-size:0.85em; color:#555;">If you select False, provide the correct term in the box below.</p>
+        {% set correction_opts = opts | selectattr('3', 'equalto', 'correction') | list %}
+        {% set underline_word = correction_opts[0][1] if correction_opts else '' %}
+        {# Render question with underlined word highlighted #}
+        {% if underline_word and underline_word in q[1] %}
+            <p style="margin-bottom:10px;">
+                {{ q[1].split(underline_word)[0] }}<u style="text-decoration:underline; font-weight:bold;">{{ underline_word }}</u>{{ q[1].split(underline_word, 1)[1] if q[1].split(underline_word)|length > 1 else '' }}
+            </p>
         {% endif %}
+        <p style="font-size:0.85em; color:#555; margin-bottom:8px;">If you select <strong>False</strong>, type the correct word in the box below.</p>
         <label class="option-label">
             <input type="radio" name="q_{{ q_id }}" value="True" required
                    onchange="toggleCorrection({{ q_id }}, this.value)"> True
@@ -91,8 +96,12 @@
                    onchange="toggleCorrection({{ q_id }}, this.value)"> False
         </label>
         <div id="correction_{{ q_id }}" style="margin-top:8px; display:none;">
-            <label style="font-size:0.9em; font-weight:bold;">Correction term:</label>
-            <input type="text" name="q_{{ q_id }}_correction" placeholder="Type the correct term...">
+            <label style="font-size:0.9em; font-weight:bold;">Correction word (one word only):</label>
+            <input type="text" name="q_{{ q_id }}_correction"
+                   placeholder="Type the correct word..."
+                   pattern="\S+" title="One word only — no spaces allowed"
+                   style="text-transform:none;"
+                   oninput="this.value=this.value.replace(/\s/g,'')">  
         </div>
 
     {# ── Fill in the Blank ── #}
@@ -171,12 +180,20 @@ const timerInterval = setInterval(() => {
 
 // ── Drag and Drop ──────────────────────────────────────────────────────
 let draggedItem = null;
-let draggedFrom = null;
+let draggedFromZone = null;  // null = came from pool, element = came from a drop zone
+
+function makeDraggable(el) {
+    el.draggable = true;
+    el.ondragstart = dragStart;
+}
 
 function dragStart(event) {
-    draggedItem = event.target;
-    draggedFrom = event.target.parentElement;
-    event.dataTransfer.setData('text/plain', event.target.dataset.value);
+    draggedItem = event.currentTarget;
+    // Track whether this item came from a drop zone or the pool
+    draggedFromZone = draggedItem.parentElement.classList.contains('drop-zone')
+        ? draggedItem.parentElement
+        : null;
+    event.dataTransfer.setData('text/plain', draggedItem.dataset.value);
 }
 
 function allowDrop(event) {
@@ -184,48 +201,84 @@ function allowDrop(event) {
 }
 
 function dragEnter(event) {
-    event.target.classList.add('drag-over');
+    const zone = event.target.closest('.drop-zone');
+    if (zone) zone.classList.add('drag-over');
 }
 
 function dragLeave(event) {
-    event.target.classList.remove('drag-over');
+    const zone = event.target.closest('.drop-zone');
+    if (zone) zone.classList.remove('drag-over');
 }
 
 function dropItem(event) {
     event.preventDefault();
     const dropZone = event.target.closest('.drop-zone');
-    if (!dropZone) return;
+    if (!dropZone || !draggedItem) return;
 
     dropZone.classList.remove('drag-over');
 
-    // If drop zone already has an item, send it back to pool
-    const existingValue = dropZone.dataset.currentValue;
-    if (existingValue) {
-        const qId = dropZone.dataset.q;
-        const pool = document.getElementById('pool_' + qId);
-        const returnItem = document.createElement('div');
-        returnItem.className = 'draggable-b';
-        returnItem.draggable = true;
-        returnItem.dataset.value = existingValue;
-        returnItem.textContent = existingValue;
-        returnItem.ondragstart = dragStart;
-        pool.appendChild(returnItem);
+    const value = draggedItem.dataset.value;
+    const qId = dropZone.dataset.q;
+
+    // If the target drop zone already has an item, swap it out
+    const existingItem = dropZone.querySelector('.draggable-b');
+    if (existingItem) {
+        const existingValue = existingItem.dataset.value;
+        if (draggedFromZone) {
+            // Swap: put existing item into the zone we dragged from
+            draggedFromZone.innerHTML = '';
+            const swapEl = createDraggable(existingValue);
+            draggedFromZone.appendChild(swapEl);
+            draggedFromZone.dataset.currentValue = existingValue;
+            draggedFromZone.classList.add('filled');
+            updateHidden(draggedFromZone, existingValue);
+        } else {
+            // Came from pool — return existing item to pool
+            const pool = document.getElementById('pool_' + qId);
+            const returnEl = createDraggable(existingValue);
+            pool.appendChild(returnEl);
+        }
+        existingItem.remove();
+    } else if (draggedFromZone) {
+        // Source drop zone is now empty
+        draggedFromZone.innerHTML = 'Drop here';
+        draggedFromZone.dataset.currentValue = '';
+        draggedFromZone.classList.remove('filled');
+        updateHidden(draggedFromZone, '');
     }
 
-    // Place dragged item in drop zone
-    const value = event.dataTransfer.getData('text/plain');
-    dropZone.textContent = value;
+    // Place dragged item in target drop zone
+    const newEl = createDraggable(value);
+    dropZone.innerHTML = '';
+    dropZone.appendChild(newEl);
     dropZone.dataset.currentValue = value;
     dropZone.classList.add('filled');
+    updateHidden(dropZone, value);
 
-    // Update hidden input using col-index (avoids space issues in IDs)
+    // Remove original from pool if it came from there
+    if (!draggedFromZone) {
+        draggedItem.remove();
+    }
+
+    draggedItem = null;
+    draggedFromZone = null;
+}
+
+function createDraggable(value) {
+    const el = document.createElement('div');
+    el.className = 'draggable-b';
+    el.style.margin = '0';
+    el.dataset.value = value;
+    el.textContent = value;
+    makeDraggable(el);
+    return el;
+}
+
+function updateHidden(dropZone, value) {
     const colIndex = dropZone.dataset.colIndex;
     const qId = dropZone.dataset.q;
     const hidden = document.getElementById('hidden_' + qId + '_' + colIndex);
     if (hidden) hidden.value = value;
-
-    // Remove from pool
-    if (draggedItem) draggedItem.remove();
 }
 
 function confirmSubmit() {

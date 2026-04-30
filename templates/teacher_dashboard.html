@@ -1,77 +1,379 @@
-<h1>Teacher Dashboard</h1>
-<p><a href="/student_dashboard">← Back to Dashboard</a> | <a href="/recent_activity">Recent Activity</a> | <a href="/manage_subjects">Manage Subjects</a> | <a href="/manage_tests">📝 Theory Tests</a></p>
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Teacher Dashboard</title>
+    <style>
+        * { box-sizing: border-box; }
+        body { font-family: Arial, sans-serif; margin: 0; padding: 0; background: #f0f2f5; color: #222; }
 
-<h2>📊 All Submissions</h2>
-<table border="1">
-    <tr>
-        <th>Student</th>
-        <th>Subject</th>
-        <th>Task</th>
-        <th>Score</th>
-        <th>Feedback</th>
-        <th>Time</th>
-    </tr>
+        .topbar { background: #005a9e; color: white; padding: 14px 24px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px; }
+        .topbar h1 { margin: 0; font-size: 1.15em; }
+        .topbar-links { display: flex; gap: 16px; flex-wrap: wrap; }
+        .topbar-links a { color: white; text-decoration: none; font-size: 0.88em; opacity: 0.85; }
+        .topbar-links a:hover { opacity: 1; text-decoration: underline; }
 
-    {% for row in results %}
-    <tr>
-        <td>{{ row[0] }}</td>
-        <td>{{ row[1] }}</td>
-        <td>{{ row[2] }}</td>
-        <td>{{ row[3] }}</td>
-        <td>{{ row[4] }}</td>
-        <td>{{ row[5] }}</td>
-    </tr>
-    {% endfor %}
-</table>
+        .page { padding: 20px 24px; max-width: 1200px; margin: 0 auto; }
 
-<h2>🔴 Lowest Attendance (Last 21 Working Days)</h2>
-<table border="1" style="border-collapse: collapse; width: 100%;">
-    <tr>
-        <th>Full Name</th>
-        <th>Days Absent</th>
-    </tr>
-    {% for name, absent in low_attendance %}
-    <tr>
-        <td>{{ name }}</td>
-        <td>{{ absent }}</td>
-    </tr>
-    {% endfor %}
-</table>
+        .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+        .grid-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 16px; }
+        .grid-4 { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; }
+        .full { grid-column: 1 / -1; }
+        .mb { margin-bottom: 16px; }
 
-<h2>⚠️ Weakness Summary</h2>
-<table border="1" style="border-collapse: collapse; width: 100%;">
-    <tr>
-        <th>Student</th>
-        <th>Skill</th>
-        <th>Count</th>
-    </tr>
+        .card { background: white; border-radius: 8px; padding: 18px; border: 1px solid #ddd; }
+        .card h3 { margin: 0 0 14px 0; font-size: 0.95em; color: #005a9e; border-bottom: 2px solid #f0f0f0; padding-bottom: 6px; }
 
-    {% for row in weaknesses %}
-    <tr>
-        <td>{{ row[0] }}</td>
-        <td>{{ row[1] }}</td>
-        <td>{{ row[2] }}</td>
-    </tr>
-    {% endfor %}
+        /* Stat boxes */
+        .stat-box { background: white; border-radius: 8px; padding: 18px; border: 1px solid #ddd; text-align: center; }
+        .stat-box .val { font-size: 2em; font-weight: bold; color: #005a9e; }
+        .stat-box .lbl { font-size: 0.8em; color: #666; margin-top: 4px; }
+        .stat-box.green .val { color: #107C10; }
+        .stat-box.orange .val { color: #ff8c00; }
+        .stat-box.red .val { color: #A4262C; }
 
-</table>
+        table { width: 100%; border-collapse: collapse; font-size: 0.87em; }
+        th { background: #f5f5f5; padding: 7px 10px; text-align: left; font-size: 0.83em; color: #555; }
+        td { padding: 6px 10px; border-bottom: 1px solid #f0f0f0; }
+        tr:last-child td { border-bottom: none; }
+        tr:hover td { background: #fafafa; }
 
-<h2>📝 Recent Activities</h2>
-<table border="1" style="border-collapse: collapse; width: 100%;">
-    <tr>
-        <th>User</th>
-        <th>Action</th>
-        <th>Timestamp</th>
-    </tr>
+        .badge { padding: 2px 8px; border-radius: 10px; font-size: 0.78em; font-weight: bold; }
+        .badge-risk { background: #f7c5c5; color: #A4262C; }
+        .badge-ok { background: #c8f7c5; color: #107C10; }
+        .badge-warn { background: #ffe0b2; color: #b36b00; }
 
-    {% for activity in recent_activities %}
-    <tr>
-        <td>{{ activity[0] }}</td>
-        <td>{{ activity[1] }}</td>
-        <td>{{ activity[2] }}</td>
-    </tr>
-    {% endfor %}
+        .score-high { color: #107C10; font-weight: bold; }
+        .score-mid { color: #ff8c00; font-weight: bold; }
+        .score-low { color: #A4262C; font-weight: bold; }
 
-</table>
+        /* Quick actions */
+        .actions { display: flex; gap: 10px; flex-wrap: wrap; }
+        .action-btn { background: #f0f4ff; border: 1px solid #b0c4ff; border-radius: 7px; padding: 12px 16px; text-align: center; text-decoration: none; color: #005a9e; font-weight: bold; font-size: 0.88em; flex: 1; min-width: 120px; }
+        .action-btn:hover { background: #dce8ff; }
+        .action-btn .icon { font-size: 1.4em; display: block; margin-bottom: 3px; }
 
-<a href="/export/results">📥 Export Results</a> | <a href="/export_attendance_form">📥 Export Attendance</a>
+        select, input { padding: 6px 10px; border: 1px solid #ccc; border-radius: 4px; font-size: 0.88em; }
+        .btn { padding: 7px 14px; border: none; border-radius: 4px; cursor: pointer; font-size: 0.88em; text-decoration: none; display: inline-block; }
+        .btn-primary { background: #005a9e; color: white; }
+        .btn-sm { padding: 4px 10px; font-size: 0.82em; }
+
+        .section-gap { margin-bottom: 16px; }
+
+        /* Group filter bar */
+        .filter-bar { background: white; border: 1px solid #ddd; border-radius: 8px; padding: 12px 18px; margin-bottom: 16px; display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+        .filter-bar label { font-weight: bold; font-size: 0.88em; }
+    </style>
+</head>
+<body>
+
+<!-- Top bar -->
+<div class="topbar">
+    <h1>🏫 Teacher Dashboard</h1>
+    <div class="topbar-links">
+        <a href="/manage_subjects">📁 Practical Tests</a>
+        <a href="/manage_tests">📝 Theory Tests</a>
+        <a href="/admin">👥 Admin Panel</a>
+        <a href="/attendance">📅 Attendance</a>
+        <a href="/recent_activity">🕐 Activity Log</a>
+        <a href="/logout">Logout</a>
+    </div>
+</div>
+
+<div class="page">
+
+    <!-- ── Quick Stats ──────────────────────────────────────────────── -->
+    <div class="grid-4 mb section-gap">
+        <div class="stat-box">
+            <div class="val">{{ total_students }}</div>
+            <div class="lbl">Total Students</div>
+        </div>
+        <div class="stat-box green">
+            <div class="val">{{ active_today }}</div>
+            <div class="lbl">Active Today</div>
+        </div>
+        <div class="stat-box {{ 'green' if avg_att_pct >= 80 else ('orange' if avg_att_pct >= 60 else 'red') }}">
+            <div class="val">{{ avg_att_pct }}%</div>
+            <div class="lbl">Avg Attendance</div>
+        </div>
+        <div class="stat-box">
+            <div class="val">{{ groups | length }}</div>
+            <div class="lbl">Groups</div>
+        </div>
+    </div>
+
+    <!-- ── Quick Actions ────────────────────────────────────────────── -->
+    <div class="card mb section-gap">
+        <h3>⚡ Quick Actions</h3>
+        <div class="actions">
+            <a href="/attendance" class="action-btn"><span class="icon">📅</span>Attendance</a>
+            <a href="/admin" class="action-btn"><span class="icon">👥</span>Admin Panel</a>
+            <a href="/manage_subjects" class="action-btn"><span class="icon">📁</span>Practical Tests</a>
+            <a href="/manage_tests" class="action-btn"><span class="icon">📝</span>Theory Tests</a>
+            <div style="flex:1; min-width:140px;">
+                <div class="action-btn" style="cursor:default;">
+                    <span class="icon">📥</span>
+                    <form method="get" id="exportForm" style="margin:0;">
+                        <select name="_export_target" onchange="handleExport(this)" style="width:100%; border:none; background:transparent; font-weight:bold; color:#005a9e; cursor:pointer; font-size:0.88em;">
+                            <option value="">Export Data ▾</option>
+                            <option value="/export/results">Results (Excel)</option>
+                            <option value="/export_attendance_form">Attendance (Excel)</option>
+                            <option value="/recent_activity">Activity Log</option>
+                        </select>
+                    </form>
+                </div>
+            </div>
+            <!-- View as learner for group -->
+            <div style="flex:1; min-width:160px;">
+                <div class="action-btn" style="cursor:default;">
+                    <span class="icon">👁</span>
+                    <form method="get" id="viewGroupForm" style="margin:0; display:flex; gap:4px; align-items:center; flex-wrap:wrap;">
+                        <select id="viewGroupSelect" style="flex:1; border:none; background:transparent; font-weight:bold; color:#005a9e; font-size:0.88em;">
+                            <option value="">View Group ▾</option>
+                            {% for g in groups %}
+                            <option value="/view_as_student/{{ g }}">{{ g }}</option>
+                            {% endfor %}
+                        </select>
+                        <button type="button" class="btn btn-primary btn-sm" onclick="goToGroup()">Go</button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ── Attendance Insights ──────────────────────────────────────── -->
+    <div class="grid-2 mb section-gap">
+
+        <!-- Group Attendance Summary -->
+        <div class="card">
+            <h3>📊 Group Attendance Summary</h3>
+            {% if group_att %}
+            <table>
+                <tr><th>Group</th><th>Students</th><th>Attendance %</th></tr>
+                {% for g in group_att %}
+                <tr>
+                    <td><a href="/attendance?group={{ g.group }}">{{ g.group }}</a></td>
+                    <td>{{ g.students }}</td>
+                    <td>
+                        <span class="{{ 'score-high' if g.att_pct >= 80 else ('score-mid' if g.att_pct >= 60 else 'score-low') }}">
+                            {{ g.att_pct }}%
+                        </span>
+                    </td>
+                </tr>
+                {% endfor %}
+            </table>
+            {% else %}
+            <p style="color:#888; font-size:0.9em;">No groups found.</p>
+            {% endif %}
+        </div>
+
+        <!-- Lowest Attendance -->
+        <div class="card">
+            <h3>🔴 Lowest Attendance (Last 21 Days)</h3>
+            {% if low_attendance %}
+            <table>
+                <tr><th>Name</th><th>Days Absent</th><th></th></tr>
+                {% for name, absent in low_attendance %}
+                <tr>
+                    <td>{{ name }}</td>
+                    <td>{{ absent }}</td>
+                    <td>
+                        <span class="badge {{ 'badge-risk' if absent >= 5 else 'badge-warn' }}">
+                            {{ 'At Risk' if absent >= 5 else 'Watch' }}
+                        </span>
+                    </td>
+                </tr>
+                {% endfor %}
+            </table>
+            {% else %}
+            <p style="color:#107C10; font-size:0.9em;">✔ No attendance concerns.</p>
+            {% endif %}
+        </div>
+    </div>
+
+    <!-- ── Performance Overview ─────────────────────────────────────── -->
+    <div class="grid-3 mb section-gap">
+
+        <!-- Class Averages per Subject per Group -->
+        <div class="card">
+            <h3>📈 Class Averages per Subject</h3>
+            {% if class_avgs %}
+            {% for group_name, subjects in class_avgs.items() %}
+            <div style="margin-bottom:12px;">
+                <div style="font-weight:bold; font-size:0.88em; color:#005a9e; margin-bottom:5px;">{{ group_name }}</div>
+                <table>
+                    <tr><th>Subject</th><th>Avg</th><th>Submissions</th></tr>
+                    {% for subj, avg, cnt in subjects %}
+                    <tr>
+                        <td>{{ subj }}</td>
+                        <td><span class="{{ 'score-high' if avg >= 60 else ('score-mid' if avg >= 40 else 'score-low') }}">{{ avg }}%</span></td>
+                        <td style="color:#888;">{{ cnt }}</td>
+                    </tr>
+                    {% endfor %}
+                </table>
+            </div>
+            {% endfor %}
+            {% else %}
+            <p style="color:#888; font-size:0.9em;">No results yet.</p>
+            {% endif %}
+        </div>
+
+        <!-- Top Performers -->
+        <div class="card">
+            <h3>🏆 Top Performers</h3>
+            {% if top_performers %}
+            <table>
+                <tr><th>Name</th><th>Group</th><th>Avg</th></tr>
+                {% for name, grp, avg in top_performers %}
+                <tr>
+                    <td>{{ name or '—' }}</td>
+                    <td>{{ grp or '—' }}</td>
+                    <td><span class="score-high">{{ avg }}%</span></td>
+                </tr>
+                {% endfor %}
+            </table>
+            {% else %}
+            <p style="color:#888; font-size:0.9em;">No data yet.</p>
+            {% endif %}
+        </div>
+
+        <!-- Bottom Performers -->
+        <div class="card">
+            <h3>📉 Needs Attention</h3>
+            {% if bottom_performers %}
+            <table>
+                <tr><th>Name</th><th>Group</th><th>Avg</th></tr>
+                {% for name, grp, avg in bottom_performers %}
+                <tr>
+                    <td>{{ name or '—' }}</td>
+                    <td>{{ grp or '—' }}</td>
+                    <td><span class="{{ 'score-mid' if avg >= 40 else 'score-low' }}">{{ avg }}%</span></td>
+                </tr>
+                {% endfor %}
+            </table>
+            {% else %}
+            <p style="color:#888; font-size:0.9em;">No data yet.</p>
+            {% endif %}
+        </div>
+    </div>
+
+    <!-- ── At-Risk Learners ─────────────────────────────────────────── -->
+    <div class="grid-2 mb section-gap">
+
+        <div class="card">
+            <h3>🚨 At-Risk: Low Marks (&lt;50%)</h3>
+            {% if at_risk_marks %}
+            <table>
+                <tr><th>Name</th><th>Group</th><th>Avg</th><th></th></tr>
+                {% for uname, name, grp, avg in at_risk_marks %}
+                <tr>
+                    <td><a href="/learner_record/{{ uname }}">{{ name or uname }}</a></td>
+                    <td>{{ grp or '—' }}</td>
+                    <td><span class="score-low">{{ avg or '—' }}{% if avg %}%{% endif %}</span></td>
+                    <td><span class="badge badge-risk">At Risk</span></td>
+                </tr>
+                {% endfor %}
+            </table>
+            {% else %}
+            <p style="color:#107C10; font-size:0.9em;">✔ No learners below 50%.</p>
+            {% endif %}
+        </div>
+
+        <div class="card">
+            <h3>🚨 At-Risk: Low Attendance (&lt;60%)</h3>
+            {% if at_risk_att %}
+            <table>
+                <tr><th>Name</th><th>Days Absent</th><th></th></tr>
+                {% for name, absent in at_risk_att %}
+                <tr>
+                    <td>{{ name }}</td>
+                    <td>{{ absent }}</td>
+                    <td><span class="badge badge-risk">At Risk</span></td>
+                </tr>
+                {% endfor %}
+            </table>
+            {% else %}
+            <p style="color:#107C10; font-size:0.9em;">✔ No attendance concerns.</p>
+            {% endif %}
+        </div>
+    </div>
+
+    <!-- ── Submissions + Activity ───────────────────────────────────── -->
+    <div class="grid-2 mb section-gap">
+
+        <!-- Recent Submissions -->
+        <div class="card">
+            <h3>📤 Recent Submissions</h3>
+            {% if recent_submissions %}
+            <table>
+                <tr><th>Name</th><th>Group</th><th>Subject</th><th>Task</th><th>Score</th></tr>
+                {% for name, grp, subj, task, score, ts in recent_submissions %}
+                <tr>
+                    <td>{{ name or '—' }}</td>
+                    <td>{{ grp or '—' }}</td>
+                    <td>{{ subj }}</td>
+                    <td>{{ task }}</td>
+                    <td><span class="{{ 'score-high' if score >= 60 else ('score-mid' if score >= 40 else 'score-low') }}">{{ score }}%</span></td>
+                </tr>
+                {% endfor %}
+            </table>
+            {% else %}
+            <p style="color:#888; font-size:0.9em;">No submissions yet.</p>
+            {% endif %}
+        </div>
+
+        <!-- Recent Activity -->
+        <div class="card">
+            <h3>🕐 Recent Activity</h3>
+            {% if recent_activities %}
+            <table>
+                <tr><th>User</th><th>Action</th><th>Time</th></tr>
+                {% for uname, action, ts in recent_activities %}
+                <tr>
+                    <td>{{ uname }}</td>
+                    <td>{{ action }}</td>
+                    <td style="color:#888; font-size:0.82em;">{{ ts[:16] if ts else '—' }}</td>
+                </tr>
+                {% endfor %}
+            </table>
+            {% else %}
+            <p style="color:#888; font-size:0.9em;">No activity yet.</p>
+            {% endif %}
+        </div>
+    </div>
+
+    <!-- ── Missing Tasks by Group ───────────────────────────────────── -->
+    {% if missing_by_group %}
+    <div class="card mb section-gap">
+        <h3>⏰ Missing Tasks by Group</h3>
+        <table>
+            <tr><th>Group</th><th>Missing Submissions</th><th></th></tr>
+            {% for grp, cnt in missing_by_group %}
+            <tr>
+                <td><a href="/attendance?group={{ grp }}">{{ grp }}</a></td>
+                <td>{{ cnt }}</td>
+                <td><span class="badge {{ 'badge-risk' if cnt > 10 else 'badge-warn' }}">{{ cnt }} missing</span></td>
+            </tr>
+            {% endfor %}
+        </table>
+    </div>
+    {% endif %}
+
+</div>
+
+<script>
+function handleExport(sel) {
+    const url = sel.value;
+    if (url) {
+        window.location.href = url;
+        sel.value = '';
+    }
+}
+function goToGroup() {
+    const sel = document.getElementById('viewGroupSelect');
+    if (sel.value) window.location.href = sel.value;
+}
+</script>
+
+</body>
+</html>

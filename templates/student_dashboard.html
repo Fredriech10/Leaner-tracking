@@ -1,20 +1,275 @@
-<h2>Welcome {{ username }}</h2>
-<a href="/export/results">📥 Export Results</a>
-<h3>Subject Averages</h3>
-<ul>
-    {% for subject, avg in averages %}
-        <li>{{ subject }}: {{ avg }}%</li>
-    {% endfor %}
-</ul>
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>My Dashboard</title>
+    <style>
+        * { box-sizing: border-box; }
+        body { font-family: Arial, sans-serif; margin: 0; padding: 0; background: #f0f2f5; color: #222; }
 
-<h3>Overall Average</h3>
-<p>{{ overall }}%</p>
+        /* Top bar */
+        .topbar { background: #0078D4; color: white; padding: 14px 24px; display: flex; justify-content: space-between; align-items: center; }
+        .topbar h1 { margin: 0; font-size: 1.2em; }
+        .topbar a { color: white; text-decoration: none; font-size: 0.9em; opacity: 0.85; }
+        .topbar a:hover { opacity: 1; }
 
-<h3>Recent Results</h3>
-<ul>
-    {% for subject, task, score in recent %}
-        <li>{{ subject }} - {{ task }}: {{ score }}%</li>
-    {% endfor %}
-</ul>
+        /* Layout */
+        .page { padding: 20px 24px; max-width: 1100px; margin: 0 auto; }
+        .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+        .grid-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 16px; }
+        .full { grid-column: 1 / -1; }
 
-<a href="/subjects/{{ username }}">Go to Subjects</a>
+        /* Cards */
+        .card { background: white; border-radius: 8px; padding: 18px; border: 1px solid #ddd; margin-bottom: 0; }
+        .card h3 { margin: 0 0 14px 0; font-size: 0.95em; color: #0078D4; border-bottom: 2px solid #f0f0f0; padding-bottom: 6px; }
+
+        /* Welcome banner */
+        .welcome { background: linear-gradient(135deg, #0078D4, #005a9e); color: white; border-radius: 10px; padding: 22px 24px; margin-bottom: 18px; display: flex; justify-content: space-between; align-items: center; }
+        .welcome h2 { margin: 0 0 4px 0; font-size: 1.4em; }
+        .welcome p { margin: 0; opacity: 0.85; font-size: 0.95em; }
+        .avg-circle { background: rgba(255,255,255,0.2); border-radius: 50%; width: 80px; height: 80px; display: flex; flex-direction: column; align-items: center; justify-content: center; flex-shrink: 0; }
+        .avg-circle .num { font-size: 1.6em; font-weight: bold; line-height: 1; }
+        .avg-circle .lbl { font-size: 0.7em; opacity: 0.85; }
+
+        /* Stat boxes */
+        .stat-row { display: flex; gap: 10px; flex-wrap: wrap; }
+        .stat { flex: 1; min-width: 70px; background: #f0f4ff; border-radius: 6px; padding: 10px; text-align: center; }
+        .stat .val { font-size: 1.5em; font-weight: bold; }
+        .stat .lbl { font-size: 0.75em; color: #555; margin-top: 2px; }
+        .stat.green .val { color: #107C10; }
+        .stat.red .val { color: #A4262C; }
+        .stat.orange .val { color: #ff8c00; }
+
+        /* Tables */
+        table { width: 100%; border-collapse: collapse; font-size: 0.88em; }
+        th { background: #f5f5f5; padding: 7px 10px; text-align: left; font-size: 0.85em; color: #555; }
+        td { padding: 7px 10px; border-bottom: 1px solid #f0f0f0; }
+        tr:last-child td { border-bottom: none; }
+
+        /* Badges */
+        .badge { padding: 2px 8px; border-radius: 10px; font-size: 0.78em; font-weight: bold; }
+        .badge-present { background: #c8f7c5; color: #107C10; }
+        .badge-absent { background: #f7c5c5; color: #A4262C; }
+        .badge-late { background: #ffe0b2; color: #b36b00; }
+        .badge-missing { background: #f7c5c5; color: #A4262C; }
+
+        /* Score colour */
+        .score-high { color: #107C10; font-weight: bold; }
+        .score-mid { color: #ff8c00; font-weight: bold; }
+        .score-low { color: #A4262C; font-weight: bold; }
+
+        /* Skill bars */
+        .skill-bar { display: flex; align-items: center; gap: 8px; margin-bottom: 7px; }
+        .skill-bar .name { font-size: 0.85em; width: 140px; }
+        .skill-bar .bg { flex: 1; background: #eee; border-radius: 4px; height: 8px; }
+        .skill-bar .fill { background: #A4262C; border-radius: 4px; height: 8px; }
+        .skill-bar .cnt { font-size: 0.78em; color: #888; width: 25px; text-align: right; }
+
+        /* Quick actions */
+        .actions { display: flex; gap: 12px; flex-wrap: wrap; }
+        .action-btn { flex: 1; min-width: 140px; background: #f0f4ff; border: 1px solid #b0c4ff; border-radius: 8px; padding: 14px; text-align: center; text-decoration: none; color: #0078D4; font-weight: bold; font-size: 0.9em; transition: background 0.15s; }
+        .action-btn:hover { background: #dce8ff; }
+        .action-btn .icon { font-size: 1.6em; display: block; margin-bottom: 4px; }
+
+        /* Feedback */
+        .feedback-item { padding: 8px 0; border-bottom: 1px solid #f0f0f0; font-size: 0.88em; }
+        .feedback-item:last-child { border-bottom: none; }
+        .feedback-item .meta { color: #888; font-size: 0.8em; margin-top: 2px; }
+
+        /* Att days */
+        .att-days { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 10px; }
+        .att-day { text-align: center; font-size: 0.75em; }
+        .att-day .dot { width: 28px; height: 28px; border-radius: 50%; margin: 0 auto 3px; display: flex; align-items: center; justify-content: center; font-size: 0.8em; font-weight: bold; color: white; }
+        .dot-present { background: #107C10; }
+        .dot-late { background: #ff8c00; }
+        .dot-absent { background: #A4262C; }
+        .att-day .day-lbl { color: #666; }
+    </style>
+</head>
+<body>
+
+<!-- Top bar -->
+<div class="topbar">
+    <h1>📚 Student Portal</h1>
+    <div style="display:flex; gap:20px;">
+        <a href="/logout">Logout</a>
+    </div>
+</div>
+
+<div class="page">
+
+    <!-- Welcome Banner -->
+    <div class="welcome">
+        <div>
+            <h2>Welcome, {{ display_name }} 👋</h2>
+            <p>Here's your learning summary</p>
+        </div>
+        <div class="avg-circle">
+            <span class="num">{{ overall_avg }}%</span>
+            <span class="lbl">Overall</span>
+        </div>
+    </div>
+
+    <!-- Quick Actions -->
+    <div class="card full" style="margin-bottom:16px;">
+        <h3>⚡ Quick Actions</h3>
+        <div class="actions">
+            <a href="/subjects/{{ username }}" class="action-btn">
+                <span class="icon">📁</span>Practical Tasks
+            </a>
+            <a href="/tests" class="action-btn">
+                <span class="icon">📝</span>Theory Tests
+            </a>
+        </div>
+    </div>
+
+    <!-- Row 1: Attendance + Subject Averages -->
+    <div class="grid-2" style="margin-bottom:16px;">
+
+        <!-- Attendance -->
+        <div class="card">
+            <h3>📅 Attendance</h3>
+            <div class="stat-row" style="margin-bottom:12px;">
+                <div class="stat {{ 'green' if att_pct >= 80 else ('orange' if att_pct >= 60 else 'red') }}">
+                    <div class="val">{{ att_pct }}%</div>
+                    <div class="lbl">This Period</div>
+                </div>
+                <div class="stat green">
+                    <div class="val">{{ att_history | selectattr('status', 'equalto', 'present') | list | length }}</div>
+                    <div class="lbl">Present</div>
+                </div>
+                <div class="stat red">
+                    <div class="val">{{ att_history | selectattr('status', 'equalto', 'absent') | list | length }}</div>
+                    <div class="lbl">Absent</div>
+                </div>
+            </div>
+            <div class="att-days">
+                {% for d in att_history %}
+                <div class="att-day">
+                    <div class="dot {{ 'dot-late' if d.late else ('dot-present' if d.status == 'present' else 'dot-absent') }}">
+                        {{ '⏰' if d.late else ('✔' if d.status == 'present' else '✖') }}
+                    </div>
+                    <div class="day-lbl">{{ d.date[5:] }}</div>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+
+        <!-- Subject Averages -->
+        <div class="card">
+            <h3>📊 Subject Averages</h3>
+            {% if subject_avgs %}
+            <table>
+                <tr><th>Subject</th><th>Average</th></tr>
+                {% for subj, avg in subject_avgs %}
+                <tr>
+                    <td>{{ subj }}</td>
+                    <td>
+                        <span class="{{ 'score-high' if avg >= 60 else ('score-mid' if avg >= 40 else 'score-low') }}">
+                            {{ avg }}%
+                        </span>
+                    </td>
+                </tr>
+                {% endfor %}
+            </table>
+            {% else %}
+            <p style="color:#888; font-size:0.9em;">No results yet.</p>
+            {% endif %}
+        </div>
+    </div>
+
+    <!-- Row 2: Recent Results + Missing Tasks -->
+    <div class="grid-2" style="margin-bottom:16px;">
+
+        <!-- Recent Results -->
+        <div class="card">
+            <h3>🏆 Recent Results</h3>
+            {% if recent_results %}
+            <table>
+                <tr><th>Subject</th><th>Task</th><th>Score</th></tr>
+                {% for r in recent_results %}
+                <tr>
+                    <td>{{ r[0] }}</td>
+                    <td>{{ r[1] }}</td>
+                    <td>
+                        <span class="{{ 'score-high' if r[2] >= 60 else ('score-mid' if r[2] >= 40 else 'score-low') }}">
+                            {{ r[2] }}%
+                        </span>
+                    </td>
+                </tr>
+                {% endfor %}
+            </table>
+            {% else %}
+            <p style="color:#888; font-size:0.9em;">No results yet.</p>
+            {% endif %}
+        </div>
+
+        <!-- Missing / Upcoming Tasks -->
+        <div class="card">
+            <h3>⏰ Missing Tasks</h3>
+            {% if missing_tasks %}
+            <table>
+                <tr><th>Subject</th><th>Task</th><th>Due</th></tr>
+                {% for t in missing_tasks %}
+                <tr>
+                    <td>{{ t[1] }}</td>
+                    <td>{{ t[2] }}</td>
+                    <td>
+                        <span class="badge badge-missing">{{ t[3] }}</span>
+                    </td>
+                </tr>
+                {% endfor %}
+            </table>
+            {% else %}
+            <p style="color:#107C10; font-size:0.9em;">✔ All tasks submitted!</p>
+            {% endif %}
+        </div>
+    </div>
+
+    <!-- Row 3: Weak Areas + Recent Feedback -->
+    <div class="grid-2" style="margin-bottom:16px;">
+
+        <!-- Weak Areas -->
+        <div class="card">
+            <h3>⚠️ Weak Areas</h3>
+            {% if weaknesses %}
+            {% set max_c = weaknesses[0][1] %}
+            {% for skill, count in weaknesses %}
+            <div class="skill-bar">
+                <div class="name">{{ skill }}</div>
+                <div class="bg"><div class="fill" style="width:{{ (count / max_c * 100)|int }}%;"></div></div>
+                <div class="cnt">{{ count }}×</div>
+            </div>
+            {% endfor %}
+            {% else %}
+            <p style="color:#107C10; font-size:0.9em;">✔ No weak areas recorded yet.</p>
+            {% endif %}
+        </div>
+
+        <!-- Recent Feedback -->
+        <div class="card">
+            <h3>💬 Recent Feedback</h3>
+            {% if recent_feedback %}
+            {% for subj, task, feedback, ts in recent_feedback %}
+            <div class="feedback-item">
+                <strong>{{ subj }} — {{ task }}</strong><br>
+                {{ feedback }}
+                <div class="meta">{{ ts[:10] if ts else '' }}</div>
+            </div>
+            {% endfor %}
+            {% else %}
+            <p style="color:#888; font-size:0.9em;">No feedback yet.</p>
+            {% endif %}
+        </div>
+    </div>
+
+</div>
+
+<script>
+setInterval(function() {
+    fetch('/heartbeat/{{ username }}');
+}, 30000);
+</script>
+
+</body>
+</html>

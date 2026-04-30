@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>My Tests</title>
+    <style>
+        body { font-family: Arial, sans-serif; padding: 20px; max-width: 800px; margin: 0 auto; }
+        .test-card { border: 1px solid #ddd; border-radius: 8px; padding: 18px; margin-bottom: 15px; background: #fafafa; display: flex; justify-content: space-between; align-items: center; gap: 15px; }
+        .test-info h3 { margin: 0 0 6px 0; }
+        .test-info p { margin: 0; color: #555; font-size: 0.9em; }
+        .test-actions { display: flex; flex-direction: column; align-items: flex-end; gap: 6px; white-space: nowrap; }
+        .btn { padding: 8px 16px; border: none; border-radius: 4px; cursor: pointer; text-decoration: none; font-size: 0.9em; display: inline-block; }
+        .btn-primary { background: #0078D4; color: white; }
+        .btn-success { background: #107C10; color: white; }
+        .btn-retry { background: #ff8c00; color: white; }
+        .badge { padding: 3px 10px; border-radius: 10px; font-size: 0.82em; font-weight: bold; }
+        .badge-best { background: #c8f7c5; color: #107C10; }
+        .badge-attempts { background: #f0f0f0; color: #555; font-size: 0.8em; }
+        .badge-maxed { background: #f7c5c5; color: #A4262C; }
+    </style>
+</head>
+<body>
+
+<p><a href="/student_dashboard">← Back to Dashboard</a></p>
+<h2>📝 My Theory Tests</h2>
+
+{% if not tests %}
+    <p>No tests available at the moment.</p>
+{% else %}
+    {% for t in tests %}
+    {# t: id, title, subject, time_limit, best_percentage, latest_submission_id, allow_multiple, max_attempts, attempt_count #}
+    {% set has_attempted = t[4] is not none %}
+    {% set attempts_left = (t[7] - t[8]) if t[6] else 0 %}
+    {% set maxed_out = has_attempted and (not t[6] or t[8] >= t[7]) %}
+
+    <div class="test-card">
+        <div class="test-info">
+            <h3>{{ t[1] }}</h3>
+            <p>
+                {% if t[2] %}Subject: {{ t[2] }} &nbsp;|&nbsp; {% endif %}
+                {% if t[3] %}Time limit: {{ t[3] }} min{% else %}No time limit{% endif %}
+                {% if t[6] %} &nbsp;|&nbsp; Max {{ t[7] }} attempt{{ 's' if t[7] != 1 }}{% endif %}
+            </p>
+        </div>
+        <div class="test-actions">
+            {% if has_attempted %}
+                <span class="badge badge-best">🏆 Best: {{ t[4] }}%</span>
+                <span class="badge badge-attempts {{ 'badge-maxed' if maxed_out else '' }}">
+                    {{ t[8] }}/{{ t[7] if t[6] else 1 }} attempt{{ 's' if t[8] != 1 }}
+                </span>
+                <a href="/test_results/{{ t[5] }}" class="btn btn-success">📋 View Results</a>
+                {% if t[6] and not maxed_out %}
+                    <a href="/take_test/{{ t[0] }}" class="btn btn-retry">🔄 Try Again</a>
+                {% endif %}
+            {% else %}
+                <a href="/take_test/{{ t[0] }}" class="btn btn-primary">Start Test →</a>
+            {% endif %}
+        </div>
+    </div>
+    {% endfor %}
+{% endif %}
+
+</body>
+</html>

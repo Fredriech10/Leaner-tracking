@@ -1,0 +1,349 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Edit Test Questions</title>
+    <style>
+        body { font-family: Arial, sans-serif; padding: 20px; max-width: 900px; margin: 0 auto; }
+        .question-card { border: 1px solid #ddd; border-radius: 6px; padding: 15px; margin-bottom: 15px; background: #fafafa; }
+        .question-card h4 { margin: 0 0 8px 0; color: #333; }
+        .correct { color: #107C10; font-weight: bold; }
+        .type-badge { background: #0078D4; color: white; padding: 2px 8px; border-radius: 10px; font-size: 0.8em; margin-left: 8px; }
+        .add-form { background: #f0f4ff; border: 1px solid #b0c4ff; padding: 20px; border-radius: 6px; margin-bottom: 30px; }
+        .edit-panel { display: none; background: #fffbe6; border: 1px solid #ffe58f; border-radius: 6px; padding: 15px; margin-top: 12px; }
+        .edit-panel.open { display: block; }
+        .form-group { margin-bottom: 12px; }
+        label { font-weight: bold; display: block; margin-bottom: 4px; font-size: 0.9em; }
+        input[type=text], input[type=number], select, textarea { padding: 7px; border: 1px solid #ccc; border-radius: 4px; width: 100%; box-sizing: border-box; }
+        textarea { resize: vertical; min-height: 60px; }
+        .btn { padding: 7px 14px; border: none; border-radius: 4px; cursor: pointer; font-size: 0.9em; }
+        .btn-primary { background: #0078D4; color: white; }
+        .btn-danger { background: #A4262C; color: white; }
+        .btn-edit { background: #ff8c00; color: white; }
+        .btn-cancel { background: #ccc; color: #333; }
+        .btn-add { background: #107C10; color: white; padding: 4px 10px; font-size: 0.85em; border: none; border-radius: 4px; cursor: pointer; }
+        .option-row { display: flex; align-items: center; gap: 8px; margin-bottom: 6px; }
+        .option-row input[type=text] { flex: 1; }
+        .match-row { display: flex; gap: 10px; margin-bottom: 6px; align-items: center; }
+        .match-row input { flex: 1; }
+        .section-divider { border: none; border-top: 2px solid #ddd; margin: 25px 0; }
+        .card-actions { display: flex; gap: 8px; margin-top: 12px; flex-wrap: wrap; }
+    </style>
+</head>
+<body>
+
+<p><a href="/manage_tests">← Back to Tests</a></p>
+<h2>✏️ {{ test[1] }} <small style="color:gray; font-size:0.7em;">{{ test[2] }}</small></h2>
+
+<!-- ── Add Question Form ─────────────────────────────────────────────── -->
+<div class="add-form">
+    <h3>Add Question</h3>
+    <form method="post" id="questionForm">
+        <input type="hidden" name="action" value="add_question">
+        <div class="form-group">
+            <label>Question Text</label>
+            <textarea name="question_text" required placeholder="Type your question here..."></textarea>
+        </div>
+        <div style="display:flex; gap:15px; flex-wrap:wrap;">
+            <div class="form-group" style="flex:1; min-width:180px;">
+                <label>Question Type</label>
+                <select name="question_type" id="questionType" onchange="showFields('dynamicFields', this.value)" required>
+                    <option value="">-- Select Type --</option>
+                    <option value="mcq_single">Multiple Choice (Single Answer)</option>
+                    <option value="mcq_multi">Multiple Choice (Multi Answer)</option>
+                    <option value="fill_in">Fill in the Blank</option>
+                    <option value="true_false">True / False</option>
+                    <option value="match">Match Column A to B</option>
+                </select>
+            </div>
+            <div class="form-group" style="width:100px;">
+                <label>Marks</label>
+                <input type="number" name="marks" value="1" min="1" max="10">
+            </div>
+        </div>
+        <div id="dynamicFields"></div>
+        <button type="submit" class="btn btn-primary" style="margin-top:10px;">➕ Add Question</button>
+    </form>
+</div>
+
+<hr class="section-divider">
+
+<!-- ── Existing Questions ────────────────────────────────────────────── -->
+<h3>Questions ({{ questions|length }})</h3>
+
+{% if not questions %}
+    <p style="color:gray;">No questions added yet.</p>
+{% endif %}
+
+{% for item in questions %}
+{% set q = item.q %}
+{% set opts = item.options %}
+{% set q_id = q[0] %}
+{% set q_type = q[2] %}
+
+<div class="question-card" id="card_{{ q_id }}">
+    <h4>
+        Q{{ loop.index }}.
+        <span class="type-badge">
+            {% if q_type == 'mcq_single' %}MCQ Single
+            {% elif q_type == 'mcq_multi' %}MCQ Multi
+            {% elif q_type == 'fill_in' %}Fill in Blank
+            {% elif q_type == 'true_false' %}True / False
+            {% elif q_type == 'match' %}Match Columns
+            {% endif %}
+        </span>
+        <span style="float:right; font-size:0.85em; color:#555;">{{ q[3] }} mark{{ 's' if q[3] != 1 }}</span>
+    </h4>
+    <p>{{ q[1] }}</p>
+
+    <!-- View mode display -->
+    {% if q_type in ['mcq_single', 'mcq_multi'] %}
+        <ul>
+        {% for o in opts %}
+            <li {% if o[2] %}class="correct"{% endif %}>{{ o[1] }} {% if o[2] %}✔{% endif %}</li>
+        {% endfor %}
+        </ul>
+    {% elif q_type == 'true_false' %}
+        {% for o in opts %}
+            {% if o[3] != 'correction' %}
+                <span {% if o[2] %}class="correct"{% endif %}>{{ o[1] }} {% if o[2] %}✔{% endif %}</span> &nbsp;
+            {% else %}
+                <span style="color:#555; font-size:0.9em;">Correction term: <em>{{ o[1] }}</em></span>
+            {% endif %}
+        {% endfor %}
+    {% elif q_type == 'fill_in' %}
+        <p>Answer: <span class="correct">{{ opts[0][1] if opts }}</span></p>
+    {% elif q_type == 'match' %}
+        <table style="border-collapse:collapse; font-size:0.9em;">
+            <tr><th style="padding:4px 12px;">Column A</th><th style="padding:4px 12px;">Column B</th></tr>
+            {% for o in opts %}
+            <tr>
+                <td style="padding:4px 12px; border:1px solid #ddd;">{{ o[1] }}</td>
+                <td style="padding:4px 12px; border:1px solid #ddd;">{{ o[3] }}</td>
+            </tr>
+            {% endfor %}
+        </table>
+    {% endif %}
+
+    <!-- Action buttons -->
+    <div class="card-actions">
+        <button type="button" class="btn btn-edit" onclick="toggleEdit({{ q_id }})">✏️ Edit</button>
+        <form method="post" style="display:inline;" onsubmit="return confirm('Delete this question?')">
+            <input type="hidden" name="action" value="delete_question">
+            <input type="hidden" name="question_id" value="{{ q_id }}">
+            <button type="submit" class="btn btn-danger">🗑 Delete</button>
+        </form>
+    </div>
+
+    <!-- ── Inline Edit Panel ── -->
+    <div class="edit-panel" id="edit_{{ q_id }}">
+        <h4 style="margin:0 0 12px 0; color:#b36b00;">✏️ Edit Question</h4>
+        <form method="post">
+            <input type="hidden" name="action" value="edit_question">
+            <input type="hidden" name="question_id" value="{{ q_id }}">
+            <input type="hidden" name="question_type" value="{{ q_type }}">
+
+            <div class="form-group">
+                <label>Question Text</label>
+                <textarea name="question_text" required>{{ q[1] }}</textarea>
+            </div>
+
+            <div class="form-group" style="width:120px;">
+                <label>Marks</label>
+                <input type="number" name="marks" value="{{ q[3] }}" min="1" max="10">
+            </div>
+
+            <!-- MCQ Single / Multi -->
+            {% if q_type in ['mcq_single', 'mcq_multi'] %}
+            <label>Options
+                <small style="color:#555; font-weight:normal;">
+                    — {% if q_type == 'mcq_single' %}select the correct answer{% else %}check all correct answers{% endif %}
+                </small>
+            </label>
+            <div id="editOptions_{{ q_id }}">
+                {% for o in opts %}
+                <div class="option-row">
+                    <input type="{{ 'radio' if q_type == 'mcq_single' else 'checkbox' }}"
+                           name="is_correct" value="{{ loop.index0 }}"
+                           {{ 'checked' if o[2] else '' }}>
+                    <input type="text" name="option_text" value="{{ o[1] }}" required>
+                </div>
+                {% endfor %}
+            </div>
+            <button type="button" class="btn-add" style="margin-top:6px;"
+                    onclick="addEditOption('editOptions_{{ q_id }}', '{{ 'radio' if q_type == 'mcq_single' else 'checkbox' }}')">
+                + Add Option
+            </button>
+
+            <!-- True / False -->
+            {% elif q_type == 'true_false' %}
+            {% set correct_tf = opts | selectattr('2', 'equalto', 1) | list %}
+            {% set correction_opt = opts | selectattr('3', 'equalto', 'correction') | list %}
+            <div class="form-group">
+                <label>Correct Answer</label>
+                <select name="tf_correct">
+                    <option value="True" {{ 'selected' if correct_tf and correct_tf[0][1] == 'True' else '' }}>True</option>
+                    <option value="False" {{ 'selected' if correct_tf and correct_tf[0][1] == 'False' else '' }}>False</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label>Correction Term <small style="color:gray; font-weight:normal;">(optional — shown when answer is False)</small></label>
+                <input type="text" name="correction_term"
+                       value="{{ correction_opt[0][1] if correction_opt else '' }}"
+                       placeholder="e.g. The correct word is...">
+            </div>
+
+            <!-- Fill in the Blank -->
+            {% elif q_type == 'fill_in' %}
+            <div class="form-group">
+                <label>Correct Answer</label>
+                <input type="text" name="fill_answer"
+                       value="{{ opts[0][1] if opts else '' }}" required
+                       placeholder="Exact answer (case-insensitive)">
+            </div>
+
+            <!-- Match -->
+            {% elif q_type == 'match' %}
+            <label>Match Pairs (Column A → Column B)</label>
+            <div id="editMatch_{{ q_id }}">
+                {% for o in opts %}
+                <div class="match-row">
+                    <input type="text" name="match_a" value="{{ o[1] }}" required>
+                    <span>→</span>
+                    <input type="text" name="match_b" value="{{ o[3] }}" required>
+                </div>
+                {% endfor %}
+            </div>
+            <button type="button" class="btn-add" style="margin-top:6px;"
+                    onclick="addEditMatchRow('editMatch_{{ q_id }}')">
+                + Add Pair
+            </button>
+            {% endif %}
+
+            <div style="display:flex; gap:8px; margin-top:14px;">
+                <button type="submit" class="btn btn-primary">💾 Save Changes</button>
+                <button type="button" class="btn btn-cancel" onclick="toggleEdit({{ q_id }})">Cancel</button>
+            </div>
+        </form>
+    </div>
+
+</div>
+{% endfor %}
+
+<script>
+// ── Toggle edit panel ──────────────────────────────────────────────────
+function toggleEdit(qId) {
+    const panel = document.getElementById('edit_' + qId);
+    panel.classList.toggle('open');
+}
+
+// ── Shared field builder for Add Question form ─────────────────────────
+function showFields(containerId, type) {
+    const container = document.getElementById(containerId);
+    container.innerHTML = '';
+
+    if (type === 'mcq_single' || type === 'mcq_multi') {
+        const inputType = type === 'mcq_single' ? 'radio' : 'checkbox';
+        const lbl = type === 'mcq_single' ? 'Options (select correct answer)' : 'Options (check all correct answers)';
+        container.innerHTML = `
+            <label>${lbl}</label>
+            <div id="optionsList_${containerId}">
+                ${[0,1,2,3].map(i => `
+                <div class="option-row">
+                    <input type="${inputType}" name="is_correct" value="${i}">
+                    <input type="text" name="option_text" placeholder="Option ${i+1}">
+                </div>`).join('')}
+            </div>
+            <button type="button" class="btn-add" onclick="addOptionTo('optionsList_${containerId}','${inputType}')">+ Add Option</button>
+        `;
+    } else if (type === 'true_false') {
+        container.innerHTML = `
+            <div class="form-group">
+                <label>Correct Answer</label>
+                <select name="tf_correct">
+                    <option value="True">True</option>
+                    <option value="False">False</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label>If False — provide the correct term <small style="color:gray;">(optional)</small></label>
+                <input type="text" name="correction_term" placeholder="e.g. The correct word is...">
+            </div>
+        `;
+    } else if (type === 'fill_in') {
+        container.innerHTML = `
+            <div class="form-group">
+                <label>Correct Answer</label>
+                <input type="text" name="fill_answer" required placeholder="Exact answer (case-insensitive)">
+            </div>
+        `;
+    } else if (type === 'match') {
+        container.innerHTML = `
+            <label>Match Pairs (Column A → Column B)</label>
+            <div id="matchList_${containerId}">
+                ${[0,1,2,3].map(i => `
+                <div class="match-row">
+                    <input type="text" name="match_a" placeholder="Column A item ${i+1}">
+                    <span>→</span>
+                    <input type="text" name="match_b" placeholder="Column B item ${i+1}">
+                </div>`).join('')}
+            </div>
+            <button type="button" class="btn-add" onclick="addMatchTo('matchList_${containerId}')">+ Add Pair</button>
+        `;
+    }
+}
+
+function addOptionTo(listId, inputType) {
+    const list = document.getElementById(listId);
+    const count = list.children.length;
+    const div = document.createElement('div');
+    div.className = 'option-row';
+    div.innerHTML = `
+        <input type="${inputType}" name="is_correct" value="${count}">
+        <input type="text" name="option_text" placeholder="Option ${count+1}">
+    `;
+    list.appendChild(div);
+}
+
+function addMatchTo(listId) {
+    const list = document.getElementById(listId);
+    const count = list.children.length;
+    const div = document.createElement('div');
+    div.className = 'match-row';
+    div.innerHTML = `
+        <input type="text" name="match_a" placeholder="Column A item ${count+1}">
+        <span>→</span>
+        <input type="text" name="match_b" placeholder="Column B item ${count+1}">
+    `;
+    list.appendChild(div);
+}
+
+// ── Edit panel option adders ───────────────────────────────────────────
+function addEditOption(listId, inputType) {
+    const list = document.getElementById(listId);
+    const count = list.children.length;
+    const div = document.createElement('div');
+    div.className = 'option-row';
+    div.innerHTML = `
+        <input type="${inputType}" name="is_correct" value="${count}">
+        <input type="text" name="option_text" placeholder="Option ${count+1}" required>
+    `;
+    list.appendChild(div);
+}
+
+function addEditMatchRow(listId) {
+    const list = document.getElementById(listId);
+    const count = list.children.length;
+    const div = document.createElement('div');
+    div.className = 'match-row';
+    div.innerHTML = `
+        <input type="text" name="match_a" placeholder="Column A item ${count+1}" required>
+        <span>→</span>
+        <input type="text" name="match_b" placeholder="Column B item ${count+1}" required>
+    `;
+    list.appendChild(div);
+}
+</script>
+
+</body>
+</html>

@@ -1,0 +1,242 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>{{ test[1] }}</title>
+    <style>
+        body { font-family: Arial, sans-serif; padding: 20px; max-width: 800px; margin: 0 auto; }
+        .question-block { border: 1px solid #ddd; border-radius: 8px; padding: 20px; margin-bottom: 20px; background: #fafafa; }
+        .question-block h3 { margin: 0 0 12px 0; font-size: 1em; color: #222; }
+        .option-label { display: flex; align-items: center; gap: 10px; padding: 8px 12px; border: 1px solid #ddd; border-radius: 5px; margin-bottom: 6px; cursor: pointer; background: white; }
+        .option-label:hover { background: #eef4ff; }
+        input[type=text] { padding: 8px; border: 1px solid #ccc; border-radius: 4px; width: 100%; box-sizing: border-box; }
+        .timer-bar { position: sticky; top: 0; background: #0078D4; color: white; padding: 10px 20px; border-radius: 6px; margin-bottom: 20px; display: flex; justify-content: space-between; align-items: center; z-index: 100; }
+        .timer-bar.warning { background: #ff8c00; }
+        .timer-bar.danger { background: #A4262C; }
+        .submit-btn { background: #107C10; color: white; padding: 12px 30px; border: none; border-radius: 6px; font-size: 1.1em; cursor: pointer; width: 100%; margin-top: 10px; }
+        .submit-btn:hover { background: #0a5e0a; }
+        .marks-badge { float: right; background: #0078D4; color: white; padding: 2px 8px; border-radius: 10px; font-size: 0.8em; }
+
+        /* ── Match drag-and-drop ── */
+        .match-container { display: flex; gap: 30px; margin-top: 10px; }
+        .match-col { flex: 1; }
+        .match-col h4 { margin: 0 0 8px 0; font-size: 0.9em; color: #555; text-transform: uppercase; letter-spacing: 0.05em; }
+        .match-item-a { padding: 10px; border: 1px solid #0078D4; border-radius: 5px; margin-bottom: 6px; background: #eef4ff; font-size: 0.95em; }
+        .drop-zone { padding: 10px; border: 2px dashed #ccc; border-radius: 5px; margin-bottom: 6px; min-height: 40px; background: white; font-size: 0.95em; color: #555; transition: background 0.2s; }
+        .drop-zone.drag-over { background: #eef4ff; border-color: #0078D4; }
+        .drop-zone.filled { background: #c8f7c5; border-color: #107C10; color: #107C10; font-weight: bold; border-style: solid; }
+        .draggable-b { padding: 10px; border: 1px solid #107C10; border-radius: 5px; margin-bottom: 6px; background: #f0fff0; cursor: grab; font-size: 0.95em; }
+        .draggable-b:active { cursor: grabbing; opacity: 0.7; }
+        .b-pool { flex: 1; }
+        .b-pool h4 { margin: 0 0 8px 0; font-size: 0.9em; color: #555; text-transform: uppercase; letter-spacing: 0.05em; }
+    </style>
+</head>
+<body>
+
+{% if test[3] and test[3] > 0 %}
+<div class="timer-bar" id="timerBar">
+    <span>⏱ Time Remaining</span>
+    <span id="timerDisplay">{{ test[3] }}:00</span>
+</div>
+{% endif %}
+
+<h2>📝 {{ test[1] }}</h2>
+{% if test[2] %}<p style="color:#555;">Subject: {{ test[2] }}</p>{% endif %}
+
+<form method="post" id="testForm">
+{% for item in questions %}
+{% set q = item.q %}
+{% set opts = item.options %}
+{% set q_id = q[0] %}
+{% set q_type = q[2] %}
+{% set marks = q[3] %}
+
+<div class="question-block">
+    <h3>
+        Q{{ loop.index }}. {{ q[1] }}
+        <span class="marks-badge">{{ marks }} mark{{ 's' if marks != 1 }}</span>
+    </h3>
+
+    {# ── Multiple Choice Single ── #}
+    {% if q_type == 'mcq_single' %}
+        {% for o in opts %}
+        <label class="option-label">
+            <input type="radio" name="q_{{ q_id }}" value="{{ o[1] }}" required>
+            {{ o[1] }}
+        </label>
+        {% endfor %}
+
+    {# ── Multiple Choice Multi ── #}
+    {% elif q_type == 'mcq_multi' %}
+        <p style="font-size:0.85em; color:#555;">Select all that apply.</p>
+        {% for o in opts %}
+        <label class="option-label">
+            <input type="checkbox" name="q_{{ q_id }}" value="{{ o[1] }}">
+            {{ o[1] }}
+        </label>
+        {% endfor %}
+
+    {# ── True / False ── #}
+    {% elif q_type == 'true_false' %}
+        {% set has_correction = opts | selectattr('3', 'equalto', 'correction') | list | length > 0 %}
+        {% if has_correction %}
+            <p style="font-size:0.85em; color:#555;">If you select False, provide the correct term in the box below.</p>
+        {% endif %}
+        <label class="option-label">
+            <input type="radio" name="q_{{ q_id }}" value="True" required
+                   onchange="toggleCorrection({{ q_id }}, this.value)"> True
+        </label>
+        <label class="option-label">
+            <input type="radio" name="q_{{ q_id }}" value="False"
+                   onchange="toggleCorrection({{ q_id }}, this.value)"> False
+        </label>
+        <div id="correction_{{ q_id }}" style="margin-top:8px; display:none;">
+            <label style="font-size:0.9em; font-weight:bold;">Correction term:</label>
+            <input type="text" name="q_{{ q_id }}_correction" placeholder="Type the correct term...">
+        </div>
+
+    {# ── Fill in the Blank ── #}
+    {% elif q_type == 'fill_in' %}
+        <input type="text" name="q_{{ q_id }}" placeholder="Type your answer..." required>
+
+    {# ── Match Column A to B ── #}
+    {% elif q_type == 'match' %}
+        <p style="font-size:0.85em; color:#555;">Drag items from Column B and drop them next to the matching Column A item.</p>
+        <div class="match-container">
+            <div class="match-col">
+                <h4>Column A</h4>
+                {% for o in opts %}
+                <div style="display:flex; align-items:center; gap:10px; margin-bottom:6px;">
+                    <div class="match-item-a" style="flex:1;">{{ o[1] }}</div>
+                    <span>→</span>
+                    <div class="drop-zone" style="flex:1;"
+                         data-col-a="{{ o[1] }}"
+                         data-col-index="{{ loop.index }}"
+                         data-q="{{ q_id }}"
+                         ondragover="allowDrop(event)"
+                         ondrop="dropItem(event)"
+                         ondragenter="dragEnter(event)"
+                         ondragleave="dragLeave(event)">
+                        Drop here
+                    </div>
+                    <input type="hidden" name="q_{{ q_id }}_{{ loop.index }}" id="hidden_{{ q_id }}_{{ loop.index }}">
+                </div>
+                {% endfor %}
+            </div>
+            <div class="b-pool">
+                <h4>Column B</h4>
+                <div id="pool_{{ q_id }}">
+                {% set b_values = opts | map(attribute=3) | list %}
+                {% for val in b_values | sort %}
+                <div class="draggable-b"
+                     draggable="true"
+                     data-value="{{ val }}"
+                     ondragstart="dragStart(event)">
+                    {{ val }}
+                </div>
+                {% endfor %}
+                </div>
+            </div>
+        </div>
+    {% endif %}
+
+</div>
+{% endfor %}
+
+<button type="submit" class="submit-btn" onclick="return confirmSubmit()">✅ Submit Test</button>
+</form>
+
+<script>
+// ── Timer ──────────────────────────────────────────────────────────────
+{% if test[3] and test[3] > 0 %}
+let totalSeconds = {{ test[3] }} * 60;
+const timerDisplay = document.getElementById('timerDisplay');
+const timerBar = document.getElementById('timerBar');
+
+const timerInterval = setInterval(() => {
+    totalSeconds--;
+    const mins = Math.floor(totalSeconds / 60);
+    const secs = totalSeconds % 60;
+    timerDisplay.textContent = `${mins}:${secs.toString().padStart(2, '0')}`;
+
+    if (totalSeconds <= 60) timerBar.className = 'timer-bar danger';
+    else if (totalSeconds <= 300) timerBar.className = 'timer-bar warning';
+
+    if (totalSeconds <= 0) {
+        clearInterval(timerInterval);
+        document.getElementById('testForm').submit();
+    }
+}, 1000);
+{% endif %}
+
+// ── Drag and Drop ──────────────────────────────────────────────────────
+let draggedItem = null;
+let draggedFrom = null;
+
+function dragStart(event) {
+    draggedItem = event.target;
+    draggedFrom = event.target.parentElement;
+    event.dataTransfer.setData('text/plain', event.target.dataset.value);
+}
+
+function allowDrop(event) {
+    event.preventDefault();
+}
+
+function dragEnter(event) {
+    event.target.classList.add('drag-over');
+}
+
+function dragLeave(event) {
+    event.target.classList.remove('drag-over');
+}
+
+function dropItem(event) {
+    event.preventDefault();
+    const dropZone = event.target.closest('.drop-zone');
+    if (!dropZone) return;
+
+    dropZone.classList.remove('drag-over');
+
+    // If drop zone already has an item, send it back to pool
+    const existingValue = dropZone.dataset.currentValue;
+    if (existingValue) {
+        const qId = dropZone.dataset.q;
+        const pool = document.getElementById('pool_' + qId);
+        const returnItem = document.createElement('div');
+        returnItem.className = 'draggable-b';
+        returnItem.draggable = true;
+        returnItem.dataset.value = existingValue;
+        returnItem.textContent = existingValue;
+        returnItem.ondragstart = dragStart;
+        pool.appendChild(returnItem);
+    }
+
+    // Place dragged item in drop zone
+    const value = event.dataTransfer.getData('text/plain');
+    dropZone.textContent = value;
+    dropZone.dataset.currentValue = value;
+    dropZone.classList.add('filled');
+
+    // Update hidden input using col-index (avoids space issues in IDs)
+    const colIndex = dropZone.dataset.colIndex;
+    const qId = dropZone.dataset.q;
+    const hidden = document.getElementById('hidden_' + qId + '_' + colIndex);
+    if (hidden) hidden.value = value;
+
+    // Remove from pool
+    if (draggedItem) draggedItem.remove();
+}
+
+function confirmSubmit() {
+    return confirm('Are you sure you want to submit your test? You cannot change your answers after submitting.');
+}
+
+function toggleCorrection(qId, value) {
+    const box = document.getElementById('correction_' + qId);
+    if (box) box.style.display = value === 'False' ? 'block' : 'none';
+}
+</script>
+
+</body>
+</html>

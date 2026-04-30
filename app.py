@@ -5,7 +5,7 @@ import threading
 import time
 import os
 import sqlite3
-from datetime import datetime, timedelta
+import random
 from flask import send_file
 import pandas as pd
 
@@ -164,16 +164,138 @@ def init_db():
     """)
 
     cursor.execute("""
+    CREATE TABLE IF NOT EXISTS theory_tests (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        title TEXT,
+        subject TEXT,
+        time_limit INTEGER,
+        allow_multiple INTEGER DEFAULT 0,
+        max_attempts INTEGER DEFAULT 1,
+        show_answers INTEGER DEFAULT 1,
+        created_by TEXT,
+        created_at TEXT,
+        is_active INTEGER DEFAULT 0
+    )
+    """)
+
+    # Migration: remove group_name column from theory_tests if present,
+    # and add allow_multiple, max_attempts, show_answers if missing
+    try:
+        cursor.execute("PRAGMA table_info(theory_tests)")
+        cols = [c[1] for c in cursor.fetchall()]
+        if "group_name" in cols:
+            cursor.execute("""
+                CREATE TABLE theory_tests_new (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    title TEXT, subject TEXT, time_limit INTEGER,
+                    allow_multiple INTEGER DEFAULT 0,
+                    max_attempts INTEGER DEFAULT 1,
+                    show_answers INTEGER DEFAULT 1,
+                    created_by TEXT, created_at TEXT, is_active INTEGER DEFAULT 0
+                )
+            """)
+            cursor.execute("INSERT INTO theory_tests_new (id,title,subject,time_limit,created_by,created_at,is_active) SELECT id,title,subject,time_limit,created_by,created_at,is_active FROM theory_tests")
+            cursor.execute("DROP TABLE theory_tests")
+            cursor.execute("ALTER TABLE theory_tests_new RENAME TO theory_tests")
+            print("Migration: removed group_name from theory_tests")
+        else:
+            if "allow_multiple" not in cols:
+                cursor.execute("ALTER TABLE theory_tests ADD COLUMN allow_multiple INTEGER DEFAULT 0")
+            if "max_attempts" not in cols:
+                cursor.execute("ALTER TABLE theory_tests ADD COLUMN max_attempts INTEGER DEFAULT 1")
+            if "show_answers" not in cols:
+                cursor.execute("ALTER TABLE theory_tests ADD COLUMN show_answers INTEGER DEFAULT 1")
+    except Exception as e:
+        print(f"Note: theory_tests migration: {e}")
+
+    cursor.execute("""
+    CREATE TABLE IF NOT EXISTS theory_test_groups (
+        test_id INTEGER,
+        group_name TEXT,
+        PRIMARY KEY (test_id, group_name),
+        FOREIGN KEY (test_id) REFERENCES theory_tests (id)
+    )
+    """)
+
+    cursor.execute("""
+    CREATE TABLE IF NOT EXISTS theory_questions (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        test_id INTEGER,
+        question_text TEXT,
+        question_type TEXT,
+        marks INTEGER DEFAULT 1,
+        order_index INTEGER DEFAULT 0,
+        FOREIGN KEY (test_id) REFERENCES theory_tests (id)
+    )
+    """)
+
+    cursor.execute("""
+    CREATE TABLE IF NOT EXISTS theory_options (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        question_id INTEGER,
+        option_text TEXT,
+        is_correct INTEGER DEFAULT 0,
+        match_pair TEXT,
+        FOREIGN KEY (question_id) REFERENCES theory_questions (id)
+    )
+    """)
+
+    cursor.execute("""
+    CREATE TABLE IF NOT EXISTS theory_submissions (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        test_id INTEGER,
+        username TEXT,
+        score INTEGER,
+        total INTEGER,
+        percentage INTEGER,
+        submitted_at TEXT,
+        FOREIGN KEY (test_id) REFERENCES theory_tests (id)
+    )
+    """)
+
+    cursor.execute("""
+    CREATE TABLE IF NOT EXISTS theory_answers (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        submission_id INTEGER,
+        question_id INTEGER,
+        answer_text TEXT,
+        is_correct INTEGER DEFAULT 0,
+        marks_awarded INTEGER DEFAULT 0,
+        FOREIGN KEY (submission_id) REFERENCES theory_submissions (id),
+        FOREIGN KEY (question_id) REFERENCES theory_questions (id)
+    )
+    """)
+
+    cursor.execute("""
     CREATE TABLE IF NOT EXISTS tasks (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         subject_id INTEGER,
         name TEXT,
         assign_date TEXT,
+        marking_script TEXT,
+        theory_test_id INTEGER,
+        task_type TEXT DEFAULT 'practical',
         created_by TEXT,
         created_at TEXT,
         FOREIGN KEY (subject_id) REFERENCES subjects (id)
     )
     """)
+
+    # Migration: add columns to tasks if missing
+    try:
+        cursor.execute("PRAGMA table_info(tasks)")
+        columns = [col[1] for col in cursor.fetchall()]
+        if "marking_script" not in columns:
+            cursor.execute("ALTER TABLE tasks ADD COLUMN marking_script TEXT")
+            print("Migration: added marking_script column to tasks")
+        if "theory_test_id" not in columns:
+            cursor.execute("ALTER TABLE tasks ADD COLUMN theory_test_id INTEGER")
+            print("Migration: added theory_test_id column to tasks")
+        if "task_type" not in columns:
+            cursor.execute("ALTER TABLE tasks ADD COLUMN task_type TEXT DEFAULT 'practical'")
+            print("Migration: added task_type column to tasks")
+    except Exception as e:
+        print(f"Note: tasks migration check: {e}")
 
     cursor.execute("""
     CREATE TABLE IF NOT EXISTS task_groups (
@@ -309,13 +431,33 @@ def save_result(username, subject, task, score, feedback):
     conn.commit()
     conn.close()
 
-# 🔹 Demo marking function (replace later with your real one)
-def mark_file(filepath):
-    score = 75
-    feedback = "Struggled with formatting and formulas"
-    weak_skills = ["Formatting", "Formulas"]
-
-    return score, feedback, weak_skills
+def mark_file(filepath, marking_script):
+    """
+    Route a submitted file to the correct task marker using the
+    marking_script name stored on the task in the database.
+    """
+    import importlib
+    if not marking_script:
+        return {
+            "task_name": "Unknown Task",
+            "score": 0,
+            "total": 0,
+            "percentage": 0,
+            "results": [],
+            "error": "No marking script assigned to this task. Please contact your teacher."
+        }
+    try:
+        module = importlib.import_module(f"marking.tasks.{marking_script}")
+        return module.mark(filepath)
+    except ModuleNotFoundError:
+        return {
+            "task_name": marking_script,
+            "score": 0,
+            "total": 0,
+            "percentage": 0,
+            "results": [],
+            "error": f"Marking script '{marking_script}' not found. Please contact your teacher."
+        }
 
 app = Flask(__name__)
 app.secret_key = os.getenv('SECRET_KEY', 'dev-key-change-in-prod')
@@ -427,6 +569,16 @@ def get_low_attendance_learners(limit=10):
     conn.close()
     results.sort(key=lambda x: x[1], reverse=True)
     return results[:limit]
+
+def get_marking_scripts():
+    """Return a list of available marking script names from marking/tasks/."""
+    tasks_dir = os.path.join(os.path.dirname(__file__), "marking", "tasks")
+    scripts = []
+    if os.path.exists(tasks_dir):
+        for f in sorted(os.listdir(tasks_dir)):
+            if f.endswith(".py") and f != "__init__.py":
+                scripts.append(f[:-3])  # strip .py
+    return scripts
 
 def get_groups():
     conn = get_db()
@@ -764,13 +916,13 @@ def upload(username, subject_id, task_id):
         return "Subject not found", 404
     subject_name = subject_row[0]
 
-    # Get task with assign_date
-    cursor.execute("SELECT name, assign_date FROM tasks WHERE id = ?", (task_id,))
+    # Get task with assign_date and marking_script
+    cursor.execute("SELECT name, assign_date, marking_script FROM tasks WHERE id = ?", (task_id,))
     task_row = cursor.fetchone()
     if not task_row:
         conn.close()
         return "Task not found", 404
-    task_name, assign_date = task_row
+    task_name, assign_date, marking_script = task_row
 
     # Get user role and group
     user_role = get_user_role(username)
@@ -807,11 +959,23 @@ def upload(username, subject_id, task_id):
         file.save(temp_path)
 
         try:
-            score, feedback, weak_skills = mark_file(temp_path)
-            update_weakness(username, weak_skills)
+            result = mark_file(temp_path, marking_script)
 
-            save_result(username, subject_name, task_name, score, feedback)
+            if result["error"]:
+                return f"""
+                <p><a href="/student_dashboard">← Back to Dashboard</a></p>
+                <h2>Submission Error</h2>
+                <p style="color:red;">{escape(result['error'])}</p>
+                """
+
+            # Build weak skills from wrong answers
+            weak_skills = [r["question"] for r in result["results"] if not r["passed"]]
+            update_weakness(username, weak_skills)
+            save_result(username, subject_name, task_name, result["percentage"], ", ".join(weak_skills[:3]) or "Well done!")
             log_activity(username, f"submitted {subject_name} {task_name}")
+
+            correct_list = "".join(f"<li>✅ {escape(r['question'])} ({r['marks_awarded']}/{r['marks_available']})</li>" for r in result["results"] if r["passed"])
+            wrong_list = "".join(f"<li>❌ {escape(r['question'])} (0/{r['marks_available']})</li>" for r in result["results"] if not r["passed"])
 
         finally:
             if os.path.exists(temp_path):
@@ -819,12 +983,11 @@ def upload(username, subject_id, task_id):
 
         return f"""
         <p><a href="/student_dashboard">← Back to Dashboard</a></p>
-        <h2>Result</h2>
-        <p>Subject: {escape(subject_name)}</p>
-        <p>Task: {escape(task_name)}</p>
-        <p>Score: {score}</p>
-        <p>Feedback: {escape(feedback)}</p>
-        <a href="/subjects/{escape(username)}">Back to Subjects</a>
+        <h2>Results – {escape(subject_name)} {escape(task_name)}</h2>
+        <p><strong>Score: {result['score']}/{result['total']} ({result['percentage']}%)</strong></p>
+        <h3>✅ Correct</h3><ul>{correct_list}</ul>
+        <h3>❌ Incorrect</h3><ul>{wrong_list}</ul>
+        <a href="/subjects/{escape(username)}">← Back to Subjects</a>
         """
 
     return f"""
@@ -842,12 +1005,10 @@ def subjects(username):
     if not session.get("username"):
         return redirect(url_for("login"))
 
-    # Verify the logged-in user is the one accessing
     session_user = session.get("username")
     if session_user != username:
         return "Unauthorized", 401
 
-    # Update active user timestamp
     update_active_user(username)
 
     conn = get_db()
@@ -855,23 +1016,18 @@ def subjects(username):
 
     cursor.execute("SELECT id, name FROM subjects ORDER BY name")
     all_subjects = cursor.fetchall()
-
     conn.close()
 
     if not all_subjects:
-        return f"""
-        <p><a href="/student_dashboard">← Back to Dashboard</a></p>
-        <h2>Select Subject</h2>
-        <p>No subjects available yet.</p>
-        """
-
-    subject_links = ""
-    for subj_id, subj_name in all_subjects:
-        subject_links += f'<a href="/tasks/{escape(username)}/{subj_id}">📁 {escape(subj_name)}</a><br>\n'
+        subject_links = "<p>No subjects available yet.</p>"
+    else:
+        subject_links = ""
+        for subj_id, subj_name in all_subjects:
+            subject_links += f'<a href="/tasks/{escape(username)}/{subj_id}">📁 {escape(subj_name)}</a><br>\n'
 
     return f"""
     <p><a href="/student_dashboard">← Back to Dashboard</a></p>
-    <h2>Select Subject</h2>
+    <h2>📁 Practical Assignments</h2>
     {subject_links}
     """
 
@@ -1857,15 +2013,29 @@ def manage_tasks(subject_id):
         if action == "create":
             task_name = request.form.get("task_name")
             assign_date = request.form.get("assign_date")
+            marking_script = request.form.get("marking_script")
             groups = request.form.getlist("groups")
             if task_name and assign_date:
-                cursor.execute("INSERT INTO tasks (subject_id, name, assign_date, created_by, created_at) VALUES (?, ?, ?, ?, ?)",
-                               (subject_id, task_name, assign_date, username, datetime.now().isoformat()))
+                cursor.execute("INSERT INTO tasks (subject_id, name, assign_date, marking_script, task_type, created_by, created_at) VALUES (?, ?, ?, ?, 'practical', ?, ?)",
+                               (subject_id, task_name, assign_date, marking_script, username, datetime.now().isoformat()))
                 task_id = cursor.lastrowid
                 for group in groups:
                     cursor.execute("INSERT INTO task_groups (task_id, group_name) VALUES (?, ?)", (task_id, group))
                 conn.commit()
                 log_activity(username, f"created task {task_name} in {subject_name}")
+        elif action == "assign_theory":
+            task_name = request.form.get("task_name")
+            assign_date = request.form.get("assign_date")
+            theory_test_id = request.form.get("theory_test_id")
+            groups = request.form.getlist("groups")
+            if task_name and assign_date and theory_test_id:
+                cursor.execute("INSERT INTO tasks (subject_id, name, assign_date, theory_test_id, task_type, created_by, created_at) VALUES (?, ?, ?, ?, 'theory', ?, ?)",
+                               (subject_id, task_name, assign_date, theory_test_id, username, datetime.now().isoformat()))
+                task_id = cursor.lastrowid
+                for group in groups:
+                    cursor.execute("INSERT INTO task_groups (task_id, group_name) VALUES (?, ?)", (task_id, group))
+                conn.commit()
+                log_activity(username, f"assigned theory test as task {task_name} in {subject_name}")
         elif action == "delete":
             task_id = request.form.get("task_id")
             if task_id:
@@ -1884,9 +2054,16 @@ def manage_tasks(subject_id):
     cursor.execute("SELECT DISTINCT group_name FROM users WHERE group_name IS NOT NULL ORDER BY group_name")
     all_groups = [row[0] for row in cursor.fetchall()]
 
+    # Get available marking scripts
+    available_scripts = get_marking_scripts()
+
+    # Get available theory tests
+    cursor.execute("SELECT id, title, subject FROM theory_tests ORDER BY title")
+    available_theory_tests = cursor.fetchall()
+
     # Get tasks
     cursor.execute("""
-    SELECT t.id, t.name, t.assign_date, GROUP_CONCAT(tg.group_name, ', ')
+    SELECT t.id, t.name, t.assign_date, t.marking_script, t.task_type, t.theory_test_id, GROUP_CONCAT(tg.group_name, ', ')
     FROM tasks t
     LEFT JOIN task_groups tg ON t.id = tg.task_id
     WHERE t.subject_id = ?
@@ -1897,12 +2074,19 @@ def manage_tasks(subject_id):
     conn.close()
 
     task_list = ""
-    for task_id, task_name, assign_date, group_list in tasks:
+    for task_id, task_name, assign_date, marking_script, task_type, theory_test_id, group_list in tasks:
+        if task_type == "theory":
+            type_label = '<span style="background:#0078D4;color:white;padding:2px 6px;border-radius:10px;font-size:0.8em;">📝 Theory</span>'
+            script_label = f'Test ID: {theory_test_id}'
+        else:
+            type_label = '<span style="background:#107C10;color:white;padding:2px 6px;border-radius:10px;font-size:0.8em;">📁 Practical</span>'
+            script_label = marking_script if marking_script else '<span style="color:red;">None assigned</span>'
         task_list += f"""
         <tr>
-            <td>{escape(task_name)}</td>
+            <td>{escape(task_name)} {type_label}</td>
             <td>{assign_date}</td>
             <td>{group_list or 'None'}</td>
+            <td>{script_label}</td>
             <td>
                 <form method="post" style="display:inline;">
                     <input type="hidden" name="action" value="delete">
@@ -1915,35 +2099,675 @@ def manage_tasks(subject_id):
 
     group_checkboxes = ""
     for group in all_groups:
-        group_checkboxes += f'<input type="checkbox" name="groups" value="{escape(group)}"> {escape(group)}<br>'
+        group_checkboxes += f'<label style="display:inline-flex;align-items:center;gap:5px;margin-right:10px;"><input type="checkbox" name="groups" value="{escape(group)}"> {escape(group)}</label>'
+
+    script_options = '<option value="">-- No marking script --</option>'
+    for script in available_scripts:
+        script_options += f'<option value="{escape(script)}">{escape(script)}</option>'
+
+    theory_test_options = '<option value="">-- Select Theory Test --</option>'
+    for tt_id, tt_title, tt_subject in available_theory_tests:
+        label = f"{tt_title}" + (f" ({tt_subject})" if tt_subject else "")
+        theory_test_options += f'<option value="{tt_id}">{escape(label)}</option>'
 
     return f"""
-    <p><a href="/manage_subjects">← Back to Subjects</a></p>
+    <p><a href="/manage_subjects">← Back to Subjects</a> | <a href="/manage_tests">📝 Manage Theory Tests</a></p>
     <h2>Manage Tasks for {escape(subject_name)}</h2>
 
-    <h3>Create New Task</h3>
-    <form method="post">
-        <input type="hidden" name="action" value="create">
-        <label>Task Name:</label>
-        <input type="text" name="task_name" required><br><br>
-        <label>Assign Date:</label>
-        <input type="date" name="assign_date" required><br><br>
-        <label>Assigned Groups:</label><br>
-        {group_checkboxes}<br>
-        <button type="submit">Create Task</button>
-    </form>
+    <h3>Add New Task</h3>
+    <div style="margin-bottom:15px;">
+        <button type="button" onclick="showPanel('practical')" id="btn_practical"
+                style="padding:8px 18px;background:#0078D4;color:white;border:none;border-radius:4px 0 0 4px;cursor:pointer;font-size:0.95em;">
+            📁 Practical Task
+        </button>
+        <button type="button" onclick="showPanel('theory')" id="btn_theory"
+                style="padding:8px 18px;background:#ccc;color:#333;border:none;border-radius:0 4px 4px 0;cursor:pointer;font-size:0.95em;">
+            📝 Theory Test
+        </button>
+    </div>
+
+    <div id="panel_practical" style="background:#f9f9f9;border:1px solid #ddd;padding:20px;border-radius:6px;">
+        <form method="post">
+            <input type="hidden" name="action" value="create">
+            <label>Task Name:</label><br>
+            <input type="text" name="task_name" required style="padding:7px;width:300px;margin-bottom:10px;"><br>
+            <label>Assign Date:</label><br>
+            <input type="date" name="assign_date" required style="padding:7px;margin-bottom:10px;"><br>
+            <label>Marking Script:</label><br>
+            <select name="marking_script" style="padding:7px;margin-bottom:10px;">{script_options}</select><br>
+            <label>Assigned Groups:</label><br>
+            <div style="margin:8px 0;">{group_checkboxes}</div>
+            <button type="submit" style="padding:8px 16px;background:#107C10;color:white;border:none;border-radius:4px;cursor:pointer;">Create Practical Task</button>
+        </form>
+    </div>
+
+    <div id="panel_theory" style="display:none;background:#f0f4ff;border:1px solid #b0c4ff;padding:20px;border-radius:6px;">
+        <form method="post">
+            <input type="hidden" name="action" value="assign_theory">
+            <label>Task Name:</label><br>
+            <input type="text" name="task_name" required style="padding:7px;width:300px;margin-bottom:10px;"><br>
+            <label>Assign Date:</label><br>
+            <input type="date" name="assign_date" required style="padding:7px;margin-bottom:10px;"><br>
+            <label>Theory Test:</label><br>
+            <select name="theory_test_id" required style="padding:7px;margin-bottom:10px;">{theory_test_options}</select><br>
+            <label>Assigned Groups:</label><br>
+            <div style="margin:8px 0;">{group_checkboxes}</div>
+            <button type="submit" style="padding:8px 16px;background:#0078D4;color:white;border:none;border-radius:4px;cursor:pointer;">Assign Theory Test</button>
+        </form>
+    </div>
+
+    <script>
+    function showPanel(type) {{
+        document.getElementById('panel_practical').style.display = type === 'practical' ? 'block' : 'none';
+        document.getElementById('panel_theory').style.display = type === 'theory' ? 'block' : 'none';
+        document.getElementById('btn_practical').style.background = type === 'practical' ? '#0078D4' : '#ccc';
+        document.getElementById('btn_practical').style.color = type === 'practical' ? 'white' : '#333';
+        document.getElementById('btn_theory').style.background = type === 'theory' ? '#0078D4' : '#ccc';
+        document.getElementById('btn_theory').style.color = type === 'theory' ? 'white' : '#333';
+    }}
+    </script>
 
     <h3>Existing Tasks</h3>
-    <table border="1">
+    <table border="1" style="border-collapse:collapse;width:100%;">
         <tr>
             <th>Task</th>
             <th>Assign Date</th>
             <th>Groups</th>
+            <th>Marking / Test</th>
             <th>Actions</th>
         </tr>
         {task_list}
     </table>
     """
+
+# ── Theory Test Routes ───────────────────────────────────────────────────────
+
+@app.route("/manage_tests")
+def manage_tests():
+    username = session.get("username")
+    if not username:
+        return redirect(url_for("login"))
+    if get_user_role(username) not in ["teacher", "admin"]:
+        return "Access denied", 403
+
+    conn = get_db()
+    cursor = conn.cursor()
+    cursor.execute("""
+        SELECT t.id, t.title, t.subject, t.time_limit, t.is_active,
+               COUNT(DISTINCT q.id) as question_count,
+               GROUP_CONCAT(DISTINCT tg.group_name) as groups,
+               t.allow_multiple, t.max_attempts, t.show_answers
+        FROM theory_tests t
+        LEFT JOIN theory_questions q ON t.id = q.test_id
+        LEFT JOIN theory_test_groups tg ON t.id = tg.test_id
+        GROUP BY t.id
+        ORDER BY t.created_at DESC
+    """)
+    tests = cursor.fetchall()
+    groups = get_groups()
+    conn.close()
+    return render_template("manage_tests.html", tests=tests, groups=groups)
+
+
+@app.route("/manage_tests/create", methods=["POST"])
+def create_test():
+    username = session.get("username")
+    if not username:
+        return redirect(url_for("login"))
+    if get_user_role(username) not in ["teacher", "admin"]:
+        return "Access denied", 403
+
+    title = request.form.get("title", "").strip()
+    subject = request.form.get("subject", "").strip()
+    groups = request.form.getlist("groups")
+    time_limit = request.form.get("time_limit", 0)
+    allow_multiple = 1 if request.form.get("allow_multiple") else 0
+    max_attempts = int(request.form.get("max_attempts", 1))
+    show_answers = 1 if request.form.get("show_answers") else 0
+
+    if not title:
+        return "Test title is required", 400
+
+    conn = get_db()
+    cursor = conn.cursor()
+    cursor.execute("""
+        INSERT INTO theory_tests (title, subject, time_limit, allow_multiple, max_attempts, show_answers, created_by, created_at)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+    """, (title, subject, time_limit, allow_multiple, max_attempts, show_answers, username, datetime.now().isoformat()))
+    test_id = cursor.lastrowid
+    for g in groups:
+        if g.strip():
+            cursor.execute("INSERT INTO theory_test_groups (test_id, group_name) VALUES (?, ?)", (test_id, g))
+    conn.commit()
+    conn.close()
+    log_activity(username, f"created theory test '{title}'")
+    return redirect(url_for("manage_test_questions", test_id=test_id))
+
+
+@app.route("/manage_tests/<int:test_id>/edit", methods=["GET", "POST"])
+def edit_test(test_id):
+    username = session.get("username")
+    if not username:
+        return redirect(url_for("login"))
+    if get_user_role(username) not in ["teacher", "admin"]:
+        return "Access denied", 403
+
+    conn = get_db()
+    cursor = conn.cursor()
+
+    cursor.execute("SELECT id, title, subject, time_limit, allow_multiple, max_attempts, show_answers FROM theory_tests WHERE id = ?", (test_id,))
+    test = cursor.fetchone()
+    if not test:
+        conn.close()
+        return "Test not found", 404
+
+    if request.method == "POST":
+        allow_multiple = 1 if request.form.get("allow_multiple") else 0
+        max_attempts = int(request.form.get("max_attempts", 1))
+        show_answers = 1 if request.form.get("show_answers") else 0
+        groups = request.form.getlist("groups")
+
+        cursor.execute("""
+            UPDATE theory_tests
+            SET allow_multiple = ?, max_attempts = ?, show_answers = ?
+            WHERE id = ?
+        """, (allow_multiple, max_attempts, show_answers, test_id))
+
+        cursor.execute("DELETE FROM theory_test_groups WHERE test_id = ?", (test_id,))
+        for g in groups:
+            if g.strip():
+                cursor.execute("INSERT INTO theory_test_groups (test_id, group_name) VALUES (?, ?)", (test_id, g))
+
+        conn.commit()
+        conn.close()
+        log_activity(username, f"edited theory test settings for test {test_id}")
+        return redirect(url_for("manage_tests"))
+
+    # GET — load current groups
+    cursor.execute("SELECT group_name FROM theory_test_groups WHERE test_id = ?", (test_id,))
+    current_groups = {row[0] for row in cursor.fetchall()}
+    all_groups = get_groups()
+    conn.close()
+
+    return render_template("edit_test.html", test=test, current_groups=current_groups, all_groups=all_groups)
+
+
+@app.route("/manage_tests/<int:test_id>/toggle", methods=["POST"])
+def toggle_test(test_id):
+    username = session.get("username")
+    if not username:
+        return redirect(url_for("login"))
+    if get_user_role(username) not in ["teacher", "admin"]:
+        return "Access denied", 403
+
+    conn = get_db()
+    cursor = conn.cursor()
+    cursor.execute("SELECT is_active FROM theory_tests WHERE id = ?", (test_id,))
+    row = cursor.fetchone()
+    if row:
+        new_state = 0 if row[0] else 1
+        cursor.execute("UPDATE theory_tests SET is_active = ? WHERE id = ?", (new_state, test_id))
+        conn.commit()
+    conn.close()
+    return redirect(url_for("manage_tests"))
+
+
+@app.route("/manage_tests/<int:test_id>/delete", methods=["POST"])
+def delete_test(test_id):
+    username = session.get("username")
+    if not username:
+        return redirect(url_for("login"))
+    if get_user_role(username) not in ["teacher", "admin"]:
+        return "Access denied", 403
+
+    conn = get_db()
+    cursor = conn.cursor()
+    # Delete in order: answers → submissions → options → questions → groups → test
+    cursor.execute("DELETE FROM theory_answers WHERE submission_id IN (SELECT id FROM theory_submissions WHERE test_id = ?)", (test_id,))
+    cursor.execute("DELETE FROM theory_submissions WHERE test_id = ?", (test_id,))
+    cursor.execute("DELETE FROM theory_options WHERE question_id IN (SELECT id FROM theory_questions WHERE test_id = ?)", (test_id,))
+    cursor.execute("DELETE FROM theory_questions WHERE test_id = ?", (test_id,))
+    cursor.execute("DELETE FROM theory_test_groups WHERE test_id = ?", (test_id,))
+    cursor.execute("DELETE FROM theory_tests WHERE id = ?", (test_id,))
+    conn.commit()
+    conn.close()
+    log_activity(username, f"deleted theory test id {test_id}")
+    return redirect(url_for("manage_tests"))
+
+
+@app.route("/manage_tests/<int:test_id>/questions", methods=["GET", "POST"])
+def manage_test_questions(test_id):
+    username = session.get("username")
+    if not username:
+        return redirect(url_for("login"))
+    if get_user_role(username) not in ["teacher", "admin"]:
+        return "Access denied", 403
+
+    conn = get_db()
+    cursor = conn.cursor()
+
+    cursor.execute("SELECT id, title, subject FROM theory_tests WHERE id = ?", (test_id,))
+    test = cursor.fetchone()
+    if not test:
+        conn.close()
+        return "Test not found", 404
+
+    if request.method == "POST":
+        action = request.form.get("action")
+
+        if action == "add_question":
+            q_text = request.form.get("question_text", "").strip()
+            q_type = request.form.get("question_type", "")
+            marks = int(request.form.get("marks", 1))
+
+            cursor.execute("SELECT COUNT(*) FROM theory_questions WHERE test_id = ?", (test_id,))
+            order_index = cursor.fetchone()[0]
+
+            cursor.execute("""
+                INSERT INTO theory_questions (test_id, question_text, question_type, marks, order_index)
+                VALUES (?, ?, ?, ?, ?)
+            """, (test_id, q_text, q_type, marks, order_index))
+            q_id = cursor.lastrowid
+
+            # Handle options per question type
+            if q_type in ["mcq_single", "mcq_multi"]:
+                options = request.form.getlist("option_text")
+                correct = request.form.getlist("is_correct")
+                for i, opt in enumerate(options):
+                    if opt.strip():
+                        is_correct = 1 if str(i) in correct else 0
+                        cursor.execute("""
+                            INSERT INTO theory_options (question_id, option_text, is_correct)
+                            VALUES (?, ?, ?)
+                        """, (q_id, opt.strip(), is_correct))
+
+            elif q_type == "true_false":
+                correct_answer = request.form.get("tf_correct", "True")
+                correction_term = request.form.get("correction_term", "").strip()
+                cursor.execute("INSERT INTO theory_options (question_id, option_text, is_correct) VALUES (?, 'True', ?)",
+                               (q_id, 1 if correct_answer == "True" else 0))
+                cursor.execute("INSERT INTO theory_options (question_id, option_text, is_correct) VALUES (?, 'False', ?)",
+                               (q_id, 1 if correct_answer == "False" else 0))
+                if correction_term:
+                    cursor.execute("INSERT INTO theory_options (question_id, option_text, is_correct, match_pair) VALUES (?, ?, 0, 'correction')",
+                                   (q_id, correction_term))
+
+            elif q_type == "fill_in":
+                answer = request.form.get("fill_answer", "").strip()
+                cursor.execute("INSERT INTO theory_options (question_id, option_text, is_correct) VALUES (?, ?, 1)",
+                               (q_id, answer))
+
+            elif q_type == "match":
+                col_a = request.form.getlist("match_a")
+                col_b = request.form.getlist("match_b")
+                for a, b in zip(col_a, col_b):
+                    if a.strip() and b.strip():
+                        cursor.execute("""
+                            INSERT INTO theory_options (question_id, option_text, is_correct, match_pair)
+                            VALUES (?, ?, 1, ?)
+                        """, (q_id, a.strip(), b.strip()))
+
+            conn.commit()
+            log_activity(username, f"added question to test {test_id}")
+
+        elif action == "delete_question":
+            q_id = request.form.get("question_id")
+            cursor.execute("DELETE FROM theory_options WHERE question_id = ?", (q_id,))
+            cursor.execute("DELETE FROM theory_questions WHERE id = ?", (q_id,))
+            conn.commit()
+
+        elif action == "edit_question":
+            q_id = request.form.get("question_id")
+            q_text = request.form.get("question_text", "").strip()
+            marks = int(request.form.get("marks", 1))
+            q_type = request.form.get("question_type", "")
+
+            cursor.execute("UPDATE theory_questions SET question_text = ?, marks = ? WHERE id = ?",
+                           (q_text, marks, q_id))
+
+            # Replace all options
+            cursor.execute("DELETE FROM theory_options WHERE question_id = ?", (q_id,))
+
+            if q_type in ["mcq_single", "mcq_multi"]:
+                options = request.form.getlist("option_text")
+                correct = request.form.getlist("is_correct")
+                for i, opt in enumerate(options):
+                    if opt.strip():
+                        is_correct = 1 if str(i) in correct else 0
+                        cursor.execute("INSERT INTO theory_options (question_id, option_text, is_correct) VALUES (?, ?, ?)",
+                                       (q_id, opt.strip(), is_correct))
+
+            elif q_type == "true_false":
+                correct_answer = request.form.get("tf_correct", "True")
+                correction_term = request.form.get("correction_term", "").strip()
+                cursor.execute("INSERT INTO theory_options (question_id, option_text, is_correct) VALUES (?, 'True', ?)",
+                               (q_id, 1 if correct_answer == "True" else 0))
+                cursor.execute("INSERT INTO theory_options (question_id, option_text, is_correct) VALUES (?, 'False', ?)",
+                               (q_id, 1 if correct_answer == "False" else 0))
+                if correction_term:
+                    cursor.execute("INSERT INTO theory_options (question_id, option_text, is_correct, match_pair) VALUES (?, ?, 0, 'correction')",
+                                   (q_id, correction_term))
+
+            elif q_type == "fill_in":
+                answer = request.form.get("fill_answer", "").strip()
+                cursor.execute("INSERT INTO theory_options (question_id, option_text, is_correct) VALUES (?, ?, 1)",
+                               (q_id, answer))
+
+            elif q_type == "match":
+                col_a = request.form.getlist("match_a")
+                col_b = request.form.getlist("match_b")
+                for a, b in zip(col_a, col_b):
+                    if a.strip() and b.strip():
+                        cursor.execute("INSERT INTO theory_options (question_id, option_text, is_correct, match_pair) VALUES (?, ?, 1, ?)",
+                                       (q_id, a.strip(), b.strip()))
+
+            conn.commit()
+            log_activity(username, f"edited question {q_id} in test {test_id}")
+
+        conn.close()
+        return redirect(url_for("manage_test_questions", test_id=test_id))
+
+    # GET — load questions with their options
+    cursor.execute("""
+        SELECT id, question_text, question_type, marks, order_index
+        FROM theory_questions WHERE test_id = ? ORDER BY order_index
+    """, (test_id,))
+    questions = cursor.fetchall()
+
+    questions_with_options = []
+    for q in questions:
+        cursor.execute("SELECT id, option_text, is_correct, match_pair FROM theory_options WHERE question_id = ?", (q[0],))
+        options = cursor.fetchall()
+        questions_with_options.append({"q": q, "options": options})
+
+    conn.close()
+    return render_template("manage_test_questions.html", test=test, questions=questions_with_options)
+
+
+@app.route("/tests")
+def learner_tests():
+    """Show available tests to a learner."""
+    username = session.get("username")
+    if not username:
+        return redirect(url_for("login"))
+
+    conn = get_db()
+    cursor = conn.cursor()
+    cursor.execute("SELECT group_name FROM users WHERE username = ?", (username,))
+    row = cursor.fetchone()
+    user_group = row[0] if row else None
+
+    cursor.execute("""
+        SELECT t.id, t.title, t.subject, t.time_limit,
+               best.best_percentage,
+               sub.id as latest_submission_id,
+               t.allow_multiple, t.max_attempts,
+               COALESCE(cnt.attempt_count, 0) as attempt_count
+        FROM theory_tests t
+        LEFT JOIN (
+            SELECT test_id, MAX(percentage) as best_percentage
+            FROM theory_submissions WHERE username = ?
+            GROUP BY test_id
+        ) best ON t.id = best.test_id
+        LEFT JOIN (
+            SELECT test_id, id, percentage,
+                   ROW_NUMBER() OVER (PARTITION BY test_id ORDER BY submitted_at DESC) as rn
+            FROM theory_submissions WHERE username = ?
+        ) sub ON t.id = sub.test_id AND sub.rn = 1
+        LEFT JOIN (
+            SELECT test_id, COUNT(*) as attempt_count
+            FROM theory_submissions WHERE username = ?
+            GROUP BY test_id
+        ) cnt ON t.id = cnt.test_id
+        WHERE t.is_active = 1
+          AND (
+              NOT EXISTS (SELECT 1 FROM theory_test_groups WHERE test_id = t.id)
+              OR EXISTS (SELECT 1 FROM theory_test_groups WHERE test_id = t.id AND group_name = ?)
+          )
+        GROUP BY t.id
+        ORDER BY t.created_at DESC
+    """, (username, username, username, user_group))
+    tests = cursor.fetchall()
+    conn.close()
+    return render_template("learner_tests.html", tests=tests)
+
+
+@app.route("/take_test/<int:test_id>", methods=["GET", "POST"])
+def take_test(test_id):
+    username = session.get("username")
+    if not username:
+        return redirect(url_for("login"))
+
+    conn = get_db()
+    cursor = conn.cursor()
+
+    cursor.execute("SELECT id, title, subject, time_limit, allow_multiple, max_attempts, show_answers FROM theory_tests WHERE id = ? AND is_active = 1", (test_id,))
+    test = cursor.fetchone()
+    if not test:
+        conn.close()
+        return "Test not found or not available", 404
+
+    # Check attempt count
+    cursor.execute("SELECT COUNT(*) FROM theory_submissions WHERE test_id = ? AND username = ?", (test_id, username))
+    attempt_count = cursor.fetchone()[0]
+    allow_multiple = test[4]
+    max_attempts = test[5]
+
+    if not allow_multiple and attempt_count > 0:
+        conn.close()
+        return redirect(url_for("learner_tests"))
+
+    if allow_multiple and attempt_count >= max_attempts:
+        conn.close()
+        return redirect(url_for("learner_tests"))
+
+    cursor.execute("""
+        SELECT id, question_text, question_type, marks
+        FROM theory_questions WHERE test_id = ? ORDER BY order_index
+    """, (test_id,))
+    questions = cursor.fetchall()
+
+    if request.method == "GET":
+        # Shuffle options and store the order in session so POST uses same order
+        questions_with_options = []
+        session_order = {}
+        for q in questions:
+            cursor.execute("SELECT id, option_text, is_correct, match_pair FROM theory_options WHERE question_id = ?", (q[0],))
+            options = list(cursor.fetchall())
+            q_type = q[2]
+            if q_type in ["mcq_single", "mcq_multi"]:
+                random.shuffle(options)
+            elif q_type == "match":
+                random.shuffle(options)
+            # Store option IDs in shuffled order in session
+            session_order[str(q[0])] = [o[0] for o in options]
+            questions_with_options.append({"q": q, "options": options})
+        session[f"test_order_{test_id}"] = session_order
+        conn.close()
+        return render_template("take_test.html", test=test, questions=questions_with_options, attempt_number=attempt_count + 1)
+
+    # POST — restore shuffled order from session
+    session_order = session.get(f"test_order_{test_id}", {})
+    questions_with_options = []
+    for q in questions:
+        q_id = q[0]
+        cursor.execute("SELECT id, option_text, is_correct, match_pair FROM theory_options WHERE question_id = ?", (q_id,))
+        all_options = {o[0]: o for o in cursor.fetchall()}
+        stored_ids = session_order.get(str(q_id), [])
+        if stored_ids:
+            options = [all_options[oid] for oid in stored_ids if oid in all_options]
+        else:
+            options = list(all_options.values())
+        questions_with_options.append({"q": q, "options": options})
+
+    # Now mark all questions
+    score = 0
+    total = 0
+    answers_to_save = []
+
+    for item in questions_with_options:
+        q = item["q"]
+        q_id, q_text, q_type, marks = q
+        options = item["options"]
+        effective_marks = len([o for o in options if o[3] and o[3] != 'correction']) if q_type == "match" else marks
+        total += effective_marks
+        awarded = 0
+        answer_text = ""
+
+        if q_type == "mcq_single":
+            selected = request.form.get(f"q_{q_id}")
+            answer_text = selected or ""
+            cursor.execute("SELECT option_text FROM theory_options WHERE question_id = ? AND is_correct = 1 LIMIT 1", (q_id,))
+            correct_row = cursor.fetchone()
+            correct_option = correct_row[0] if correct_row else None
+            if selected and selected == correct_option:
+                awarded = marks
+
+        elif q_type == "mcq_multi":
+            selected = set(request.form.getlist(f"q_{q_id}"))
+            cursor.execute("SELECT option_text FROM theory_options WHERE question_id = ? AND is_correct = 1", (q_id,))
+            correct = set(row[0] for row in cursor.fetchall())
+            answer_text = ", ".join(sorted(selected))
+            if selected == correct:
+                awarded = marks
+
+        elif q_type == "true_false":
+            selected = request.form.get(f"q_{q_id}")
+            correction_submitted = request.form.get(f"q_{q_id}_correction", "").strip()
+            answer_text = selected or ""
+            if correction_submitted:
+                answer_text += f" (correction: {correction_submitted})"
+            cursor.execute("SELECT option_text FROM theory_options WHERE question_id = ? AND is_correct = 1 LIMIT 1", (q_id,))
+            correct_row = cursor.fetchone()
+            correct_option = correct_row[0] if correct_row else None
+            cursor.execute("SELECT option_text FROM theory_options WHERE question_id = ? AND match_pair = 'correction' LIMIT 1", (q_id,))
+            correction_row = cursor.fetchone()
+            correction_term = correction_row[0] if correction_row else None
+            if selected == correct_option:
+                if selected == "False" and correction_term:
+                    if correction_submitted.upper() == correction_term.upper():
+                        awarded = effective_marks
+                else:
+                    awarded = effective_marks
+
+        elif q_type == "fill_in":
+            answer_text = request.form.get(f"q_{q_id}", "").strip()
+            cursor.execute("SELECT option_text FROM theory_options WHERE question_id = ? AND is_correct = 1 LIMIT 1", (q_id,))
+            correct_row = cursor.fetchone()
+            correct = correct_row[0] if correct_row else ""
+            if answer_text.upper() == correct.upper():
+                awarded = marks
+
+        elif q_type == "match":
+            match_answers = []
+            awarded = 0
+            for idx, o in enumerate(options, start=1):
+                col_a_item = o[1]
+                col_b_correct = o[3]
+                submitted = request.form.get(f"q_{q_id}_{idx}", "")
+                match_answers.append(f"{col_a_item}={submitted}")
+                if submitted == col_b_correct:
+                    awarded += 1
+            answer_text = "; ".join(match_answers)
+
+        score += awarded
+        answers_to_save.append((q_id, answer_text, 1 if awarded == effective_marks else 0, awarded))
+
+    percentage = round((score / total) * 100) if total else 0
+
+    cursor.execute("""
+        INSERT INTO theory_submissions (test_id, username, score, total, percentage, submitted_at)
+        VALUES (?, ?, ?, ?, ?, ?)
+    """, (test_id, username, score, total, percentage, datetime.now().isoformat()))
+    submission_id = cursor.lastrowid
+
+    for q_id, answer_text, is_correct, awarded in answers_to_save:
+        cursor.execute("""
+            INSERT INTO theory_answers (submission_id, question_id, answer_text, is_correct, marks_awarded)
+            VALUES (?, ?, ?, ?, ?)
+        """, (submission_id, q_id, answer_text, is_correct, awarded))
+
+    conn.commit()
+    conn.close()
+    session.pop(f"test_order_{test_id}", None)
+    log_activity(username, f"completed theory test {test_id} — {percentage}%")
+    return redirect(url_for("test_results", submission_id=submission_id))
+
+
+@app.route("/test_results/<int:submission_id>")
+def test_results(submission_id):
+    username = session.get("username")
+    if not username:
+        return redirect(url_for("login"))
+
+    conn = get_db()
+    cursor = conn.cursor()
+
+    cursor.execute("""
+        SELECT s.id, s.score, s.total, s.percentage, s.submitted_at, t.title, t.subject,
+               t.show_answers, t.allow_multiple, t.max_attempts, t.id as test_id
+        FROM theory_submissions s
+        JOIN theory_tests t ON s.test_id = t.id
+        WHERE s.id = ? AND s.username = ?
+    """, (submission_id, username))
+    submission = cursor.fetchone()
+    if not submission:
+        conn.close()
+        return "Results not found", 404
+
+    test_id = submission[10]
+    show_answers = submission[7]
+    allow_multiple = submission[8]
+    max_attempts = submission[9]
+
+    # Count attempts and get best score
+    cursor.execute("SELECT COUNT(*), MAX(percentage) FROM theory_submissions WHERE test_id = ? AND username = ?", (test_id, username))
+    attempt_row = cursor.fetchone()
+    attempts_used = attempt_row[0]
+    best_percentage = attempt_row[1]
+    can_retry = allow_multiple and attempts_used < max_attempts
+
+    cursor.execute("""
+        SELECT q.question_text, q.question_type, q.marks,
+               a.answer_text, a.is_correct, a.marks_awarded, a.question_id
+        FROM theory_answers a
+        JOIN theory_questions q ON a.question_id = q.id
+        WHERE a.submission_id = ?
+        ORDER BY q.order_index
+    """, (submission_id,))
+    answers = cursor.fetchall()
+
+    detailed = []
+    for ans in answers:
+        q_text, q_type, marks, answer_text, is_correct, marks_awarded, q_id = ans
+        cursor.execute("""
+            SELECT option_text, is_correct, match_pair
+            FROM theory_options WHERE question_id = ?
+        """, (q_id,))
+        options = cursor.fetchall()
+        detailed.append({
+            "question": q_text,
+            "type": q_type,
+            "marks": marks,
+            "answer": answer_text,
+            "correct": is_correct,
+            "awarded": marks_awarded,
+            "options": options
+        })
+
+    conn.close()
+    return render_template(
+        "test_results.html",
+        submission=submission,
+        detailed=detailed,
+        show_answers=show_answers,
+        can_retry=can_retry,
+        attempts_used=attempts_used,
+        max_attempts=max_attempts,
+        best_percentage=best_percentage,
+        test_id=test_id
+    )
+
 
 if __name__ == "__main__":
     init_db()

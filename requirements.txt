@@ -1,1 +1,6 @@
 Flask==3.0.3
+pandas
+openpyxl
+python-docx
+beautifulsoup4
+pyodbc

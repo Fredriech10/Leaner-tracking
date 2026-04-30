@@ -1,0 +1,139 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Manage Theory Tests</title>
+    <style>
+        body { font-family: Arial, sans-serif; padding: 20px; max-width: 1000px; margin: 0 auto; }
+        table { border-collapse: collapse; width: 100%; margin-top: 20px; }
+        th, td { border: 1px solid #ddd; padding: 10px; text-align: left; }
+        th { background: #f0f0f0; }
+        .badge-active { background: #c8f7c5; color: #107C10; padding: 3px 8px; border-radius: 10px; font-size: 0.85em; }
+        .badge-inactive { background: #f7c5c5; color: #A4262C; padding: 3px 8px; border-radius: 10px; font-size: 0.85em; }
+        .btn { padding: 6px 12px; border: none; border-radius: 4px; cursor: pointer; text-decoration: none; font-size: 0.9em; }
+        .btn-primary { background: #0078D4; color: white; }
+        .btn-danger { background: #A4262C; color: white; }
+        .btn-success { background: #107C10; color: white; }
+        .btn-warning { background: #ff8c00; color: white; }
+        .create-form { background: #f9f9f9; border: 1px solid #ddd; padding: 20px; border-radius: 6px; margin-bottom: 30px; }
+        .form-row { display: flex; gap: 15px; flex-wrap: wrap; align-items: flex-end; margin-bottom: 10px; }
+        .form-group { display: flex; flex-direction: column; gap: 4px; }
+        label { font-weight: bold; font-size: 0.9em; }
+        input, select { padding: 7px; border: 1px solid #ccc; border-radius: 4px; }
+    </style>
+</head>
+<body>
+
+<p><a href="/teacher_dashboard">← Back to Teacher Dashboard</a></p>
+<h2>📝 Theory Tests</h2>
+
+<div class="create-form">
+    <h3>Create New Test</h3>
+    <form method="post" action="/manage_tests/create">
+        <div class="form-row">
+            <div class="form-group">
+                <label>Test Title</label>
+                <input type="text" name="title" required placeholder="e.g. Excel Theory Test 1" style="width:220px;">
+            </div>
+            <div class="form-group">
+                <label>Subject</label>
+                <input type="text" name="subject" placeholder="e.g. Excel" style="width:120px;">
+            </div>
+            <div class="form-group" style="width:100px;">
+                <label>Time Limit (min)</label>
+                <input type="number" name="time_limit" value="0" min="0" style="width:80px;">
+                <small style="color:gray;">0 = no limit</small>
+            </div>
+        </div>
+        <div class="form-row" style="gap:30px; flex-wrap:wrap; margin-top:10px;">
+            <label style="font-weight:normal; display:flex; align-items:center; gap:8px;">
+                <input type="checkbox" name="allow_multiple" id="allowMultiple" onchange="toggleMaxAttempts(this)">
+                <strong>Allow Multiple Attempts</strong>
+            </label>
+            <div class="form-group" id="maxAttemptsGroup" style="display:none;">
+                <label>Max Attempts</label>
+                <input type="number" name="max_attempts" value="3" min="2" max="10" style="width:70px;">
+            </div>
+            <label style="font-weight:normal; display:flex; align-items:center; gap:8px;">
+                <input type="checkbox" name="show_answers" checked>
+                <strong>Show Answers After Submission</strong>
+            </label>
+        </div>
+        <div class="form-group">
+            <label>Assign to Groups</label>
+            <div style="display:flex;flex-wrap:wrap;gap:10px;">
+            {% for g in groups %}
+            <label style="font-weight:normal;display:inline-flex;align-items:center;gap:5px;">
+                <input type="checkbox" name="groups" value="{{ g }}"> {{ g }}
+            </label>
+            {% endfor %}
+            </div>
+            <small style="color:gray;margin-top:4px;display:block;">Leave all unchecked = available to all groups</small>
+        </div>
+        <div class="form-row">
+            <div class="form-group">
+                <label>&nbsp;</label>
+                <button type="submit" class="btn btn-primary">Create Test</button>
+            </div>
+        </div>
+    </form>
+</div>
+
+<h3>Existing Tests</h3>
+{% if tests %}
+<table>
+    <tr>
+        <th>Title</th>
+        <th>Subject</th>
+        <th>Groups</th>
+        <th>Questions</th>
+        <th>Time Limit</th>
+        <th>Attempts</th>
+        <th>Show Answers</th>
+        <th>Status</th>
+        <th>Actions</th>
+    </tr>
+    {% for t in tests %}
+    <tr>
+        <td>{{ t[1] }}</td>
+        <td>{{ t[2] or '—' }}</td>
+        <td>{{ t[6] or 'All Groups' }}</td>
+        <td>{{ t[5] }}</td>
+        <td>{{ t[3] ~ ' min' if t[3] else 'No limit' }}</td>
+        <td>{{ t[8] ~ ' max' if t[7] else '1 (single)' }}</td>
+        <td>{{ '✔ Yes' if t[9] else '✘ No' }}</td>
+        <td>
+            {% if t[4] %}
+                <span class="badge-active">Active</span>
+            {% else %}
+                <span class="badge-inactive">Inactive</span>
+            {% endif %}
+        </td>
+        <td style="display:flex; gap:6px; flex-wrap:wrap;">
+            <a href="/manage_tests/{{ t[0] }}/questions" class="btn btn-primary">✏️ Edit Questions</a>
+            <a href="/manage_tests/{{ t[0] }}/edit" class="btn btn-warning">⚙️ Edit Settings</a>
+            <form method="post" action="/manage_tests/{{ t[0] }}/toggle" style="display:inline;">
+                <button type="submit" class="btn {{ 'btn-warning' if t[4] else 'btn-success' }}">
+                    {{ '⏸ Deactivate' if t[4] else '▶ Activate' }}
+                </button>
+            </form>
+            <form method="post" action="/manage_tests/{{ t[0] }}/delete" style="display:inline;"
+                  onsubmit="return confirm('Delete this test and all its questions?')">
+                <button type="submit" class="btn btn-danger">🗑 Delete</button>
+            </form>
+        </td>
+    </tr>
+    {% endfor %}
+</table>
+{% else %}
+<p>No tests created yet.</p>
+{% endif %}
+
+<script>
+function toggleMaxAttempts(checkbox) {
+    document.getElementById('maxAttemptsGroup').style.display = checkbox.checked ? 'block' : 'none';
+}
+</script>
+
+</body>
+</html>

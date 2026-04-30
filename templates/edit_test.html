@@ -1,0 +1,95 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Edit Test Settings</title>
+    <style>
+        body { font-family: Arial, sans-serif; padding: 20px; max-width: 700px; margin: 0 auto; }
+        .edit-form { background: #f9f9f9; border: 1px solid #ddd; padding: 25px; border-radius: 8px; }
+        .form-group { margin-bottom: 18px; }
+        label { font-weight: bold; font-size: 0.95em; display: block; margin-bottom: 6px; }
+        input[type=number] { padding: 7px; border: 1px solid #ccc; border-radius: 4px; width: 80px; }
+        .check-label { font-weight: normal; display: inline-flex; align-items: center; gap: 8px; font-size: 0.95em; }
+        .group-grid { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 6px; }
+        .group-grid label { font-weight: normal; display: inline-flex; align-items: center; gap: 6px; background: white; border: 1px solid #ddd; padding: 6px 12px; border-radius: 5px; cursor: pointer; }
+        .group-grid label:hover { background: #eef4ff; border-color: #0078D4; }
+        .group-grid input[type=checkbox]:checked + span { color: #0078D4; font-weight: bold; }
+        .info-box { background: #eef4ff; border: 1px solid #b0c4ff; border-radius: 6px; padding: 12px 16px; margin-bottom: 20px; font-size: 0.9em; color: #333; }
+        .btn { padding: 9px 20px; border: none; border-radius: 4px; cursor: pointer; font-size: 0.95em; text-decoration: none; display: inline-block; }
+        .btn-primary { background: #0078D4; color: white; }
+        .btn-secondary { background: #ccc; color: #333; }
+        .section-title { font-size: 1em; font-weight: bold; color: #0078D4; margin-bottom: 10px; border-bottom: 2px solid #eee; padding-bottom: 6px; }
+        #maxAttemptsGroup { margin-top: 10px; padding: 10px; background: white; border: 1px solid #ddd; border-radius: 5px; display: {{ 'block' if test[4] else 'none' }}; }
+    </style>
+</head>
+<body>
+
+<p><a href="/manage_tests">← Back to Tests</a></p>
+<h2>⚙️ Edit Test Settings</h2>
+
+<div class="info-box">
+    <strong>{{ test[1] }}</strong>{% if test[2] %} — {{ test[2] }}{% endif %}<br>
+    <small style="color:#555;">Only settings are editable here. To edit questions go to Edit Questions.</small>
+</div>
+
+<div class="edit-form">
+    <form method="post">
+
+        <!-- Groups -->
+        <div class="form-group">
+            <div class="section-title">Assigned Groups</div>
+            <div class="group-grid">
+                {% for g in all_groups %}
+                <label>
+                    <input type="checkbox" name="groups" value="{{ g }}"
+                           {{ 'checked' if g in current_groups else '' }}>
+                    <span>{{ g }}</span>
+                </label>
+                {% endfor %}
+            </div>
+            <small style="color:gray; margin-top:6px; display:block;">Leave all unchecked = available to all groups</small>
+        </div>
+
+        <!-- Attempts -->
+        <div class="form-group">
+            <div class="section-title">Attempt Settings</div>
+            <label class="check-label">
+                <input type="checkbox" name="allow_multiple" id="allowMultiple"
+                       {{ 'checked' if test[4] else '' }}
+                       onchange="toggleMaxAttempts(this)">
+                Allow Multiple Attempts
+            </label>
+            <div id="maxAttemptsGroup">
+                <label style="margin-top:8px;">Max Attempts</label>
+                <input type="number" name="max_attempts" value="{{ test[5] }}" min="2" max="10">
+            </div>
+        </div>
+
+        <!-- Show Answers -->
+        <div class="form-group">
+            <div class="section-title">Results Display</div>
+            <label class="check-label">
+                <input type="checkbox" name="show_answers" {{ 'checked' if test[6] else '' }}>
+                Show Answers After Submission
+            </label>
+            <small style="color:gray; display:block; margin-top:4px;">
+                When off, learners only see their score — not the correct answers.
+            </small>
+        </div>
+
+        <div style="display:flex; gap:10px; margin-top:10px;">
+            <button type="submit" class="btn btn-primary">💾 Save Changes</button>
+            <a href="/manage_tests" class="btn btn-secondary">Cancel</a>
+        </div>
+
+    </form>
+</div>
+
+<script>
+function toggleMaxAttempts(checkbox) {
+    document.getElementById('maxAttemptsGroup').style.display = checkbox.checked ? 'block' : 'none';
+}
+</script>
+
+</body>
+</html>

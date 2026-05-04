@@ -12,7 +12,7 @@
 
 <p>Select the groups you want to export. Each group will be saved as a separate sheet in the Excel file.</p>
 
-<form method="POST" action="/export_attendance_multi">
+<form method="POST" action="/export_attendance_multi" id="exportForm">
     <h3>Select Date Range:</h3>
     <label>Start Date: <input type="date" name="start_date" required></label>
     <label style="margin-left:20px;">End Date: <input type="date" name="end_date" required></label>
@@ -30,6 +30,14 @@
         📊 Export Selected Groups
     </button>
 </form>
+
+<script>
+document.getElementById('exportForm').addEventListener('submit', function() {
+    setTimeout(function() {
+        window.location.href = '/teacher_dashboard';
+    }, 1000);
+});
+</script>
 
 </body>
 </html>

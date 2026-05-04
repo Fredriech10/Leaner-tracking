@@ -256,11 +256,18 @@
 <div class="card full" style="margin-bottom:18px;">
     <h3>📋 Task Status</h3>
     <table>
-        <tr><th>Subject</th><th>Task</th><th>Status</th><th>Score</th><th>Feedback</th><th>Submitted</th></tr>
+        <tr><th>Subject</th><th>Task</th><th>Type</th><th>Status</th><th>Score</th><th>Feedback</th><th>Submitted</th></tr>
         {% for task in task_rows %}
         <tr>
             <td>{{ task.subject }}</td>
             <td>{{ task.task }}</td>
+            <td>
+                {% if task.type == 'theory' %}
+                <span style="background:#fff4e6;color:#b36b00;padding:2px 6px;border-radius:10px;font-size:0.75em;font-weight:bold;">📝 Theory</span>
+                {% else %}
+                <span style="background:#e8f4f8;color:#005a9e;padding:2px 6px;border-radius:10px;font-size:0.75em;font-weight:bold;">📁 Practical</span>
+                {% endif %}
+            </td>
             <td>
                 <span class="badge {{ 'badge-submitted' if task.status == 'Submitted' else 'badge-missing' }}">
                     {{ task.status }}

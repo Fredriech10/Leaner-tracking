@@ -82,7 +82,7 @@
         <!-- Left: Group Selection -->
         <form method="get" id="groupForm" style="display: flex; gap: 12px; align-items: center;">
             <label for="groupSelect" style="font-weight: bold;">Group:</label>
-            <select name="group" id="groupSelect">
+            <select name="group" id="groupSelect" onchange="this.form.submit()">
                 <option value="">-- Select Group --</option>
                 {% for g in groups %}
                     <option value="{{ g }}" {% if g == selected_group %}selected{% endif %}>
@@ -93,7 +93,6 @@
             {% if edit_mode %}
                 <input type="hidden" name="edit" value="1">
             {% endif %}
-            <button type="submit" class="btn btn-primary">Load</button>
         </form>
 
         {% if selected_group %}
@@ -318,6 +317,7 @@
 
 <script>
 const editMode = {{ "true" if edit_mode else "false" }};
+const selectedGroup = "{{ selected_group or '' }}";
 
 function getDateRange() {
     const today = new Date();

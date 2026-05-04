@@ -1,0 +1,84 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Export Results</title>
+    <style>
+        * { box-sizing: border-box; }
+        body { font-family: Arial, sans-serif; margin: 0; padding: 20px; background: #f0f2f5; color: #222; }
+        
+        .container { max-width: 800px; margin: 0 auto; }
+        
+        .card { background: white; border-radius: 8px; padding: 24px; border: 1px solid #ddd; margin-bottom: 20px; }
+        .card h2 { margin: 0 0 20px 0; font-size: 1.3em; color: #005a9e; }
+        
+        .form-group { margin-bottom: 20px; }
+        .form-group label { display: block; font-weight: bold; margin-bottom: 8px; font-size: 0.95em; }
+        
+        .checkbox-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 10px; padding: 12px; background: #f9f9f9; border-radius: 6px; border: 1px solid #ddd; }
+        .checkbox-item { display: flex; align-items: center; gap: 8px; }
+        .checkbox-item input[type="checkbox"] { width: 18px; height: 18px; cursor: pointer; }
+        .checkbox-item label { margin: 0; cursor: pointer; font-weight: normal; }
+        
+        .btn { padding: 10px 20px; border: none; border-radius: 6px; cursor: pointer; font-size: 0.95em; font-weight: bold; text-decoration: none; display: inline-block; }
+        .btn-primary { background: #005a9e; color: white; }
+        .btn-primary:hover { background: #004578; }
+        .btn-secondary { background: #666; color: white; }
+        .btn-secondary:hover { background: #555; }
+        
+        .select-all-btn { background: #f0f4ff; border: 1px solid #b0c4ff; color: #005a9e; padding: 6px 12px; border-radius: 4px; cursor: pointer; font-size: 0.85em; margin-bottom: 10px; }
+        .select-all-btn:hover { background: #dce8ff; }
+        
+        .info-box { background: #e8f4f8; border-left: 4px solid #0078D4; padding: 12px 16px; border-radius: 4px; margin-bottom: 20px; font-size: 0.9em; }
+        .info-box strong { color: #005a9e; }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <div class="card">
+        <h2>📊 Export Results by Group</h2>
+        
+        <div class="info-box">
+            <strong>ℹ️ Export Format:</strong> Each group will be exported to a separate sheet with dynamically generated columns for all assigned practical tasks and theory tests. Only tasks assigned to each group will appear in their respective sheets.
+        </div>
+        
+        <form method="post" action="/export_results_multi" id="exportForm">
+            <div class="form-group">
+                <label>Select Groups to Export:</label>
+                <button type="button" class="select-all-btn" onclick="toggleAll()">Select All / Deselect All</button>
+                <div class="checkbox-grid">
+                    {% for group in all_groups %}
+                    <div class="checkbox-item">
+                        <input type="checkbox" name="groups" value="{{ group }}" id="group_{{ loop.index }}">
+                        <label for="group_{{ loop.index }}">{{ group }}</label>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+            
+            <div style="display: flex; gap: 12px; justify-content: flex-end;">
+                <a href="/teacher_dashboard" class="btn btn-secondary">Cancel</a>
+                <button type="submit" class="btn btn-primary">📥 Export to Excel</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<script>
+function toggleAll() {
+    const checkboxes = document.querySelectorAll('input[name="groups"]');
+    const allChecked = Array.from(checkboxes).every(cb => cb.checked);
+    checkboxes.forEach(cb => cb.checked = !allChecked);
+}
+
+// Redirect to dashboard after download starts
+document.getElementById('exportForm').addEventListener('submit', function() {
+    setTimeout(function() {
+        window.location.href = '/teacher_dashboard';
+    }, 1000);
+});
+</script>
+
+</body>
+</html>

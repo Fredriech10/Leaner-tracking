@@ -2033,18 +2033,70 @@ def learner_record(username):
     else:
         trend = "not enough data"
 
-    # Task status rows
+    # Task status rows - DYNAMICALLY fetch only assigned tasks
+    cursor.execute("SELECT group_name FROM users WHERE username = ?", (username,))
+    user_group_row = cursor.fetchone()
+    user_group = user_group_row[0] if user_group_row else None
+    
+    # Get practical tasks assigned to this user's group
+    cursor.execute("""
+        SELECT DISTINCT s.name as subject, t.name as task_name
+        FROM tasks t
+        JOIN subjects s ON t.subject_id = s.id
+        JOIN task_groups tg ON t.id = tg.task_id
+        WHERE tg.group_name = ? AND t.task_type = 'practical'
+        ORDER BY s.name, t.name
+    """, (user_group,))
+    assigned_practical_tasks = cursor.fetchall()
+    
+    # Get theory tests assigned to this user's group
+    cursor.execute("""
+        SELECT DISTINCT tt.id, tt.title
+        FROM theory_tests tt
+        LEFT JOIN theory_test_groups ttg ON tt.id = ttg.test_id
+        WHERE (ttg.group_name = ? OR ttg.group_name IS NULL)
+        ORDER BY tt.title
+    """, (user_group,))
+    assigned_theory_tests = cursor.fetchall()
+    
+    # Build task rows from assigned tasks only
     results_map = {(r[0], r[1]): {"score": r[2], "feedback": r[3], "timestamp": r[4]} for r in all_results}
     task_rows = []
-    for subject, task in TASK_DEFINITIONS:
+    for subject, task in assigned_practical_tasks:
         row = results_map.get((subject, task))
         task_rows.append({
             "subject": subject, "task": task,
             "score": row["score"] if row else None,
             "feedback": row["feedback"] if row else None,
             "timestamp": row["timestamp"] if row else None,
-            "status": "Submitted" if row else "Not submitted"
+            "status": "Submitted" if row else "Not submitted",
+            "type": "practical"
         })
+    
+    # Get theory test submissions
+    theory_submissions_map = {}
+    for test_id, title in assigned_theory_tests:
+        cursor.execute("""
+            SELECT MAX(percentage), MAX(submitted_at)
+            FROM theory_submissions
+            WHERE username = ? AND test_id = ?
+        """, (username, test_id))
+        result = cursor.fetchone()
+        if result and result[0] is not None:
+            theory_submissions_map[title] = {"score": result[0], "timestamp": result[1]}
+    
+    # Add theory tests to task rows
+    for test_id, title in assigned_theory_tests:
+        row = theory_submissions_map.get(title)
+        task_rows.append({
+            "subject": "Theory", "task": title,
+            "score": row["score"] if row else None,
+            "feedback": "",
+            "timestamp": row["timestamp"] if row else None,
+            "status": "Submitted" if row else "Not submitted",
+            "type": "theory"
+        })
+    
     average = round(sum(t["score"] for t in task_rows if t["score"] is not None) /
                     max(1, sum(1 for t in task_rows if t["score"] is not None)), 1) \
               if any(t["score"] is not None for t in task_rows) else 0
@@ -2145,22 +2197,129 @@ def export_results():
     if get_user_role(username) not in ["teacher", "admin"]:
         return "Access denied", 403
 
+    all_groups = get_groups()
+    return render_template("export_results.html", all_groups=all_groups)
+
+
+@app.route("/export_results_multi", methods=["POST"])
+def export_results_multi():
+    username = session.get("username")
+    if not username:
+        return redirect(url_for("login"))
+
+    if get_user_role(username) not in ["teacher", "admin"]:
+        return "Access denied", 403
+
+    selected_groups = request.form.getlist("groups")
+
+    if not selected_groups:
+        return "No groups selected", 400
+
     conn = get_db()
+    cursor = conn.cursor()
 
-    df = pd.read_sql_query("""
-    SELECT u.full_name, u.group_name, r.subject, r.task, r.score, r.feedback, r.timestamp
-    FROM results r
-    JOIN users u ON r.username = u.username
-    """, conn)
+    file_path = "multi_group_results_export.xlsx"
 
-    file_path = f"results_export_{username}.xlsx"
-    df.to_excel(file_path, index=False)
+    with pd.ExcelWriter(file_path, engine='openpyxl') as writer:
+        for group in selected_groups:
+            # Get all students in the group
+            cursor.execute("""
+                SELECT username, full_name FROM users
+                WHERE group_name = ? AND role = 'student'
+                ORDER BY full_name
+            """, (group,))
+            students_raw = cursor.fetchall()
 
-    log_activity(username, "exported results")
+            # Get practical tasks assigned to this group
+            cursor.execute("""
+                SELECT DISTINCT s.name as subject, t.name as task_name, t.id
+                FROM tasks t
+                JOIN subjects s ON t.subject_id = s.id
+                JOIN task_groups tg ON t.id = tg.task_id
+                WHERE tg.group_name = ? AND t.task_type = 'practical'
+                ORDER BY s.name, t.name
+            """, (group,))
+            practical_tasks = cursor.fetchall()
 
+            # Get theory tests assigned to this group
+            cursor.execute("""
+                SELECT DISTINCT tt.id, tt.title, tt.subject
+                FROM theory_tests tt
+                LEFT JOIN theory_test_groups ttg ON tt.id = ttg.test_id
+                WHERE (ttg.group_name = ? OR ttg.group_name IS NULL)
+                ORDER BY tt.subject, tt.title
+            """, (group,))
+            theory_tasks = cursor.fetchall()
+
+            # Build rows for Excel
+            rows = []
+            for student_username, full_name in students_raw:
+                row = {
+                    "Username": student_username,
+                    "Name": full_name or student_username,
+                    "Group": group
+                }
+
+                # Get practical results
+                for subject, task_name, task_id in practical_tasks:
+                    cursor.execute("""
+                        SELECT MAX(score)
+                        FROM results
+                        WHERE username = ? AND subject = ? AND task = ?
+                    """, (student_username, subject, task_name))
+                    result = cursor.fetchone()
+                    col_name = f"{subject} - {task_name}"
+                    row[col_name] = result[0] if result and result[0] is not None else ""
+
+                # Get theory results
+                for test_id, title, subject in theory_tasks:
+                    cursor.execute("""
+                        SELECT MAX(percentage)
+                        FROM theory_submissions
+                        WHERE username = ? AND test_id = ?
+                    """, (student_username, test_id))
+                    result = cursor.fetchone()
+                    col_name = f"[Theory] {title}"
+                    row[col_name] = result[0] if result and result[0] is not None else ""
+
+                # Calculate overall average
+                all_scores = []
+                for subject, task_name, task_id in practical_tasks:
+                    cursor.execute("""
+                        SELECT MAX(score)
+                        FROM results
+                        WHERE username = ? AND subject = ? AND task = ?
+                    """, (student_username, subject, task_name))
+                    result = cursor.fetchone()
+                    if result and result[0] is not None:
+                        all_scores.append(result[0])
+                
+                for test_id, title, subject in theory_tasks:
+                    cursor.execute("""
+                        SELECT MAX(percentage)
+                        FROM theory_submissions
+                        WHERE username = ? AND test_id = ?
+                    """, (student_username, test_id))
+                    result = cursor.fetchone()
+                    if result and result[0] is not None:
+                        all_scores.append(result[0])
+                
+                row["Overall Average"] = round(sum(all_scores) / len(all_scores), 1) if all_scores else ""
+
+                rows.append(row)
+
+            # Create DataFrame and write to Excel
+            df = pd.DataFrame(rows)
+            # Clean sheet name (remove special characters)
+            sheet_name = group.replace("/", "_").replace("\\", "_")[:31]  # Excel sheet name limit
+            df.to_excel(writer, sheet_name=sheet_name, index=False)
+
+    log_activity(username, "exported results by group")
     conn.close()
 
-    return send_file(file_path, as_attachment=True)
+    response = send_file(file_path, as_attachment=True)
+    response.headers["HX-Redirect"] = url_for("teacher_dashboard")
+    return response
 
 @app.route("/export/attendance")
 def export_attendance():
@@ -2396,7 +2555,9 @@ def export_attendance_multi():
 
     conn.close()
 
-    return send_file(file_path, as_attachment=True)
+    response = send_file(file_path, as_attachment=True)
+    response.headers["HX-Redirect"] = url_for("teacher_dashboard")
+    return response
 
 @app.route("/reset_attendance", methods=["POST"])
 def reset_attendance():

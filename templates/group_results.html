@@ -1,0 +1,280 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <title>Group Results</title>
+    <meta charset="UTF-8">
+    <style>
+        * { box-sizing: border-box; }
+        body { font-family: Arial, sans-serif; margin: 0; padding: 0; background: #f0f2f5; color: #222; }
+
+        .topbar { background: #005a9e; color: white; padding: 14px 24px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px; }
+        .topbar h1 { margin: 0; font-size: 1.15em; }
+        .topbar-links { display: flex; gap: 16px; flex-wrap: wrap; }
+        .topbar-links a { color: white; text-decoration: none; font-size: 0.88em; opacity: 0.85; }
+        .topbar-links a:hover { opacity: 1; text-decoration: underline; }
+
+        .page { padding: 20px 24px; max-width: 1600px; margin: 0 auto; }
+
+        .card { background: white; border-radius: 8px; padding: 18px; border: 1px solid #ddd; margin-bottom: 16px; }
+        .card h3 { margin: 0 0 14px 0; font-size: 0.95em; color: #005a9e; border-bottom: 2px solid #f0f0f0; padding-bottom: 6px; }
+
+        .btn { padding: 8px 16px; border: none; border-radius: 6px; cursor: pointer; font-size: 0.88em; font-weight: bold; }
+        .btn-primary { background: #005a9e; color: white; }
+        .btn-primary:hover { background: #004578; }
+
+        select { padding: 8px 12px; border: 1px solid #ccc; border-radius: 6px; font-size: 0.9em; }
+
+        table { width: 100%; border-collapse: collapse; font-size: 0.85em; background: white; }
+        th { background: #f5f5f5; padding: 10px 8px; text-align: left; font-size: 0.82em; color: #555; font-weight: bold; border-bottom: 2px solid #ddd; position: sticky; top: 0; }
+        td { padding: 8px; border-bottom: 1px solid #f0f0f0; }
+        tr:last-child td { border-bottom: none; }
+        tr:hover td { background: #fafafa; }
+
+        .task-header { background: #e8f4f8 !important; font-weight: bold; text-align: center; }
+        .theory-header { background: #fff4e6 !important; }
+        .student-name { font-weight: bold; color: #005a9e; }
+        
+        .score-cell { text-align: center; cursor: pointer; position: relative; }
+        .score-cell:hover { background: #e8f4f8; }
+        
+        .score-high { color: #107C10; font-weight: bold; }
+        .score-medium { color: #ff8c00; font-weight: bold; }
+        .score-low { color: #A4262C; font-weight: bold; }
+        .score-none { color: #999; font-style: italic; }
+
+        .attempts-badge { 
+            display: inline-block; 
+            background: #0078D4; 
+            color: white; 
+            padding: 2px 6px; 
+            border-radius: 10px; 
+            font-size: 0.75em; 
+            margin-left: 4px;
+        }
+
+        .tooltip {
+            visibility: hidden;
+            position: absolute;
+            z-index: 1000;
+            background: #333;
+            color: white;
+            padding: 8px 12px;
+            border-radius: 6px;
+            font-size: 0.85em;
+            white-space: nowrap;
+            bottom: 125%;
+            left: 50%;
+            transform: translateX(-50%);
+            opacity: 0;
+            transition: opacity 0.3s;
+        }
+
+        .tooltip::after {
+            content: "";
+            position: absolute;
+            top: 100%;
+            left: 50%;
+            margin-left: -5px;
+            border-width: 5px;
+            border-style: solid;
+            border-color: #333 transparent transparent transparent;
+        }
+
+        .score-cell:hover .tooltip {
+            visibility: visible;
+            opacity: 1;
+        }
+
+        .legend { display: flex; gap: 16px; flex-wrap: wrap; margin-bottom: 16px; padding: 12px; background: white; border-radius: 6px; border: 1px solid #ddd; }
+        .legend-item { padding: 6px 12px; border-radius: 4px; font-size: 0.85em; }
+        .legend-practical { background: #e8f4f8; color: #005a9e; font-weight: bold; }
+        .legend-theory { background: #fff4e6; color: #b36b00; font-weight: bold; }
+
+        .summary-stats { display: flex; gap: 16px; flex-wrap: wrap; margin-bottom: 16px; }
+        .stat-box { background: white; border: 1px solid #ddd; border-radius: 6px; padding: 12px 16px; flex: 1; min-width: 150px; }
+        .stat-label { font-size: 0.8em; color: #666; margin-bottom: 4px; }
+        .stat-value { font-size: 1.4em; font-weight: bold; color: #005a9e; }
+
+        .export-btn { float: right; }
+
+        .filter-bar { display: flex; gap: 12px; align-items: center; margin-bottom: 16px; flex-wrap: wrap; }
+    </style>
+</head>
+<body>
+
+<div class="topbar">
+    <h1>📊 Group Results</h1>
+    <div class="topbar-links">
+        <a href="/teacher_dashboard">← Back to Dashboard</a>
+        <a href="/logout">Logout</a>
+    </div>
+</div>
+
+<div class="page">
+
+<div class="card">
+    <form method="get" id="groupForm" style="display: flex; gap: 12px; align-items: center;">
+        <label for="groupSelect" style="font-weight: bold;">Select Group:</label>
+        <select name="group" id="groupSelect" onchange="this.form.submit()">
+            <option value="">-- Select Group --</option>
+            {% for g in groups %}
+                <option value="{{ g }}" {% if g == selected_group %}selected{% endif %}>
+                    {{ g }}
+                </option>
+            {% endfor %}
+        </select>
+    </form>
+</div>
+
+{% if selected_group %}
+
+<!-- Summary Statistics -->
+<div class="summary-stats">
+    <div class="stat-box">
+        <div class="stat-label">Total Students</div>
+        <div class="stat-value">{{ students|length }}</div>
+    </div>
+    <div class="stat-box">
+        <div class="stat-label">Practical Tasks</div>
+        <div class="stat-value">{{ practical_tasks|length }}</div>
+    </div>
+    <div class="stat-box">
+        <div class="stat-label">Theory Tests</div>
+        <div class="stat-value">{{ theory_tasks|length }}</div>
+    </div>
+    <div class="stat-box">
+        <div class="stat-label">Group Average</div>
+        <div class="stat-value">{{ group_average }}%</div>
+    </div>
+</div>
+
+<!-- Legend -->
+<div class="legend">
+    <span class="legend-item legend-practical">📁 Practical Task</span>
+    <span class="legend-item legend-theory">📝 Theory Test</span>
+    <span style="font-size: 0.85em; color: #666;">💡 Hover over scores to see all attempts</span>
+</div>
+
+<!-- Results Table -->
+<div class="card">
+    <h3>📋 {{ selected_group }} - Detailed Results</h3>
+    
+    {% if not students %}
+        <p style="color: #888;">No students found in this group.</p>
+    {% elif not practical_tasks and not theory_tasks %}
+        <p style="color: #888;">No tasks assigned to this group yet.</p>
+    {% else %}
+    
+    <div style="overflow-x: auto;">
+        <table>
+            <thead>
+                <tr>
+                    <th rowspan="2" style="vertical-align: middle;">Student</th>
+                    <th rowspan="2" style="vertical-align: middle;">Overall Avg</th>
+                    
+                    {% if practical_tasks %}
+                    <th colspan="{{ practical_tasks|length }}" class="task-header">📁 Practical Tasks</th>
+                    {% endif %}
+                    
+                    {% if theory_tasks %}
+                    <th colspan="{{ theory_tasks|length }}" class="task-header theory-header">📝 Theory Tests</th>
+                    {% endif %}
+                </tr>
+                <tr>
+                    {% for task in practical_tasks %}
+                    <th class="task-header">{{ task.subject }}<br>{{ task.name }}</th>
+                    {% endfor %}
+                    
+                    {% for task in theory_tasks %}
+                    <th class="task-header theory-header">{{ task.title }}</th>
+                    {% endfor %}
+                </tr>
+            </thead>
+            <tbody>
+                {% for student in students %}
+                <tr>
+                    <td class="student-name">
+                        <a href="/learner_record/{{ student.username }}" style="text-decoration: none; color: inherit;">
+                            {{ student.full_name or student.username }}
+                        </a>
+                    </td>
+                    <td style="text-align: center; font-weight: bold;">
+                        {% if student.overall_avg %}
+                            <span class="{% if student.overall_avg >= 75 %}score-high{% elif student.overall_avg >= 50 %}score-medium{% else %}score-low{% endif %}">
+                                {{ student.overall_avg }}%
+                            </span>
+                        {% else %}
+                            <span class="score-none">-</span>
+                        {% endif %}
+                    </td>
+                    
+                    <!-- Practical Tasks -->
+                    {% for task in practical_tasks %}
+                    <td class="score-cell">
+                        {% set result = student.practical_results.get((task.subject, task.name)) %}
+                        {% if result %}
+                            <span class="{% if result.best_score >= 75 %}score-high{% elif result.best_score >= 50 %}score-medium{% else %}score-low{% endif %}">
+                                {{ result.best_score }}%
+                            </span>
+                            {% if result.attempts > 1 %}
+                            <span class="attempts-badge">{{ result.attempts }}x</span>
+                            {% endif %}
+                            
+                            {% if result.all_scores|length > 1 %}
+                            <div class="tooltip">
+                                <strong>All Attempts:</strong><br>
+                                {% for score in result.all_scores %}
+                                {{ loop.index }}. {{ score }}%<br>
+                                {% endfor %}
+                            </div>
+                            {% endif %}
+                        {% else %}
+                            <span class="score-none">Not submitted</span>
+                        {% endif %}
+                    </td>
+                    {% endfor %}
+                    
+                    <!-- Theory Tests -->
+                    {% for task in theory_tasks %}
+                    <td class="score-cell">
+                        {% set result = student.theory_results.get(task.test_id) %}
+                        {% if result %}
+                            <span class="{% if result.best_score >= 75 %}score-high{% elif result.best_score >= 50 %}score-medium{% else %}score-low{% endif %}">
+                                {{ result.best_score }}%
+                            </span>
+                            {% if result.attempts > 1 %}
+                            <span class="attempts-badge">{{ result.attempts }}x</span>
+                            {% endif %}
+                            
+                            {% if result.all_scores|length > 1 %}
+                            <div class="tooltip">
+                                <strong>All Attempts:</strong><br>
+                                {% for score in result.all_scores %}
+                                {{ loop.index }}. {{ score }}%<br>
+                                {% endfor %}
+                            </div>
+                            {% endif %}
+                        {% else %}
+                            <span class="score-none">Not submitted</span>
+                        {% endif %}
+                    </td>
+                    {% endfor %}
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    
+    {% endif %}
+</div>
+
+{% else %}
+    <div class="card">
+        <p style="color: #888;">Please select a group to view results.</p>
+    </div>
+{% endif %}
+
+</div>
+
+</body>
+</html>

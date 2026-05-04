@@ -118,7 +118,7 @@
                 </button>
             </form>
             <form method="post" action="/manage_tests/{{ t[0] }}/delete" style="display:inline;"
-                  onsubmit="return confirm('Delete this test and all its questions?')">
+                  onsubmit="return confirm('⚠️ WARNING: Delete this test, all questions, AND ALL STUDENT SUBMISSIONS?\n\nThis will permanently remove:\n- All test questions\n- All student attempts and scores\n- Test from Group Results\n\nThis action CANNOT be undone!')">
                 <button type="submit" class="btn btn-danger">🗑 Delete</button>
             </form>
         </td>

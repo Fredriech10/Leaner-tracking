@@ -1,0 +1,117 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Manage Subjects</title>
+    <style>
+        * { box-sizing: border-box; }
+        body { font-family: Arial, sans-serif; margin: 0; padding: 0; background: #f0f2f5; color: #222; }
+
+        .topbar { background: #005a9e; color: white; padding: 14px 24px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px; }
+        .topbar h1 { margin: 0; font-size: 1.15em; }
+        .topbar-links { display: flex; gap: 16px; flex-wrap: wrap; }
+        .topbar-links a { color: white; text-decoration: none; font-size: 0.88em; opacity: 0.85; }
+        .topbar-links a:hover { opacity: 1; text-decoration: underline; }
+
+        .page { padding: 20px 24px; max-width: 1200px; margin: 0 auto; }
+
+        .card { background: white; border-radius: 8px; padding: 18px; border: 1px solid #ddd; margin-bottom: 16px; }
+        .card h3 { margin: 0 0 14px 0; font-size: 0.95em; color: #005a9e; border-bottom: 2px solid #f0f0f0; padding-bottom: 6px; }
+
+        .form-inline { display: flex; gap: 12px; align-items: center; flex-wrap: wrap; }
+        .form-inline input[type="text"] { padding: 8px 12px; border: 1px solid #ccc; border-radius: 6px; font-size: 0.9em; min-width: 250px; }
+        
+        .btn { padding: 8px 16px; border: none; border-radius: 6px; cursor: pointer; font-size: 0.88em; font-weight: bold; text-decoration: none; display: inline-block; }
+        .btn-primary { background: #005a9e; color: white; }
+        .btn-primary:hover { background: #004578; }
+        .btn-success { background: #107C10; color: white; }
+        .btn-success:hover { background: #0d6b0d; }
+        .btn-danger { background: #A4262C; color: white; }
+        .btn-danger:hover { background: #8a1f24; }
+        .btn-sm { padding: 5px 12px; font-size: 0.82em; }
+
+        table { width: 100%; border-collapse: collapse; font-size: 0.87em; background: white; }
+        th { background: #f5f5f5; padding: 10px; text-align: left; font-size: 0.83em; color: #555; font-weight: bold; border-bottom: 2px solid #ddd; }
+        td { padding: 10px; border-bottom: 1px solid #f0f0f0; }
+        tr:last-child td { border-bottom: none; }
+        tr:hover td { background: #fafafa; }
+
+        .action-links { display: flex; gap: 8px; }
+        .action-links a { color: #005a9e; text-decoration: none; font-size: 0.85em; }
+        .action-links a:hover { text-decoration: underline; }
+
+        .empty-state { text-align: center; padding: 40px 20px; color: #888; }
+        .empty-state .icon { font-size: 3em; margin-bottom: 10px; opacity: 0.3; }
+    </style>
+</head>
+<body>
+
+<!-- Top bar -->
+<div class="topbar">
+    <h1>📁 Manage Subjects</h1>
+    <div class="topbar-links">
+        <a href="/teacher_dashboard">← Back to Dashboard</a>
+        <a href="/manage_tests">📝 Theory Tests</a>
+        <a href="/admin">👥 Admin Panel</a>
+        <a href="/attendance">📅 Attendance</a>
+        <a href="/logout">Logout</a>
+    </div>
+</div>
+
+<div class="page">
+
+<!-- Create New Subject -->
+<div class="card">
+    <h3>➕ Create New Subject</h3>
+    <form method="post" class="form-inline">
+        <input type="hidden" name="action" value="create">
+        <label for="subject_name" style="font-weight: bold;">Subject Name:</label>
+        <input type="text" id="subject_name" name="subject_name" placeholder="e.g., Word, Excel, Python" required>
+        <button type="submit" class="btn btn-success">Create Subject</button>
+    </form>
+</div>
+
+<!-- Existing Subjects -->
+<div class="card">
+    <h3>📚 Existing Subjects</h3>
+    {% if subjects %}
+    <table>
+        <thead>
+            <tr>
+                <th>Subject Name</th>
+                <th>Tasks</th>
+                <th>Actions</th>
+            </tr>
+        </thead>
+        <tbody>
+        {% for subj_id, subj_name in subjects %}
+        <tr>
+            <td><strong>{{ subj_name }}</strong></td>
+            <td>
+                <a href="/manage_tasks/{{ subj_id }}" class="btn btn-primary btn-sm">📋 Manage Tasks</a>
+            </td>
+            <td>
+                <div class="action-links">
+                    <form method="post" style="display:inline;" onsubmit="return confirm('Delete subject {{ subj_name }}? This will also delete all associated tasks.')">
+                        <input type="hidden" name="action" value="delete">
+                        <input type="hidden" name="subject_id" value="{{ subj_id }}">
+                        <button type="submit" class="btn btn-danger btn-sm">🗑️ Delete</button>
+                    </form>
+                </div>
+            </td>
+        </tr>
+        {% endfor %}
+        </tbody>
+    </table>
+    {% else %}
+    <div class="empty-state">
+        <div class="icon">📁</div>
+        <p>No subjects created yet. Create your first subject above!</p>
+    </div>
+    {% endif %}
+</div>
+
+</div>
+
+</body>
+</html>

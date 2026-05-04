@@ -2203,6 +2203,131 @@ def export_attendance():
 
     return send_file(file_path, as_attachment=True)
 
+@app.route("/group_results")
+def group_results():
+    username = session.get("username")
+    if not username:
+        return redirect(url_for("login"))
+
+    if get_user_role(username) not in ["teacher", "admin"]:
+        return "Access denied", 403
+
+    selected_group = request.args.get("group")
+    groups = get_groups()
+
+    if not selected_group:
+        return render_template("group_results.html", groups=groups, selected_group=None)
+
+    conn = get_db()
+    cursor = conn.cursor()
+
+    # Get all students in the group
+    cursor.execute("""
+        SELECT username, full_name FROM users
+        WHERE group_name = ? AND role = 'student'
+        ORDER BY full_name
+    """, (selected_group,))
+    students_raw = cursor.fetchall()
+
+    # Get practical tasks assigned to this group
+    cursor.execute("""
+        SELECT DISTINCT s.name as subject, t.name as task_name, t.id
+        FROM tasks t
+        JOIN subjects s ON t.subject_id = s.id
+        JOIN task_groups tg ON t.id = tg.task_id
+        WHERE tg.group_name = ? AND t.task_type = 'practical'
+        ORDER BY s.name, t.name
+    """, (selected_group,))
+    practical_tasks = [{"subject": row[0], "name": row[1], "id": row[2]} for row in cursor.fetchall()]
+
+    # Get theory tests assigned to this group (include inactive tests if they have submissions)
+    cursor.execute("""
+        SELECT DISTINCT tt.id, tt.title, tt.subject
+        FROM theory_tests tt
+        LEFT JOIN theory_test_groups ttg ON tt.id = ttg.test_id
+        WHERE (ttg.group_name = ? OR ttg.group_name IS NULL)
+        ORDER BY tt.subject, tt.title
+    """, (selected_group,))
+    theory_tasks = [{"test_id": row[0], "title": row[1], "subject": row[2]} for row in cursor.fetchall()]
+
+    # Build student results
+    students = []
+    total_averages = []
+
+    for username, full_name in students_raw:
+        student = {
+            "username": username,
+            "full_name": full_name,
+            "practical_results": {},
+            "theory_results": {},
+            "overall_avg": None
+        }
+
+        # Get practical results for this student
+        for task in practical_tasks:
+            cursor.execute("""
+                SELECT score, timestamp
+                FROM results
+                WHERE username = ? AND subject = ? AND task = ?
+                ORDER BY timestamp DESC
+            """, (username, task["subject"], task["name"]))
+            scores = cursor.fetchall()
+            
+            if scores:
+                all_scores = [s[0] for s in scores]
+                best_score = max(all_scores)
+                student["practical_results"][(task["subject"], task["name"])] = {
+                    "best_score": best_score,
+                    "attempts": len(scores),
+                    "all_scores": all_scores
+                }
+
+        # Get theory results for this student
+        for task in theory_tasks:
+            cursor.execute("""
+                SELECT percentage, submitted_at
+                FROM theory_submissions
+                WHERE username = ? AND test_id = ?
+                ORDER BY submitted_at DESC
+            """, (username, task["test_id"]))
+            scores = cursor.fetchall()
+            
+            if scores:
+                all_scores = [s[0] for s in scores]
+                best_score = max(all_scores)
+                student["theory_results"][task["test_id"]] = {
+                    "best_score": best_score,
+                    "attempts": len(scores),
+                    "all_scores": all_scores
+                }
+
+        # Calculate overall average (best scores only)
+        all_best_scores = []
+        all_best_scores.extend([r["best_score"] for r in student["practical_results"].values()])
+        all_best_scores.extend([r["best_score"] for r in student["theory_results"].values()])
+        
+        if all_best_scores:
+            student["overall_avg"] = round(sum(all_best_scores) / len(all_best_scores), 1)
+            total_averages.append(student["overall_avg"])
+
+        students.append(student)
+
+    # Calculate group average
+    group_average = round(sum(total_averages) / len(total_averages), 1) if total_averages else 0
+
+    conn.close()
+
+    return render_template(
+        "group_results.html",
+        groups=groups,
+        selected_group=selected_group,
+        students=students,
+        practical_tasks=practical_tasks,
+        theory_tasks=theory_tasks,
+        group_average=group_average
+    )
+
+
 @app.route("/export_attendance_form")
 def export_attendance_form():
     username = session.get("username")
@@ -2427,11 +2552,15 @@ def exclude_date():
         return "Access denied", 403
 
     date = request.form.get("date")
-    group = request.form.get("group")  # Can be None for global, or specific group
+    group = request.form.get("group")  # Can be empty string for global, or specific group
     reason = request.form.get("reason", "")
 
     if not date:
         return "Missing date", 400
+
+    # Convert empty string to None for global exclusions
+    if group == "":
+        group = None
 
     conn = get_db()
     cursor = conn.cursor()
@@ -2459,10 +2588,14 @@ def include_date():
         return "Access denied", 403
 
     date = request.form.get("date")
-    group = request.form.get("group")  # Can be None for global, or specific group
+    group = request.form.get("group")  # Can be empty string for global, or specific group
 
     if not date:
         return "Missing date", 400
+
+    # Convert empty string to None for global exclusions
+    if group == "":
+        group = None
 
     conn = get_db()
     cursor = conn.cursor()
@@ -2613,11 +2746,16 @@ def manage_subjects():
                 cursor.execute("SELECT name FROM subjects WHERE id = ?", (subject_id,))
                 subj = cursor.fetchone()
                 if subj:
+                    # Delete all results for tasks in this subject
+                    cursor.execute("""
+                        DELETE FROM results WHERE subject = ?
+                    """, (subj[0],))
+                    # Delete task groups and tasks
                     cursor.execute("DELETE FROM task_groups WHERE task_id IN (SELECT id FROM tasks WHERE subject_id = ?)", (subject_id,))
                     cursor.execute("DELETE FROM tasks WHERE subject_id = ?", (subject_id,))
                     cursor.execute("DELETE FROM subjects WHERE id = ?", (subject_id,))
                     conn.commit()
-                    log_activity(username, f"deleted subject {subj[0]}")
+                    log_activity(username, f"deleted subject {subj[0]} and all related tasks and results")
                 conn.close()
 
         return redirect(url_for("manage_subjects"))
@@ -2638,7 +2776,7 @@ def manage_subjects():
                 <form method="post" style="display:inline;">
                     <input type="hidden" name="action" value="delete">
                     <input type="hidden" name="subject_id" value="{subj_id}">
-                    <button type="submit" onclick="return confirm('Delete subject {escape(subj_name)}?')">Delete</button>
+                    <button type="submit" onclick="return confirm('Delete subject {escape(subj_name)} and ALL related tasks and results? This cannot be undone!')">Delete</button>
                 </form>
             </td>
         </tr>
@@ -2718,13 +2856,25 @@ def manage_tasks(subject_id):
         elif action == "delete":
             task_id = request.form.get("task_id")
             if task_id:
-                cursor.execute("SELECT name FROM tasks WHERE id = ?", (task_id,))
+                cursor.execute("SELECT name, subject_id FROM tasks WHERE id = ?", (task_id,))
                 tsk = cursor.fetchone()
                 if tsk:
+                    task_name = tsk[0]
+                    subject_id_val = tsk[1]
+                    # Get subject name to delete results
+                    cursor.execute("SELECT name FROM subjects WHERE id = ?", (subject_id_val,))
+                    subj_row = cursor.fetchone()
+                    if subj_row:
+                        subject_name = subj_row[0]
+                        # Delete all results for this task
+                        cursor.execute("""
+                            DELETE FROM results WHERE subject = ? AND task = ?
+                        """, (subject_name, task_name))
+                    # Delete task groups and task
                     cursor.execute("DELETE FROM task_groups WHERE task_id = ?", (task_id,))
                     cursor.execute("DELETE FROM tasks WHERE id = ?", (task_id,))
                     conn.commit()
-                    log_activity(username, f"deleted task {tsk[0]} from {subject_name}")
+                    log_activity(username, f"deleted task {task_name} from {subject_name} and all related results")
 
         conn.close()
         return redirect(url_for("manage_tasks", subject_id=subject_id))
@@ -2783,7 +2933,7 @@ def manage_tasks(subject_id):
                     <input type="hidden" name="subject_id" value="{subject_id}">
                     <button type="submit" style="padding:4px 10px;border:none;border-radius:4px;cursor:pointer;font-size:0.85em;background:#A4262C;color:white;">🗑 Clear Uploads</button>
                 </form>
-                <form method="post" style="display:inline;" onsubmit="return confirm('Delete task {escape(task_name)}?')">
+                <form method="post" style="display:inline;" onsubmit="return confirm('⚠️ WARNING: Delete task {escape(task_name)} and ALL STUDENT SUBMISSIONS?\n\nThis will permanently remove:\n- All student uploads and scores\n- Task from Group Results\n\nThis action CANNOT be undone!')">
                     <input type="hidden" name="action" value="delete">
                     <input type="hidden" name="task_id" value="{task_id}">
                     <button type="submit" style="padding:4px 10px;border:none;border-radius:4px;cursor:pointer;font-size:0.85em;background:#555;color:white;">Delete</button>
@@ -3000,16 +3150,25 @@ def delete_test(test_id):
 
     conn = get_db()
     cursor = conn.cursor()
-    # Delete in order: answers → submissions → options → questions → groups → test
+    
+    # Get test title for logging
+    cursor.execute("SELECT title FROM theory_tests WHERE id = ?", (test_id,))
+    test_row = cursor.fetchone()
+    test_title = test_row[0] if test_row else f"Test {test_id}"
+    
+    # Delete in order: answers → submissions → options → questions → test_groups → tasks → test
     cursor.execute("DELETE FROM theory_answers WHERE submission_id IN (SELECT id FROM theory_submissions WHERE test_id = ?)", (test_id,))
     cursor.execute("DELETE FROM theory_submissions WHERE test_id = ?", (test_id,))
     cursor.execute("DELETE FROM theory_options WHERE question_id IN (SELECT id FROM theory_questions WHERE test_id = ?)", (test_id,))
     cursor.execute("DELETE FROM theory_questions WHERE test_id = ?", (test_id,))
     cursor.execute("DELETE FROM theory_test_groups WHERE test_id = ?", (test_id,))
+    # Also delete any tasks that reference this theory test
+    cursor.execute("DELETE FROM task_groups WHERE task_id IN (SELECT id FROM tasks WHERE theory_test_id = ?)", (test_id,))
+    cursor.execute("DELETE FROM tasks WHERE theory_test_id = ?", (test_id,))
     cursor.execute("DELETE FROM theory_tests WHERE id = ?", (test_id,))
     conn.commit()
     conn.close()
-    log_activity(username, f"deleted theory test id {test_id}")
+    log_activity(username, f"deleted theory test '{test_title}' and all related submissions")
     return redirect(url_for("manage_tests"))
 
 

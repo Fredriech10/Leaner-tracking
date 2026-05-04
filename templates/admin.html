@@ -1,67 +1,176 @@
-<h1>Admin Panel</h1>
-<p><a href="/student_dashboard">← Back to Dashboard</a></p>
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Admin Panel</title>
+    <style>
+        * { box-sizing: border-box; }
+        body { font-family: Arial, sans-serif; margin: 0; padding: 0; background: #f0f2f5; color: #222; }
 
-<form method="get" action="/admin" style="margin-bottom: 1rem; display: flex; gap: 0.5rem; flex-wrap: wrap; align-items: center;">
-    <label>
-        Search:
-        <input type="search" name="search" value="{{ search or "" }}" placeholder="username, name, group, role">
-    </label>
-    <label>
-        Group:
-        <select name="group">
+        .topbar { background: #005a9e; color: white; padding: 14px 24px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px; }
+        .topbar h1 { margin: 0; font-size: 1.15em; }
+        .topbar-links { display: flex; gap: 16px; flex-wrap: wrap; }
+        .topbar-links a { color: white; text-decoration: none; font-size: 0.88em; opacity: 0.85; }
+        .topbar-links a:hover { opacity: 1; text-decoration: underline; }
+
+        .page { padding: 20px 24px; max-width: 1400px; margin: 0 auto; }
+
+        .card { background: white; border-radius: 8px; padding: 18px; border: 1px solid #ddd; margin-bottom: 16px; }
+        .card h3 { margin: 0 0 14px 0; font-size: 0.95em; color: #005a9e; border-bottom: 2px solid #f0f0f0; padding-bottom: 6px; }
+
+        .filter-bar { display: flex; gap: 12px; align-items: center; flex-wrap: wrap; }
+        .filter-bar label { font-weight: bold; font-size: 0.88em; }
+        
+        .btn { padding: 8px 16px; border: none; border-radius: 6px; cursor: pointer; font-size: 0.88em; font-weight: bold; text-decoration: none; display: inline-block; }
+        .btn-primary { background: #005a9e; color: white; }
+        .btn-primary:hover { background: #004578; }
+        .btn-secondary { background: #666; color: white; }
+        .btn-secondary:hover { background: #555; }
+        .btn-sm { padding: 4px 10px; font-size: 0.82em; }
+
+        select, input[type="search"], input[type="text"] { padding: 8px 12px; border: 1px solid #ccc; border-radius: 6px; font-size: 0.9em; }
+
+        table { width: 100%; border-collapse: collapse; font-size: 0.87em; background: white; }
+        th { background: #f5f5f5; padding: 10px; text-align: left; font-size: 0.83em; color: #555; font-weight: bold; border-bottom: 2px solid #ddd; }
+        th a { color: #005a9e; text-decoration: none; font-weight: bold; }
+        th a:hover { text-decoration: underline; }
+        td { padding: 8px 10px; border-bottom: 1px solid #f0f0f0; }
+        tr:last-child td { border-bottom: none; }
+        tr:hover td { background: #fafafa; }
+
+        .badge { padding: 3px 8px; border-radius: 10px; font-size: 0.78em; font-weight: bold; }
+        .badge-teacher { background: #e3f2fd; color: #0078D4; }
+        .badge-student { background: #f0f0f0; color: #666; }
+        .badge-admin { background: #f7c5c5; color: #A4262C; }
+
+        .action-links { display: flex; gap: 8px; flex-wrap: wrap; }
+        .action-links a { color: #005a9e; text-decoration: none; font-size: 0.85em; }
+        .action-links a:hover { text-decoration: underline; }
+
+        .stats { display: flex; gap: 16px; margin-bottom: 16px; flex-wrap: wrap; }
+        .stat-box { background: white; border-radius: 8px; padding: 14px 18px; border: 1px solid #ddd; text-align: center; flex: 1; min-width: 150px; }
+        .stat-box .val { font-size: 1.8em; font-weight: bold; color: #005a9e; }
+        .stat-box .lbl { font-size: 0.8em; color: #666; margin-top: 4px; }
+    </style>
+</head>
+<body>
+
+<!-- Top bar -->
+<div class="topbar">
+    <h1>👥 Admin Panel</h1>
+    <div class="topbar-links">
+        <a href="/teacher_dashboard">← Back to Dashboard</a>
+        <a href="/attendance">📅 Attendance</a>
+        <a href="/manage_subjects">📁 Practical Tests</a>
+        <a href="/manage_tests">📝 Theory Tests</a>
+        <a href="/recent_activity">🕐 Activity Log</a>
+        <a href="/logout">Logout</a>
+    </div>
+</div>
+
+<div class="page">
+
+<!-- Stats -->
+<div class="stats">
+    <div class="stat-box">
+        <div class="val">{{ users | length }}</div>
+        <div class="lbl">Total Users</div>
+    </div>
+    <div class="stat-box">
+        <div class="val">{{ users | selectattr('3', 'equalto', 'student') | list | length }}</div>
+        <div class="lbl">Students</div>
+    </div>
+    <div class="stat-box">
+        <div class="val">{{ users | selectattr('3', 'equalto', 'teacher') | list | length }}</div>
+        <div class="lbl">Teachers</div>
+    </div>
+    <div class="stat-box">
+        <div class="val">{{ groups | length }}</div>
+        <div class="lbl">Groups</div>
+    </div>
+</div>
+
+<!-- Filters -->
+<div class="card">
+    <form method="get" action="/admin" class="filter-bar">
+        <label for="searchInput">Search:</label>
+        <input type="search" id="searchInput" name="search" value="{{ search or '' }}" placeholder="username, name, group, role" style="min-width: 250px;">
+        
+        <label for="groupFilter">Group:</label>
+        <select name="group" id="groupFilter">
             <option value="">All Groups</option>
             {% for group_name in groups %}
                 <option value="{{ group_name }}" {% if group_name == selected_group %}selected{% endif %}>{{ group_name }}</option>
             {% endfor %}
         </select>
-    </label>
-    <input type="hidden" name="sort" value="{{ sort }}">
-    <input type="hidden" name="order" value="{{ order }}">
-    <button type="submit">Apply</button>
-    <a href="/admin" style="margin-left: 1rem;">Reset</a>
-</form>
+        
+        <input type="hidden" name="sort" value="{{ sort }}">
+        <input type="hidden" name="order" value="{{ order }}">
+        
+        <button type="submit" class="btn btn-primary">Apply Filters</button>
+        <a href="/admin" class="btn btn-secondary">Reset</a>
+    </form>
+</div>
 
-<table border="1" style="border-collapse: collapse; width: 100%;">
-    <tr>
-        <th><a href="/admin?sort=username&order={% if sort == 'username' and order == 'asc' %}desc{% else %}asc{% endif %}{% if search %}&search={{ search }}{% endif %}{% if selected_group %}&group={{ selected_group }}{% endif %}">Username{% if sort == 'username' %} {{ '↑' if order == 'asc' else '↓' }}{% endif %}</a></th>
-        <th><a href="/admin?sort=full_name&order={% if sort == 'full_name' and order == 'asc' %}desc{% else %}asc{% endif %}{% if search %}&search={{ search }}{% endif %}{% if selected_group %}&group={{ selected_group }}{% endif %}">Full Name{% if sort == 'full_name' %} {{ '↑' if order == 'asc' else '↓' }}{% endif %}</a></th>
-        <th><a href="/admin?sort=group_name&order={% if sort == 'group_name' and order == 'asc' %}desc{% else %}asc{% endif %}{% if search %}&search={{ search }}{% endif %}{% if selected_group %}&group={{ selected_group }}{% endif %}">Group{% if sort == 'group_name' %} {{ '↑' if order == 'asc' else '↓' }}{% endif %}</a></th>
-        <th><a href="/admin?sort=role&order={% if sort == 'role' and order == 'asc' %}desc{% else %}asc{% endif %}{% if search %}&search={{ search }}{% endif %}{% if selected_group %}&group={{ selected_group }}{% endif %}">Role{% if sort == 'role' %} {{ '↑' if order == 'asc' else '↓' }}{% endif %}</a></th>
-        <th><a href="/admin?sort=last_active&order={% if sort == 'last_active' and order == 'asc' %}desc{% else %}asc{% endif %}{% if search %}&search={{ search }}{% endif %}{% if selected_group %}&group={{ selected_group }}{% endif %}">Last Active{% if sort == 'last_active' %} {{ '↑' if order == 'asc' else '↓' }}{% endif %}</a></th>
-        <th>Actions</th>
-    </tr>
-
-{% for user in users %}
-<tr>
-    <td><a href="/learner_record/{{ user[0] }}">{{ user[0] }}</a></td>
-    <td>{{ user[1] or "—" }}</td>
-    <td>{{ user[2] or "—" }}</td>
-    <td>{{ user[3] }}</td>
-    <td>{{ user[4] }}</td>
-    <td>
-        <a href="/edit_user/{{ user[0] }}">Edit</a> |
-        {% if user[3] != "teacher" %}
-            <a href="/promote/{{ user[0] }}">Promote</a>
+<!-- Users Table -->
+<div class="card">
+    <h3>User Management</h3>
+    <table id="usersTable">
+        <thead>
+            <tr>
+                <th><a href="/admin?sort=username&order={% if sort == 'username' and order == 'asc' %}desc{% else %}asc{% endif %}{% if search %}&search={{ search }}{% endif %}{% if selected_group %}&group={{ selected_group }}{% endif %}">Username{% if sort == 'username' %} {{ '↑' if order == 'asc' else '↓' }}{% endif %}</a></th>
+                <th><a href="/admin?sort=full_name&order={% if sort == 'full_name' and order == 'asc' %}desc{% else %}asc{% endif %}{% if search %}&search={{ search }}{% endif %}{% if selected_group %}&group={{ selected_group }}{% endif %}">Full Name{% if sort == 'full_name' %} {{ '↑' if order == 'asc' else '↓' }}{% endif %}</a></th>
+                <th><a href="/admin?sort=group_name&order={% if sort == 'group_name' and order == 'asc' %}desc{% else %}asc{% endif %}{% if search %}&search={{ search }}{% endif %}{% if selected_group %}&group={{ selected_group }}{% endif %}">Group{% if sort == 'group_name' %} {{ '↑' if order == 'asc' else '↓' }}{% endif %}</a></th>
+                <th><a href="/admin?sort=role&order={% if sort == 'role' and order == 'asc' %}desc{% else %}asc{% endif %}{% if search %}&search={{ search }}{% endif %}{% if selected_group %}&group={{ selected_group }}{% endif %}">Role{% if sort == 'role' %} {{ '↑' if order == 'asc' else '↓' }}{% endif %}</a></th>
+                <th><a href="/admin?sort=last_active&order={% if sort == 'last_active' and order == 'asc' %}desc{% else %}asc{% endif %}{% if search %}&search={{ search }}{% endif %}{% if selected_group %}&group={{ selected_group }}{% endif %}">Last Active{% if sort == 'last_active' %} {{ '↑' if order == 'asc' else '↓' }}{% endif %}</a></th>
+                <th>Actions</th>
+            </tr>
+        </thead>
+        <tbody>
+        {% for user in users %}
+        <tr>
+            <td><a href="/learner_record/{{ user[0] }}" style="color:#005a9e; font-weight:bold;">{{ user[0] }}</a></td>
+            <td>{{ user[1] or "—" }}</td>
+            <td>{{ user[2] or "—" }}</td>
+            <td>
+                {% if user[3] == 'teacher' %}
+                    <span class="badge badge-teacher">Teacher</span>
+                {% elif user[3] == 'admin' %}
+                    <span class="badge badge-admin">Admin</span>
+                {% else %}
+                    <span class="badge badge-student">Student</span>
+                {% endif %}
+            </td>
+            <td style="color:#888; font-size:0.85em;">{{ user[4][:16] if user[4] else '—' }}</td>
+            <td>
+                <div class="action-links">
+                    <a href="/edit_user/{{ user[0] }}">✏️ Edit</a>
+                    <a href="/learner_record/{{ user[0] }}">📊 Record</a>
+                    {% if user[3] != "teacher" and user[3] != "admin" %}
+                        <a href="/promote/{{ user[0] }}" style="color:#107C10;">⬆️ Promote</a>
+                    {% else %}
+                        <a href="/demote/{{ user[0] }}" style="color:#A4262C;">⬇️ Demote</a>
+                    {% endif %}
+                </div>
+            </td>
+        </tr>
         {% else %}
-            <a href="/demote/{{ user[0] }}">Demote</a>
-        {% endif %}
-    </td>
-</tr>
-{% else %}
-<tr>
-    <td colspan="6" style="text-align:center;">No users found.</td>
-</tr>
-{% endfor %}
-</table>
+        <tr>
+            <td colspan="6" style="text-align:center; color:#888;">No users found.</td>
+        </tr>
+        {% endfor %}
+        </tbody>
+    </table>
+</div>
+
+</div>
 
 <script>
 document.addEventListener('DOMContentLoaded', function() {
-    const searchInput = document.querySelector('input[name="search"]');
-    const table = document.querySelector('table');
-    const rows = table.querySelectorAll('tbody tr'); // Assuming tbody, but since no tbody, it will be all tr except first
-
-    // Actually, since no tbody, rows are all tr, first is header
-    const userRows = Array.from(table.querySelectorAll('tr')).slice(1); // Skip header row
+    const searchInput = document.getElementById('searchInput');
+    const table = document.getElementById('usersTable');
+    const tbody = table.querySelector('tbody');
+    const userRows = Array.from(tbody.querySelectorAll('tr'));
 
     searchInput.addEventListener('input', function() {
         const searchTerm = this.value.toLowerCase().trim();
@@ -69,7 +178,10 @@ document.addEventListener('DOMContentLoaded', function() {
 
         userRows.forEach(row => {
             const cells = row.querySelectorAll('td');
-            if (cells.length < 5) return; // Skip the "No users found" row or others
+            if (cells.length < 5) {
+                // This is the "No users found" row
+                return;
+            }
 
             const username = cells[0].textContent.toLowerCase();
             const fullName = cells[1].textContent.toLowerCase();
@@ -90,10 +202,13 @@ document.addEventListener('DOMContentLoaded', function() {
         });
 
         // Handle the "No users found" row
-        const noUsersRow = table.querySelector('tr td[colspan="6"]');
+        const noUsersRow = tbody.querySelector('tr td[colspan="6"]');
         if (noUsersRow) {
             noUsersRow.parentElement.style.display = hasVisibleRows ? 'none' : '';
         }
     });
 });
 </script>
+
+</body>
+</html>

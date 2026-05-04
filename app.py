@@ -687,11 +687,11 @@ def get_attendance_data(group, start_date=None, end_date=None):
     for day in days:
         late_cutoffs[day] = get_group_late_threshold(group, day)
 
-    for user, name, group in learners:
+    for user, name, user_group_name in learners:
         row = {
             "username": user,
             "name": name,
-            "group": group,
+            "group": user_group_name,
             "days": {}
         }
 
@@ -823,19 +823,55 @@ def student_dashboard():
     display_name = user_row[0] if user_row and user_row[0] else username
     user_group = user_row[1] if user_row else None
 
-    # ─ Academic
-    cursor.execute("SELECT subject, ROUND(AVG(score),1) FROM results WHERE username = ? GROUP BY subject", (username,))
+    # ─ Academic (best score per task)
+    cursor.execute("""
+        SELECT subject, ROUND(AVG(best_score),1)
+        FROM (SELECT subject, task, MAX(score) as best_score FROM results WHERE username = ? GROUP BY subject, task)
+        GROUP BY subject
+    """, (username,))
     subject_avgs = cursor.fetchall()
 
-    cursor.execute("SELECT ROUND(AVG(score),1) FROM results WHERE username = ?", (username,))
+    cursor.execute("""
+        SELECT ROUND(AVG(best_score),1)
+        FROM (SELECT subject, task, MAX(score) as best_score FROM results WHERE username = ? GROUP BY subject, task)
+    """, (username,))
     overall_row = cursor.fetchone()
-    overall_avg = overall_row[0] if overall_row and overall_row[0] else 0
+    practical_avg = overall_row[0] if overall_row and overall_row[0] else 0
 
     cursor.execute("""
-        SELECT subject, task, score, feedback, timestamp
-        FROM results WHERE username = ? ORDER BY timestamp DESC LIMIT 5
+        SELECT ROUND(AVG(best_pct),1)
+        FROM (SELECT test_id, MAX(percentage) as best_pct FROM theory_submissions WHERE username = ? GROUP BY test_id)
+    """, (username,))
+    theory_avg_row = cursor.fetchone()
+    theory_avg = theory_avg_row[0] if theory_avg_row and theory_avg_row[0] else None
+
+    if practical_avg and theory_avg:
+        overall_avg = round((practical_avg + theory_avg) / 2, 1)
+    else:
+        overall_avg = practical_avg or theory_avg or 0
+
+    cursor.execute("""
+        SELECT subject, task, MAX(score) as score, feedback, MAX(timestamp) as timestamp
+        FROM results WHERE username = ? GROUP BY subject, task ORDER BY timestamp DESC LIMIT 5
     """, (username,))
     recent_results = cursor.fetchall()
+
+    cursor.execute("""
+        SELECT tt.subject, tt.title, MAX(ts.percentage) as best_pct, MAX(ts.submitted_at) as latest
+        FROM theory_submissions ts
+        JOIN theory_tests tt ON ts.test_id = tt.id
+        WHERE ts.username = ? GROUP BY ts.test_id ORDER BY latest DESC LIMIT 5
+    """, (username,))
+    recent_theory_results = cursor.fetchall()
+
+    cursor.execute("""
+        SELECT tt.subject, ROUND(AVG(best_pct),1)
+        FROM (SELECT test_id, MAX(percentage) as best_pct FROM theory_submissions WHERE username = ? GROUP BY test_id) b
+        JOIN theory_tests tt ON b.test_id = tt.id
+        WHERE tt.subject IS NOT NULL AND tt.subject != ''
+        GROUP BY tt.subject
+    """, (username,))
+    theory_subject_avgs = cursor.fetchall()
 
     # ─ Attendance (last 7 working days)
     days = get_last_7_days()
@@ -862,6 +898,24 @@ def student_dashboard():
 
     present = sum(1 for d in att_history if d["status"] == "present")
     att_pct = round((present / len(att_history)) * 100) if att_history else 0
+
+    # ─ Practical subjects and tasks for inline panel
+    today = datetime.now().date().isoformat()
+    cursor.execute("SELECT id, name FROM subjects ORDER BY name")
+    all_subjects = cursor.fetchall()
+    subjects_with_tasks = []
+    for subj_id, subj_name in all_subjects:
+        cursor.execute("""
+            SELECT t.id, t.name
+            FROM tasks t
+            JOIN task_groups tg ON t.id = tg.task_id
+            WHERE t.subject_id = ? AND tg.group_name = ? AND t.assign_date <= ?
+            AND t.task_type = 'practical' AND t.is_active = 1
+            ORDER BY t.name
+        """, (subj_id, user_group, today))
+        tasks_for_subj = cursor.fetchall()
+        if tasks_for_subj:
+            subjects_with_tasks.append({'id': subj_id, 'name': subj_name, 'tasks': tasks_for_subj})
 
     # ─ Missing tasks
     today = datetime.now().date().isoformat()
@@ -899,10 +953,15 @@ def student_dashboard():
         username=username,
         display_name=display_name,
         overall_avg=overall_avg,
+        practical_avg=practical_avg,
+        theory_avg=theory_avg,
         subject_avgs=subject_avgs,
+        theory_subject_avgs=theory_subject_avgs,
         recent_results=recent_results,
+        recent_theory_results=recent_theory_results,
         att_history=att_history,
         att_pct=att_pct,
+        subjects_with_tasks=subjects_with_tasks,
         missing_tasks=missing_tasks,
         weaknesses=weaknesses,
         recent_feedback=recent_feedback
@@ -1162,26 +1221,25 @@ def upload(username, subject_id, task_id):
 
         try:
             result = mark_file(temp_path, marking_script)
-
-            if result["error"]:
-                return f"""
-                <p><a href="/student_dashboard">← Back to Dashboard</a></p>
-                <h2>Submission Error</h2>
-                <p style="color:red;">{escape(result['error'])}</p>
-                """
-
-            # Build weak skills from wrong answers
-            weak_skills = [r["question"] for r in result["results"] if not r["passed"]]
-            update_weakness(username, weak_skills)
-            save_result(username, subject_name, task_name, result["percentage"], ", ".join(weak_skills[:3]) or "Well done!")
-            log_activity(username, f"submitted {subject_name} {task_name}")
-
-            correct_list = "".join(f"<li>✅ {escape(r['question'])} ({r['marks_awarded']}/{r['marks_available']})</li>" for r in result["results"] if r["passed"])
-            wrong_list = "".join(f"<li>❌ {escape(r['question'])} (0/{r['marks_available']})</li>" for r in result["results"] if not r["passed"])
-
         finally:
             if os.path.exists(temp_path):
                 os.remove(temp_path)
+
+        if result["error"]:
+            return f"""
+            <p><a href="/student_dashboard">← Back to Dashboard</a></p>
+            <h2>Submission Error</h2>
+            <p style="color:red;">{escape(result['error'])}</p>
+            """
+
+        # Build weak skills from wrong answers
+        weak_skills = [r["question"] for r in result["results"] if not r["passed"]]
+        update_weakness(username, weak_skills)
+        save_result(username, subject_name, task_name, result["percentage"], ", ".join(weak_skills[:3]) or "Well done!")
+        log_activity(username, f"submitted {subject_name} {task_name}")
+
+        correct_list = "".join(f"<li>✅ {escape(r['question'])} ({r['marks_awarded']}/{r['marks_available']})</li>" for r in result["results"] if r["passed"])
+        wrong_list = "".join(f"<li>❌ {escape(r['question'])} (0/{r['marks_available']})</li>" for r in result["results"] if not r["passed"])
 
         return f"""
         <p><a href="/student_dashboard">← Back to Dashboard</a></p>
@@ -1496,58 +1554,110 @@ def teacher_dashboard():
     """)
     recent_activities = cursor.fetchall()
 
-    # ─ Recent submissions (last 15)
+    # ─ Recent submissions (last 15, best score per student per task)
     cursor.execute("""
-        SELECT u.full_name, u.group_name, r.subject, r.task, r.score, r.timestamp
-        FROM results r JOIN users u ON r.username = u.username
-        ORDER BY r.timestamp DESC LIMIT 15
+        SELECT u.full_name, u.group_name, b.subject, b.task, b.best_score, MAX(r.timestamp)
+        FROM (
+            SELECT username, subject, task, MAX(score) as best_score
+            FROM results GROUP BY username, subject, task
+        ) b
+        JOIN results r ON r.username = b.username AND r.subject = b.subject AND r.task = b.task AND r.score = b.best_score
+        JOIN users u ON u.username = b.username
+        GROUP BY b.username, b.subject, b.task
+        ORDER BY MAX(r.timestamp) DESC LIMIT 15
     """)
     recent_submissions = cursor.fetchall()
 
-    # ─ Class averages per subject per group
+    # ─ Class averages per subject per group (best score per student per task)
     cursor.execute("""
-        SELECT u.group_name, r.subject, ROUND(AVG(r.score),1), COUNT(*)
-        FROM results r
-        JOIN users u ON r.username = u.username
+        SELECT u.group_name, b.subject, ROUND(AVG(b.best_score),1), COUNT(*)
+        FROM (
+            SELECT username, subject, task, MAX(score) as best_score
+            FROM results GROUP BY username, subject, task
+        ) b
+        JOIN users u ON u.username = b.username
         WHERE u.group_name IS NOT NULL
-        GROUP BY u.group_name, r.subject
-        ORDER BY u.group_name, r.subject
+        GROUP BY u.group_name, b.subject
+        ORDER BY u.group_name, b.subject
     """)
     class_avgs_raw = cursor.fetchall()
 
-    # Restructure into {group: [(subject, avg, count), ...]}
     from collections import defaultdict
     class_avgs = defaultdict(list)
     for group_name, subject, avg, cnt in class_avgs_raw:
         class_avgs[group_name].append((subject, avg, cnt))
     class_avgs = dict(class_avgs)
 
-    # ─ Top performers (top 5 by avg score)
+    # ─ Theory averages per subject per group (best attempt per student per test)
     cursor.execute("""
-        SELECT u.full_name, u.group_name, ROUND(AVG(r.score),1) as avg
-        FROM results r JOIN users u ON r.username = u.username
+        SELECT u.group_name, tt.subject, ROUND(AVG(b.best_pct),1), COUNT(*)
+        FROM (
+            SELECT username, test_id, MAX(percentage) as best_pct
+            FROM theory_submissions GROUP BY username, test_id
+        ) b
+        JOIN theory_tests tt ON b.test_id = tt.id
+        JOIN users u ON u.username = b.username
+        WHERE u.group_name IS NOT NULL AND tt.subject IS NOT NULL AND tt.subject != ''
+        GROUP BY u.group_name, tt.subject
+        ORDER BY u.group_name, tt.subject
+    """)
+    theory_avgs_raw = cursor.fetchall()
+    theory_class_avgs = defaultdict(list)
+    for group_name, subject, avg, cnt in theory_avgs_raw:
+        theory_class_avgs[group_name].append((subject, avg, cnt))
+    theory_class_avgs = dict(theory_class_avgs)
+
+    # ─ Recent theory submissions (best per student per test)
+    cursor.execute("""
+        SELECT u.full_name, u.group_name, tt.subject, tt.title, b.best_pct, MAX(ts.submitted_at)
+        FROM (
+            SELECT username, test_id, MAX(percentage) as best_pct
+            FROM theory_submissions GROUP BY username, test_id
+        ) b
+        JOIN theory_submissions ts ON ts.username = b.username AND ts.test_id = b.test_id AND ts.percentage = b.best_pct
+        JOIN theory_tests tt ON b.test_id = tt.id
+        JOIN users u ON u.username = b.username
+        GROUP BY b.username, b.test_id
+        ORDER BY MAX(ts.submitted_at) DESC LIMIT 15
+    """)
+    recent_theory_submissions = cursor.fetchall()
+
+    # ─ Top/bottom performers (best score per task)
+    cursor.execute("""
+        SELECT u.full_name, u.group_name, ROUND(AVG(b.best_score),1) as avg
+        FROM (
+            SELECT username, subject, task, MAX(score) as best_score
+            FROM results GROUP BY username, subject, task
+        ) b
+        JOIN users u ON u.username = b.username
         WHERE u.role = 'student'
-        GROUP BY r.username HAVING COUNT(*) >= 1
+        GROUP BY b.username HAVING COUNT(*) >= 1
         ORDER BY avg DESC LIMIT 5
     """)
     top_performers = cursor.fetchall()
 
-    # ─ Bottom performers (bottom 5)
     cursor.execute("""
-        SELECT u.full_name, u.group_name, ROUND(AVG(r.score),1) as avg
-        FROM results r JOIN users u ON r.username = u.username
+        SELECT u.full_name, u.group_name, ROUND(AVG(b.best_score),1) as avg
+        FROM (
+            SELECT username, subject, task, MAX(score) as best_score
+            FROM results GROUP BY username, subject, task
+        ) b
+        JOIN users u ON u.username = b.username
         WHERE u.role = 'student'
-        GROUP BY r.username HAVING COUNT(*) >= 1
+        GROUP BY b.username HAVING COUNT(*) >= 1
         ORDER BY avg ASC LIMIT 5
     """)
     bottom_performers = cursor.fetchall()
 
-    # ─ At-risk: low marks (<50%) OR low attendance (<60%)
+    # ─ At-risk: low marks (<50%) using best score per task
     cursor.execute("""
         SELECT u.username, u.full_name, u.group_name,
-               ROUND(AVG(r.score),1) as avg_score
+               ROUND(AVG(b.best_score),1) as avg_score
         FROM users u
-        LEFT JOIN results r ON u.username = r.username
+        LEFT JOIN (
+            SELECT username, subject, task, MAX(score) as best_score
+            FROM results GROUP BY username, subject, task
+        ) b ON u.username = b.username
         WHERE u.role = 'student'
         GROUP BY u.username
         HAVING avg_score < 50 OR avg_score IS NULL
@@ -1589,7 +1699,9 @@ def teacher_dashboard():
         low_attendance=low_attendance,
         recent_activities=recent_activities,
         recent_submissions=recent_submissions,
+        recent_theory_submissions=recent_theory_submissions,
         class_avgs=class_avgs,
+        theory_class_avgs=theory_class_avgs,
         top_performers=top_performers,
         bottom_performers=bottom_performers,
         at_risk_marks=at_risk_marks,
@@ -1661,6 +1773,8 @@ def calculate_attendance_percentage(data, days):
 @app.route("/attendance")
 def attendance():
     username = session.get("username")
+    if not username:
+        return redirect(url_for("login"))
 
     if get_user_role(username) not in ["teacher", "admin"]:
         return "Access denied", 403
@@ -1792,6 +1906,8 @@ def recent_activity():
 @app.route("/edit_user/<username>", methods=["GET", "POST"])
 def edit_user(username):
     admin_user = session.get("username")
+    if not admin_user:
+        return redirect(url_for("login"))
 
     if get_user_role(admin_user) not in ["teacher", "admin"]:
         return "Access denied", 403
@@ -1827,6 +1943,8 @@ def edit_user(username):
 @app.route("/learner_record/<username>")
 def learner_record(username):
     admin_user = session.get("username")
+    if not admin_user:
+        return redirect(url_for("login"))
     if get_user_role(admin_user) not in ["teacher", "admin"]:
         return "Access denied", 403
 
@@ -1871,20 +1989,33 @@ def learner_record(username):
 
     # ── Academic results ──────────────────────────────────────────────
     cursor.execute("""
-        SELECT subject, task, score, feedback, timestamp
-        FROM results WHERE username = ? ORDER BY timestamp DESC
+        SELECT subject, task, MAX(score) as score, feedback, MAX(timestamp) as timestamp
+        FROM results WHERE username = ? GROUP BY subject, task ORDER BY timestamp DESC
     """, (username,))
     all_results = cursor.fetchall()
 
     cursor.execute("""
-        SELECT subject, ROUND(AVG(score), 1)
-        FROM results WHERE username = ? GROUP BY subject
+        SELECT subject, ROUND(AVG(best_score),1)
+        FROM (SELECT subject, task, MAX(score) as best_score FROM results WHERE username = ? GROUP BY subject, task)
+        GROUP BY subject
     """, (username,))
     subject_avgs = cursor.fetchall()
 
-    cursor.execute("SELECT ROUND(AVG(score), 1) FROM results WHERE username = ?", (username,))
+    cursor.execute("""
+        SELECT ROUND(AVG(best_score),1)
+        FROM (SELECT subject, task, MAX(score) as best_score FROM results WHERE username = ? GROUP BY subject, task)
+    """, (username,))
     overall_avg_row = cursor.fetchone()
-    overall_avg = overall_avg_row[0] if overall_avg_row and overall_avg_row[0] else 0
+    practical_avg = overall_avg_row[0] if overall_avg_row and overall_avg_row[0] else 0
+
+    cursor.execute("""
+        SELECT ROUND(AVG(best_pct),1)
+        FROM (SELECT test_id, MAX(percentage) as best_pct FROM theory_submissions WHERE username = ? GROUP BY test_id)
+    """, (username,))
+    theory_avg_row = cursor.fetchone()
+    theory_avg = theory_avg_row[0] if theory_avg_row and theory_avg_row[0] else None
+
+    overall_avg = round((practical_avg + theory_avg) / 2, 1) if practical_avg and theory_avg else (practical_avg or theory_avg or 0)
 
     recent_results = all_results[:10]
 
@@ -1920,10 +2051,10 @@ def learner_record(username):
 
     # ── Theory test results ───────────────────────────────────────────
     cursor.execute("""
-        SELECT t.title, s.score, s.total, s.percentage, s.submitted_at
-        FROM theory_submissions s
-        JOIN theory_tests t ON s.test_id = t.id
-        WHERE s.username = ? ORDER BY s.submitted_at DESC LIMIT 10
+        SELECT tt.title, ts.score, ts.total, MAX(ts.percentage) as best_pct, MAX(ts.submitted_at) as latest
+        FROM theory_submissions ts
+        JOIN theory_tests tt ON ts.test_id = tt.id
+        WHERE ts.username = ? GROUP BY ts.test_id ORDER BY latest DESC LIMIT 10
     """, (username,))
     theory_results = cursor.fetchall()
 
@@ -1958,6 +2089,8 @@ def learner_record(username):
         task_rows=task_rows,
         average=average,
         overall_avg=overall_avg,
+        practical_avg=practical_avg,
+        theory_avg=theory_avg,
         subject_avgs=subject_avgs,
         recent_results=recent_results,
         theory_results=theory_results,
@@ -1970,6 +2103,8 @@ def learner_record(username):
 @app.route("/learner_record/<username>/add_note", methods=["POST"])
 def add_learner_note(username):
     admin_user = session.get("username")
+    if not admin_user:
+        return redirect(url_for("login"))
     if get_user_role(admin_user) not in ["teacher", "admin"]:
         return "Access denied", 403
     note = request.form.get("note", "").strip()
@@ -1989,6 +2124,8 @@ def add_learner_note(username):
 @app.route("/learner_record/<username>/delete_note/<int:note_id>", methods=["POST"])
 def delete_learner_note(username, note_id):
     admin_user = session.get("username")
+    if not admin_user:
+        return redirect(url_for("login"))
     if get_user_role(admin_user) not in ["teacher", "admin"]:
         return "Access denied", 403
     conn = get_db()
@@ -2002,6 +2139,8 @@ def delete_learner_note(username, note_id):
 @app.route("/export/results")
 def export_results():
     username = session.get("username")
+    if not username:
+        return redirect(url_for("login"))
 
     if get_user_role(username) not in ["teacher", "admin"]:
         return "Access denied", 403
@@ -2026,6 +2165,8 @@ def export_results():
 @app.route("/export/attendance")
 def export_attendance():
     username = session.get("username")
+    if not username:
+        return redirect(url_for("login"))
 
     if get_user_role(username) not in ["teacher", "admin"]:
         return "Access denied", 403
@@ -2065,6 +2206,8 @@ def export_attendance():
 @app.route("/export_attendance_form")
 def export_attendance_form():
     username = session.get("username")
+    if not username:
+        return redirect(url_for("login"))
 
     if get_user_role(username) not in ["teacher", "admin"]:
         return "Access denied", 403
@@ -2076,6 +2219,8 @@ def export_attendance_form():
 @app.route("/export_attendance_multi", methods=["POST"])
 def export_attendance_multi():
     username = session.get("username")
+    if not username:
+        return redirect(url_for("login"))
 
     if get_user_role(username) not in ["teacher", "admin"]:
         return "Access denied", 403
@@ -2131,6 +2276,8 @@ def export_attendance_multi():
 @app.route("/reset_attendance", methods=["POST"])
 def reset_attendance():
     username = session.get("username")
+    if not username:
+        return redirect(url_for("login"))
 
     if get_user_role(username) not in ["teacher", "admin"]:
         return "Access denied", 403
@@ -2173,6 +2320,8 @@ def reset_attendance():
 @app.route("/mark_all_present", methods=["POST"])
 def mark_all_present():
     username = session.get("username")
+    if not username:
+        return redirect(url_for("login"))
 
     if get_user_role(username) not in ["teacher", "admin"]:
         return "Access denied", 403
@@ -2211,6 +2360,8 @@ def mark_all_present():
 @app.route("/save_attendance", methods=["POST"])
 def save_attendance():
     username = session.get("username")
+    if not username:
+        return redirect(url_for("login"))
 
     if get_user_role(username) not in ["teacher", "admin"]:
         return "Access denied", 403
@@ -2269,6 +2420,8 @@ def save_attendance():
 @app.route("/exclude_date", methods=["POST"])
 def exclude_date():
     username = session.get("username")
+    if not username:
+        return redirect(url_for("login"))
 
     if get_user_role(username) not in ["teacher", "admin"]:
         return "Access denied", 403
@@ -2299,6 +2452,8 @@ def exclude_date():
 @app.route("/include_date", methods=["POST"])
 def include_date():
     username = session.get("username")
+    if not username:
+        return redirect(url_for("login"))
 
     if get_user_role(username) not in ["teacher", "admin"]:
         return "Access denied", 403
@@ -2328,6 +2483,8 @@ def include_date():
 @app.route("/mark_all_absent", methods=["POST"])
 def mark_all_absent():
     username = session.get("username")
+    if not username:
+        return redirect(url_for("login"))
 
     if get_user_role(username) not in ["teacher", "admin"]:
         return "Access denied", 403

@@ -133,8 +133,20 @@
         <div class="stat-row" style="margin-bottom:14px;">
             <div class="stat {{ 'green' if overall_avg >= 60 else ('orange' if overall_avg >= 40 else 'red') }}">
                 <div class="val">{{ overall_avg }}%</div>
-                <div class="lbl">Overall Avg</div>
+                <div class="lbl">Overall</div>
             </div>
+            {% if practical_avg %}
+            <div class="stat {{ 'green' if practical_avg >= 60 else ('orange' if practical_avg >= 40 else 'red') }}">
+                <div class="val">{{ practical_avg }}%</div>
+                <div class="lbl">Practical</div>
+            </div>
+            {% endif %}
+            {% if theory_avg %}
+            <div class="stat {{ 'green' if theory_avg >= 60 else ('orange' if theory_avg >= 40 else 'red') }}">
+                <div class="val">{{ theory_avg }}%</div>
+                <div class="lbl">Theory</div>
+            </div>
+            {% endif %}
             <div class="stat">
                 <div class="val
                     {% if trend == 'improving' %} trend-improving

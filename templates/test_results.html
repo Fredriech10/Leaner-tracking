@@ -65,7 +65,7 @@
 {% set is_partial = item.awarded > 0 and item.awarded < item.marks %}
 <div class="question-result {{ 'correct' if item.correct else ('partial' if is_partial else 'wrong') }}">
     <div class="q-header">
-        <div class="q-text">Q{{ loop.index }}. {{ item.question }}</div>
+        <div class="q-text">Q{{ loop.index }}. {{ item.question | safe }}</div>
         <div class="marks-info {{ 'marks-correct' if item.correct else ('marks-partial' if is_partial else 'marks-wrong') }}">
             {{ item.awarded }}/{{ item.marks }} mark{{ 's' if item.marks != 1 }}
             {{ '✔' if item.correct else ('~' if is_partial else '✘') }}

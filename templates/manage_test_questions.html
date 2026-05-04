@@ -28,6 +28,13 @@
         .match-row input { flex: 1; }
         .section-divider { border: none; border-top: 2px solid #ddd; margin: 25px 0; }
         .card-actions { display: flex; gap: 8px; margin-top: 12px; flex-wrap: wrap; }
+        /* Rich text editor */
+        .rte-toolbar { display: flex; gap: 4px; margin-bottom: 4px; }
+        .rte-btn { padding: 4px 10px; border: 1px solid #ccc; border-radius: 3px; background: white; cursor: pointer; font-size: 0.9em; line-height: 1.2; }
+        .rte-btn:hover { background: #e8f0fe; border-color: #0078D4; }
+        .rte-btn.active { background: #0078D4; color: white; border-color: #0078D4; }
+        .rte-editor { border: 1px solid #ccc; border-radius: 4px; padding: 8px; min-height: 60px; background: white; outline: none; font-family: Arial, sans-serif; font-size: 1em; line-height: 1.5; }
+        .rte-editor:focus { border-color: #0078D4; box-shadow: 0 0 0 2px rgba(0,120,212,0.15); }
     </style>
 </head>
 <body>
@@ -40,14 +47,14 @@
     <h3>Add Question</h3>
     <form method="post" id="questionForm">
         <input type="hidden" name="action" value="add_question">
-        <div class="form-group">
+        <div class="form-group" id="qtextGroup">
             <label>Question Text</label>
-            <textarea name="question_text" required placeholder="Type your question here..."></textarea>
+            <textarea name="question_text" id="addQText" required placeholder="Type your question here..."></textarea>
         </div>
         <div style="display:flex; gap:15px; flex-wrap:wrap;">
             <div class="form-group" style="flex:1; min-width:180px;">
                 <label>Question Type</label>
-                <select name="question_type" id="questionType" onchange="showFields('dynamicFields', this.value)" required>
+                <select name="question_type" id="questionType" onchange="handleQuestionTypeChange(this)" required>
                     <option value="">-- Select Type --</option>
                     <option value="mcq_single">Multiple Choice (Single Answer)</option>
                     <option value="mcq_multi">Multiple Choice (Multi Answer)</option>
@@ -94,7 +101,7 @@
         </span>
         <span style="float:right; font-size:0.85em; color:#555;">{{ q[3] }} mark{{ 's' if q[3] != 1 }}</span>
     </h4>
-    <p>{{ q[1] }}</p>
+    <p>{{ q[1] | safe }}</p>
 
     <!-- View mode display -->
     {% if q_type in ['mcq_single', 'mcq_multi'] %}
@@ -145,10 +152,12 @@
             <input type="hidden" name="question_id" value="{{ q_id }}">
             <input type="hidden" name="question_type" value="{{ q_type }}">
 
+            {% if q_type != 'true_false' %}
             <div class="form-group">
                 <label>Question Text</label>
                 <textarea name="question_text" required>{{ q[1] }}</textarea>
             </div>
+            {% endif %}
 
             <div class="form-group" style="width:120px;">
                 <label>Marks</label>
@@ -181,7 +190,6 @@
             {% elif q_type == 'true_false' %}
             {% set correct_tf = opts | selectattr('2', 'equalto', 1) | list %}
             {% set correction_opt = opts | selectattr('3', 'equalto', 'correction') | list %}
-            {% set underline_opt = opts | selectattr('3', 'equalto', 'underline') | list %}
             <div class="form-group">
                 <label>Correct Answer</label>
                 <select name="tf_correct">
@@ -190,11 +198,9 @@
                 </select>
             </div>
             <div class="form-group">
-                <label>Word to Underline <small style="color:gray; font-weight:normal;">(incorrect word shown underlined — one word)</small></label>
-                <input type="text" name="underline_word"
-                       value="{{ underline_opt[0][1] if underline_opt else '' }}"
-                       placeholder="e.g. Python"
-                       pattern="\S+" title="One word only — no spaces">
+                <label>Question Text (formatting supported)</label>
+                <div id="rte_edit_{{ q_id }}_wrapper"></div>
+                <input type="hidden" name="question_text" id="hidden_rte_edit_{{ q_id }}" value="{{ q[1] | e }}">
             </div>
             <div class="form-group">
                 <label>Correct Replacement Word <small style="color:gray; font-weight:normal;">(what learner must type if False — one word)</small></label>
@@ -232,7 +238,7 @@
             {% endif %}
 
             <div style="display:flex; gap:8px; margin-top:14px;">
-                <button type="submit" class="btn btn-primary">💾 Save Changes</button>
+                <button type="submit" class="btn btn-primary" onclick="syncAllEditRTEs()">💾 Save Changes</button>
                 <button type="button" class="btn btn-cancel" onclick="toggleEdit({{ q_id }})">Cancel</button>
             </div>
         </form>
@@ -242,10 +248,94 @@
 {% endfor %}
 
 <script>
+// ── Rich Text Editor ──────────────────────────────────────────────────
+function buildRTE(editorId, hiddenId, initialHtml) {
+    const wrapper = document.getElementById(editorId + '_wrapper');
+    if (!wrapper) return;
+    wrapper.innerHTML = `
+        <div class="rte-toolbar">
+            <button type="button" class="rte-btn" title="Bold" onmousedown="event.preventDefault(); rteCmd('bold', '${editorId}')"><b>B</b></button>
+            <button type="button" class="rte-btn" title="Italic" onmousedown="event.preventDefault(); rteCmd('italic', '${editorId}')"><i>I</i></button>
+            <button type="button" class="rte-btn" title="Underline" onmousedown="event.preventDefault(); rteCmd('underline', '${editorId}')"><u>U</u></button>
+        </div>
+        <div class="rte-editor" id="${editorId}" contenteditable="true"></div>
+    `;
+    const editor = document.getElementById(editorId);
+    editor.innerHTML = initialHtml || '';
+    editor.addEventListener('input', () => syncRTE(editorId, hiddenId));
+    editor.addEventListener('keyup', () => updateRTEToolbar(editorId));
+    editor.addEventListener('mouseup', () => updateRTEToolbar(editorId));
+    syncRTE(editorId, hiddenId);
+}
+
+function rteCmd(cmd, editorId) {
+    document.getElementById(editorId).focus();
+    document.execCommand(cmd, false, null);
+    updateRTEToolbar(editorId);
+    const hiddenId = editorId.replace('rte_', 'hidden_rte_');
+    syncRTE(editorId, hiddenId);
+}
+
+function syncRTE(editorId, hiddenId) {
+    const editor = document.getElementById(editorId);
+    const hidden = document.getElementById(hiddenId);
+    if (editor && hidden) hidden.value = editor.innerHTML;
+}
+
+function updateRTEToolbar(editorId) {
+    const wrapper = document.getElementById(editorId + '_wrapper');
+    if (!wrapper) return;
+    const btns = wrapper.querySelectorAll('.rte-btn');
+    const cmds = ['bold', 'italic', 'underline'];
+    btns.forEach((btn, i) => {
+        btn.classList.toggle('active', document.queryCommandState(cmds[i]));
+    });
+}
+
+// ── Init all edit-panel RTEs when page loads ───────────────────────────
+document.addEventListener('DOMContentLoaded', () => {
+    document.querySelectorAll('[id^="rte_edit_"][id$="_wrapper"]').forEach(wrapper => {
+        const editorId = wrapper.id.replace('_wrapper', '');
+        const hiddenId = 'hidden_' + editorId;
+        const hidden = document.getElementById(hiddenId);
+        buildRTE(editorId, hiddenId, hidden ? hidden.value : '');
+    });
+});
+
+function syncAllEditRTEs() {
+    document.querySelectorAll('[id^="rte_edit_"]:not([id$="_wrapper"])').forEach(editor => {
+        const hiddenId = 'hidden_' + editor.id;
+        const hidden = document.getElementById(hiddenId);
+        if (hidden) hidden.value = editor.innerHTML;
+    });
+}
+
 // ── Toggle edit panel ──────────────────────────────────────────────────
 function toggleEdit(qId) {
     const panel = document.getElementById('edit_' + qId);
     panel.classList.toggle('open');
+}
+
+// ── Swap question textarea ↔ RTE based on type ────────────────────────
+function handleQuestionTypeChange(selectEl) {
+    const type = selectEl.value;
+    const group = document.getElementById('qtextGroup');
+    if (type === 'true_false') {
+        // Replace textarea with RTE
+        group.innerHTML = `
+            <label>Question Text</label>
+            <div id="rte_add_tf_wrapper"></div>
+            <input type="hidden" name="question_text" id="hidden_rte_add_tf">
+        `;
+        buildRTE('rte_add_tf', 'hidden_rte_add_tf', '');
+    } else {
+        // Restore plain textarea
+        group.innerHTML = `
+            <label>Question Text</label>
+            <textarea name="question_text" id="addQText" required placeholder="Type your question here..."></textarea>
+        `;
+    }
+    showFields('dynamicFields', type);
 }
 
 // ── Shared field builder for Add Question form ─────────────────────────
@@ -268,6 +358,7 @@ function showFields(containerId, type) {
             <button type="button" class="btn-add" onclick="addOptionTo('optionsList_${containerId}','${inputType}')">+ Add Option</button>
         `;
     } else if (type === 'true_false') {
+        const editorId = 'rte_add_tf';
         container.innerHTML = `
             <div class="form-group">
                 <label>Correct Answer</label>
@@ -277,13 +368,7 @@ function showFields(containerId, type) {
                 </select>
             </div>
             <div class="form-group">
-                <label>Word to Underline <small style="color:gray;">(the incorrect word in the statement — one word, no spaces)</small></label>
-                <input type="text" name="underline_word" placeholder="e.g. Python"
-                       pattern="\\S+" title="One word only — no spaces">
-                <small style="color:#888; margin-top:3px; display:block;">This word will appear <u>underlined</u> in the question to show learners which word may be wrong.</small>
-            </div>
-            <div class="form-group">
-                <label>Correct Replacement Word <small style="color:gray;">(what the learner must type if they select False — one word)</small></label>
+                <label>Correct Replacement Word <small style="color:gray; font-weight:normal;">(what the learner must type if they select False — one word)</small></label>
                 <input type="text" name="correction_term" placeholder="e.g. Java"
                        pattern="\\S+" title="One word only — no spaces">
                 <small style="color:#888; margin-top:3px; display:block;">Leave blank if the statement is True (no correction needed).</small>

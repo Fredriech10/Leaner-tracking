@@ -53,7 +53,20 @@
         .action-btn:hover { background: #dce8ff; }
         .action-btn .icon { font-size: 1.4em; display: block; margin-bottom: 3px; }
 
-        select, input { padding: 6px 10px; border: 1px solid #ccc; border-radius: 4px; font-size: 0.88em; }
+        /* Slideshow */
+        .slideshow-wrap { position: relative; }
+        .slide { display: none; }
+        .slide.active { display: block; }
+        .slide-nav { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; }
+        .slide-nav button { background: #f0f4ff; border: 1px solid #b0c4ff; border-radius: 4px; padding: 3px 10px; cursor: pointer; font-size: 0.85em; color: #005a9e; }
+        .slide-nav button:hover { background: #dce8ff; }
+        .slide-nav .slide-label { font-weight: bold; font-size: 0.9em; color: #005a9e; }
+        .slide-dots { display: flex; justify-content: center; gap: 5px; margin-top: 8px; }
+        .slide-dot { width: 7px; height: 7px; border-radius: 50%; background: #ccc; cursor: pointer; }
+        .slide-dot.active { background: #005a9e; }
+        .type-tag { font-size: 0.75em; padding: 1px 6px; border-radius: 8px; margin-left: 4px; vertical-align: middle; }
+        .tag-practical { background: #e8f5e9; color: #107C10; }
+        .tag-theory { background: #e3f2fd; color: #0078D4; }
         .btn { padding: 7px 14px; border: none; border-radius: 4px; cursor: pointer; font-size: 0.88em; text-decoration: none; display: inline-block; }
         .btn-primary { background: #005a9e; color: white; }
         .btn-sm { padding: 4px 10px; font-size: 0.82em; }
@@ -194,25 +207,46 @@
     <!-- ── Performance Overview ─────────────────────────────────────── -->
     <div class="grid-3 mb section-gap">
 
-        <!-- Class Averages per Subject per Group -->
+        <!-- Class Averages per Subject per Group (Slideshow) -->
         <div class="card">
             <h3>📈 Class Averages per Subject</h3>
-            {% if class_avgs %}
-            {% for group_name, subjects in class_avgs.items() %}
-            <div style="margin-bottom:12px;">
-                <div style="font-weight:bold; font-size:0.88em; color:#005a9e; margin-bottom:5px;">{{ group_name }}</div>
-                <table>
-                    <tr><th>Subject</th><th>Avg</th><th>Submissions</th></tr>
-                    {% for subj, avg, cnt in subjects %}
-                    <tr>
-                        <td>{{ subj }}</td>
-                        <td><span class="{{ 'score-high' if avg >= 60 else ('score-mid' if avg >= 40 else 'score-low') }}">{{ avg }}%</span></td>
-                        <td style="color:#888;">{{ cnt }}</td>
-                    </tr>
-                    {% endfor %}
-                </table>
+            {% set all_groups = class_avgs.keys() | list + theory_class_avgs.keys() | list | unique | list %}
+            {% set slide_groups = (class_avgs.keys() | list + theory_class_avgs.keys() | list) | unique | list %}
+            {% if slide_groups %}
+            <div class="slideshow-wrap" id="classSlideshow">
+                <div class="slide-nav">
+                    <button onclick="changeSlide(-1)">&#8592;</button>
+                    <span class="slide-label" id="slideLabel"></span>
+                    <button onclick="changeSlide(1)">&#8594;</button>
+                </div>
+                {% for grp in slide_groups %}
+                <div class="slide" data-group="{{ grp }}">
+                    <table>
+                        <tr><th>Subject</th><th>Type</th><th>Avg</th><th>Count</th></tr>
+                        {% for subj, avg, cnt in class_avgs.get(grp, []) %}
+                        <tr>
+                            <td>{{ subj }}</td>
+                            <td><span class="type-tag tag-practical">Practical</span></td>
+                            <td><span class="{{ 'score-high' if avg >= 60 else ('score-mid' if avg >= 40 else 'score-low') }}">{{ avg }}%</span></td>
+                            <td style="color:#888;">{{ cnt }}</td>
+                        </tr>
+                        {% endfor %}
+                        {% for subj, avg, cnt in theory_class_avgs.get(grp, []) %}
+                        <tr>
+                            <td>{{ subj }}</td>
+                            <td><span class="type-tag tag-theory">Theory</span></td>
+                            <td><span class="{{ 'score-high' if avg >= 60 else ('score-mid' if avg >= 40 else 'score-low') }}">{{ avg }}%</span></td>
+                            <td style="color:#888;">{{ cnt }}</td>
+                        </tr>
+                        {% endfor %}
+                        {% if not class_avgs.get(grp) and not theory_class_avgs.get(grp) %}
+                        <tr><td colspan="4" style="color:#888;">No results yet.</td></tr>
+                        {% endif %}
+                    </table>
+                </div>
+                {% endfor %}
+                <div class="slide-dots" id="slideDots"></div>
             </div>
-            {% endfor %}
             {% else %}
             <p style="color:#888; font-size:0.9em;">No results yet.</p>
             {% endif %}
@@ -301,19 +335,28 @@
     <!-- ── Submissions + Activity ───────────────────────────────────── -->
     <div class="grid-2 mb section-gap">
 
-        <!-- Recent Submissions -->
+        <!-- Recent Submissions (Practical + Theory) -->
         <div class="card">
             <h3>📤 Recent Submissions</h3>
-            {% if recent_submissions %}
+            {% set combined = [] %}
+            {% for name, grp, subj, task, score, ts in recent_submissions %}
+                {% set _ = combined.append({'name': name, 'grp': grp, 'subj': subj, 'task': task, 'score': score, 'ts': ts, 'type': 'practical'}) %}
+            {% endfor %}
+            {% for name, grp, subj, title, pct, ts in recent_theory_submissions %}
+                {% set _ = combined.append({'name': name, 'grp': grp, 'subj': subj or title, 'task': title, 'score': pct, 'ts': ts, 'type': 'theory'}) %}
+            {% endfor %}
+            {% if combined %}
+            {% set sorted_combined = combined | sort(attribute='ts', reverse=True) %}
             <table>
-                <tr><th>Name</th><th>Group</th><th>Subject</th><th>Task</th><th>Score</th></tr>
-                {% for name, grp, subj, task, score, ts in recent_submissions %}
+                <tr><th>Name</th><th>Group</th><th>Subject</th><th>Task</th><th>Score</th><th>Type</th></tr>
+                {% for r in sorted_combined[:15] %}
                 <tr>
-                    <td>{{ name or '—' }}</td>
-                    <td>{{ grp or '—' }}</td>
-                    <td>{{ subj }}</td>
-                    <td>{{ task }}</td>
-                    <td><span class="{{ 'score-high' if score >= 60 else ('score-mid' if score >= 40 else 'score-low') }}">{{ score }}%</span></td>
+                    <td>{{ r.name or '—' }}</td>
+                    <td>{{ r.grp or '—' }}</td>
+                    <td>{{ r.subj or '—' }}</td>
+                    <td>{{ r.task }}</td>
+                    <td><span class="{{ 'score-high' if r.score >= 60 else ('score-mid' if r.score >= 40 else 'score-low') }}">{{ r.score }}%</span></td>
+                    <td><span class="type-tag {{ 'tag-practical' if r.type == 'practical' else 'tag-theory' }}">{{ r.type | capitalize }}</span></td>
                 </tr>
                 {% endfor %}
             </table>
@@ -364,14 +407,44 @@
 <script>
 function handleExport(sel) {
     const url = sel.value;
-    if (url) {
-        window.location.href = url;
-        sel.value = '';
-    }
+    if (url) { window.location.href = url; sel.value = ''; }
 }
 function goToGroup() {
     const sel = document.getElementById('viewGroupSelect');
     if (sel.value) window.location.href = sel.value;
+}
+
+// ── Slideshow ──────────────────────────────────────────────────────────
+const slides = document.querySelectorAll('#classSlideshow .slide');
+const dotsContainer = document.getElementById('slideDots');
+const slideLabel = document.getElementById('slideLabel');
+let currentSlide = 0;
+
+if (slides.length) {
+    // Build dots
+    slides.forEach((_, i) => {
+        const dot = document.createElement('div');
+        dot.className = 'slide-dot' + (i === 0 ? ' active' : '');
+        dot.onclick = () => goToSlide(i);
+        dotsContainer.appendChild(dot);
+    });
+    goToSlide(0);
+
+    // Auto-advance every 5 seconds
+    setInterval(() => changeSlide(1), 5000);
+}
+
+function goToSlide(n) {
+    slides.forEach(s => s.classList.remove('active'));
+    document.querySelectorAll('.slide-dot').forEach(d => d.classList.remove('active'));
+    currentSlide = (n + slides.length) % slides.length;
+    slides[currentSlide].classList.add('active');
+    document.querySelectorAll('.slide-dot')[currentSlide].classList.add('active');
+    if (slideLabel) slideLabel.textContent = slides[currentSlide].dataset.group;
+}
+
+function changeSlide(dir) {
+    goToSlide(currentSlide + dir);
 }
 </script>
 

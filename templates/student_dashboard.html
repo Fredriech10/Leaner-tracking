@@ -65,7 +65,13 @@
         .skill-bar .fill { background: #A4262C; border-radius: 4px; height: 8px; }
         .skill-bar .cnt { font-size: 0.78em; color: #888; width: 25px; text-align: right; }
 
-        /* Quick actions */
+        /* Task panel */
+        .task-panel { display: none; margin-top: 12px; border-top: 2px solid #f0f0f0; padding-top: 12px; }
+        .task-panel.open { display: block; }
+        .subject-select { padding: 7px 10px; border: 1px solid #b0c4ff; border-radius: 6px; font-size: 0.9em; width: 100%; margin-bottom: 10px; background: white; cursor: pointer; }
+        .task-list { display: flex; flex-wrap: wrap; gap: 8px; }
+        .task-link { background: #f0f4ff; border: 1px solid #b0c4ff; border-radius: 6px; padding: 8px 14px; text-decoration: none; color: #0078D4; font-size: 0.88em; font-weight: bold; transition: background 0.15s; }
+        .task-link:hover { background: #dce8ff; }
         .actions { display: flex; gap: 12px; flex-wrap: wrap; }
         .action-btn { flex: 1; min-width: 140px; background: #f0f4ff; border: 1px solid #b0c4ff; border-radius: 8px; padding: 14px; text-align: center; text-decoration: none; color: #0078D4; font-weight: bold; font-size: 0.9em; transition: background 0.15s; }
         .action-btn:hover { background: #dce8ff; }
@@ -104,9 +110,23 @@
             <h2>Welcome, {{ display_name }} 👋</h2>
             <p>Here's your learning summary</p>
         </div>
-        <div class="avg-circle">
-            <span class="num">{{ overall_avg }}%</span>
-            <span class="lbl">Overall</span>
+        <div style="display:flex; gap:10px; flex-shrink:0;">
+            {% if practical_avg %}
+            <div class="avg-circle">
+                <span class="num">{{ practical_avg }}%</span>
+                <span class="lbl">Practical</span>
+            </div>
+            {% endif %}
+            {% if theory_avg %}
+            <div class="avg-circle">
+                <span class="num">{{ theory_avg }}%</span>
+                <span class="lbl">Theory</span>
+            </div>
+            {% endif %}
+            <div class="avg-circle">
+                <span class="num">{{ overall_avg }}%</span>
+                <span class="lbl">Overall</span>
+            </div>
         </div>
     </div>
 
@@ -114,12 +134,33 @@
     <div class="card full" style="margin-bottom:16px;">
         <h3>⚡ Quick Actions</h3>
         <div class="actions">
-            <a href="/subjects/{{ username }}" class="action-btn">
+            <a href="#" class="action-btn" onclick="toggleTaskPanel(); return false;">
                 <span class="icon">📁</span>Practical Tasks
             </a>
             <a href="/tests" class="action-btn">
                 <span class="icon">📝</span>Theory Tests
             </a>
+        </div>
+
+        <!-- Inline practical task panel -->
+        <div class="task-panel" id="taskPanel">
+            {% if subjects_with_tasks %}
+            <select class="subject-select" id="subjectSelect" onchange="showTasks(this.value)">
+                <option value="">-- Select a Subject --</option>
+                {% for s in subjects_with_tasks %}
+                <option value="subj_{{ s.id }}">📁 {{ s.name }}</option>
+                {% endfor %}
+            </select>
+            {% for s in subjects_with_tasks %}
+            <div class="task-list" id="subj_{{ s.id }}" style="display:none;">
+                {% for task_id, task_name in s.tasks %}
+                <a href="/upload/{{ username }}/{{ s.id }}/{{ task_id }}" class="task-link">📄 {{ task_name }}</a>
+                {% endfor %}
+            </div>
+            {% endfor %}
+            {% else %}
+            <p style="color:#888; font-size:0.9em; margin:0;">No practical tasks available yet.</p>
+            {% endif %}
         </div>
     </div>
 
@@ -158,17 +199,21 @@
         <!-- Subject Averages -->
         <div class="card">
             <h3>📊 Subject Averages</h3>
-            {% if subject_avgs %}
+            {% if subject_avgs or theory_subject_avgs %}
             <table>
-                <tr><th>Subject</th><th>Average</th></tr>
+                <tr><th>Subject</th><th>Type</th><th>Average</th></tr>
                 {% for subj, avg in subject_avgs %}
                 <tr>
                     <td>{{ subj }}</td>
-                    <td>
-                        <span class="{{ 'score-high' if avg >= 60 else ('score-mid' if avg >= 40 else 'score-low') }}">
-                            {{ avg }}%
-                        </span>
-                    </td>
+                    <td><span style="font-size:0.78em; background:#e8f5e9; color:#107C10; padding:1px 6px; border-radius:8px;">Practical</span></td>
+                    <td><span class="{{ 'score-high' if avg >= 60 else ('score-mid' if avg >= 40 else 'score-low') }}">{{ avg }}%</span></td>
+                </tr>
+                {% endfor %}
+                {% for subj, avg in theory_subject_avgs %}
+                <tr>
+                    <td>{{ subj }}</td>
+                    <td><span style="font-size:0.78em; background:#e3f2fd; color:#0078D4; padding:1px 6px; border-radius:8px;">Theory</span></td>
+                    <td><span class="{{ 'score-high' if avg >= 60 else ('score-mid' if avg >= 40 else 'score-low') }}">{{ avg }}%</span></td>
                 </tr>
                 {% endfor %}
             </table>
@@ -184,18 +229,23 @@
         <!-- Recent Results -->
         <div class="card">
             <h3>🏆 Recent Results</h3>
-            {% if recent_results %}
+            {% if recent_results or recent_theory_results %}
             <table>
-                <tr><th>Subject</th><th>Task</th><th>Score</th></tr>
+                <tr><th>Subject</th><th>Task</th><th>Score</th><th>Type</th></tr>
                 {% for r in recent_results %}
                 <tr>
                     <td>{{ r[0] }}</td>
                     <td>{{ r[1] }}</td>
-                    <td>
-                        <span class="{{ 'score-high' if r[2] >= 60 else ('score-mid' if r[2] >= 40 else 'score-low') }}">
-                            {{ r[2] }}%
-                        </span>
-                    </td>
+                    <td><span class="{{ 'score-high' if r[2] >= 60 else ('score-mid' if r[2] >= 40 else 'score-low') }}">{{ r[2] }}%</span></td>
+                    <td><span style="font-size:0.78em; background:#e8f5e9; color:#107C10; padding:1px 6px; border-radius:8px;">Practical</span></td>
+                </tr>
+                {% endfor %}
+                {% for subj, title, pct, ts in recent_theory_results %}
+                <tr>
+                    <td>{{ subj or title }}</td>
+                    <td>{{ title }}</td>
+                    <td><span class="{{ 'score-high' if pct >= 60 else ('score-mid' if pct >= 40 else 'score-low') }}">{{ pct }}%</span></td>
+                    <td><span style="font-size:0.78em; background:#e3f2fd; color:#0078D4; padding:1px 6px; border-radius:8px;">Theory</span></td>
                 </tr>
                 {% endfor %}
             </table>
@@ -269,6 +319,19 @@
 setInterval(function() {
     fetch('/heartbeat/{{ username }}');
 }, 30000);
+
+function toggleTaskPanel() {
+    const panel = document.getElementById('taskPanel');
+    panel.classList.toggle('open');
+}
+
+function showTasks(subjId) {
+    document.querySelectorAll('.task-list').forEach(el => el.style.display = 'none');
+    if (subjId) {
+        const el = document.getElementById(subjId);
+        if (el) el.style.display = 'flex';
+    }
+}
 </script>
 
 </body>

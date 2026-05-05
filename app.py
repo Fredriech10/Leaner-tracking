@@ -313,6 +313,20 @@ def init_db():
     """)
 
     cursor.execute("""
+    CREATE TABLE IF NOT EXISTS result_removals (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        username TEXT,
+        task_type TEXT,
+        subject TEXT,
+        task_name TEXT,
+        test_id INTEGER,
+        removed_by TEXT,
+        reason TEXT,
+        removed_at TEXT
+    )
+    """)
+
+    cursor.execute("""
     CREATE TABLE IF NOT EXISTS task_groups (
         task_id INTEGER,
         group_name TEXT,
@@ -676,7 +690,7 @@ def get_attendance_data(group, start_date=None, end_date=None):
     cursor.execute("""
     SELECT username, full_name, group_name
     FROM users
-    WHERE group_name = ?
+    WHERE group_name = ? AND role = 'student'
     """, (group,))
     learners = cursor.fetchall()
 
@@ -1576,7 +1590,7 @@ def teacher_dashboard():
             FROM results GROUP BY username, subject, task
         ) b
         JOIN users u ON u.username = b.username
-        WHERE u.group_name IS NOT NULL
+        WHERE u.group_name IS NOT NULL AND u.role = 'student'
         GROUP BY u.group_name, b.subject
         ORDER BY u.group_name, b.subject
     """)
@@ -1597,7 +1611,8 @@ def teacher_dashboard():
         ) b
         JOIN theory_tests tt ON b.test_id = tt.id
         JOIN users u ON u.username = b.username
-        WHERE u.group_name IS NOT NULL AND tt.subject IS NOT NULL AND tt.subject != ''
+        WHERE u.group_name IS NOT NULL AND u.role = 'student'
+          AND tt.subject IS NOT NULL AND tt.subject != ''
         GROUP BY u.group_name, tt.subject
         ORDER BY u.group_name, tt.subject
     """)
@@ -2188,6 +2203,79 @@ def delete_learner_note(username, note_id):
     return redirect(url_for("learner_record", username=username))
 
 
+@app.route("/remove_results", methods=["POST"])
+def remove_results():
+    teacher = session.get("username")
+    if not teacher or get_user_role(teacher) not in ["teacher", "admin"]:
+        return "Access denied", 403
+
+    task_type  = request.form.get("task_type")   # 'practical' or 'theory'
+    subject    = request.form.get("subject", "")
+    task_name  = request.form.get("task_name", "")
+    test_id    = request.form.get("test_id", "")
+    target     = request.form.get("target")       # 'all' or a specific username
+    reason     = request.form.get("reason", "").strip()
+    group      = request.form.get("group", "")
+
+    if not reason:
+        reason = "Removed by teacher"
+
+    conn = get_db()
+    cursor = conn.cursor()
+
+    # Determine which students are affected
+    if target == "all":
+        if task_type == "practical":
+            cursor.execute("SELECT DISTINCT username FROM results WHERE subject = ? AND task = ?",
+                           (subject, task_name))
+        else:
+            cursor.execute("SELECT DISTINCT username FROM theory_submissions WHERE test_id = ?",
+                           (test_id,))
+        affected = [row[0] for row in cursor.fetchall()]
+    else:
+        affected = [target]
+
+    now = datetime.now().isoformat()
+
+    for username in affected:
+        # Log the removal
+        cursor.execute("""
+            INSERT INTO result_removals
+                (username, task_type, subject, task_name, test_id, removed_by, reason, removed_at)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+        """, (username, task_type, subject, task_name,
+               test_id if task_type == "theory" else None,
+               teacher, reason, now))
+
+        # Also add a learner note so it shows on their record
+        note_text = (f"⚠️ Marks removed by {teacher}: "
+                     f"{'[Theory] ' + task_name if task_type == 'theory' else subject + ' - ' + task_name}. "
+                     f"Reason: {reason}")
+        cursor.execute("""
+            INSERT INTO learner_notes (username, note, flag, created_by, created_at)
+            VALUES (?, ?, 'warning', ?, ?)
+        """, (username, note_text, teacher, now))
+
+        # Delete the actual results
+        if task_type == "practical":
+            cursor.execute("DELETE FROM results WHERE username = ? AND subject = ? AND task = ?",
+                           (username, subject, task_name))
+        else:
+            cursor.execute("""
+                DELETE FROM theory_answers WHERE submission_id IN
+                    (SELECT id FROM theory_submissions WHERE username = ? AND test_id = ?)
+            """, (username, test_id))
+            cursor.execute("DELETE FROM theory_submissions WHERE username = ? AND test_id = ?",
+                           (username, test_id))
+
+    conn.commit()
+    log_activity(teacher, f"removed {'all' if target == 'all' else target}'s results for "
+                          f"{'[Theory] ' + task_name if task_type == 'theory' else subject + ' - ' + task_name}. "
+                          f"Reason: {reason}")
+    conn.close()
+    return redirect(url_for("group_results", group=group))
+
+
 @app.route("/export/results")
 def export_results():
     username = session.get("username")
@@ -2579,7 +2667,7 @@ def reset_attendance():
 
     # 🔹 Get users in group
     cursor.execute("""
-    SELECT username FROM users WHERE group_name = ?
+    SELECT username FROM users WHERE group_name = ? AND role = 'student'
     """, (group,))
     users = [u[0] for u in cursor.fetchall()]
 
@@ -2623,7 +2711,7 @@ def mark_all_present():
 
     # 🔹 Get users in group
     cursor.execute("""
-    SELECT username FROM users WHERE group_name = ?
+    SELECT username FROM users WHERE group_name = ? AND role = 'student'
     """, (group,))
     users = [u[0] for u in cursor.fetchall()]
 
@@ -2794,7 +2882,7 @@ def mark_all_absent():
 
     # 🔹 Get users in group
     cursor.execute("""
-    SELECT username FROM users WHERE group_name = ?
+    SELECT username FROM users WHERE group_name = ? AND role = 'student'
     """, (group,))
     users = [u[0] for u in cursor.fetchall()]
 

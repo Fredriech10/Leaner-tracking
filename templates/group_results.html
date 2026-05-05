@@ -21,6 +21,8 @@
         .btn { padding: 8px 16px; border: none; border-radius: 6px; cursor: pointer; font-size: 0.88em; font-weight: bold; }
         .btn-primary { background: #005a9e; color: white; }
         .btn-primary:hover { background: #004578; }
+        .btn-danger { background: rgba(0,0,0,0.08); color: #888; font-size: 0.72em; padding: 2px 6px; border: none; border-radius: 4px; cursor: pointer; white-space: nowrap; }
+        .btn-danger:hover { background: #A4262C; color: white; }
 
         select { padding: 8px 12px; border: 1px solid #ccc; border-radius: 6px; font-size: 0.9em; }
 
@@ -33,22 +35,22 @@
         .task-header { background: #e8f4f8 !important; font-weight: bold; text-align: center; }
         .theory-header { background: #fff4e6 !important; }
         .student-name { font-weight: bold; color: #005a9e; }
-        
+
         .score-cell { text-align: center; cursor: pointer; position: relative; }
         .score-cell:hover { background: #e8f4f8; }
-        
+
         .score-high { color: #107C10; font-weight: bold; }
         .score-medium { color: #ff8c00; font-weight: bold; }
         .score-low { color: #A4262C; font-weight: bold; }
         .score-none { color: #999; font-style: italic; }
 
-        .attempts-badge { 
-            display: inline-block; 
-            background: #0078D4; 
-            color: white; 
-            padding: 2px 6px; 
-            border-radius: 10px; 
-            font-size: 0.75em; 
+        .attempts-badge {
+            display: inline-block;
+            background: #0078D4;
+            color: white;
+            padding: 2px 6px;
+            border-radius: 10px;
+            font-size: 0.75em;
             margin-left: 4px;
         }
 
@@ -68,7 +70,6 @@
             opacity: 0;
             transition: opacity 0.3s;
         }
-
         .tooltip::after {
             content: "";
             position: absolute;
@@ -79,11 +80,7 @@
             border-style: solid;
             border-color: #333 transparent transparent transparent;
         }
-
-        .score-cell:hover .tooltip {
-            visibility: visible;
-            opacity: 1;
-        }
+        .score-cell:hover .tooltip { visibility: visible; opacity: 1; }
 
         .legend { display: flex; gap: 16px; flex-wrap: wrap; margin-bottom: 16px; padding: 12px; background: white; border-radius: 6px; border: 1px solid #ddd; }
         .legend-item { padding: 6px 12px; border-radius: 4px; font-size: 0.85em; }
@@ -95,9 +92,21 @@
         .stat-label { font-size: 0.8em; color: #666; margin-bottom: 4px; }
         .stat-value { font-size: 1.4em; font-weight: bold; color: #005a9e; }
 
-        .export-btn { float: right; }
-
         .filter-bar { display: flex; gap: 12px; align-items: center; margin-bottom: 16px; flex-wrap: wrap; }
+
+        /* Modal */
+        .modal-overlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 9999; align-items: center; justify-content: center; }
+        .modal-overlay.active { display: flex; }
+        .modal { background: white; border-radius: 8px; padding: 24px; width: 440px; max-width: 95vw; box-shadow: 0 8px 32px rgba(0,0,0,0.25); }
+        .modal h3 { margin: 0 0 8px 0; color: #A4262C; font-size: 1em; }
+        .modal p { margin: 0 0 14px 0; font-size: 0.88em; color: #444; line-height: 1.5; }
+        .modal label { font-size: 0.85em; font-weight: bold; display: block; margin-bottom: 4px; }
+        .modal textarea { width: 100%; padding: 8px; border: 1px solid #ccc; border-radius: 4px; font-size: 0.88em; resize: vertical; }
+        .modal-actions { display: flex; gap: 8px; justify-content: flex-end; margin-top: 14px; }
+        .btn-cancel { background: #eee; color: #333; padding: 7px 16px; border: none; border-radius: 4px; cursor: pointer; font-size: 0.88em; }
+        .btn-cancel:hover { background: #ddd; }
+        .modal .btn-danger-confirm { background: #A4262C; color: white; padding: 7px 16px; border: none; border-radius: 4px; cursor: pointer; font-size: 0.88em; }
+        .modal .btn-danger-confirm:hover { background: #7a1a1e; }
     </style>
 </head>
 <body>
@@ -118,9 +127,7 @@
         <select name="group" id="groupSelect" onchange="this.form.submit()">
             <option value="">-- Select Group --</option>
             {% for g in groups %}
-                <option value="{{ g }}" {% if g == selected_group %}selected{% endif %}>
-                    {{ g }}
-                </option>
+                <option value="{{ g }}" {% if g == selected_group %}selected{% endif %}>{{ g }}</option>
             {% endfor %}
         </select>
     </form>
@@ -128,7 +135,6 @@
 
 {% if selected_group %}
 
-<!-- Summary Statistics -->
 <div class="summary-stats">
     <div class="stat-box">
         <div class="stat-label">Total Students</div>
@@ -148,45 +154,51 @@
     </div>
 </div>
 
-<!-- Legend -->
 <div class="legend">
     <span class="legend-item legend-practical">📁 Practical Task</span>
     <span class="legend-item legend-theory">📝 Theory Test</span>
-    <span style="font-size: 0.85em; color: #666;">💡 Hover over scores to see all attempts</span>
+    <span style="font-size:0.85em;color:#666;">💡 Hover over scores to see all attempts &nbsp;|&nbsp; 🗑 Remove All = remove all students' marks for that task &nbsp;|&nbsp; ✕ = remove one student's marks</span>
 </div>
 
-<!-- Results Table -->
 <div class="card">
     <h3>📋 {{ selected_group }} - Detailed Results</h3>
-    
+
     {% if not students %}
-        <p style="color: #888;">No students found in this group.</p>
+        <p style="color:#888;">No students found in this group.</p>
     {% elif not practical_tasks and not theory_tasks %}
-        <p style="color: #888;">No tasks assigned to this group yet.</p>
+        <p style="color:#888;">No tasks assigned to this group yet.</p>
     {% else %}
-    
+
     <div style="overflow-x: auto;">
         <table>
             <thead>
                 <tr>
-                    <th rowspan="2" style="vertical-align: middle;">Student</th>
-                    <th rowspan="2" style="vertical-align: middle;">Overall Avg</th>
-                    
+                    <th rowspan="2" style="vertical-align:middle;">Student</th>
+                    <th rowspan="2" style="vertical-align:middle;">Overall Avg</th>
+
                     {% if practical_tasks %}
                     <th colspan="{{ practical_tasks|length }}" class="task-header">📁 Practical Tasks</th>
                     {% endif %}
-                    
+
                     {% if theory_tasks %}
                     <th colspan="{{ theory_tasks|length }}" class="task-header theory-header">📝 Theory Tests</th>
                     {% endif %}
                 </tr>
                 <tr>
                     {% for task in practical_tasks %}
-                    <th class="task-header">{{ task.subject }}<br>{{ task.name }}</th>
+                    <th class="task-header">
+                        {{ task.subject }}<br>{{ task.name }}
+                        <br>
+                        <button class="btn-danger" onclick="openRemoveModal('practical','{{ task.subject }}','{{ task.name }}','','all','{{ selected_group }}')">🗑 Remove All</button>
+                    </th>
                     {% endfor %}
-                    
+
                     {% for task in theory_tasks %}
-                    <th class="task-header theory-header">{{ task.title }}</th>
+                    <th class="task-header theory-header">
+                        {{ task.title }}
+                        <br>
+                        <button class="btn-danger" onclick="openRemoveModal('theory','','{{ task.title }}','{{ task.test_id }}','all','{{ selected_group }}')">🗑 Remove All</button>
+                    </th>
                     {% endfor %}
                 </tr>
             </thead>
@@ -194,11 +206,11 @@
                 {% for student in students %}
                 <tr>
                     <td class="student-name">
-                        <a href="/learner_record/{{ student.username }}" style="text-decoration: none; color: inherit;">
+                        <a href="/learner_record/{{ student.username }}" style="text-decoration:none;color:inherit;">
                             {{ student.full_name or student.username }}
                         </a>
                     </td>
-                    <td style="text-align: center; font-weight: bold;">
+                    <td style="text-align:center;font-weight:bold;">
                         {% if student.overall_avg %}
                             <span class="{% if student.overall_avg >= 75 %}score-high{% elif student.overall_avg >= 50 %}score-medium{% else %}score-low{% endif %}">
                                 {{ student.overall_avg }}%
@@ -207,8 +219,7 @@
                             <span class="score-none">-</span>
                         {% endif %}
                     </td>
-                    
-                    <!-- Practical Tasks -->
+
                     {% for task in practical_tasks %}
                     <td class="score-cell">
                         {% set result = student.practical_results.get((task.subject, task.name)) %}
@@ -219,22 +230,20 @@
                             {% if result.attempts > 1 %}
                             <span class="attempts-badge">{{ result.attempts }}x</span>
                             {% endif %}
-                            
                             {% if result.all_scores|length > 1 %}
                             <div class="tooltip">
                                 <strong>All Attempts:</strong><br>
-                                {% for score in result.all_scores %}
-                                {{ loop.index }}. {{ score }}%<br>
-                                {% endfor %}
+                                {% for score in result.all_scores %}{{ loop.index }}. {{ score }}%<br>{% endfor %}
                             </div>
                             {% endif %}
+                            <br>
+                            <button class="btn-danger" style="margin-top:3px;" onclick="openRemoveModal('practical','{{ task.subject }}','{{ task.name }}','','{{ student.username }}','{{ selected_group }}')">✕ Remove</button>
                         {% else %}
                             <span class="score-none">Not submitted</span>
                         {% endif %}
                     </td>
                     {% endfor %}
-                    
-                    <!-- Theory Tests -->
+
                     {% for task in theory_tasks %}
                     <td class="score-cell">
                         {% set result = student.theory_results.get(task.test_id) %}
@@ -245,15 +254,14 @@
                             {% if result.attempts > 1 %}
                             <span class="attempts-badge">{{ result.attempts }}x</span>
                             {% endif %}
-                            
                             {% if result.all_scores|length > 1 %}
                             <div class="tooltip">
                                 <strong>All Attempts:</strong><br>
-                                {% for score in result.all_scores %}
-                                {{ loop.index }}. {{ score }}%<br>
-                                {% endfor %}
+                                {% for score in result.all_scores %}{{ loop.index }}. {{ score }}%<br>{% endfor %}
                             </div>
                             {% endif %}
+                            <br>
+                            <button class="btn-danger" style="margin-top:3px;" onclick="openRemoveModal('theory','','{{ task.title }}','{{ task.test_id }}','{{ student.username }}','{{ selected_group }}')">✕ Remove</button>
                         {% else %}
                             <span class="score-none">Not submitted</span>
                         {% endif %}
@@ -264,17 +272,69 @@
             </tbody>
         </table>
     </div>
-    
+
     {% endif %}
 </div>
 
 {% else %}
     <div class="card">
-        <p style="color: #888;">Please select a group to view results.</p>
+        <p style="color:#888;">Please select a group to view results.</p>
     </div>
 {% endif %}
 
 </div>
+
+<!-- Remove Results Modal -->
+<div class="modal-overlay" id="removeModal">
+    <div class="modal">
+        <h3>⚠️ Remove Marks</h3>
+        <p id="modalDesc"></p>
+        <label>Reason <span style="color:#A4262C;">*</span></label>
+        <textarea id="modalReason" rows="3" placeholder="Enter reason for removing marks (e.g. suspected plagiarism, incorrect submission)..."></textarea>
+        <p style="font-size:0.8em;color:#666;margin-top:6px;">A warning note will be added to the learner record(s) for transparency.</p>
+        <form id="removeForm" method="POST" action="/remove_results">
+            <input type="hidden" name="task_type" id="f_task_type">
+            <input type="hidden" name="subject"   id="f_subject">
+            <input type="hidden" name="task_name" id="f_task_name">
+            <input type="hidden" name="test_id"   id="f_test_id">
+            <input type="hidden" name="target"    id="f_target">
+            <input type="hidden" name="group"     id="f_group">
+            <input type="hidden" name="reason"    id="f_reason">
+        </form>
+        <div class="modal-actions">
+            <button class="btn-cancel" onclick="closeModal()">Cancel</button>
+            <button class="modal btn-danger-confirm" onclick="submitRemove()">Confirm Remove</button>
+        </div>
+    </div>
+</div>
+
+<script>
+function openRemoveModal(taskType, subject, taskName, testId, target, group) {
+    document.getElementById('f_task_type').value = taskType;
+    document.getElementById('f_subject').value   = subject;
+    document.getElementById('f_task_name').value = taskName;
+    document.getElementById('f_test_id').value   = testId;
+    document.getElementById('f_target').value    = target;
+    document.getElementById('f_group').value     = group;
+    document.getElementById('modalReason').value = '';
+
+    const label = taskType === 'theory' ? '[Theory] ' + taskName : subject + ' - ' + taskName;
+    const who   = target === 'all' ? 'ALL students in this group' : target;
+    document.getElementById('modalDesc').textContent =
+        'You are about to remove marks for "' + label + '" for ' + who + '. This cannot be undone.';
+
+    document.getElementById('removeModal').classList.add('active');
+}
+function closeModal() {
+    document.getElementById('removeModal').classList.remove('active');
+}
+function submitRemove() {
+    const reason = document.getElementById('modalReason').value.trim();
+    if (!reason) { alert('Please enter a reason before removing marks.'); return; }
+    document.getElementById('f_reason').value = reason;
+    document.getElementById('removeForm').submit();
+}
+</script>
 
 </body>
 </html>

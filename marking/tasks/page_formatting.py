@@ -29,11 +29,8 @@ def mark(filepath):
         if section:
             pw = section.page_width
             ph = section.page_height
-            # A4 = 210mm x 297mm. python-docx returns EMUs (914400 per inch)
-            # 210mm = 8.268in = 7559055 EMU, 297mm = 11.693in = 10692914 EMU
-            # Allow ±200000 EMU tolerance
+            # A4: 210mm x 297mm = 7559055 x 10692914 EMU, allow ±200000 tolerance
             is_a4 = (7350000 <= pw <= 7750000) and (10480000 <= ph <= 10900000)
-
             _add(results, "1.1.1 Paper size set to A4", 1, is_a4)
             if is_a4: score += 1
 
@@ -45,7 +42,7 @@ def mark(filepath):
 
         # --- 1.1.2 Margins (2 marks) ---
         if section:
-            # 2.5cm = 25mm = 0.984in = 900430 EMU (confirmed from debug)
+            # 2.5cm = 900430 EMU (confirmed from actual document)
             target = 900430
             tol = 100000
             ok = all(abs(m - target) <= tol for m in [
@@ -92,26 +89,22 @@ def mark(filepath):
             watermark_text = False
             watermark_blue = False
             watermark_diagonal = False
-            V = 'urn:schemas-microsoft-com:vml'
-            VN = '{' + V + '}'
+            VN = '{urn:schemas-microsoft-com:vml}'
 
             for sec in doc.sections:
                 hdr = sec.header
                 if not hdr:
                     continue
-                hdr_xml = hdr._element
-                for shape in hdr_xml.iter(VN + 'shape'):
+                for shape in hdr._element.iter(VN + 'shape'):
                     for tp in shape.iter(VN + 'textpath'):
-                        text = tp.get('string', '')
-                        if 'CAT TEST' in text.upper():
+                        if 'CAT TEST' in (tp.get('string', '')).upper():
                             watermark_text = True
                             fillcolor = shape.get('fillcolor', '').lower().strip()
                             # Pass if colour is not the default grey
                             default_greys = ('', '#c0c0c0', 'silver', 'gray', 'grey', '#808080', 'auto')
                             if fillcolor not in default_greys:
                                 watermark_blue = True
-                            style = shape.get('style', '').lower()
-                            if 'rotation' in style:
+                            if 'rotation' in shape.get('style', '').lower():
                                 watermark_diagonal = True
 
             _add(results, "1.2.2 Text 'CAT TEST' inserted", 1, watermark_text)
@@ -131,7 +124,6 @@ def mark(filepath):
                 if hdr:
                     for para in hdr.paragraphs:
                         text = para.text.strip()
-                        # Check jc val directly in XML since para.alignment may be None
                         pPr = para._element.find(WN + 'pPr')
                         jc = pPr.find(WN + 'jc') if pPr is not None else None
                         jc_val = jc.get(WN + 'val') if jc is not None else None
@@ -154,7 +146,6 @@ def mark(filepath):
                 ftr = doc.sections[0].footer
                 if ftr:
                     ftr_xml = ftr._element
-                    # Collect all instrText anywhere in footer (including inside w:sdt)
                     instr_texts = [el.text or '' for el in ftr_xml.iter(WN + 'instrText')]
                     all_instr = ' '.join(instr_texts).upper()
 
@@ -164,21 +155,14 @@ def mark(filepath):
                     if has_page_field:
                         has_page = True
 
-                    # Check for "of" literal text in footer paragraphs
-                    all_text = ''
-                    for p in ftr_xml.iter(WN + 'p'):
-                        for t in p.iter(WN + 't'):
-                            all_text += (t.text or '')
-
+                    all_text = ''.join(t.text or '' for t in ftr_xml.iter(WN + 't'))
                     if has_page_field and has_numpages_field and 'of' in all_text.lower():
                         has_format = True
 
-                    # Check center alignment on any paragraph
                     for p in ftr_xml.iter(WN + 'p'):
                         pPr = p.find(WN + 'pPr')
                         jc = pPr.find(WN + 'jc') if pPr is not None else None
-                        jc_val = jc.get(WN + 'val') if jc is not None else None
-                        if jc_val == 'center':
+                        if jc is not None and jc.get(WN + 'val') == 'center':
                             is_centered = True
                             break
 
@@ -200,7 +184,6 @@ def mark(filepath):
             auto_hyph = settings_part._element.findall('.//' + WN + 'autoHyphenation')
             if auto_hyph:
                 val = auto_hyph[0].get(WN + 'val')
-                # Present with no val, or val="1"/"true" means enabled
                 if val is None or val in ('1', 'true', 'on'):
                     hyphen_ok = True
             _add(results, "1.4.1 Automatic hyphenation enabled", 1, hyphen_ok)

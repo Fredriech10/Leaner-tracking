@@ -68,6 +68,19 @@
             <small style="color:#666; margin-top:6px; display:block;">Leave all unchecked = no group assigned.</small>
         </div>
 
+        <!-- Sample File -->
+        <div class="form-group">
+            <div class="section-title">Sample File</div>
+            {% if task[5] %}
+            <p>Current: <a href="/task_sample/{{ task[0] }}" target="_blank">{{ task[5] | filename }}</a> 
+            (<a href="#" onclick="document.getElementById('replace_sample_{{ task[0] }}').click(); return false;">Replace</a>)</p>
+            {% else %}
+            <p>No sample file uploaded</p>
+            {% endif %}
+            <input type="file" id="replace_sample_{{ task[0] }}" name="sample_file" accept=".docx,.xlsx,.html" style="display:none;">
+            <input type="hidden" name="task_id" value="{{ task[0] }}">
+        </div>
+
         <div style="display:flex; gap:10px; margin-top:10px;">
             <button type="submit" class="btn btn-primary">💾 Save Changes</button>
             <a href="/manage_tasks/{{ task[4] }}" class="btn btn-secondary">Cancel</a>

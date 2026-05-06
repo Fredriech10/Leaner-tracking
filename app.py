@@ -3114,7 +3114,14 @@ def manage_subjects():
                     log_activity(username, f"deleted subject {subj[0]} and all related tasks and results")
                 conn.close()
 
-        return redirect(url_for("manage_subjects"))
+        # After POST we also render template with fresh subject list
+        conn = get_db()
+        cursor = conn.cursor()
+        cursor.execute("SELECT id, name FROM subjects ORDER BY name")
+        subjects = cursor.fetchall()
+        conn.close()
+        return render_template("manage_subjects.html", subjects=subjects)
+
 
     conn = get_db()
     cursor = conn.cursor()
@@ -3122,46 +3129,11 @@ def manage_subjects():
     subjects = cursor.fetchall()
     conn.close()
 
-    subject_list = ""
-    for subj_id, subj_name in subjects:
-        subject_list += f"""
-        <tr>
-            <td>{escape(subj_name)}</td>
-            <td><a href="/manage_tasks/{subj_id}">Manage Tasks</a></td>
-            <td>
-                <form method="post" style="display:inline;">
-                    <input type="hidden" name="action" value="delete">
-                    <input type="hidden" name="subject_id" value="{subj_id}">
-                    <button type="submit" onclick="return confirm('Delete subject {escape(subj_name)} and ALL related tasks and results? This cannot be undone!')">Delete</button>
-                </form>
-            </td>
-        </tr>
-        """
+    return render_template("manage_subjects.html", subjects=subjects)
 
-    return f"""
-    <p><a href="/teacher_dashboard">← Back to Teacher Dashboard</a></p>
-    <h2>Manage Subjects</h2>
-
-    <h3>Create New Subject</h3>
-    <form method="post">
-        <input type="hidden" name="action" value="create">
-        <label>Subject Name:</label>
-        <input type="text" name="subject_name" required>
-        <button type="submit">Create</button>
-    </form>
-
-    <h3>Existing Subjects</h3>
-    <table border="1">
-        <tr>
-            <th>Subject</th>
-            <th>Tasks</th>
-            <th>Actions</th>
-        </tr>
-        {subject_list}
-    </table>
-    """
 
 @app.route("/manage_tasks/<subject_id>", methods=["GET", "POST"])
+
 def manage_tasks(subject_id):
     username = session.get("username")
     if not username:
@@ -3234,6 +3206,7 @@ def manage_tasks(subject_id):
 
         conn.close()
         return redirect(url_for("manage_tasks", subject_id=subject_id))
+
 
     # Get all groups
     cursor.execute("SELECT DISTINCT group_name FROM users WHERE group_name IS NOT NULL ORDER BY group_name")
@@ -3311,74 +3284,14 @@ def manage_tasks(subject_id):
         label = f"{tt_title}" + (f" ({tt_subject})" if tt_subject else "")
         theory_test_options += f'<option value="{tt_id}">{escape(label)}</option>'
 
-    return f"""
-    <p><a href="/manage_subjects">← Back to Subjects</a></p>
-    <h2>Manage Tasks for {escape(subject_name)}</h2>
+    return render_template(
+        "manage_tasks.html",
+        subject_name=subject_name,
+        script_options=script_options,
+        group_checkboxes=group_checkboxes,
+        task_list=task_list,
+    )
 
-    <h3>Add New Task</h3>
-    <div style="margin-bottom:15px;">
-        <button type="button" onclick="showPanel('practical')" id="btn_practical"
-                style="padding:8px 18px;background:#0078D4;color:white;border:none;border-radius:4px 0 0 4px;cursor:pointer;font-size:0.95em;">
-            📁 Practical Task
-        </button>
-        <a href="/manage_tests"
-           style="padding:8px 18px;background:#ccc;color:#333;border:none;border-radius:0 4px 4px 0;cursor:pointer;font-size:0.95em;text-decoration:none;display:inline-block;">
-            📝 Theory Tests →
-        </a>
-    </div>
-
-    <div id="panel_practical" style="background:#f9f9f9;border:1px solid #ddd;padding:20px;border-radius:6px;">
-        <form method="post">
-            <input type="hidden" name="action" value="create">
-            <label>Task Name:</label><br>
-            <input type="text" name="task_name" required style="padding:7px;width:300px;margin-bottom:10px;"><br>
-            <label>Assign Date:</label><br>
-            <input type="date" name="assign_date" required style="padding:7px;margin-bottom:10px;"><br>
-            <label>Marking Script:</label><br>
-            <select name="marking_script" style="padding:7px;margin-bottom:10px;">{script_options}</select><br>
-            <label>Assigned Groups:</label><br>
-            <div style="margin:8px 0;">{group_checkboxes}</div>
-            <button type="submit" style="padding:8px 16px;background:#107C10;color:white;border:none;border-radius:4px;cursor:pointer;">Create Practical Task</button>
-        </form>
-    </div>
-
-
-    <p style="margin:8px 0 0;">
-                <a href="#" onclick="document.getElementById('replace_sample_19').click(); return false;">Replace</a>
-                <span id="sample_name_19" class="readonly-note" style="display:inline;">
-                    (current sample loaded)
-                </span>
-            </p>
-
-
-            <input type="file" id="replace_sample_19" name="sample_file" accept=".docx,.xlsx,.html" style="display:none;" onchange="updateSampleName('19', this);">
-
-            <input type="hidden" name="task_id" value="19">
-        </div>
-
-  
-
-    <script>
-    function showPanel(type) {{
-        document.getElementById('panel_practical').style.display = type === 'practical' ? 'block' : 'none';
-        document.getElementById('btn_practical').style.background = type === 'practical' ? '#0078D4' : '#ccc';
-        document.getElementById('btn_practical').style.color = type === 'practical' ? 'white' : '#333';
-    }}
-    </script>
-
-    <h3>Existing Tasks</h3>
-    <table border="1" style="border-collapse:collapse;width:100%;">
-        <tr>
-            <th>Task</th>
-            <th>Assign Date</th>
-            <th>Groups</th>
-            <th>Marking / Test</th>
-            <th>Status</th>
-            <th>Actions</th>
-        </tr>
-        {task_list}
-    </table>
-    """
 
 # ── Theory Test Routes ───────────────────────────────────────────────────────
 

@@ -1160,6 +1160,61 @@ def toggle_task(task_id):
 
 
 @app.route("/tasks/<int:task_id>/clear_uploads", methods=["POST"])
+@app.route("/task_sample/<int:task_id>")
+def task_sample(task_id):
+    """Serve a task's sample file stored in DB (BLOB)."""
+    username = session.get("username")
+    if not username:
+        return "Unauthorized", 401
+
+    conn = get_db()
+    cursor = conn.cursor()
+    cursor.execute(
+        """
+        SELECT sample_file, sample_file_name
+        FROM tasks
+        WHERE id = ? AND task_type = 'practical'
+        """,
+        (task_id,)
+    )
+    row = cursor.fetchone()
+    conn.close()
+
+    if not row:
+        return "Sample not found", 404
+
+    sample_bytes, sample_name = row
+    if not sample_bytes:
+        return "No sample file uploaded", 404
+
+    if not sample_name:
+        sample_name = f"task_{task_id}_sample"
+
+    ext = os.path.splitext(sample_name)[1].lower()
+
+    # Import here to avoid issues if file is missing in some environments
+    from io import BytesIO
+
+    bio = BytesIO(sample_bytes)
+
+    # Pick a reasonable mimetype
+    mimetype = None
+    if ext == ".docx":
+        mimetype = "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+    elif ext == ".xlsx":
+        mimetype = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+    elif ext == ".html":
+        mimetype = "text/html; charset=utf-8"
+
+    from flask import send_file
+    return send_file(
+        bio,
+        mimetype=mimetype,
+        as_attachment=True,
+        download_name=sample_name
+    )
+
+
 def clear_task_uploads(task_id):
     username = session.get("username")
     if not username or get_user_role(username) not in ["teacher", "admin"]:

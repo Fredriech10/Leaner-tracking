@@ -1,14 +1,13 @@
-# TODO: Fix Attendance Sheet Browser Opening Issue
+# Sample File Attachment - TODO
 
-## Plan Breakdown (Approved)
-1. [x] Create TODO.md with steps (done)
-2. [x] Edit start.bat to use localhost URL (done)
-3. [x] Test updated start.bat (run it, confirm browser opens - tested, opens localhost)
-4. [x] Verify attendance page loads with group (login as teacher/admin - confirmed via server test, page renders)
-## Additional Fix
-6. [x] Fix KeyError in attendance.html template (value[:5] → value.time[:5]) - done
+## Current Status
+- [x] Plan confirmed (BLOB storage)
+- [ ] DB migration (sample_file BLOB)
+- [ ] Teacher edit_task form + handler
+- [ ] /task_sample/{task_id} download route
+- [ ] Student tasks view download link
+- [ ] manage_tasks create form
+- [ ] Full testing
 
-✅ All fixes complete. Test /attendance?group=11G3
-
-
-
+## Next Step
+DB migration in app.py init_db()

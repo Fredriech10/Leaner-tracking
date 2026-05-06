@@ -297,7 +297,14 @@ def init_db():
             print("Migration: added task_type column to tasks")
         if "is_active" not in columns:
             cursor.execute("ALTER TABLE tasks ADD COLUMN is_active INTEGER DEFAULT 1")
-            print("Migration: added is_active column to tasks")
+        
+        if "sample_file" not in columns:
+            cursor.execute("ALTER TABLE tasks ADD COLUMN sample_file BLOB")
+            print("Migration: added sample_file BLOB column to tasks")
+
+        if "sample_file_name" not in columns:
+            cursor.execute("ALTER TABLE tasks ADD COLUMN sample_file_name TEXT")
+            print("Migration: added sample_file_name column to tasks")
     except Exception as e:
         print(f"Note: tasks migration check: {e}")
 
@@ -1072,8 +1079,10 @@ def edit_task(task_id):
     cursor = conn.cursor()
 
     cursor.execute("""
-        SELECT t.id, t.name, t.assign_date, t.marking_script, t.subject_id
-        FROM tasks t WHERE t.id = ? AND t.task_type = 'practical'
+        SELECT t.id, t.name, t.assign_date, t.marking_script, t.subject_id,
+               t.sample_file, t.sample_file_name
+        FROM tasks t
+        WHERE t.id = ? AND t.task_type = 'practical'
     """, (task_id,))
     task = cursor.fetchone()
     if not task:
@@ -1095,6 +1104,19 @@ def edit_task(task_id):
         for g in groups:
             if g.strip():
                 cursor.execute("INSERT INTO task_groups (task_id, group_name) VALUES (?, ?)", (task_id, g))
+
+        # Optional: replace sample file
+        sample_file = request.files.get("sample_file")
+        if sample_file and sample_file.filename:
+            sample_bytes = sample_file.read()
+            # keep original filename for downloading
+            sample_filename = sample_file.filename
+            cursor.execute(
+                """UPDATE tasks
+                   SET sample_file = ?, sample_file_name = ?
+                   WHERE id = ?""",
+                (sample_bytes, sample_filename, task_id)
+            )
 
         conn.commit()
         conn.close()

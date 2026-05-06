@@ -498,6 +498,7 @@ def mark_file(filepath, marking_script):
 app = Flask(__name__)
 app.secret_key = os.getenv('SECRET_KEY', 'dev-key-change-in-prod')
 
+
 # Store active users in memory
 active_users = {}
 lock = threading.Lock()
@@ -1159,9 +1160,9 @@ def toggle_task(task_id):
     return redirect(url_for("manage_tasks", subject_id=subject_id))
 
 
-@app.route("/tasks/<int:task_id>/clear_uploads", methods=["POST"])
-@app.route("/task_sample/<int:task_id>")
-def task_sample(task_id):
+@app.route("/tasks/<int:task_id>/clear_uploads", methods=["GET", "POST"])
+def clear_task_uploads(task_id):
+
     """Serve a task's sample file stored in DB (BLOB)."""
     username = session.get("username")
     if not username:
@@ -1215,7 +1216,7 @@ def task_sample(task_id):
     )
 
 
-def clear_task_uploads(task_id):
+def clear_task_uploads_delete(task_id):
     username = session.get("username")
     if not username or get_user_role(username) not in ["teacher", "admin"]:
         return "Access denied", 403
@@ -1238,6 +1239,7 @@ def clear_task_uploads(task_id):
         log_activity(username, f"cleared uploads for {subject_name} {task_name}")
     conn.close()
     return redirect(url_for("manage_tasks", subject_id=subject_id))
+
 
 
 @app.route("/upload/<username>/<subject_id>/<task_id>", methods=["GET", "POST"])
@@ -1341,14 +1343,42 @@ def upload(username, subject_id, task_id):
         <a href="/subjects/{escape(username)}">← Back to Subjects</a>
         """
 
+    # Include a student-safe sample download link if a sample file exists
+    sample_link_html = ""
+    cursor = None
+    try:
+        conn = get_db()
+        cursor = conn.cursor()
+        cursor.execute(
+            "SELECT sample_file, sample_file_name FROM tasks WHERE id = ? AND task_type = 'practical'",
+            (task_id,),
+        )
+        row = cursor.fetchone()
+        if row and row[0]:
+            sample_name = row[1] or f"task_{task_id}_sample"
+            sample_link_html = (
+                f'<p><a href="/tasks/{task_id}/clear_uploads">📎 Download task sample</a> '
+                f'({escape(sample_name)})</p>'
+            )
+    finally:
+        try:
+            if cursor:
+                conn.close()
+        except Exception:
+            pass
+
+
     return f"""
     <p><a href="/student_dashboard">← Back to Dashboard</a></p>
     <h2>Upload - {escape(subject_name).upper()} ({escape(task_name)})</h2>
+    {sample_link_html}
     <form method="post" enctype="multipart/form-data">
         <input type="file" name="file" required>
         <button type="submit">Upload</button>
     </form>
     """
+
+
 
 
 @app.route("/subjects/<username>")
@@ -3311,6 +3341,22 @@ def manage_tasks(subject_id):
             <button type="submit" style="padding:8px 16px;background:#107C10;color:white;border:none;border-radius:4px;cursor:pointer;">Create Practical Task</button>
         </form>
     </div>
+
+
+    <p style="margin:8px 0 0;">
+                <a href="#" onclick="document.getElementById('replace_sample_19').click(); return false;">Replace</a>
+                <span id="sample_name_19" class="readonly-note" style="display:inline;">
+                    (current sample loaded)
+                </span>
+            </p>
+
+
+            <input type="file" id="replace_sample_19" name="sample_file" accept=".docx,.xlsx,.html" style="display:none;" onchange="updateSampleName('19', this);">
+
+            <input type="hidden" name="task_id" value="19">
+        </div>
+
+  
 
     <script>
     function showPanel(type) {{

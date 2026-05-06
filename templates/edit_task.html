@@ -33,7 +33,7 @@
 </div>
 
 <div class="card">
-    <form method="post">
+    <form method="post" enctype="multipart/form-data">
 
         <!-- Assign Date -->
         <div class="form-group">
@@ -71,15 +71,41 @@
         <!-- Sample File -->
         <div class="form-group">
             <div class="section-title">Sample File</div>
-            {% if task[5] %}
-            <p>Current: <a href="/task_sample/{{ task[0] }}" target="_blank">{{ task[5] | filename }}</a> 
-            (<a href="#" onclick="document.getElementById('replace_sample_{{ task[0] }}').click(); return false;">Replace</a>)</p>
-            {% else %}
-            <p>No sample file uploaded</p>
-            {% endif %}
-            <input type="file" id="replace_sample_{{ task[0] }}" name="sample_file" accept=".docx,.xlsx,.html" style="display:none;">
+            <p class="readonly-note" style="margin-top:0;">
+                {% if task[5] %}
+                    {# task[5] is stored as BLOB in DB; ensure we treat it safely as bytes/unknown #}
+                    Current: <a href="/task_sample/{{ task[0] }}" target="_blank">(download sample file)</a>
+                {% else %}
+                    No sample file uploaded
+                {% endif %}
+
+            </p>
+
+            <p style="margin:8px 0 0;">
+                <a href="#" onclick="document.getElementById('replace_sample_{{ task[0] }}').click(); return false;">Replace</a>
+                <span id="sample_name_{{ task[0] }}" class="readonly-note" style="display:inline;">
+                    {% if task[5] %}(current sample loaded){% endif %}
+                </span>
+            </p>
+
+
+            <input type="file" id="replace_sample_{{ task[0] }}" name="sample_file" accept=".docx,.xlsx,.html" style="display:none;" onchange="updateSampleName('{{ task[0] }}', this);">
+
             <input type="hidden" name="task_id" value="{{ task[0] }}">
         </div>
+
+        <script>
+            function updateSampleName(taskId, input) {
+                const el = document.getElementById('sample_name_' + taskId);
+
+                if (!input || !input.files || !input.files.length) {
+                    if (el) el.textContent = '';
+                    return;
+                }
+                const name = input.files[0].name;
+                if (el) el.textContent = '(' + name + ')';
+            }
+        </script>
 
         <div style="display:flex; gap:10px; margin-top:10px;">
             <button type="submit" class="btn btn-primary">💾 Save Changes</button>

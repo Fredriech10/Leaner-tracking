@@ -22,12 +22,13 @@
         .btn-edit { background: #ff8c00; color: white; }
         .btn-cancel { background: #ccc; color: #333; }
         .btn-add { background: #107C10; color: white; padding: 4px 10px; font-size: 0.85em; border: none; border-radius: 4px; cursor: pointer; }
+        .btn-back { background: #093bc5; color: white; padding: 4px 10px; font-size: 0.85em; border: none; border-radius: 4px; cursor: pointer; }
         .option-row { display: flex; align-items: center; gap: 8px; margin-bottom: 6px; }
         .option-row input[type=text] { flex: 1; }
         .match-row { display: flex; gap: 10px; margin-bottom: 6px; align-items: center; }
         .match-row input { flex: 1; }
         .section-divider { border: none; border-top: 2px solid #ddd; margin: 25px 0; }
-        .card-actions { display: flex; gap: 8px; margin-top: 12px; flex-wrap: wrap; }
+        .card-actions { display: flex; gap: 8px; margin-top: 12px; flex-wrap: nowrap; align-items: center; }
         /* Rich text editor */
         .rte-toolbar { display: flex; gap: 4px; margin-bottom: 4px; }
         .rte-btn { padding: 4px 10px; border: 1px solid #ccc; border-radius: 3px; background: white; cursor: pointer; font-size: 0.9em; line-height: 1.2; }
@@ -39,8 +40,42 @@
 </head>
 <body>
 
-<p><a href="/manage_tests">← Back to Tests</a></p>
+<p><button type="submit" class="btn-back"><a href="/manage_tests">← Back to Tests</a></button></p>
 <h2>✏️ {{ test[1] }} <small style="color:gray; font-size:0.7em;">{{ test[2] }}</small></h2>
+
+<!-- ── Import Questions (JSON paste) ───────────────────────────────── -->
+<div class="add-form" style="background:#f9f0ff;border-color:#ddb6ff;">
+    <h3>Import Questions (JSON paste)</h3>
+
+    {% if import_success %}
+        <p style="color:#107C10;font-weight:bold;">✅ {{ import_success }}</p>
+    {% endif %}
+    {% if import_error %}
+        <p style="color:#A4262C;font-weight:bold;">❌ {{ import_error }}</p>
+    {% endif %}
+
+    <form method="post">
+        <input type="hidden" name="action" value="import_questions_json">
+        <div class="form-group">
+            <label>Questions JSON</label>
+            <textarea name="questions_json" id="questionsJson" placeholder='Paste JSON with top-level key "questions".' required style="min-height:120px;"></textarea>
+        </div>
+
+        <div class="form-group">
+            <label style="display:flex;align-items:center;gap:10px;cursor:pointer;">
+                <input type="checkbox" name="append" value="1" checked>
+                <span><strong>Append</strong> (keep existing questions and add new ones)</span>
+            </label>
+            <div style="color:#666;font-size:0.9em;margin-top:6px;">
+                If Append is off, the importer replaces existing questions for this test.
+            </div>
+        </div>
+
+        <button type="submit" class="btn btn-primary" style="margin-top:10px;">⬇️ Import</button>
+    </form>
+</div>
+
+<hr class="section-divider">
 
 <!-- ── Add Question Form ─────────────────────────────────────────────── -->
 <div class="add-form">
@@ -136,11 +171,23 @@
 
     <!-- Action buttons -->
     <div class="card-actions">
-        <button type="button" class="btn btn-edit" onclick="toggleEdit({{ q_id }})">✏️ Edit</button>
+        <button
+            type="button"
+            class="btn btn-edit"
+            onclick="toggleEdit({{ q_id }})"
+            title="Edit question"
+            aria-label="Edit question"
+        >✏️</button>
+
         <form method="post" style="display:inline;" onsubmit="return confirm('Delete this question?')">
             <input type="hidden" name="action" value="delete_question">
             <input type="hidden" name="question_id" value="{{ q_id }}">
-            <button type="submit" class="btn btn-danger">🗑 Delete</button>
+            <button
+                type="submit"
+                class="btn btn-danger"
+                title="Delete question"
+                aria-label="Delete question"
+            >🗑</button>
         </form>
     </div>
 
@@ -448,6 +495,12 @@ function addEditMatchRow(listId) {
     list.appendChild(div);
 }
 </script>
+
+<hr class="section-divider">
+
+<form method="get" action="/manage_tests" style="margin-top:16px;">
+    <button type="submit" class="btn-back" ><a href="/manage_tests">← Back to Tests</a></button>
+</form>
 
 </body>
 </html>

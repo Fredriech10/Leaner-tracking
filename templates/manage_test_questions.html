@@ -22,13 +22,13 @@
         .btn-edit { background: #ff8c00; color: white; }
         .btn-cancel { background: #ccc; color: #333; }
         .btn-add { background: #107C10; color: white; padding: 4px 10px; font-size: 0.85em; border: none; border-radius: 4px; cursor: pointer; }
-        .btn-back { background: #093bc5; color: white; padding: 4px 10px; font-size: 0.85em; border: none; border-radius: 4px; cursor: pointer; }
+        .btn-add { background: #107C10; color: white; padding: 4px 10px; font-size: 0.85em; border: none; border-radius: 4px; cursor: pointer; }
         .option-row { display: flex; align-items: center; gap: 8px; margin-bottom: 6px; }
         .option-row input[type=text] { flex: 1; }
         .match-row { display: flex; gap: 10px; margin-bottom: 6px; align-items: center; }
         .match-row input { flex: 1; }
         .section-divider { border: none; border-top: 2px solid #ddd; margin: 25px 0; }
-        .card-actions { display: flex; gap: 8px; margin-top: 12px; flex-wrap: nowrap; align-items: center; }
+        .card-actions { display: flex; gap: 8px; margin-top: 12px; flex-wrap: wrap; }
         /* Rich text editor */
         .rte-toolbar { display: flex; gap: 4px; margin-bottom: 4px; }
         .rte-btn { padding: 4px 10px; border: 1px solid #ccc; border-radius: 3px; background: white; cursor: pointer; font-size: 0.9em; line-height: 1.2; }
@@ -40,7 +40,7 @@
 </head>
 <body>
 
-<p><button type="submit" class="btn-back"><a href="/manage_tests">← Back to Tests</a></button></p>
+<p><a href="/manage_tests">← Back to Tests</a></p>
 <h2>✏️ {{ test[1] }} <small style="color:gray; font-size:0.7em;">{{ test[2] }}</small></h2>
 
 <!-- ── Import Questions (JSON paste) ───────────────────────────────── -->
@@ -110,8 +110,8 @@
 
 <hr class="section-divider">
 
-<!-- ── Existing Questions ────────────────────────────────────────────── -->
-<h3>Questions ({{ questions|length }})</h3>
+<!-- ── Import Questions (JSON Paste) ───────────────────────────────── -->
+<s|length }})</h3>
 
 {% if not questions %}
     <p style="color:gray;">No questions added yet.</p>
@@ -170,28 +170,15 @@
     {% endif %}
 
     <!-- Action buttons -->
-    <div class="card-actions">
-        <button
-            type="button"
-            class="btn btn-edit"
-            onclick="toggleEdit({{ q_id }})"
-            title="Edit question"
-            aria-label="Edit question"
-        >✏️</button>
-
+    <div class="card-action    <div class="card-actions">
+        <button type="button" class="btn btn-edit" onclick="toggleEdit({{ q_id }})">✏️ Edit</button>
         <form method="post" style="display:inline;" onsubmit="return confirm('Delete this question?')">
             <input type="hidden" name="action" value="delete_question">
             <input type="hidden" name="question_id" value="{{ q_id }}">
-            <button
-                type="submit"
-                class="btn btn-danger"
-                title="Delete question"
-                aria-label="Delete question"
-            >🗑</button>
+            <button type="submit" class="btn btn-danger">🗑 Delete</button>
         </form>
     </div>
-
-    <!-- ── Inline Edit Panel ── -->
+<!-- ── Edit Panel ── -->
     <div class="edit-panel" id="edit_{{ q_id }}">
         <h4 style="margin:0 0 12px 0; color:#b36b00;">✏️ Edit Question</h4>
         <form method="post">
@@ -496,10 +483,15 @@ function addEditMatchRow(listId) {
 }
 </script>
 
+</body>
+</htm</script>
+
 <hr class="section-divider">
 
 <form method="get" action="/manage_tests" style="margin-top:16px;">
-    <button type="submit" class="btn-back" ><a href="/manage_tests">← Back to Tests</a></button>
+    <button type="button" class="btn" onclick="return confirm('All questions are saved')">
+       <a href="/manage_tests">← Back to Tests</a>
+    </button>
 </form>
 
 </body>

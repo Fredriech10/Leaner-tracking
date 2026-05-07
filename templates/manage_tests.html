@@ -15,6 +15,16 @@
         .btn-danger { background: #A4262C; color: white; }
         .btn-success { background: #107C10; color: white; }
         .btn-warning { background: #ff8c00; color: white; }
+
+        /* Groups column truncation */
+        /* Columns: Title(1), Subject(2), Groups(3) ... */
+        td:nth-child(3) { max-width: 210px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+        /* Actions column: keep inline next to each other */
+        td:last-child { white-space: nowrap; }
+        td:last-child a,
+        td:last-child form { display: inline-block; margin: 0; }
+
         .create-form { background: #f9f9f9; border: 1px solid #ddd; padding: 20px; border-radius: 6px; margin-bottom: 30px; }
         .form-row { display: flex; gap: 15px; flex-wrap: wrap; align-items: flex-end; margin-bottom: 10px; }
         .form-group { display: flex; flex-direction: column; gap: 4px; }
@@ -109,17 +119,23 @@
                 <span class="badge-inactive">Inactive</span>
             {% endif %}
         </td>
-        <td style="display:flex; gap:6px; flex-wrap:wrap;">
-            <a href="/manage_tests/{{ t[0] }}/questions" class="btn btn-primary">✏️ Edit Questions</a>
-            <a href="/manage_tests/{{ t[0] }}/edit" class="btn btn-warning">⚙️ Edit Settings</a>
+        <td style="display:flex; gap:6px; flex-wrap:nowrap;">
+            <a href="/manage_tests/{{ t[0] }}/questions" class="btn btn-primary" title="Edit questions">✏️</a>
+            <a href="/manage_tests/{{ t[0] }}/edit" class="btn btn-warning" title="Edit settings">⚙️</a>
+
             <form method="post" action="/manage_tests/{{ t[0] }}/toggle" style="display:inline;">
-                <button type="submit" class="btn {{ 'btn-warning' if t[4] else 'btn-success' }}">
-                    {{ '⏸ Deactivate' if t[4] else '▶ Activate' }}
+                <button
+                    type="submit"
+                    class="btn {{ 'btn-warning' if t[4] else 'btn-success' }}"
+                    title="{{ 'Deactivate' if t[4] else 'Activate' }}"
+                >
+                    {{ '⏸' if t[4] else '▶' }}
                 </button>
             </form>
+
             <form method="post" action="/manage_tests/{{ t[0] }}/delete" style="display:inline;"
                   onsubmit="return confirm('⚠️ WARNING: Delete this test, all questions, AND ALL STUDENT SUBMISSIONS?\n\nThis will permanently remove:\n- All test questions\n- All student attempts and scores\n- Test from Group Results\n\nThis action CANNOT be undone!')">
-                <button type="submit" class="btn btn-danger">🗑 Delete</button>
+                <button type="submit" class="btn btn-danger" title="Delete test">🗑</button>
             </form>
         </td>
     </tr>

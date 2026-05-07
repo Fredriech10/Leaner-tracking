@@ -3252,20 +3252,20 @@ def manage_tasks(subject_id):
             <td>{script_label}</td>
             <td>{status_badge}</td>
             <td style="display:flex;gap:5px;flex-wrap:wrap;">
-                {'<a href="/tasks/' + str(task_id) + '/edit" style="padding:4px 10px;border:none;border-radius:4px;cursor:pointer;font-size:0.85em;background:#0078D4;color:white;text-decoration:none;">✏️ Edit</a>' if task_type == 'practical' else ''}
+                {'<a href="/tasks/' + str(task_id) + '/edit" title="Edit task" style="padding:4px 10px;border:none;border-radius:4px;cursor:pointer;font-size:0.85em;background:#0078D4;color:white;text-decoration:none;">✏️</a>' if task_type == 'practical' else ''}
                 <form method="post" action="/tasks/{task_id}/toggle" style="display:inline;">
                     <input type="hidden" name="subject_id" value="{subject_id}">
-                    <button type="submit" style="padding:4px 10px;border:none;border-radius:4px;cursor:pointer;font-size:0.85em;{toggle_style}">{toggle_label}</button>
+                    <button type="submit" title="{toggle_label}" style="padding:4px 10px;border:none;border-radius:4px;cursor:pointer;font-size:0.85em;{toggle_style}">{'⏸' if is_active else '▶'}</button>
                 </form>
                 <form method="post" action="/tasks/{task_id}/clear_uploads" style="display:inline;"
                       onsubmit="return confirm('Clear ALL uploads for {escape(task_name)}? This cannot be undone.')">
                     <input type="hidden" name="subject_id" value="{subject_id}">
-                    <button type="submit" style="padding:4px 10px;border:none;border-radius:4px;cursor:pointer;font-size:0.85em;background:#A4262C;color:white;">🗑 Clear Uploads</button>
+                    <button type="submit" title="Clear uploads" style="padding:4px 10px;border:none;border-radius:4px;cursor:pointer;font-size:0.85em;background:#A4262C;color:white;">🗑</button>
                 </form>
                 <form method="post" style="display:inline;" onsubmit="return confirm('⚠️ WARNING: Delete task {escape(task_name)} and ALL STUDENT SUBMISSIONS?\n\nThis will permanently remove:\n- All student uploads and scores\n- Task from Group Results\n\nThis action CANNOT be undone!')">
                     <input type="hidden" name="action" value="delete">
                     <input type="hidden" name="task_id" value="{task_id}">
-                    <button type="submit" style="padding:4px 10px;border:none;border-radius:4px;cursor:pointer;font-size:0.85em;background:#555;color:white;">Delete</button>
+                    <button type="submit" title="Delete task" style="padding:4px 10px;border:none;border-radius:4px;cursor:pointer;font-size:0.85em;background:#555;color:white;">🗑</button>
                 </form>
             </td>
         </tr>
@@ -3585,6 +3585,74 @@ def manage_test_questions(test_id):
 
             conn.commit()
             log_activity(username, f"edited question {q_id} in test {test_id}")
+
+        elif action == "import_questions_json":
+            import_success = None
+            import_error = None
+
+            from theory_json_importer import insert_theory_test_from_json
+
+            payload = request.form.get("questions_json", "").strip()
+            # Append-only by default: checkbox checked => append
+            append = request.form.get("append") is not None
+
+            try:
+                if not payload:
+                    raise ValueError("questions_json is empty")
+
+                if not append:
+                    # Replace: clear existing questions/options for this test
+                    cursor.execute("""
+                        DELETE FROM theory_options
+                        WHERE question_id IN (SELECT id FROM theory_questions WHERE test_id = ?)
+                    """, (test_id,))
+                    cursor.execute("DELETE FROM theory_questions WHERE test_id = ?", (test_id,))
+                    start_order_index = 0
+                else:
+                    cursor.execute("""
+                        SELECT COALESCE(MAX(order_index), -1) + 1
+                        FROM theory_questions
+                        WHERE test_id = ?
+                    """, (test_id,))
+                    start_order_index = cursor.fetchone()[0]
+
+                insert_theory_test_from_json(
+                    cursor,
+                    test_id=test_id,
+                    username=username,
+                    payload=payload,
+                    start_order_index=start_order_index
+                )
+
+                conn.commit()
+                log_activity(username, f"imported questions into test {test_id} (append={append})")
+                import_success = "Import completed successfully."
+
+            except Exception as e:
+                conn.rollback()
+                import_error = str(e)
+
+            # Reload questions and re-render (same page) with import status
+            cursor.execute("""
+                SELECT id, question_text, question_type, marks, order_index
+                FROM theory_questions WHERE test_id = ? ORDER BY order_index
+            """, (test_id,))
+            questions = cursor.fetchall()
+
+            questions_with_options = []
+            for q in questions:
+                cursor.execute("SELECT id, option_text, is_correct, match_pair FROM theory_options WHERE question_id = ?", (q[0],))
+                options = cursor.fetchall()
+                questions_with_options.append({"q": q, "options": options})
+
+            conn.close()
+            return render_template(
+                "manage_test_questions.html",
+                test=test,
+                questions=questions_with_options,
+                import_success=import_success,
+                import_error=import_error
+            )
 
         conn.close()
         return redirect(url_for("manage_test_questions", test_id=test_id))

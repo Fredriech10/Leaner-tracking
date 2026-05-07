@@ -939,23 +939,101 @@ def student_dashboard():
         if tasks_for_subj:
             subjects_with_tasks.append({'id': subj_id, 'name': subj_name, 'tasks': tasks_for_subj})
 
-    # ─ Missing tasks
+    # ─ Missing tasks (practical + theory) assigned to the student's group
     today = datetime.now().date().isoformat()
+
+    # Practical missing tasks
     cursor.execute("""
-        SELECT t.id, s.name as subject_name, t.name, t.assign_date
+        SELECT t.id,
+               s.name AS subject_name,
+               t.name AS task_name,
+               t.assign_date,
+               t.marking_script
         FROM tasks t
         JOIN subjects s ON t.subject_id = s.id
         JOIN task_groups tg ON t.id = tg.task_id
-        WHERE tg.group_name = ? AND t.assign_date <= ?
-        AND t.task_type = 'practical'
-        AND NOT EXISTS (
-            SELECT 1 FROM results r
-            WHERE r.username = ? AND r.subject = s.name AND r.task = t.name
-        )
-        ORDER BY t.assign_date
-        LIMIT 5
+        WHERE tg.group_name = ?
+          AND t.assign_date <= ?
+          AND t.task_type = 'practical'
+          AND t.is_active = 1
+          AND NOT EXISTS (
+              SELECT 1 FROM results r
+              WHERE r.username = ? AND r.subject = s.name AND r.task = t.name
+          )
+        ORDER BY t.assign_date, t.name
+        LIMIT 10
     """, (user_group, today, username))
-    missing_tasks = cursor.fetchall()
+    practical_missing = cursor.fetchall()
+
+    practical_missing_assignments = [
+        {
+            "type": "practical",
+            "subject": row[1],
+            "activity": row[2],
+            "due": row[3],
+            "task_id": row[0],
+            "subject_id": None,
+            "start_url": None,
+        }
+        for row in practical_missing
+    ]
+
+    # Need subject_id for upload link
+    if practical_missing_assignments:
+        task_ids = [a["task_id"] for a in practical_missing_assignments]
+        placeholders = ",".join(["?"] * len(task_ids))
+        cursor.execute(f"""
+            SELECT id, subject_id
+            FROM tasks
+            WHERE id IN ({placeholders})
+        """, task_ids)
+        id_to_subject = {row[0]: row[1] for row in cursor.fetchall()}
+
+        for a in practical_missing_assignments:
+            a["subject_id"] = id_to_subject.get(a["task_id"])
+            if a["subject_id"] is not None:
+                a["start_url"] = f"/upload/{username}/{a['subject_id']}/{a['task_id']}"
+
+    # Theory missing tasks for the group (no submission by this student)
+    cursor.execute("""
+        SELECT tt.id,
+               tt.subject,
+               tt.title,
+               tt.time_limit,
+               tt.allow_multiple,
+               tt.max_attempts
+        FROM theory_tests tt
+        JOIN theory_test_groups ttg ON tt.id = ttg.test_id
+        WHERE tt.is_active = 1
+          AND ttg.group_name = ?
+          AND NOT EXISTS (
+              SELECT 1 FROM theory_submissions ts
+              WHERE ts.username = ? AND ts.test_id = tt.id
+          )
+        ORDER BY tt.subject, tt.title
+        LIMIT 10
+    """, (user_group, username))
+    theory_missing = cursor.fetchall()
+
+    theory_missing_assignments = [
+        {
+            "type": "theory",
+            "subject": row[1] or "Theory",
+            "activity": row[2],
+            "due": None,
+            "test_id": row[0],
+            "start_url": f"/take_test/{row[0]}",
+        }
+        for row in theory_missing
+    ]
+
+    missing_assignments = practical_missing_assignments + theory_missing_assignments
+    # Backward-compatible variable for the existing template placeholder
+    missing_tasks = [(None, a['subject'], a['activity'], a['due'] or '') for a in missing_assignments if a['type']=='practical']
+
+    # If template expects best-effort ordering, put practical first then theory.
+    missing_assignments = practical_missing_assignments + theory_missing_assignments
+
 
     # ─ Weaknesses
     cursor.execute("SELECT skill, count FROM weaknesses WHERE username = ? ORDER BY count DESC LIMIT 5", (username,))
@@ -984,11 +1062,14 @@ def student_dashboard():
         att_history=att_history,
         att_pct=att_pct,
         subjects_with_tasks=subjects_with_tasks,
+        missing_assignments=missing_assignments,
         missing_tasks=missing_tasks,
         weaknesses=weaknesses,
         recent_feedback=recent_feedback
     )
+
 @app.route("/auto_login")
+
 def auto_login():
     username = request.args.get("username", "").strip().upper()
 
@@ -3768,7 +3849,19 @@ def take_test(test_id):
             if q_type in ["mcq_single", "mcq_multi"]:
                 random.shuffle(options)
             elif q_type == "match":
-                random.shuffle(options)
+                # For match questions we only randomize Column B display order.
+                # Keep Column A order stable so grading indices still match.
+                # Structure of `options` for match questions is:
+                #   (id, col_a_text, is_correct, match_pair_col_b_text)
+                options = sorted(options, key=lambda o: o[0])
+                b_opts = options[:]
+                random.shuffle(b_opts)
+                # Re-pack so Column A values remain in original order (options),
+                # while Column B (match_pair) is shuffled for display.
+                options = [
+                    (o[0], o[1], o[2], b_opts[i][3])
+                    for i, o in enumerate(options)
+                ]
             # Store option IDs in shuffled order in session
             session_order[str(q[0])] = [o[0] for o in options]
             questions_with_options.append({"q": q, "options": options})

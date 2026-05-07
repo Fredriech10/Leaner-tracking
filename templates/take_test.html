@@ -44,6 +44,9 @@
 {% if test[2] %}<p style="color:#555;">Subject: {{ test[2] }}</p>{% endif %}
 
 <form method="post" id="testForm">
+    <input type="hidden" name="auto_submitted" value="0">
+
+
 {% for item in questions %}
 {% set q = item.q %}
 {% set opts = item.options %}
@@ -107,9 +110,10 @@
         <div class="match-container">
             <div class="match-col">
                 <h4>Column A</h4>
-                {% for o in opts %}
+{% for o in opts %}
                 <div style="display:flex; align-items:center; gap:10px; margin-bottom:6px;">
-                    <div class="match-item-a" style="flex:1;">{{ o[1] }}</div>
+
+<div class="match-item-a" style="flex:1;">{{ o[1] }}</div>
                     <span>→</span>
                     <div class="drop-zone" style="flex:1;"
                          data-col-a="{{ o[1] }}"
@@ -128,8 +132,8 @@
             <div class="b-pool">
                 <h4>Column B</h4>
                 <div id="pool_{{ q_id }}">
-                {% set b_values = opts | map(attribute=3) | list %}
-                {% for val in b_values | sort %}
+{% set b_values = opts | map(attribute=3) | list %}
+                {% for val in b_values %}
                 <div class="draggable-b"
                      draggable="true"
                      data-value="{{ val }}"
@@ -282,6 +286,46 @@ function toggleCorrection(qId, value) {
     const box = document.getElementById('correction_' + qId);
     if (box) box.style.display = value === 'False' ? 'block' : 'none';
 }
+
+// ── Auto-submit protection (best-effort) ─────────────────────────────
+// If the student switches tab / leaves the page / closes the page,
+// we auto-submit once (unless the tab was already submitted by timer/manual).
+let autoSubmitting = false;
+let submissionTriggered = false;
+
+function triggerAutoSubmit(reason) {
+    if (submissionTriggered) return;
+    submissionTriggered = true;
+
+    const hidden = document.querySelector('input[name="auto_submitted"]');
+    if (hidden) hidden.value = '1';
+
+    // Attempt to submit the form. If it fails (navigation), browser will continue unload.
+    try {
+        autoSubmitting = true;
+        document.getElementById('testForm').submit();
+    } catch (e) {
+        // swallow
+    }
+}
+
+// Tab visibility change
+document.addEventListener('visibilitychange', () => {
+    if (document.visibilityState === 'hidden') {
+        triggerAutoSubmit('visibilitychange');
+    }
+});
+
+// Leaving page
+window.addEventListener('pagehide', () => {
+    triggerAutoSubmit('pagehide');
+});
+
+// Blur (switching away)
+window.addEventListener('blur', () => {
+    triggerAutoSubmit('blur');
+});
+
 </script>
 
 </body>

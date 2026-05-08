@@ -1,0 +1,41 @@
+Please give me a 15 mark test include multiple choice, match collumn B to A , true or false and fill in the blanks, for collumn B to A each correct answer counts as 1 mark. for true/ false the correction should be one word.
+Output in the following format {
+"questions": [
+
+
+{
+"type": "true_false",
+"question": "CPU is an output device",
+"answer": false,
+"correction": "processing"
+},
+
+
+{
+"type": "multiple_choice",
+"question": "Which device is used for input?",
+"options": ["Mouse", "Printer", "Speaker", "Monitor"],
+"answer": "Mouse"
+},
+
+
+{
+"type": "matching",
+"question": "Match devices to their function",
+"pairs": [
+{ "A": "CPU", "B": "Processing" },
+{ "A": "Keyboard", "B": "Input" },
+{ "A": "Monitor", "B": "Output" }
+]
+},
+
+
+{
+"type": "fill_blank",
+"question": "The CPU performs ______ operations",
+"answer": "processing"
+}
+
+
+]
+}

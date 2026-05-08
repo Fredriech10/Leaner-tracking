@@ -1,0 +1,187 @@
+[33mcommit b8991899dba6355d0b583835afb479dd11dd244b[m[33m ([m[1;36mHEAD[m[33m -> [m[1;32mmain[m[33m)[m
+Author: Fredriech10 <fpretorius10@gmail.com>
+Date:   Fri May 8 08:38:29 2026 +0200
+
+    updated tasks attempts
+
+[33mcommit a3ede7e9423817472aa89c4ad5e05b163922a1ae[m
+Author: Fredriech10 <fpretorius10@gmail.com>
+Date:   Thu May 7 14:52:11 2026 +0200
+
+    `Added retry attempts feature to practical tasks`
+
+[33mcommit 1b9603637bd8eb19867c8132a7f7dddff6035187[m
+Author: Fredriech10 <fpretorius10@gmail.com>
+Date:   Thu May 7 10:30:31 2026 +0200
+
+    Update Shuffle for take test. Updated so when learners leave the page or page becomes hidden it auto submitts file. No back function counts as submit. Student dashboard added button to go to missing test or assingments
+
+[33mcommit d7dd952e68ace5a9fe1d90db979086b12690f00c[m
+Author: Fredriech10 <fpretorius10@gmail.com>
+Date:   Thu May 7 08:44:01 2026 +0200
+
+    updated display for task and tests manager
+
+[33mcommit 37b878d3dc16af79b81fb9f6e9c3a90eab8c6eec[m
+Author: Fredriech10 <fpretorius10@gmail.com>
+Date:   Thu May 7 07:24:10 2026 +0200
+
+    update manage questions html
+
+[33mcommit 7532fd7e4a338f4e8aad5d093b2c2a7d607ed760[m
+Author: Fredriech10 <fpretorius10@gmail.com>
+Date:   Thu May 7 06:56:11 2026 +0200
+
+    updates automatic import to theory questions
+
+[33mcommit c45458d8a5294c3de7d69d4e8898501d6146902f[m
+Author: Fredriech10 <fpretorius10@gmail.com>
+Date:   Wed May 6 15:18:55 2026 +0200
+
+    db updated
+
+[33mcommit 8ffd0ca0bb553ff4e4bfda646e23d82ef828eef8[m
+Author: Fredriech10 <fpretorius10@gmail.com>
+Date:   Wed May 6 14:31:24 2026 +0200
+
+    `Updated __pycache__/app.cpython-314.pyc and school.db files.`
+
+[33mcommit 4f07c11abb6acda948bbb47b95d2ae8d3310d1c1[m
+Author: Fredriech10 <fpretorius10@gmail.com>
+Date:   Wed May 6 12:10:43 2026 +0200
+
+    created manage_tasks.html
+
+[33mcommit facfd97b1ddbc695eebf9f77d0a287fa1f037a8f[m
+Author: Fredriech10 <fpretorius10@gmail.com>
+Date:   Wed May 6 11:05:37 2026 +0200
+
+    `Refactor task management and upload functionality`
+
+[33mcommit cd7d0ab1d5a3cd4aaa895e102c65629682264e07[m
+Author: Fredriech10 <fpretorius10@gmail.com>
+Date:   Wed May 6 08:39:56 2026 +0200
+
+    partial update download task
+
+[33mcommit edf36aaaecd2d9b17e805f804f2495eaf78130bc[m
+Author: Fredriech10 <fpretorius10@gmail.com>
+Date:   Wed May 6 08:21:47 2026 +0200
+
+    Partial sample task sumbision
+
+[33mcommit f36c34c86033062fef039b4d8ca13581ecf070d3[m
+Author: Fredriech10 <fpretorius10@gmail.com>
+Date:   Tue May 5 14:30:58 2026 +0200
+
+    10g2
+
+[33mcommit 5419660aada168aa20aee7caaf649df7404d025a[m
+Author: Fredriech10 <fpretorius10@gmail.com>
+Date:   Tue May 5 12:56:32 2026 +0200
+
+    added assesment file
+
+[33mcommit 2951128570e3cd51bc55a38d1045ad0f6a29b28c[m
+Author: Fredriech10 <fpretorius10@gmail.com>
+Date:   Tue May 5 12:29:26 2026 +0200
+
+    updated to accept files
+
+[33mcommit 2ad583ffc1830a9637d37e7c2bd05ca7f443c7ce[m
+Author: Fredriech10 <fpretorius10@gmail.com>
+Date:   Tue May 5 12:29:00 2026 +0200
+
+    updated task page
+
+[33mcommit 57d9a5c562f9c7e2130f46baf03b2943e8f947c1[m
+Author: Fredriech10 <fpretorius10@gmail.com>
+Date:   Tue May 5 11:00:19 2026 +0200
+
+    updated formatting
+
+[33mcommit 5e1f4a9f90f0b968f26d39647dc3a92e7b9783b5[m
+Author: Fredriech10 <fpretorius10@gmail.com>
+Date:   Tue May 5 08:23:03 2026 +0200
+
+    markign changes
+
+[33mcommit 26d919e358ab1e713867dff588f1b1324698bceb[m
+Author: Fredriech10 <fpretorius10@gmail.com>
+Date:   Mon May 4 14:29:37 2026 +0200
+
+    updated export function and created new marking script
+
+[33mcommit 9de848818cc53b27f1448dfd59f5ca47feef11da[m
+Author: Fredriech10 <fpretorius10@gmail.com>
+Date:   Mon May 4 13:04:13 2026 +0200
+
+    updated and added new results view
+
+[33mcommit 65143a930367cbd482838c5dea2aa1f2a710556b[m
+Author: Fredriech10 <fpretorius10@gmail.com>
+Date:   Mon May 4 12:22:35 2026 +0200
+
+    updated exclude for attendance and modified so layouts
+
+[33mcommit 362024396dda25e2f4156f35bccb65f740401edc[m
+Author: Fredriech10 <fpretorius10@gmail.com>
+Date:   Mon May 4 10:35:37 2026 +0200
+
+    startup added
+
+[33mcommit 95370330e513cb1202fe208797e8b6f879919a38[m
+Author: Fredriech10 <fpretorius10@gmail.com>
+Date:   Mon May 4 10:22:02 2026 +0200
+
+    updated student start bat
+
+[33mcommit 1187c3e0ddf42147d99bd343b15ba2627fcbe925[m
+Author: Fredriech10 <fpretorius10@gmail.com>
+Date:   Mon May 4 09:44:28 2026 +0200
+
+    add to startup apps
+
+[33mcommit 5b846eea6dc02c2e060bb276b495f2b74d016230[m
+Author: Fredriech10 <fpretorius10@gmail.com>
+Date:   Mon May 4 08:20:43 2026 +0200
+
+    start and
+
+[33mcommit af3e6e2480d42560296807f0aeb62fce73431bc2[m
+Author: Fredriech10 <fpretorius10@gmail.com>
+Date:   Mon May 4 08:19:07 2026 +0200
+
+    update imports and installs
+
+[33mcommit 5b893ada284585ed67bd8c03457d2234956b958d[m
+Author: Fredriech10 <fpretorius10@gmail.com>
+Date:   Thu Apr 30 10:46:54 2026 +0200
+
+    Updated drag and drop . true and false still broke
+
+[33mcommit 3f1e143c34aeed7e297d4d77c0fe7639b2bf2ffb[m
+Author: Fredriech10 <fpretorius10@gmail.com>
+Date:   Thu Apr 30 08:25:25 2026 +0200
+
+    Updated theory and practical assingment working
+
+[33mcommit 7074b3eea1fefaa631df67aaf71b7e9fa5fa0b26[m
+Author: Fredriech10 <fpretorius10@gmail.com>
+Date:   Wed Apr 29 09:49:38 2026 +0200
+
+    updates count days in database
+
+[33mcommit 407e6f32dcf52347e20edbbc9cad3a070a878764[m
+Author: Fredriech10 <fpretorius10@gmail.com>
+Date:   Wed Apr 29 09:46:27 2026 +0200
+
+    Updates attendance and teacher dashboard
+
+[33mcommit 92a2110fe5a03190c9be2d45ea35b61f8e1a0267[m
+Author: FREDRIECH PRETORIUS <FPSGB6088@wcgschools.gov.za>
+Date:   Wed Apr 29 08:55:53 2026 +0200
+
+    Working Admin,attendance and recent activities.
+    teacehr and student dashboard all demos.
+    dynamic addition for tasks and assignments for learners but only demo uploads so far

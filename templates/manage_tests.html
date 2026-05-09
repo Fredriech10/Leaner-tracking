@@ -49,10 +49,16 @@
                 <label>Subject</label>
                 <input type="text" name="subject" placeholder="e.g. Excel" style="width:120px;">
             </div>
-            <div class="form-group" style="width:100px;">
+            <div class="form-group" style="width:170px;">
                 <label>Time Limit (min)</label>
                 <input type="number" name="time_limit" value="0" min="0" style="width:80px;">
-                <small style="color:gray;">0 = no limit</small>
+                
+            </div>
+
+            <div class="form-group" style="width:220px;">
+                <label style="font-weight:bold;">Assign Start Date</label>
+                
+                <input type="date" name="assign_date" required style="width:180px;">
             </div>
         </div>
         <div class="form-row" style="gap:30px; flex-wrap:wrap; margin-top:10px;">
@@ -97,6 +103,7 @@
         <th>Subject</th>
         <th>Groups</th>
         <th>Questions</th>
+        <th>Assign Start Date</th>
         <th>Time Limit</th>
         <th>Attempts</th>
         <th>Show Answers</th>
@@ -109,11 +116,18 @@
         <td>{{ t[2] or '—' }}</td>
         <td>{{ t[6] or 'All Groups' }}</td>
         <td>{{ t[5] }}</td>
-        <td>{{ t[3] ~ ' min' if t[3] else 'No limit' }}</td>
-        <td>{{ t[8] ~ ' max' if t[7] else '1 (single)' }}</td>
-        <td>{{ '✔ Yes' if t[9] else '✘ No' }}</td>
+        <td>{{ t[3] or '—' }}</td>
+        <td>{{ t[4] ~ ' min' if t[4] else 'No limit' }}</td>
         <td>
-            {% if t[4] %}
+            {% if t[8] %}
+                {{ t[9] ~ ' max' }}
+            {% else %}
+                1 (single)
+            {% endif %}
+        </td>
+        <td>{{ '✔ Yes' if t[10] else '✘ No' }}</td>
+        <td>
+            {% if t[5] %}
                 <span class="badge-active">Active</span>
             {% else %}
                 <span class="badge-inactive">Inactive</span>
@@ -126,10 +140,10 @@
             <form method="post" action="/manage_tests/{{ t[0] }}/toggle" style="display:inline;">
                 <button
                     type="submit"
-                    class="btn {{ 'btn-warning' if t[4] else 'btn-success' }}"
-                    title="{{ 'Deactivate' if t[4] else 'Activate' }}"
+                    class="btn {{ 'btn-warning' if t[5] else 'btn-success' }}"
+                    title="{{ 'Deactivate' if t[5] else 'Activate' }}"
                 >
-                    {{ '⏸' if t[4] else '▶' }}
+                    {{ '⏸' if t[5] else '▶' }}
                 </button>
             </form>
 

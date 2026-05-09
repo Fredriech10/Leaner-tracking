@@ -155,11 +155,45 @@
     </div>
 
 {% elif not data %}
+    {% set in_any_term = namespace(found=false) %}
+    {% for n in range(1, 5) %}
+        {% if terms[n].start and terms[n].end and terms[n].start <= today <= terms[n].end %}
+            {% set in_any_term.found = true %}
+        {% endif %}
+    {% endfor %}
+    {% if not in_any_term.found and (terms[1].start or terms[2].start or terms[3].start or terms[4].start) %}
+    <div class="card" style="border-left: 4px solid #ff8c00;">
+        <p style="margin:0; font-size:0.95em;">
+            📅 <strong>Outside term dates</strong> — today ({{ today }}) does not fall within any configured term.
+            Attendance is only tracked during term dates.
+            <a href="/attendance?group={{ selected_group }}" style="color:#005a9e; margin-left:8px;">Configure term dates ↑</a>
+        </p>
+    </div>
+    {% else %}
     <div class="card">
         <p style="color:#888;">No attendance data found for this group.</p>
     </div>
+    {% endif %}
 
 {% else %}
+
+<!-- Term context banner -->
+{% set in_active_term = namespace(found=false, num=0) %}
+{% for n in range(1, 5) %}
+    {% if terms[n].start and terms[n].end and terms[n].start <= today <= terms[n].end %}
+        {% set in_active_term.found = true %}
+        {% set in_active_term.num = n %}
+    {% endif %}
+{% endfor %}
+{% if in_active_term.found %}
+<div style="background:#e8f5e9; border:1px solid #a5d6a7; border-radius:8px; padding:10px 16px; margin-bottom:12px; font-size:0.88em; color:#1b5e20;">
+    🗓️ <strong>Term {{ in_active_term.num }}</strong> is active — {{ terms[in_active_term.num].start }} to {{ terms[in_active_term.num].end }}. Showing full term attendance.
+</div>
+{% elif terms[1].start or terms[2].start or terms[3].start or terms[4].start %}
+<div style="background:#fff8e1; border:1px solid #ffe082; border-radius:8px; padding:10px 16px; margin-bottom:12px; font-size:0.88em; color:#6d4c00;">
+    ⚠️ Today ({{ today }}) is <strong>outside all term dates</strong>. Showing last 7 school days. Attendance calculations only count term days.
+</div>
+{% endif %}
 
 <!-- Legend -->
 <div class="legend">
@@ -222,32 +256,94 @@
     </div>
 </div>
 
-<div class="card">
-    <h3>📋 Excluded Dates</h3>
-    {% if excluded_dates %}
-        <ul>
-        {% for date_info in excluded_dates %}
-            <li style="display: flex; justify-content: space-between; align-items: center;">
-                <div>
-                    <strong>{{ date_info[0] }}</strong> - 
-                    <span style="color:#666;">{{ 'All Groups' if not date_info[1] else date_info[1] }}</span> - 
-                    <em style="color:#888;">{{ date_info[2] or 'No reason' }}</em>
-                </div>
-                <form method="POST" action="/include_date" style="display:inline;">
-                    <input type="hidden" name="selected_group" value="{{ selected_group }}">
-                    <input type="hidden" name="group" value="{{ date_info[1] }}">
-                    <input type="hidden" name="date" value="{{ date_info[0] }}">
-                    <button type="submit" class="btn btn-success" style="padding: 4px 10px; font-size: 0.82em;"
-                        onclick="return confirm('Include this date back in attendance calculations?')">
-                        ✓ Include
-                    </button>
-                </form>
-            </li>
-        {% endfor %}
-        </ul>
-    {% else %}
-        <p style="color:#888;">No dates are currently excluded.</p>
-    {% endif %}
+<div class="card" style="padding: 0; overflow: hidden;">
+    <button type="button" onclick="toggleTermDates()" style="width:100%; background:none; border:none; padding:14px 18px; text-align:left; cursor:pointer; display:flex; justify-content:space-between; align-items:center;">
+        <span style="font-size:0.95em; font-weight:bold; color:#005a9e;">🗓️ Term Dates
+            {% set active_term = namespace(num=0) %}
+            {% for n in range(1, 5) %}
+                {% if terms[n].start and terms[n].end and terms[n].start <= today <= terms[n].end %}
+                    {% set active_term.num = n %}
+                {% endif %}
+            {% endfor %}
+            {% if active_term.num %}
+                <span style="background:#c8f7c5; color:#107C10; border-radius:10px; padding:1px 8px; font-size:0.82em; margin-left:6px;">Term {{ active_term.num }} active</span>
+            {% else %}
+                <span style="background:#f0f0f0; color:#888; border-radius:10px; padding:1px 8px; font-size:0.82em; margin-left:6px;">No active term</span>
+            {% endif %}
+        </span>
+        <span id="termChevron" style="color:#005a9e; font-size:0.85em;">▼ Show</span>
+    </button>
+    <div id="termBody" style="display:none; padding:0 18px 18px; border-top:2px solid #f0f0f0;">
+        <form method="POST" action="/term_dates">
+            <table style="margin-top:12px; width:auto; border-collapse:collapse;">
+                <tr>
+                    <th style="padding:6px 12px 6px 0; text-align:left; color:#555; font-size:0.85em;">Term</th>
+                    <th style="padding:6px 12px; text-align:left; color:#555; font-size:0.85em;">Start Date</th>
+                    <th style="padding:6px 12px; text-align:left; color:#555; font-size:0.85em;">End Date</th>
+                    <th style="padding:6px 12px; text-align:left; color:#555; font-size:0.85em;">Status</th>
+                </tr>
+                {% for n in range(1, 5) %}
+                {% set t = terms[n] %}
+                {% set is_active = t.start and t.end and t.start <= today <= t.end %}
+                <tr>
+                    <td style="padding:6px 12px 6px 0; font-weight:bold;">Term {{ n }}</td>
+                    <td style="padding:4px 12px;">
+                        <input type="date" name="term{{ n }}_start" value="{{ t.start or '' }}"
+                               style="padding:6px 10px; border:1px solid #ccc; border-radius:6px; font-size:0.9em;">
+                    </td>
+                    <td style="padding:4px 12px;">
+                        <input type="date" name="term{{ n }}_end" value="{{ t.end or '' }}"
+                               style="padding:6px 10px; border:1px solid #ccc; border-radius:6px; font-size:0.9em;">
+                    </td>
+                    <td style="padding:4px 12px;">
+                        {% if is_active %}
+                            <span style="background:#c8f7c5; color:#107C10; border-radius:10px; padding:2px 10px; font-size:0.82em; font-weight:bold;">● Active</span>
+                        {% elif t.start and t.end %}
+                            <span style="background:#f0f0f0; color:#888; border-radius:10px; padding:2px 10px; font-size:0.82em;">Set</span>
+                        {% else %}
+                            <span style="color:#bbb; font-size:0.82em;">Not set</span>
+                        {% endif %}
+                    </td>
+                </tr>
+                {% endfor %}
+            </table>
+            <p style="font-size:0.82em; color:#888; margin:10px 0 12px;">Days outside all term dates are automatically excluded from attendance. Leave a term blank to clear it.</p>
+            <button type="submit" class="btn btn-primary" style="padding:7px 18px;">💾 Save Term Dates</button>
+        </form>
+    </div>
+</div>
+
+<div class="card" style="padding: 0; overflow: hidden;">
+    <button type="button" onclick="toggleExcluded()" style="width:100%; background:none; border:none; padding:14px 18px; text-align:left; cursor:pointer; display:flex; justify-content:space-between; align-items:center;">
+        <span style="font-size:0.95em; font-weight:bold; color:#005a9e;">📋 Excluded Dates {% if excluded_dates %}<span style="background:#f7c5c5; color:#A4262C; border-radius:10px; padding:1px 8px; font-size:0.82em; margin-left:6px;">{{ excluded_dates | length }}</span>{% endif %}</span>
+        <span id="excludedChevron" style="color:#005a9e; font-size:0.85em;">▼ Show</span>
+    </button>
+    <div id="excludedBody" style="display:none; padding:0 18px 14px; border-top:2px solid #f0f0f0;">
+        {% if excluded_dates %}
+            <ul style="margin-top:10px;">
+            {% for date_info in excluded_dates %}
+                <li style="display: flex; justify-content: space-between; align-items: center;">
+                    <div>
+                        <strong>{{ date_info[0] }}</strong> —
+                        <span style="color:#666;">{{ 'All Groups' if not date_info[1] else date_info[1] }}</span> —
+                        <em style="color:#888;">{{ date_info[2] or 'No reason' }}</em>
+                    </div>
+                    <form method="POST" action="/include_date" style="display:inline;">
+                        <input type="hidden" name="selected_group" value="{{ selected_group }}">
+                        <input type="hidden" name="group" value="{{ date_info[1] }}">
+                        <input type="hidden" name="date" value="{{ date_info[0] }}">
+                        <button type="submit" class="btn btn-success" style="padding: 4px 10px; font-size: 0.82em;"
+                            onclick="return confirm('Include this date back in attendance calculations?')">
+                            ✓ Include
+                        </button>
+                    </form>
+                </li>
+            {% endfor %}
+            </ul>
+        {% else %}
+            <p style="color:#888; margin-top:10px;">No dates are currently excluded.</p>
+        {% endif %}
+    </div>
 </div>
 
 <!-- Save Attendance Form -->
@@ -504,6 +600,22 @@ function quickAction(action, dateFieldId, confirmMsg) {
         const formId = dateFieldId.replace('Date', 'Form');
         document.getElementById(formId).submit();
     }
+}
+
+function toggleTermDates() {
+    const body = document.getElementById('termBody');
+    const chevron = document.getElementById('termChevron');
+    const open = body.style.display === 'block';
+    body.style.display = open ? 'none' : 'block';
+    chevron.textContent = open ? '▼ Show' : '▲ Hide';
+}
+
+function toggleExcluded() {
+    const body = document.getElementById('excludedBody');
+    const chevron = document.getElementById('excludedChevron');
+    const open = body.style.display === 'block';
+    body.style.display = open ? 'none' : 'block';
+    chevron.textContent = open ? '▼ Show' : '▲ Hide';
 }
 
 function showExcludeModal() {

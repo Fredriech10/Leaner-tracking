@@ -134,33 +134,12 @@
     <div class="card full" style="margin-bottom:16px;">
         <h3>⚡ Quick Actions</h3>
         <div class="actions">
-            <a href="#" class="action-btn" onclick="toggleTaskPanel(); return false;">
+            <a href="/my_tasks" class="action-btn">
                 <span class="icon">📁</span>Practical Tasks
             </a>
             <a href="/tests" class="action-btn">
                 <span class="icon">📝</span>Theory Tests
             </a>
-        </div>
-
-        <!-- Inline practical task panel -->
-        <div class="task-panel" id="taskPanel">
-            {% if subjects_with_tasks %}
-            <select class="subject-select" id="subjectSelect" onchange="showTasks(this.value)">
-                <option value="">-- Select a Subject --</option>
-                {% for s in subjects_with_tasks %}
-                <option value="subj_{{ s.id }}">📁 {{ s.name }}</option>
-                {% endfor %}
-            </select>
-            {% for s in subjects_with_tasks %}
-            <div class="task-list" id="subj_{{ s.id }}" style="display:none;">
-                {% for task_id, task_name in s.tasks %}
-                <a href="/upload/{{ username }}/{{ s.id }}/{{ task_id }}" class="task-link">📄 {{ task_name }}</a>
-                {% endfor %}
-            </div>
-            {% endfor %}
-            {% else %}
-            <p style="color:#888; font-size:0.9em; margin:0;">No practical tasks available yet.</p>
-            {% endif %}
         </div>
     </div>
 
@@ -336,19 +315,6 @@
 setInterval(function() {
     fetch('/heartbeat/{{ username }}');
 }, 30000);
-
-function toggleTaskPanel() {
-    const panel = document.getElementById('taskPanel');
-    panel.classList.toggle('open');
-}
-
-function showTasks(subjId) {
-    document.querySelectorAll('.task-list').forEach(el => el.style.display = 'none');
-    if (subjId) {
-        const el = document.getElementById(subjId);
-        if (el) el.style.display = 'flex';
-    }
-}
 </script>
 
 </body>

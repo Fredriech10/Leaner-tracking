@@ -1,0 +1,84 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>My Tasks</title>
+    <style>
+        body { font-family: Arial, sans-serif; padding: 20px; max-width: 800px; margin: 0 auto; }
+        .test-card { border: 1px solid #ddd; border-radius: 8px; padding: 18px; margin-bottom: 15px; background: #fafafa; display: flex; justify-content: space-between; align-items: center; gap: 15px; }
+        .test-info h3 { margin: 0 0 6px 0; }
+        .test-info p { margin: 0; color: #555; font-size: 0.9em; }
+        .test-actions { display: flex; flex-direction: column; align-items: flex-end; gap: 6px; white-space: nowrap; }
+        .btn { padding: 8px 16px; border: none; border-radius: 4px; cursor: pointer; text-decoration: none; font-size: 0.9em; display: inline-block; }
+        .btn-primary { background: #0078D4; color: white; }
+        .btn-success { background: #107C10; color: white; }
+        .btn-retry { background: #ff8c00; color: white; }
+        .badge { padding: 3px 10px; border-radius: 10px; font-size: 0.82em; font-weight: bold; }
+        .badge-best { background: #c8f7c5; color: #107C10; }
+        .badge-attempts { background: #f0f0f0; color: #555; font-size: 0.8em; }
+        .badge-maxed { background: #f7c5c5; color: #A4262C; }
+        .badge-inactive { background: #f5f5f5; color: #888; }
+        .badge-type { background: #e8f3ff; color: #0078D4; }
+    </style>
+</head>
+<body>
+
+<p><a href="/student_dashboard">← Back to Dashboard</a></p>
+<h2>📁 My Tasks</h2>
+
+{% if not tasks %}
+    <p>No tasks available at the moment.</p>
+{% else %}
+    {% for task in tasks %}
+    {% set has_attempted = task.submission_count > 0 %}
+    {% set maxed_out = task.allow_multiple and task.submission_count >= task.max_attempts %}
+    {% set single_completed = not task.allow_multiple and task.submission_count >= 1 %}
+    <div class="test-card">
+        <div class="test-info">
+            <h3>{{ task.name }}</h3>
+            <p>
+                Subject: {{ task.subject }} &nbsp;|&nbsp; Assigned: {{ task.assign_date }}
+                {% if task.task_type == 'practical' %}
+                    &nbsp;|&nbsp; Practical task
+                {% else %}
+                    &nbsp;|&nbsp; Theory task
+                {% endif %}
+                {% if task.allow_multiple %}
+                    &nbsp;|&nbsp; Max {{ task.max_attempts }} attempt{{ 's' if task.max_attempts != 1 }}
+                {% endif %}
+            </p>
+        </div>
+        <div class="test-actions">
+            {% if has_attempted %}
+                <span class="badge badge-best">🏆 Best: {{ task.best_score }}%</span>
+                <span class="badge badge-attempts {{ 'badge-maxed' if maxed_out or single_completed else '' }}">
+                    {{ task.submission_count }}/{{ task.max_attempts if task.allow_multiple else 1 }} attempt{{ 's' if task.submission_count != 1 }}
+                </span>
+            {% else %}
+                <span class="badge badge-attempts">No submissions yet</span>
+            {% endif %}
+
+            {% if task.task_type == 'practical' %}
+                {% if task.is_active %}
+                    <a href="/upload/{{ username }}/{{ task.subject_id }}/{{ task.id }}" class="btn btn-primary">Upload Task →</a>
+                {% else %}
+                    <span class="btn badge badge-inactive">Inactive</span>
+                {% endif %}
+            {% else %}
+                {% if task.theory_test_id %}
+                    {% if maxed_out %}
+                        <span class="btn badge badge-maxed">Max attempts reached</span>
+                    {% else %}
+                        <a href="/take_test/{{ task.theory_test_id }}" class="btn btn-primary">Take Test →</a>
+                    {% endif %}
+                {% else %}
+                    <span class="btn badge badge-inactive">Test not available</span>
+                {% endif %}
+            {% endif %}
+        </div>
+    </div>
+    {% endfor %}
+{% endif %}
+
+</body>
+</html>

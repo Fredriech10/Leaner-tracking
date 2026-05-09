@@ -110,6 +110,17 @@
                     </div>
                 </div>
 
+                <div class="form-row" style="margin-bottom: 12px; gap: 20px; align-items: center;">
+                    <label style="display:inline-flex;align-items:center;gap:8px;">
+                        <input type="checkbox" name="allow_multiple" id="allow_multiple" onchange="toggleMaxAttempts(this)">
+                        Allow multiple submissions
+                    </label>
+                    <div id="maxAttemptsPanel" style="display:none;">
+                        <label style="display:block;font-weight:bold;margin-bottom:6px;">Max Attempts</label>
+                        <input type="number" name="max_attempts" value="2" min="2" max="10" style="width:120px; padding:8px; border:1px solid #ccc; border-radius:4px;">
+                    </div>
+                </div>
+
                 <div class="section-title">Assigned Groups</div>
                 <div class="group-check-grid" style="margin:8px 0 18px;">
                     {{ group_checkboxes | safe }}
@@ -132,6 +143,7 @@
                 <th>Assign Date</th>
                 <th>Groups</th>
                 <th>Marking / Test</th>
+                <th>Attempts</th>
                 <th>Status</th>
                 <th>Actions</th>
             </tr>
@@ -148,8 +160,9 @@
         document.getElementById('btn_practical').style.background = type === 'practical' ? '#0078D4' : '#ccc';
         document.getElementById('btn_practical').style.color = type === 'practical' ? 'white' : '#333';
     }
+    function toggleMaxAttempts(checkbox) {
+        document.getElementById('maxAttemptsPanel').style.display = checkbox.checked ? 'block' : 'none';
+    }
 </script>
-
 </body>
 </html>
-

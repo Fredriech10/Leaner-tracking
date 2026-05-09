@@ -68,6 +68,19 @@
             <small style="color:#666; margin-top:6px; display:block;">Leave all unchecked = no group assigned.</small>
         </div>
 
+        <div class="form-group">
+            <div class="section-title">Submission Options</div>
+            <label style="display:inline-flex; align-items:center; gap:8px; margin-bottom:8px;">
+                <input type="checkbox" id="allow_multiple" name="allow_multiple" value="1" {{ 'checked' if task[7] else '' }} onchange="toggleMaxAttempts(this)">
+                Allow multiple submissions
+            </label>
+            <div id="maxAttemptsPanel" style="display:{{ 'block' if task[7] else 'none' }}; margin-top: 6px;">
+                <label style="font-weight:bold; display:block; margin-bottom:6px;">Max Attempts</label>
+                <input type="number" name="max_attempts" min="2" max="10" value="{{ task[8] or 2 }}" style="width:120px; padding:8px; border:1px solid #ccc; border-radius:4px;">
+            </div>
+            <small style="color:#666; display:block; margin-top:8px;">When multiple submissions are allowed, learners can resubmit until this limit is reached.</small>
+        </div>
+
         <!-- Sample File -->
         <div class="form-group">
             <div class="section-title">Sample File</div>
@@ -114,6 +127,12 @@
 
     </form>
 </div>
+
+<script>
+    function toggleMaxAttempts(checkbox) {
+        document.getElementById('maxAttemptsPanel').style.display = checkbox.checked ? 'block' : 'none';
+    }
+</script>
 
 </body>
 </html>

@@ -286,6 +286,8 @@ def init_db():
         marking_script TEXT,
         theory_test_id INTEGER,
         task_type TEXT DEFAULT 'practical',
+        allow_multiple INTEGER DEFAULT 0,
+        max_attempts INTEGER DEFAULT 1,
         is_active INTEGER DEFAULT 1,
         created_by TEXT,
         created_at TEXT,
@@ -306,6 +308,12 @@ def init_db():
         if "task_type" not in columns:
             cursor.execute("ALTER TABLE tasks ADD COLUMN task_type TEXT DEFAULT 'practical'")
             print("Migration: added task_type column to tasks")
+        if "allow_multiple" not in columns:
+            cursor.execute("ALTER TABLE tasks ADD COLUMN allow_multiple INTEGER DEFAULT 0")
+            print("Migration: added allow_multiple column to tasks")
+        if "max_attempts" not in columns:
+            cursor.execute("ALTER TABLE tasks ADD COLUMN max_attempts INTEGER DEFAULT 1")
+            print("Migration: added max_attempts column to tasks")
         if "is_active" not in columns:
             cursor.execute("ALTER TABLE tasks ADD COLUMN is_active INTEGER DEFAULT 1")
         
@@ -1173,7 +1181,7 @@ def edit_task(task_id):
 
     cursor.execute("""
         SELECT t.id, t.name, t.assign_date, t.marking_script, t.subject_id,
-               t.sample_file, t.sample_file_name
+               t.sample_file, t.sample_file_name, t.allow_multiple, t.max_attempts
         FROM tasks t
         WHERE t.id = ? AND t.task_type = 'practical'
     """, (task_id,))
@@ -1187,11 +1195,13 @@ def edit_task(task_id):
     if request.method == "POST":
         assign_date = request.form.get("assign_date")
         marking_script = request.form.get("marking_script")
+        allow_multiple = 1 if request.form.get("allow_multiple") else 0
+        max_attempts = int(request.form.get("max_attempts", 1)) if allow_multiple else 1
         groups = request.form.getlist("groups")
 
         cursor.execute("""
-            UPDATE tasks SET assign_date = ?, marking_script = ? WHERE id = ?
-        """, (assign_date, marking_script, task_id))
+            UPDATE tasks SET assign_date = ?, marking_script = ?, allow_multiple = ?, max_attempts = ? WHERE id = ?
+        """, (assign_date, marking_script, allow_multiple, max_attempts, task_id))
 
         cursor.execute("DELETE FROM task_groups WHERE task_id = ?", (task_id,))
         for g in groups:
@@ -1355,13 +1365,13 @@ def upload(username, subject_id, task_id):
         return "Subject not found", 404
     subject_name = subject_row[0]
 
-    # Get task with assign_date, marking_script and is_active
-    cursor.execute("SELECT name, assign_date, marking_script, is_active FROM tasks WHERE id = ?", (task_id,))
+    # Get task with assign_date, marking_script, submission rules, and is_active
+    cursor.execute("SELECT name, assign_date, marking_script, allow_multiple, max_attempts, is_active FROM tasks WHERE id = ?", (task_id,))
     task_row = cursor.fetchone()
     if not task_row:
         conn.close()
         return "Task not found", 404
-    task_name, assign_date, marking_script, task_is_active = task_row
+    task_name, assign_date, marking_script, allow_multiple, max_attempts, task_is_active = task_row
 
     # Block upload if task is deactivated (students only)
     user_role = get_user_role(username)
@@ -1393,12 +1403,22 @@ def upload(username, subject_id, task_id):
             conn.close()
             return "Access denied: Task is not yet available", 403
 
-    conn.close()
-
     if request.method == "POST":
+        cursor.execute("SELECT COUNT(*) FROM results WHERE username = ? AND subject = ? AND task = ?", (username, subject_name, task_name))
+        submission_count = cursor.fetchone()[0]
+
+        if not allow_multiple and submission_count >= 1:
+            conn.close()
+            return "<p><a href=\"/student_dashboard\">← Back to Dashboard</a></p><h2>Upload Closed</h2><p style=\"color:#A4262C;\">This task allows only a single submission, and you have already submitted once.</p>", 403
+
+        if allow_multiple and submission_count >= max_attempts:
+            conn.close()
+            return "<p><a href=\"/student_dashboard\">← Back to Dashboard</a></p><h2>Upload Closed</h2><p style=\"color:#A4262C;\">You have reached the maximum number of submissions for this task.</p>", 403
+
         file = request.files.get("file")
 
         if not file:
+            conn.close()
             return "No file uploaded", 400
 
         temp_path = f"temp_{username}.xlsx"
@@ -1411,6 +1431,7 @@ def upload(username, subject_id, task_id):
                 os.remove(temp_path)
 
         if result["error"]:
+            conn.close()
             return f"""
             <p><a href="/student_dashboard">← Back to Dashboard</a></p>
             <h2>Submission Error</h2>
@@ -1426,6 +1447,7 @@ def upload(username, subject_id, task_id):
         correct_list = "".join(f"<li>✅ {escape(r['question'])} ({r['marks_awarded']}/{r['marks_available']})</li>" for r in result["results"] if r["passed"])
         wrong_list = "".join(f"<li>❌ {escape(r['question'])} (0/{r['marks_available']})</li>" for r in result["results"] if not r["passed"])
 
+        conn.close()
         return f"""
         <p><a href="/student_dashboard">← Back to Dashboard</a></p>
         <h2>Results – {escape(subject_name)} {escape(task_name)}</h2>
@@ -1434,6 +1456,8 @@ def upload(username, subject_id, task_id):
         <h3>❌ Incorrect</h3><ul>{wrong_list}</ul>
         <a href="/subjects/{escape(username)}">← Back to Subjects</a>
         """
+
+    conn.close()
 
     # Include a student-safe sample download link if a sample file exists
     sample_link_html = ""
@@ -1459,16 +1483,12 @@ def upload(username, subject_id, task_id):
         except Exception:
             pass
 
-
-    return f"""
-    <p><a href="/student_dashboard">← Back to Dashboard</a></p>
-    <h2>Upload - {escape(subject_name).upper()} ({escape(task_name)})</h2>
-    {sample_link_html}
-    <form method="post" enctype="multipart/form-data">
-        <input type="file" name="file" required>
-        <button type="submit">Upload</button>
-    </form>
-    """
+    return render_template(
+        "upload_task.html",
+        subject_name=subject_name,
+        task_name=task_name,
+        sample_link_html=sample_link_html,
+    )
 
 
 
@@ -3251,10 +3271,12 @@ def manage_tasks(subject_id):
             task_name = request.form.get("task_name")
             assign_date = request.form.get("assign_date")
             marking_script = request.form.get("marking_script")
+            allow_multiple = 1 if request.form.get("allow_multiple") else 0
+            max_attempts = int(request.form.get("max_attempts", 1)) if allow_multiple else 1
             groups = request.form.getlist("groups")
             if task_name and assign_date:
-                cursor.execute("INSERT INTO tasks (subject_id, name, assign_date, marking_script, task_type, created_by, created_at) VALUES (?, ?, ?, ?, 'practical', ?, ?)",
-                               (subject_id, task_name, assign_date, marking_script, username, datetime.now().isoformat()))
+                cursor.execute("INSERT INTO tasks (subject_id, name, assign_date, marking_script, task_type, allow_multiple, max_attempts, created_by, created_at) VALUES (?, ?, ?, ?, 'practical', ?, ?, ?, ?)",
+                               (subject_id, task_name, assign_date, marking_script, allow_multiple, max_attempts, username, datetime.now().isoformat()))
                 task_id = cursor.lastrowid
                 for group in groups:
                     cursor.execute("INSERT INTO task_groups (task_id, group_name) VALUES (?, ?)", (task_id, group))
@@ -3313,7 +3335,8 @@ def manage_tasks(subject_id):
 
     # Get tasks
     cursor.execute("""
-    SELECT t.id, t.name, t.assign_date, t.marking_script, t.task_type, t.theory_test_id, t.is_active, GROUP_CONCAT(tg.group_name, ', ')
+    SELECT t.id, t.name, t.assign_date, t.marking_script, t.task_type, t.theory_test_id,
+           t.allow_multiple, t.max_attempts, t.is_active, GROUP_CONCAT(tg.group_name, ', ')
     FROM tasks t
     LEFT JOIN task_groups tg ON t.id = tg.task_id
     WHERE t.subject_id = ?
@@ -3324,7 +3347,7 @@ def manage_tasks(subject_id):
     conn.close()
 
     task_list = ""
-    for task_id, task_name, assign_date, marking_script, task_type, theory_test_id, is_active, group_list in tasks:
+    for task_id, task_name, assign_date, marking_script, task_type, theory_test_id, allow_multiple, max_attempts, is_active, group_list in tasks:
         if task_type == "theory":
             type_label = '<span style="background:#0078D4;color:white;padding:2px 6px;border-radius:10px;font-size:0.8em;">📝 Theory</span>'
             script_label = f'Test ID: {theory_test_id}'
@@ -3336,12 +3359,18 @@ def manage_tasks(subject_id):
         toggle_label = '⏸ Deactivate' if is_active else '▶ Activate'
         toggle_style = 'background:#ff8c00;color:white;' if is_active else 'background:#107C10;color:white;'
 
+        if task_type == 'practical':
+            attempts_label = 'Single' if not allow_multiple else f'Multiple ({max_attempts})'
+        else:
+            attempts_label = 'Theory task'
+
         task_list += f"""
         <tr>
             <td>{escape(task_name)} {type_label}</td>
             <td>{assign_date}</td>
             <td>{group_list or 'None'}</td>
             <td>{script_label}</td>
+            <td>{attempts_label}</td>
             <td>{status_badge}</td>
             <td style="display:flex;gap:5px;flex-wrap:wrap;">
                 {'<a href="/tasks/' + str(task_id) + '/edit" title="Edit task" style="padding:4px 10px;border:none;border-radius:4px;cursor:pointer;font-size:0.85em;background:#0078D4;color:white;text-decoration:none;">✏️</a>' if task_type == 'practical' else ''}
@@ -3830,6 +3859,68 @@ def learner_tests():
     tests = cursor.fetchall()
     conn.close()
     return render_template("learner_tests.html", tests=tests)
+
+
+@app.route("/my_tasks")
+def learner_tasks():
+    username = session.get("username")
+    if not username:
+        return redirect(url_for("login"))
+
+    conn = get_db()
+    cursor = conn.cursor()
+    role = get_user_role(username)
+    cursor.execute("SELECT group_name FROM users WHERE username = ?", (username,))
+    row = cursor.fetchone()
+    user_group = row[0] if row else None
+    today = datetime.now().date().isoformat()
+
+    if role in ["teacher", "admin"]:
+        cursor.execute("""
+            SELECT t.id, t.name, t.assign_date, t.task_type, t.allow_multiple,
+                   t.max_attempts, t.is_active, t.theory_test_id, t.subject_id, s.name
+            FROM tasks t
+            JOIN subjects s ON t.subject_id = s.id
+            ORDER BY t.assign_date, s.name, t.name
+        """)
+    else:
+        cursor.execute("""
+            SELECT t.id, t.name, t.assign_date, t.task_type, t.allow_multiple,
+                   t.max_attempts, t.is_active, t.theory_test_id, t.subject_id, s.name
+            FROM tasks t
+            JOIN subjects s ON t.subject_id = s.id
+            JOIN task_groups tg ON t.id = tg.task_id
+            WHERE tg.group_name = ? AND t.assign_date <= ? AND t.is_active = 1
+            ORDER BY t.assign_date, s.name, t.name
+        """, (user_group, today))
+
+    task_rows = cursor.fetchall()
+    tasks = []
+    for task_id, task_name, assign_date, task_type, allow_multiple, max_attempts, is_active, theory_test_id, subject_id, subject_name in task_rows:
+        cursor.execute(
+            "SELECT COUNT(*), COALESCE(MAX(score), 0) FROM results WHERE username = ? AND subject = ? AND task = ?",
+            (username, subject_name, task_name)
+        )
+        submission_count, best_score = cursor.fetchone()
+        submission_count = submission_count or 0
+
+        tasks.append({
+            "id": task_id,
+            "name": task_name,
+            "assign_date": assign_date,
+            "task_type": task_type,
+            "allow_multiple": allow_multiple,
+            "max_attempts": max_attempts,
+            "is_active": is_active,
+            "theory_test_id": theory_test_id,
+            "subject_id": subject_id,
+            "subject": subject_name,
+            "submission_count": submission_count,
+            "best_score": best_score,
+        })
+
+    conn.close()
+    return render_template("learner_tasks.html", tasks=tasks, username=username)
 
 
 @app.route("/take_test/<int:test_id>", methods=["GET", "POST"])

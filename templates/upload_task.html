@@ -1,0 +1,105 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Upload - {{ subject_name }} {{ task_name }}</title>
+    <style>
+        body { font-family: Arial, sans-serif; padding: 20px; max-width: 760px; margin: 0 auto; background: #f4f6fb; color: #1f2937; }
+        a.action-link { color: #0078D4; text-decoration: none; font-weight: 600; }
+        a.action-link:hover { text-decoration: underline; }
+        .card { background: #ffffff; border: 1px solid #dde2ea; border-radius: 16px; padding: 26px; box-shadow: 0 18px 40px rgba(15, 23, 42, 0.06); }
+        h2 { margin-top: 0; font-size: 1.6em; }
+        .sample-link { display: inline-block; margin: 12px 0 20px; color: #0078D4; text-decoration: none; font-size: 0.95em; }
+        .sample-link:hover { text-decoration: underline; }
+        .upload-area { border: 2px dashed #0078D4; border-radius: 16px; padding: 40px 28px; text-align: center; background: #eef5ff; color: #0f4fa1; cursor: pointer; transition: background 0.2s, border-color 0.2s; }
+        .upload-area.dragover { background: #dceeff; border-color: #005a9e; }
+        .upload-area p { margin: 0; font-size: 1rem; line-height: 1.6; }
+        .upload-area small { display: block; margin-top: 8px; color: #475569; }
+        input[type=file] { display: none; }
+        .submit-btn { width: 100%; margin-top: 24px; padding: 14px 18px; border: none; border-radius: 12px; background: #0078D4; color: white; font-size: 1rem; font-weight: 700; cursor: pointer; transition: background 0.2s; }
+        .submit-btn:hover { background: #005a9e; }
+        .message { font-size: 0.95em; color: #334155; margin-top: 12px; }
+    </style>
+</head>
+<body>
+    <p><a href="/student_dashboard" class="action-link">← Back to Dashboard</a></p>
+    <div class="card">
+        <h2>Upload - {{ subject_name|upper }} ({{ task_name }})</h2>
+        {% if sample_link_html %}
+            <div class="sample-link">{{ sample_link_html | safe }}</div>
+        {% endif %}
+        <form method="post" enctype="multipart/form-data" id="uploadForm">
+            <div class="upload-area" id="uploadArea">
+                <p id="uploadMessage">Drag & drop your file here, or click to choose a file.</p>
+                <small>Supported file types include Word, Excel, PowerPoint, Access, and HTML.</small>
+            </div>
+            <input type="file" name="file" id="fileInput" accept=".doc,.docx,.xls,.xlsx,.csv,.ppt,.pptx,.mdb,.accdb,.html,.htm" required>
+            <button type="submit" class="submit-btn">Upload</button>
+            <p class="message">If you have a sample file, download it above before uploading.</p>
+        </form>
+    </div>
+
+    <script>
+        const uploadArea = document.getElementById('uploadArea');
+        const fileInput = document.getElementById('fileInput');
+        const uploadMessage = document.getElementById('uploadMessage');
+        const uploadForm = document.getElementById('uploadForm');
+        let droppedFile = null;
+
+        uploadArea.addEventListener('click', () => fileInput.click());
+        uploadArea.addEventListener('dragenter', (event) => {
+            event.preventDefault();
+            uploadArea.classList.add('dragover');
+        });
+        uploadArea.addEventListener('dragover', (event) => {
+            event.preventDefault();
+            uploadArea.classList.add('dragover');
+        });
+        uploadArea.addEventListener('dragleave', () => {
+            uploadArea.classList.remove('dragover');
+        });
+        uploadArea.addEventListener('drop', (event) => {
+            event.preventDefault();
+            uploadArea.classList.remove('dragover');
+            const files = event.dataTransfer.files;
+            if (files.length) {
+                droppedFile = files[0];
+                try {
+                    fileInput.files = files;
+                } catch (e) {
+                    // Some browsers do not allow direct FileList assignment.
+                }
+                uploadMessage.textContent = droppedFile.name;
+            }
+        });
+
+        fileInput.addEventListener('change', () => {
+            if (fileInput.files.length) {
+                droppedFile = fileInput.files[0];
+                uploadMessage.textContent = droppedFile.name;
+            }
+        });
+
+        uploadForm.addEventListener('submit', (event) => {
+            if (droppedFile && fileInput.files.length === 0) {
+                event.preventDefault();
+                const formData = new FormData();
+                formData.append('file', droppedFile, droppedFile.name);
+                fetch(uploadForm.action || window.location.href, {
+                    method: 'POST',
+                    body: formData,
+                })
+                .then(response => response.text())
+                .then(html => {
+                    document.open();
+                    document.write(html);
+                    document.close();
+                })
+                .catch(() => {
+                    uploadMessage.textContent = 'Upload failed. Please try again or choose a file manually.';
+                });
+            }
+        });
+    </script>
+</body>
+</html>

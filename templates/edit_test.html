@@ -19,7 +19,7 @@
         .btn-primary { background: #0078D4; color: white; }
         .btn-secondary { background: #ccc; color: #333; }
         .section-title { font-size: 1em; font-weight: bold; color: #0078D4; margin-bottom: 10px; border-bottom: 2px solid #eee; padding-bottom: 6px; }
-        #maxAttemptsGroup { margin-top: 10px; padding: 10px; background: white; border: 1px solid #ddd; border-radius: 5px; display: {{ 'block' if test[4] else 'none' }}; }
+        #maxAttemptsGroup { margin-top: 10px; padding: 10px; background: white; border: 1px solid #ddd; border-radius: 5px; display: {{ 'block' if test[5] else 'none' }}; }
     </style>
 </head>
 <body>
@@ -62,13 +62,13 @@
             <div class="section-title">Attempt Settings</div>
             <label class="check-label">
                 <input type="checkbox" name="allow_multiple" id="allowMultiple"
-                       {{ 'checked' if test[4] else '' }}
+                       {{ 'checked' if test[5] else '' }}
                        onchange="toggleMaxAttempts(this)">
                 Allow Multiple Attempts
             </label>
             <div id="maxAttemptsGroup">
                 <label style="margin-top:8px;">Max Attempts</label>
-                <input type="number" name="max_attempts" value="{{ test[5] }}" min="2" max="10">
+                <input type="number" name="max_attempts" value="{{ test[6] }}" min="2" max="10">
             </div>
         </div>
 
@@ -76,7 +76,7 @@
         <div class="form-group">
             <div class="section-title">Results Display</div>
             <label class="check-label">
-                <input type="checkbox" name="show_answers" {{ 'checked' if test[6] else '' }}>
+                <input type="checkbox" name="show_answers" {{ 'checked' if test[7] else '' }}>
                 Show Answers After Submission
             </label>
             <small style="color:gray; display:block; margin-top:4px;">

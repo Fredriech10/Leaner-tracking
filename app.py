@@ -168,6 +168,7 @@ def init_db():
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         title TEXT,
         subject TEXT,
+        assign_date TEXT,  -- YYYY-MM-DD
         time_limit INTEGER,
         allow_multiple INTEGER DEFAULT 0,
         max_attempts INTEGER DEFAULT 1,
@@ -177,6 +178,16 @@ def init_db():
         is_active INTEGER DEFAULT 0
     )
     """)
+
+    # Migration: add assign_date if missing (idempotent)
+    try:
+        cursor.execute("PRAGMA table_info(theory_tests)")
+        cols = [c[1] for c in cursor.fetchall()]
+        if "assign_date" not in cols:
+            cursor.execute("ALTER TABLE theory_tests ADD COLUMN assign_date TEXT")
+            print("Migration: added assign_date column to theory_tests")
+    except Exception as e:
+        print(f"Note: theory_tests assign_date migration: {e}")
 
     # Migration: remove group_name column from theory_tests if present,
     # and add allow_multiple, max_attempts, show_answers if missing
@@ -3386,11 +3397,24 @@ def manage_tests():
 
     conn = get_db()
     cursor = conn.cursor()
+    # IMPORTANT: Keep tuple ordering aligned with templates/manage_tests.html
+    # Template columns expect:
+    #   t[0]=id, t[1]=title, t[2]=subject, t[3]=assign_date,
+    #   t[4]=time_limit, t[5]=is_active, t[6]=groups,
+    #   t[7]=question_count, t[8]=allow_multiple, t[9]=max_attempts, t[10]=show_answers
     cursor.execute("""
-        SELECT t.id, t.title, t.subject, t.time_limit, t.is_active,
-               COUNT(DISTINCT q.id) as question_count,
-               GROUP_CONCAT(DISTINCT tg.group_name) as groups,
-               t.allow_multiple, t.max_attempts, t.show_answers
+        SELECT
+            t.id,
+            t.title,
+            t.subject,
+            t.assign_date,
+            t.time_limit,
+            t.is_active,
+            GROUP_CONCAT(DISTINCT tg.group_name),
+            COUNT(DISTINCT q.id),
+            t.allow_multiple,
+            t.max_attempts,
+            t.show_answers
         FROM theory_tests t
         LEFT JOIN theory_questions q ON t.id = q.test_id
         LEFT JOIN theory_test_groups tg ON t.id = tg.test_id
@@ -3415,6 +3439,7 @@ def create_test():
     subject = request.form.get("subject", "").strip()
     groups = request.form.getlist("groups")
     time_limit = request.form.get("time_limit", 0)
+    assign_date = request.form.get("assign_date")  # YYYY-MM-DD
     allow_multiple = 1 if request.form.get("allow_multiple") else 0
     max_attempts = int(request.form.get("max_attempts", 1))
     show_answers = 1 if request.form.get("show_answers") else 0
@@ -3425,9 +3450,10 @@ def create_test():
     conn = get_db()
     cursor = conn.cursor()
     cursor.execute("""
-        INSERT INTO theory_tests (title, subject, time_limit, allow_multiple, max_attempts, show_answers, created_by, created_at)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?)
-    """, (title, subject, time_limit, allow_multiple, max_attempts, show_answers, username, datetime.now().isoformat()))
+        INSERT INTO theory_tests
+            (title, subject, assign_date, time_limit, allow_multiple, max_attempts, show_answers, created_by, created_at)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+    """, (title, subject, assign_date, time_limit, allow_multiple, max_attempts, show_answers, username, datetime.now().isoformat()))
     test_id = cursor.lastrowid
     for g in groups:
         if g.strip():
@@ -3449,7 +3475,7 @@ def edit_test(test_id):
     conn = get_db()
     cursor = conn.cursor()
 
-    cursor.execute("SELECT id, title, subject, time_limit, allow_multiple, max_attempts, show_answers FROM theory_tests WHERE id = ?", (test_id,))
+    cursor.execute("SELECT id, title, subject, assign_date, time_limit, allow_multiple, max_attempts, show_answers FROM theory_tests WHERE id = ?", (test_id,))
     test = cursor.fetchone()
     if not test:
         conn.close()
@@ -3461,11 +3487,14 @@ def edit_test(test_id):
         show_answers = 1 if request.form.get("show_answers") else 0
         groups = request.form.getlist("groups")
 
+        assign_date = request.form.get("assign_date")
+      #  time_limit = request.form.get("time_limit", 0)
+
         cursor.execute("""
             UPDATE theory_tests
-            SET allow_multiple = ?, max_attempts = ?, show_answers = ?
+            SET assign_date = ?, allow_multiple = ?, max_attempts = ?, show_answers = ?
             WHERE id = ?
-        """, (allow_multiple, max_attempts, show_answers, test_id))
+        """, (assign_date, allow_multiple, max_attempts, show_answers, test_id))
 
         cursor.execute("DELETE FROM theory_test_groups WHERE test_id = ?", (test_id,))
         for g in groups:

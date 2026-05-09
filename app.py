@@ -18,23 +18,31 @@ def update_active_user(username):
 
 def get_last_21_days():
     days = []
-    current = datetime.now()
+    current = datetime.now().date()
+    term_days = get_all_term_days()  # empty set if no terms configured
+    limit = 0
 
-    while len(days) < 21:
-        if current.weekday() < 5:  # Mon–Fri only
-            days.append(current.strftime("%Y-%m-%d"))
+    while len(days) < 21 and limit < 365:
+        s = current.strftime("%Y-%m-%d")
+        if current.weekday() < 5 and (not term_days or s in term_days):
+            days.append(s)
         current -= timedelta(days=1)
+        limit += 1
 
     return list(reversed(days))
 
 def get_last_7_days():
     days = []
-    current = datetime.now()
+    current = datetime.now().date()
+    term_days = get_all_term_days()  # empty set if no terms configured
+    limit = 0
 
-    while len(days) < 7:
-        if current.weekday() < 5:  # Mon–Fri only
-            days.append(current.strftime("%Y-%m-%d"))
+    while len(days) < 7 and limit < 365:
+        s = current.strftime("%Y-%m-%d")
+        if current.weekday() < 5 and (not term_days or s in term_days):
+            days.append(s)
         current -= timedelta(days=1)
+        limit += 1
 
     return list(reversed(days))
 
@@ -43,6 +51,47 @@ DB_NAME = "school.db"
 
 def get_db():
     return sqlite3.connect(DB_NAME)
+
+
+def get_term_dates():
+    """Return all 4 terms as a dict {1: {start, end}, ...}."""
+    conn = get_db()
+    cursor = conn.cursor()
+    try:
+        cursor.execute("SELECT term, start_date, end_date FROM term_dates ORDER BY term")
+        rows = cursor.fetchall()
+    except Exception:
+        rows = []
+    conn.close()
+    terms = {i: {"start": None, "end": None} for i in range(1, 5)}
+    for term, start, end in rows:
+        terms[term] = {"start": start, "end": end}
+    return terms
+
+
+def get_active_term_range():
+    """Return (start, end) of the currently active term, or None."""
+    today = datetime.now().date().isoformat()
+    for t in get_term_dates().values():
+        if t["start"] and t["end"] and t["start"] <= today <= t["end"]:
+            return t["start"], t["end"]
+    return None
+
+
+def get_all_term_days():
+    """Return a set of all weekdays that fall within any configured term (up to today)."""
+    today = datetime.now().date().isoformat()
+    days = set()
+    for t in get_term_dates().values():
+        if t["start"] and t["end"]:
+            current = datetime.strptime(t["start"], "%Y-%m-%d").date()
+            end = min(datetime.strptime(t["end"], "%Y-%m-%d").date(),
+                      datetime.now().date())
+            while current <= end:
+                if current.weekday() < 5:
+                    days.add(current.strftime("%Y-%m-%d"))
+                current += timedelta(days=1)
+    return days
 
 
 def init_db():
@@ -358,6 +407,14 @@ def init_db():
         group_name TEXT,
         PRIMARY KEY (task_id, group_name),
         FOREIGN KEY (task_id) REFERENCES tasks (id)
+    )
+    """)
+
+    cursor.execute("""
+    CREATE TABLE IF NOT EXISTS term_dates (
+        term INTEGER PRIMARY KEY,  -- 1, 2, 3, or 4
+        start_date TEXT,
+        end_date TEXT
     )
     """)
 
@@ -692,19 +749,33 @@ def get_attendance_data(group, start_date=None, end_date=None):
     conn = get_db()
     cursor = conn.cursor()
 
-    # If no dates provided, use last 7 days
+    # If no dates provided, use active term range or fall back to last 7 days
     if not start_date or not end_date:
-        days = get_last_7_days()
+        term_range = get_active_term_range()
+        if term_range:
+            start_date, end_date = term_range
+            current = datetime.strptime(start_date, "%Y-%m-%d").date()
+            end = datetime.strptime(end_date, "%Y-%m-%d").date()
+            days = []
+            while current <= end:
+                if current.weekday() < 5:
+                    days.append(current.strftime("%Y-%m-%d"))
+                current += timedelta(days=1)
+        else:
+            days = get_last_7_days()
     else:
         # Generate business days (Mon-Fri) between start_date and end_date
         days = []
         current = datetime.strptime(start_date, "%Y-%m-%d").date()
         end = datetime.strptime(end_date, "%Y-%m-%d").date()
-        
         while current <= end:
-            if current.weekday() < 5:  # Mon-Fri only
+            if current.weekday() < 5:
                 days.append(current.strftime("%Y-%m-%d"))
             current += timedelta(days=1)
+
+    # Remove future dates
+    today_str = datetime.now().date().isoformat()
+    days = [day for day in days if day <= today_str]
 
     # Filter out excluded dates
     cursor.execute("""
@@ -1444,18 +1515,20 @@ def upload(username, subject_id, task_id):
         save_result(username, subject_name, task_name, result["percentage"], ", ".join(weak_skills[:3]) or "Well done!")
         log_activity(username, f"submitted {subject_name} {task_name}")
 
-        correct_list = "".join(f"<li>✅ {escape(r['question'])} ({r['marks_awarded']}/{r['marks_available']})</li>" for r in result["results"] if r["passed"])
-        wrong_list = "".join(f"<li>❌ {escape(r['question'])} (0/{r['marks_available']})</li>" for r in result["results"] if not r["passed"])
+        correct_items = [r for r in result["results"] if r["passed"]]
+        wrong_items = [r for r in result["results"] if not r["passed"]]
 
         conn.close()
-        return f"""
-        <p><a href="/student_dashboard">← Back to Dashboard</a></p>
-        <h2>Results – {escape(subject_name)} {escape(task_name)}</h2>
-        <p><strong>Score: {result['score']}/{result['total']} ({result['percentage']}%)</strong></p>
-        <h3>✅ Correct</h3><ul>{correct_list}</ul>
-        <h3>❌ Incorrect</h3><ul>{wrong_list}</ul>
-        <a href="/subjects/{escape(username)}">← Back to Subjects</a>
-        """
+        return render_template(
+            "upload_result.html",
+            subject_name=subject_name,
+            task_name=task_name,
+            score=result["score"],
+            total=result["total"],
+            percentage=result["percentage"],
+            correct_items=correct_items,
+            wrong_items=wrong_items,
+        )
 
     conn.close()
 
@@ -1745,37 +1818,29 @@ def teacher_dashboard():
     cursor.execute("SELECT COUNT(DISTINCT username) FROM login_history WHERE date = ?", (today,))
     active_today = cursor.fetchone()[0]
 
-    # Avg attendance % across all students (last 21 days)
     days_21 = get_last_21_days()
-    cursor.execute("SELECT COUNT(DISTINCT username) FROM login_history WHERE date IN ({}) ".format(
-        ",".join(["?"]*len(days_21))), days_21)
-    total_present_slots = cursor.execute(
-        "SELECT COUNT(*) FROM login_history WHERE date IN ({})".format(",".join(["?"]*len(days_21))), days_21
-    ).fetchone()[0]
-    if total_students and len(days_21):
-        avg_att_pct = round((total_present_slots / (total_students * len(days_21))) * 100)
-    else:
-        avg_att_pct = 0
 
     # ─ Group list
     groups = get_groups()
 
-    # ─ Group attendance summary
+    # ─ Group attendance summary + overall avg (uses same logic as attendance page)
     group_att = []
+    total_present_all = 0
+    total_slots_all = 0
     for g in groups:
-        cursor.execute("SELECT COUNT(*) FROM users WHERE group_name = ?", (g,))
-        g_count = cursor.fetchone()[0]
-        if g_count and days_21:
-            cursor.execute(
-                "SELECT COUNT(DISTINCT username) FROM login_history WHERE date IN ({}) AND username IN "
-                "(SELECT username FROM users WHERE group_name = ?)".format(",".join(["?"]*len(days_21))),
-                days_21 + [g]
-            )
-            g_present = cursor.fetchone()[0]
-            g_pct = round((g_present / (g_count * len(days_21))) * 100)
+        days_g, data_g = get_attendance_data(g)
+        g_count = len(data_g)
+        if g_count and days_g:
+            present = sum(1 for row in data_g for d in days_g if row['days'].get(d))
+            slots = g_count * len(days_g)
+            g_pct = round((present / slots) * 100)
+            total_present_all += present
+            total_slots_all += slots
         else:
             g_pct = 0
         group_att.append({"group": g, "students": g_count, "att_pct": g_pct})
+
+    avg_att_pct = round((total_present_all / total_slots_all) * 100) if total_slots_all else 0
 
     # ─ Low attendance learners
     low_attendance = get_low_attendance_learners(10)
@@ -1940,7 +2005,9 @@ def teacher_dashboard():
         bottom_performers=bottom_performers,
         at_risk_marks=at_risk_marks,
         at_risk_att=at_risk_att,
-        missing_by_group=missing_by_group
+        missing_by_group=missing_by_group,
+        active_term=get_active_term_range(),
+        days_in_period=len(days_21)
     )
 
 
@@ -1993,6 +2060,40 @@ def demote(username):
 
     return redirect(url_for("admin_panel"))
 
+@app.route("/delete_user/<username>", methods=["POST"])
+def delete_user(username):
+    admin_user = session.get("username")
+    if not admin_user:
+        return redirect(url_for("login"))
+    if get_user_role(admin_user) not in ["teacher", "admin"]:
+        return "Access denied", 403
+    if username == admin_user:
+        return "Cannot delete your own account", 400
+
+    conn = get_db()
+    cursor = conn.cursor()
+
+    # Delete all data associated with this user
+    cursor.execute("DELETE FROM results WHERE username = ?", (username,))
+    cursor.execute("DELETE FROM weaknesses WHERE username = ?", (username,))
+    cursor.execute("DELETE FROM login_history WHERE username = ?", (username,))
+    cursor.execute("DELETE FROM attendance_override WHERE username = ?", (username,))
+    cursor.execute("DELETE FROM activities WHERE username = ?", (username,))
+    cursor.execute("DELETE FROM learner_notes WHERE username = ?", (username,))
+    cursor.execute("DELETE FROM result_removals WHERE username = ?", (username,))
+    cursor.execute("""
+        DELETE FROM theory_answers WHERE submission_id IN
+            (SELECT id FROM theory_submissions WHERE username = ?)
+    """, (username,))
+    cursor.execute("DELETE FROM theory_submissions WHERE username = ?", (username,))
+    cursor.execute("DELETE FROM users WHERE username = ?", (username,))
+
+    conn.commit()
+    conn.close()
+    log_activity(admin_user, f"deleted user {username}")
+    return redirect(url_for("admin_panel"))
+
+
 def calculate_attendance_percentage(data, days):
     total_cells = len(data) * len(days)
     present = 0
@@ -2003,6 +2104,36 @@ def calculate_attendance_percentage(data, days):
                 present += 1
 
     return round((present / total_cells) * 100) if total_cells else 0
+
+@app.route("/term_dates", methods=["GET", "POST"])
+def term_dates():
+    username = session.get("username")
+    if not username:
+        return redirect(url_for("login"))
+    if get_user_role(username) not in ["teacher", "admin"]:
+        return "Access denied", 403
+
+    if request.method == "POST":
+        conn = get_db()
+        cursor = conn.cursor()
+        for term_num in range(1, 5):
+            start = request.form.get(f"term{term_num}_start", "").strip()
+            end = request.form.get(f"term{term_num}_end", "").strip()
+            if start and end:
+                cursor.execute("""
+                    INSERT INTO term_dates (term, start_date, end_date)
+                    VALUES (?, ?, ?)
+                    ON CONFLICT(term) DO UPDATE SET start_date = excluded.start_date, end_date = excluded.end_date
+                """, (term_num, start, end))
+            else:
+                cursor.execute("DELETE FROM term_dates WHERE term = ?", (term_num,))
+        conn.commit()
+        conn.close()
+        log_activity(username, "updated term dates")
+        return redirect(url_for("attendance"))
+
+    return redirect(url_for("attendance"))
+
 
 @app.route("/attendance")
 def attendance():
@@ -2035,6 +2166,8 @@ def attendance():
     excluded_dates = cursor.fetchall()
     conn.close()
 
+    terms = get_term_dates()
+
     return render_template(
         "attendance.html",
         groups=groups,
@@ -2042,8 +2175,9 @@ def attendance():
         days=days,
         data=data,
         edit_mode=edit_mode,
-        today=datetime.now().strftime("%Y-%m-%d"),   # ✅ add today's date
-        excluded_dates=excluded_dates
+        today=datetime.now().strftime("%Y-%m-%d"),
+        excluded_dates=excluded_dates,
+        terms=terms
     )
 
 @app.route("/admin")

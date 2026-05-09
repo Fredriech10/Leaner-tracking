@@ -108,7 +108,7 @@
         </div>
         <div class="stat-box {{ 'green' if avg_att_pct >= 80 else ('orange' if avg_att_pct >= 60 else 'red') }}">
             <div class="val">{{ avg_att_pct }}%</div>
-            <div class="lbl">Avg Attendance</div>
+            <div class="lbl">Avg Attendance{% if active_term %} (Term){% else %} (21 days){% endif %}</div>
         </div>
         <div class="stat-box">
             <div class="val">{{ groups | length }}</div>

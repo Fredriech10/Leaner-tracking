@@ -151,6 +151,10 @@
                     {% else %}
                         <a href="/demote/{{ user[0] }}" style="color:#A4262C;">⬇️ Demote</a>
                     {% endif %}
+                    <form method="post" action="/delete_user/{{ user[0] }}" style="display:inline;"
+                          onsubmit="return confirm('Delete {{ user[0] }}? This will permanently remove their profile, results, and attendance records.')">
+                        <button type="submit" style="background:none; border:none; cursor:pointer; color:#A4262C; font-size:0.85em; padding:0;">🗑️ Delete</button>
+                    </form>
                 </div>
             </td>
         </tr>

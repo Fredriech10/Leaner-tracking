@@ -4,7 +4,15 @@
     <meta charset="UTF-8">
     <title>Test Results</title>
     <style>
-        body { font-family: Arial, sans-serif; padding: 20px; max-width: 800px; margin: 0 auto; }
+        * { box-sizing: border-box; }
+        body { font-family: Arial, sans-serif; margin: 0; padding: 0; background: #f0f2f5; color: #222; }
+        .topbar { background: #0078D4; color: white; padding: 12px 24px; display: flex; justify-content: space-between; align-items: center; flex-wrap: nowrap; gap: 10px; position: sticky; top: 0; z-index: 999; }
+        .topbar h1 { margin: 0; font-size: 1.05em; white-space: nowrap; }
+        .topbar-links { display: flex; gap: 10px; align-items: center; flex-wrap: nowrap; }
+        .topbar-links a { color: white; text-decoration: none; font-size: 0.82em; opacity: 0.9; white-space: nowrap; }
+        .topbar-links a:hover { opacity: 1; text-decoration: underline; }
+        .topbar-user { color: white; font-size: 0.82em; white-space: nowrap; border-left: 1px solid rgba(255,255,255,0.35); padding-left: 10px; }
+        .page { padding: 20px 24px; max-width: 950px; margin: 0 auto; }
         .score-banner { text-align: center; padding: 30px; border-radius: 10px; margin-bottom: 20px; }
         .score-banner.pass { background: #c8f7c5; border: 2px solid #107C10; }
         .score-banner.fail { background: #f7c5c5; border: 2px solid #A4262C; }
@@ -34,6 +42,19 @@
     </style>
 </head>
 <body>
+
+<div class="topbar">
+    <h1>📚 Student Portal</h1>
+    <div class="topbar-links">
+        <a href="/student_dashboard">🏠 Dashboard</a>
+        <a href="/my_tasks">📁 Tasks</a>
+        <a href="/tests">📝 Tests</a>
+        <span class="topbar-user">👤 {{ session_username }}</span>
+        <a href="/logout">Logout</a>
+    </div>
+</div>
+
+<div class="page">
 
 {% set percentage = submission[3] %}
 {% set passed = percentage >= 50 %}
@@ -113,5 +134,6 @@
     {% endif %}
 </div>
 
+</div>
 </body>
 </html>

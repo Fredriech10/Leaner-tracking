@@ -4,26 +4,52 @@
     <meta charset="UTF-8">
     <title>Manage Theory Tests</title>
     <style>
-        body { font-family: Arial, sans-serif; padding: 20px; max-width: 1000px; margin: 0 auto; }
+        * { box-sizing: border-box; }
+        body { font-family: Arial, sans-serif; margin: 0; padding: 0; background: #f0f2f5; color: #222; }
+        .topbar { background: #005a9e; color: white; padding: 12px 24px; display: flex; justify-content: space-between; align-items: center; flex-wrap: nowrap; gap: 10px; position: sticky; top: 0; z-index: 999; }
+        .topbar h1 { margin: 0; font-size: 1.05em; white-space: nowrap; }
+        .topbar-links { display: flex; gap: 10px; align-items: center; flex-wrap: nowrap; }
+        .topbar-links a { color: white; text-decoration: none; font-size: 0.82em; opacity: 0.9; white-space: nowrap; }
+        .topbar-links a:hover { opacity: 1; text-decoration: underline; }
+        .topbar-user { color: white; font-size: 0.82em; white-space: nowrap; border-left: 1px solid rgba(255,255,255,0.35); padding-left: 10px; }
+        .topbar-user a { color: white; text-decoration: none; font-weight: bold; }
+        .topbar-user a:hover { text-decoration: underline; }
+        .page { padding: 20px 24px; max-width: 1400px; margin: 0 auto; }
         table { border-collapse: collapse; width: 100%; margin-top: 20px; }
         th, td { border: 1px solid #ddd; padding: 10px; text-align: left; }
         th { background: #f0f0f0; }
         .badge-active { background: #c8f7c5; color: #107C10; padding: 3px 8px; border-radius: 10px; font-size: 0.85em; }
         .badge-inactive { background: #f7c5c5; color: #A4262C; padding: 3px 8px; border-radius: 10px; font-size: 0.85em; }
-        .btn { padding: 6px 12px; border: none; border-radius: 4px; cursor: pointer; text-decoration: none; font-size: 0.9em; }
+        .btn { padding: 6px 10px; border: none; border-radius: 4px; cursor: pointer; text-decoration: none; font-size: 0.85em; font-weight: bold; display: inline-flex; align-items: center; justify-content: center; min-width: 34px; height: 32px; vertical-align: middle; }
         .btn-primary { background: #0078D4; color: white; }
         .btn-danger { background: #A4262C; color: white; }
         .btn-success { background: #107C10; color: white; }
         .btn-warning { background: #ff8c00; color: white; }
+        .btn:hover { opacity: 0.88; }
 
         /* Groups column truncation */
         /* Columns: Title(1), Subject(2), Groups(3) ... */
         td:nth-child(3) { max-width: 210px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 
-        /* Actions column: keep inline next to each other */
-        td:last-child { white-space: nowrap; }
+        td:last-child { white-space: nowrap; vertical-align: middle; }
         td:last-child a,
-        td:last-child form { display: inline-block; margin: 0; }
+        td:last-child form,
+        td:last-child button { vertical-align: middle; }
+        td:last-child form { display: inline-flex; margin: 0; }
+
+        /* Reuse modal */
+        .modal-overlay { display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.5); z-index:9999; align-items:center; justify-content:center; }
+        .modal-overlay.active { display:flex; }
+        .modal { background:white; border-radius:8px; padding:24px; width:480px; max-width:95vw; box-shadow:0 8px 32px rgba(0,0,0,0.25); }
+        .modal h3 { margin:0 0 16px 0; color:#005a9e; font-size:1em; }
+        .modal .form-group { margin-bottom:14px; }
+        .modal label { display:block; font-weight:bold; font-size:0.88em; margin-bottom:4px; }
+        .modal input, .modal select { width:100%; padding:8px; border:1px solid #ccc; border-radius:4px; font-size:0.9em; }
+        .modal-actions { display:flex; gap:8px; justify-content:flex-end; margin-top:16px; }
+        .btn-cancel { background:#eee; color:#333; padding:7px 16px; border:none; border-radius:4px; cursor:pointer; font-size:0.88em; }
+        .btn-teal { background:#0078D4; color:white; padding:7px 16px; border:none; border-radius:4px; cursor:pointer; font-size:0.88em; font-weight:bold; }
+        .group-check-grid { display:flex; flex-wrap:wrap; gap:8px; margin-top:6px; }
+        .group-check-grid label { font-weight:normal; display:inline-flex; align-items:center; gap:5px; background:white; border:1px solid #ddd; padding:5px 10px; border-radius:5px; cursor:pointer; font-size:0.85em; }
 
         .create-form { background: #f9f9f9; border: 1px solid #ddd; padding: 20px; border-radius: 6px; margin-bottom: 30px; }
         .form-row { display: flex; gap: 15px; flex-wrap: wrap; align-items: flex-end; margin-bottom: 10px; }
@@ -34,8 +60,19 @@
 </head>
 <body>
 
-<p><a href="/teacher_dashboard">← Back to Teacher Dashboard</a></p>
-<h2>📝 Theory Tests</h2>
+<div class="topbar">
+    <h1>📝 Theory Tests</h1>
+    <div class="topbar-links">
+        <a href="/teacher_dashboard">🏠 Dashboard</a>
+        <a href="/manage_subjects">📁 Practical</a>
+        <a href="/admin">👥 Admin</a>
+        <a href="/attendance">📅 Attendance</a>
+        <span class="topbar-user">👤 <a href="/edit_user/{{ session_username }}">{{ session_username }}</a></span>
+        <a href="/logout">Logout</a>
+    </div>
+</div>
+
+<div class="page">
 
 <div class="create-form">
     <h3>Create New Test</h3>
@@ -86,6 +123,13 @@
             </div>
             <small style="color:gray;margin-top:4px;display:block;">Leave all unchecked = available to all groups</small>
         </div>
+        <div class="form-group">
+            <label>Assign to Teachers</label>
+            <div style="display:flex;flex-wrap:wrap;gap:10px;">
+                {{ teacher_checkboxes | safe }}
+            </div>
+            <small style="color:gray;margin-top:4px;display:block;">Select one or more teachers to assign the test to.</small>
+        </div>
         <div class="form-row">
             <div class="form-group">
                 <label>&nbsp;</label>
@@ -102,6 +146,7 @@
         <th>Title</th>
         <th>Subject</th>
         <th>Groups</th>
+        <th>Teachers</th>
         <th>Questions</th>
         <th>Assign Start Date</th>
         <th>Time Limit</th>
@@ -115,6 +160,7 @@
         <td>{{ t[1] }}</td>
         <td>{{ t[2] or '—' }}</td>
         <td>{{ t[6] or 'All Groups' }}</td>
+        <td>{{ t[11] or 'All Teachers' }}</td>
         <td>{{ t[7] }}</td>
         <td>{{ t[3] or '—' }}</td>
         <td>{{ t[4] ~ ' min' if t[4] else 'No limit' }}</td>
@@ -133,21 +179,15 @@
                 <span class="badge-inactive">Inactive</span>
             {% endif %}
         </td>
-        <td style="display:flex; gap:6px; flex-wrap:nowrap;">
+        <td style="white-space:nowrap; vertical-align:middle;">
             <a href="/manage_tests/{{ t[0] }}/questions" class="btn btn-primary" title="Edit questions">✏️</a>
             <a href="/manage_tests/{{ t[0] }}/edit" class="btn btn-warning" title="Edit settings">⚙️</a>
-
-            <form method="post" action="/manage_tests/{{ t[0] }}/toggle" style="display:inline;">
-                <button
-                    type="submit"
-                    class="btn {{ 'btn-warning' if t[5] else 'btn-success' }}"
-                    title="{{ 'Deactivate' if t[5] else 'Activate' }}"
-                >
-                    {{ '⏸' if t[5] else '▶' }}
-                </button>
+            <button type="button" class="btn btn-success" title="Reuse: copy questions into a new test"
+                onclick="openReuseModal({{ t[0] }}, {{ t[1]|tojson }}, {{ (t[2] or '')|tojson }}, {{ t[4] or 0 }}, {{ 1 if t[8] else 0 }}, {{ t[9] or 1 }}, {{ 1 if t[10] else 0 }})">📋</button>
+            <form method="post" action="/manage_tests/{{ t[0] }}/toggle" style="display:inline-flex; margin:0;">
+                <button type="submit" class="btn {{ 'btn-warning' if t[5] else 'btn-success' }}" title="{{ 'Deactivate' if t[5] else 'Activate' }}">{{ '⏸' if t[5] else '▶' }}</button>
             </form>
-
-            <form method="post" action="/manage_tests/{{ t[0] }}/delete" style="display:inline;"
+            <form method="post" action="/manage_tests/{{ t[0] }}/delete" style="display:inline-flex; margin:0;"
                   onsubmit="return confirm('⚠️ WARNING: Delete this test, all questions, AND ALL STUDENT SUBMISSIONS?\n\nThis will permanently remove:\n- All test questions\n- All student attempts and scores\n- Test from Group Results\n\nThis action CANNOT be undone!')">
                 <button type="submit" class="btn btn-danger" title="Delete test">🗑</button>
             </form>
@@ -159,10 +199,94 @@
 <p>No tests created yet.</p>
 {% endif %}
 
+</div>
+
+<!-- Reuse Test Modal -->
+<div class="modal-overlay" id="reuseModal">
+    <div class="modal">
+        <h3>📋 Reuse Test — Create New Copy</h3>
+        <form method="post" id="reuseForm">
+            <div class="form-group">
+                <label>New Test Title</label>
+                <input type="text" name="title" id="reuse_title" required>
+            </div>
+            <div class="form-group">
+                <label>Subject</label>
+                <input type="text" name="subject" id="reuse_subject">
+            </div>
+            <div class="form-group">
+                <label>Assign Start Date</label>
+                <input type="date" name="assign_date" id="reuse_date" required>
+            </div>
+            <div class="form-group">
+                <label>Time Limit (min) <span style="font-weight:normal;color:#888;">(0 = no limit)</span></label>
+                <input type="number" name="time_limit" id="reuse_time" min="0" style="width:100px;">
+            </div>
+            <div class="form-group">
+                <label style="display:inline-flex;align-items:center;gap:8px;font-weight:normal;">
+                    <input type="checkbox" name="allow_multiple" id="reuse_allow_multiple" onchange="toggleReuseAttempts(this)">
+                    <strong>Allow Multiple Attempts</strong>
+                </label>
+                <div id="reuseAttemptsGroup" style="display:none; margin-top:8px;">
+                    <label>Max Attempts</label>
+                    <input type="number" name="max_attempts" id="reuse_max_attempts" value="3" min="2" max="10" style="width:80px;">
+                </div>
+            </div>
+            <div class="form-group">
+                <label style="display:inline-flex;align-items:center;gap:8px;font-weight:normal;">
+                    <input type="checkbox" name="show_answers" id="reuse_show_answers" checked>
+                    <strong>Show Answers After Submission</strong>
+                </label>
+            </div>
+            <div class="form-group">
+                <label>Assign to Groups</label>
+                <div class="group-check-grid">
+                    {% for g in groups %}
+                    <label><input type="checkbox" name="groups" value="{{ g }}"> {{ g }}</label>
+                    {% endfor %}
+                </div>
+                <small style="color:gray;margin-top:4px;display:block;">Leave all unchecked = available to all groups</small>
+            </div>
+            <div class="modal-actions">
+                <button type="button" class="btn-cancel" onclick="closeReuseModal()">Cancel</button>
+                <button type="submit" class="btn-teal">📋 Create Copy</button>
+            </div>
+        </form>
+    </div>
+</div>
+
 <script>
 function toggleMaxAttempts(checkbox) {
     document.getElementById('maxAttemptsGroup').style.display = checkbox.checked ? 'block' : 'none';
 }
+function toggleReuseAttempts(checkbox) {
+    document.getElementById('reuseAttemptsGroup').style.display = checkbox.checked ? 'block' : 'none';
+}
+function openReuseModal(testId, title, subject, timeLimit, allowMultiple, maxAttempts, showAnswers) {
+    document.getElementById('reuseForm').action = '/manage_tests/' + testId + '/reuse';
+    document.getElementById('reuse_title').value = title + ' (Copy)';
+    document.getElementById('reuse_subject').value = subject || '';
+    document.getElementById('reuse_time').value = timeLimit || 0;
+    const allowCb = document.getElementById('reuse_allow_multiple');
+    allowCb.checked = !!allowMultiple;
+    toggleReuseAttempts(allowCb);
+    document.getElementById('reuse_max_attempts').value = maxAttempts || 3;
+    document.getElementById('reuse_show_answers').checked = !!showAnswers;
+    // Clear group checkboxes
+    document.querySelectorAll('#reuseModal input[name="groups"]').forEach(cb => cb.checked = false);
+    // Set today as default date
+    document.getElementById('reuse_date').value = new Date().toISOString().split('T')[0];
+    document.getElementById('reuseModal').classList.add('active');
+    document.getElementById('reuse_title').focus();
+    document.getElementById('reuse_title').select();
+}
+function closeReuseModal() {
+    document.getElementById('reuseModal').classList.remove('active');
+}
+// Close on backdrop click
+document.getElementById('reuseModal').addEventListener('click', function(e) {
+    if (e.target === this) closeReuseModal();
+});
 </script>
 
 </body>

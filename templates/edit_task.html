@@ -5,7 +5,16 @@
     <title>Edit Task</title>
     <style>
         * { box-sizing: border-box; }
-        body { font-family: Arial, sans-serif; padding: 20px; max-width: 700px; margin: 0 auto; background: #f5f5f5; }
+        body { font-family: Arial, sans-serif; margin: 0; padding: 0; background: #f5f5f5; }
+        .topbar { background: #005a9e; color: white; padding: 12px 24px; display: flex; justify-content: space-between; align-items: center; flex-wrap: nowrap; gap: 10px; position: sticky; top: 0; z-index: 999; }
+        .topbar h1 { margin: 0; font-size: 1.05em; white-space: nowrap; }
+        .topbar-links { display: flex; gap: 10px; align-items: center; flex-wrap: nowrap; }
+        .topbar-links a { color: white; text-decoration: none; font-size: 0.82em; opacity: 0.9; white-space: nowrap; }
+        .topbar-links a:hover { opacity: 1; text-decoration: underline; }
+        .topbar-user { color: white; font-size: 0.82em; white-space: nowrap; border-left: 1px solid rgba(255,255,255,0.35); padding-left: 10px; }
+        .topbar-user a { color: white; text-decoration: none; font-weight: bold; }
+        .topbar-user a:hover { text-decoration: underline; }
+        .page { padding: 20px 24px; max-width: 800px; margin: 0 auto; }
         .card { background: white; border-radius: 8px; padding: 25px; border: 1px solid #ddd; }
         .info-box { background: #eef4ff; border: 1px solid #b0c4ff; border-radius: 6px; padding: 12px 16px; margin-bottom: 20px; font-size: 0.9em; color: #333; }
         .form-group { margin-bottom: 18px; }
@@ -20,12 +29,27 @@
         .btn-secondary { background: #ccc; color: #333; }
         .task-name { font-size: 1.1em; font-weight: bold; color: #222; }
         .readonly-note { font-size: 0.8em; color: #888; margin-left: 6px; font-weight: normal; }
+        .rte-toolbar { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 8px; }
+        .rte-btn { border: 1px solid #ccc; border-radius: 4px; background: white; padding: 6px 10px; cursor: pointer; font-size: 0.9em; }
+        .rte-btn:hover { background: #f0f4ff; border-color: #0078D4; }
+        .rte-editor { min-height: 130px; border: 1px solid #ccc; border-radius: 6px; padding: 12px; background: white; overflow:auto; }
+        .rte-editor:empty:before { content: attr(data-placeholder); color: #888; }
     </style>
 </head>
 <body>
 
-<p><a href="/manage_tasks/{{ task[4] }}">← Back to Tasks</a></p>
-<h2>✏️ Edit Practical Task</h2>
+<div class="topbar">
+    <h1>✏️ Edit Practical Task</h1>
+    <div class="topbar-links">
+        <a href="/manage_tasks/{{ task[5] }}">← Back to Tasks</a>
+        <a href="/manage_subjects">📁 Subjects</a>
+        <a href="/teacher_dashboard">🏠 Dashboard</a>
+        <span class="topbar-user">👤 <a href="/edit_user/{{ session_username }}">{{ session_username }}</a></span>
+        <a href="/logout">Logout</a>
+    </div>
+</div>
+
+<div class="page">
 
 <div class="info-box">
     <span class="task-name">{{ task[1] }}</span>
@@ -53,6 +77,22 @@
             </select>
         </div>
 
+        <!-- Task Questions -->
+        <div class="form-group">
+            <div class="section-title">Task Questions</div>
+            <input type="hidden" name="question_text" id="edit_task_question_text" value="{{ task[4] | e }}">
+            <div class="rte-toolbar">
+                <button type="button" class="rte-btn" onclick="rteCmd('bold','editTaskEditor')"><b>B</b></button>
+                <button type="button" class="rte-btn" onclick="rteCmd('italic','editTaskEditor')"><i>I</i></button>
+                <button type="button" class="rte-btn" onclick="rteCmd('underline','editTaskEditor')"><u>U</u></button>
+                <button type="button" class="rte-btn" onclick="rteCmd('insertUnorderedList','editTaskEditor')">• List</button>
+                <button type="button" class="rte-btn" onclick="rteCmd('insertOrderedList','editTaskEditor')">1. List</button>
+                <button type="button" class="rte-btn" onclick="insertTable('editTaskEditor')">Table</button>
+            </div>
+            <div class="rte-editor" id="editTaskEditor" contenteditable="true" data-placeholder="Enter the task questions or instructions here..."></div>
+            <small class="readonly-note">Use the toolbar to format text, create bullet/numbered lists, or insert a table.</small>
+        </div>
+
         <!-- Groups -->
         <div class="form-group">
             <div class="section-title">Assigned Groups</div>
@@ -71,12 +111,12 @@
         <div class="form-group">
             <div class="section-title">Submission Options</div>
             <label style="display:inline-flex; align-items:center; gap:8px; margin-bottom:8px;">
-                <input type="checkbox" id="allow_multiple" name="allow_multiple" value="1" {{ 'checked' if task[7] else '' }} onchange="toggleMaxAttempts(this)">
+                <input type="checkbox" id="allow_multiple" name="allow_multiple" value="1" {{ 'checked' if task[8] else '' }} onchange="toggleMaxAttempts(this)">
                 Allow multiple submissions
             </label>
-            <div id="maxAttemptsPanel" style="display:{{ 'block' if task[7] else 'none' }}; margin-top: 6px;">
+            <div id="maxAttemptsPanel" style="display:{{ 'block' if task[8] else 'none' }}; margin-top: 6px;">
                 <label style="font-weight:bold; display:block; margin-bottom:6px;">Max Attempts</label>
-                <input type="number" name="max_attempts" min="2" max="10" value="{{ task[8] or 2 }}" style="width:120px; padding:8px; border:1px solid #ccc; border-radius:4px;">
+                <input type="number" name="max_attempts" min="{{ '2' if task[8] else '1' }}" max="10" value="{{ task[9] or 2 }}" style="width:120px; padding:8px; border:1px solid #ccc; border-radius:4px;">
             </div>
             <small style="color:#666; display:block; margin-top:8px;">When multiple submissions are allowed, learners can resubmit until this limit is reached.</small>
         </div>
@@ -85,11 +125,9 @@
         <div class="form-group">
             <div class="section-title">Sample File</div>
             <p class="readonly-note" style="margin-top:0;">
-                {% if task[5] %}
-                    {# task[5] is stored as BLOB in DB; ensure we treat it safely as bytes/unknown #}
-                    Current: <a href="/task_sample/{{ task[0] }}" target="_blank">(download sample file)</a>
-                {% else %}
-                    No sample file uploaded
+                {% if task[6] %}
+                    {# task[6] is stored as BLOB in DB; ensure we treat it safely as bytes/unknown #}
+                        Current: <a href="/tasks/{{ task[0] }}/sample_file" target="_blank">(download sample file)</a>
                 {% endif %}
 
             </p>
@@ -102,7 +140,7 @@
             </p>
 
 
-            <input type="file" id="replace_sample_{{ task[0] }}" name="sample_file" accept=".docx,.xlsx,.html" style="display:none;" onchange="updateSampleName('{{ task[0] }}', this);">
+            <input type="file" id="replace_sample_{{ task[0] }}" name="sample_file" accept=".xlsx,.xls,.xlsm,.accdb,.mdb,.html,.htm,.ppt,.pptx,.doc,.docx,.docm" style="display:none;" onchange="updateSampleName('{{ task[0] }}', this);">
 
             <input type="hidden" name="task_id" value="{{ task[0] }}">
         </div>
@@ -121,17 +159,54 @@
         </script>
 
         <div style="display:flex; gap:10px; margin-top:10px;">
-            <button type="submit" class="btn btn-primary">💾 Save Changes</button>
-            <a href="/manage_tasks/{{ task[4] }}" class="btn btn-secondary">Cancel</a>
+            <button type="submit" class="btn btn-primary" onclick="syncEditRTE()">💾 Save Changes</button>
+            <a href="/manage_tasks/{{ task[5] }}" class="btn btn-secondary">Cancel</a>
         </div>
 
     </form>
+</div>
+
 </div>
 
 <script>
     function toggleMaxAttempts(checkbox) {
         document.getElementById('maxAttemptsPanel').style.display = checkbox.checked ? 'block' : 'none';
     }
+    function rteCmd(command, editorId) {
+        const editor = document.getElementById(editorId);
+        editor.focus();
+        document.execCommand(command, false, null);
+    }
+    function insertTable(editorId) {
+        const rows = prompt('Number of rows', '2');
+        const cols = prompt('Number of columns', '2');
+        if (!rows || !cols) return;
+        const r = parseInt(rows, 10);
+        const c = parseInt(cols, 10);
+        if (isNaN(r) || isNaN(c) || r < 1 || c < 1) return;
+        let table = '<table style="border-collapse:collapse; width:100%;">';
+        for (let i = 0; i < r; i++) {
+            table += '<tr>';
+            for (let j = 0; j < c; j++) {
+                table += '<td style="border:1px solid #999; padding:6px;">&nbsp;</td>';
+            }
+            table += '</tr>';
+        }
+        table += '</table><p></p>';
+        document.execCommand('insertHTML', false, table);
+    }
+    function syncEditRTE() {
+        const editor = document.getElementById('editTaskEditor');
+        const hidden = document.getElementById('edit_task_question_text');
+        if (hidden && editor) hidden.value = editor.innerHTML.trim();
+    }
+    document.addEventListener('DOMContentLoaded', () => {
+        const editor = document.getElementById('editTaskEditor');
+        const hidden = document.getElementById('edit_task_question_text');
+        if (editor && hidden) {
+            editor.innerHTML = hidden.value || '';
+        }
+    });
 </script>
 
 </body>

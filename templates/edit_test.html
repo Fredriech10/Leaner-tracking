@@ -4,7 +4,17 @@
     <meta charset="UTF-8">
     <title>Edit Test Settings</title>
     <style>
-        body { font-family: Arial, sans-serif; padding: 20px; max-width: 700px; margin: 0 auto; }
+        * { box-sizing: border-box; }
+        body { font-family: Arial, sans-serif; margin: 0; padding: 0; background: #f0f2f5; color: #222; }
+        .topbar { background: #005a9e; color: white; padding: 12px 24px; display: flex; justify-content: space-between; align-items: center; flex-wrap: nowrap; gap: 10px; position: sticky; top: 0; z-index: 999; }
+        .topbar h1 { margin: 0; font-size: 1.05em; white-space: nowrap; }
+        .topbar-links { display: flex; gap: 10px; align-items: center; flex-wrap: nowrap; }
+        .topbar-links a { color: white; text-decoration: none; font-size: 0.82em; opacity: 0.9; white-space: nowrap; }
+        .topbar-links a:hover { opacity: 1; text-decoration: underline; }
+        .topbar-user { color: white; font-size: 0.82em; white-space: nowrap; border-left: 1px solid rgba(255,255,255,0.35); padding-left: 10px; }
+        .topbar-user a { color: white; text-decoration: none; font-weight: bold; }
+        .topbar-user a:hover { text-decoration: underline; }
+        .page { padding: 20px 24px; max-width: 800px; margin: 0 auto; }
         .edit-form { background: #f9f9f9; border: 1px solid #ddd; padding: 25px; border-radius: 8px; }
         .form-group { margin-bottom: 18px; }
         label { font-weight: bold; font-size: 0.95em; display: block; margin-bottom: 6px; }
@@ -24,7 +34,17 @@
 </head>
 <body>
 
-<p><a href="/manage_tests">← Back to Tests</a></p>
+<div class="topbar">
+    <h1>⚙️ Edit Test Settings</h1>
+    <div class="topbar-links">
+        <a href="/manage_tests">← Back to Tests</a>
+        <a href="/teacher_dashboard">🏠 Dashboard</a>
+        <span class="topbar-user">👤 <a href="/edit_user/{{ session_username }}">{{ session_username }}</a></span>
+        <a href="/logout">Logout</a>
+    </div>
+</div>
+
+<div class="page">
 <h2>⚙️ Edit Test Settings</h2>
 
 <div class="info-box">
@@ -48,6 +68,21 @@
                 {% endfor %}
             </div>
             <small style="color:gray; margin-top:6px; display:block;">Leave all unchecked = available to all groups</small>
+        </div>
+
+        <!-- Teachers -->
+        <div class="form-group">
+            <div class="section-title">Assigned Teachers</div>
+            <div class="group-grid">
+                {% for teacher in all_teachers %}
+                <label>
+                    <input type="checkbox" name="teachers" value="{{ teacher[0] }}"
+                           {{ 'checked' if teacher[0] in current_teachers else '' }}>
+                    <span>{{ teacher[1] or teacher[0] }}</span>
+                </label>
+                {% endfor %}
+            </div>
+            <small style="color:gray; margin-top:6px; display:block;">Select teachers who should own this test.</small>
         </div>
 
         <!-- Assign Start Date -->
@@ -88,8 +123,9 @@
             <button type="submit" class="btn btn-primary">💾 Save Changes</button>
             <a href="/manage_tests" class="btn btn-secondary">Cancel</a>
         </div>
-
     </form>
+</div>
+
 </div>
 
 <script>

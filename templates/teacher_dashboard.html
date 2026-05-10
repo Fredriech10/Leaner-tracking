@@ -7,17 +7,21 @@
         * { box-sizing: border-box; }
         body { font-family: Arial, sans-serif; margin: 0; padding: 0; background: #f0f2f5; color: #222; }
 
-        .topbar { background: #005a9e; color: white; padding: 14px 24px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px; }
-        .topbar h1 { margin: 0; font-size: 1.15em; }
-        .topbar-links { display: flex; gap: 16px; flex-wrap: wrap; }
-        .topbar-links a { color: white; text-decoration: none; font-size: 0.88em; opacity: 0.85; }
+        .topbar { background: #005a9e; color: white; padding: 12px 24px; display: flex; justify-content: space-between; align-items: center; flex-wrap: nowrap; gap: 10px; position: sticky; top: 0; z-index: 999; }
+        .topbar h1 { margin: 0; font-size: 1.05em; white-space: nowrap; }
+        .topbar-links { display: flex; gap: 10px; align-items: center; flex-wrap: nowrap; }
+        .topbar-links a { color: white; text-decoration: none; font-size: 0.82em; opacity: 0.9; white-space: nowrap; }
         .topbar-links a:hover { opacity: 1; text-decoration: underline; }
+        .topbar-user { color: white; font-size: 0.82em; white-space: nowrap; border-left: 1px solid rgba(255,255,255,0.35); padding-left: 10px; }
+        .topbar-user a { color: white; text-decoration: none; font-weight: bold; }
+        .topbar-user a:hover { text-decoration: underline; }
 
-        .page { padding: 20px 24px; max-width: 1200px; margin: 0 auto; }
+        .page { padding: 20px 24px; max-width: 1400px; margin: 0 auto; }
 
         .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
         .grid-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 16px; }
         .grid-4 { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; }
+        table td:last-child, table th:last-child { white-space: nowrap; }
         .full { grid-column: 1 / -1; }
         .mb { margin-bottom: 16px; }
 
@@ -49,9 +53,31 @@
 
         /* Quick actions */
         .actions { display: flex; gap: 10px; flex-wrap: wrap; }
-        .action-btn { background: #f0f4ff; border: 1px solid #b0c4ff; border-radius: 7px; padding: 12px 16px; text-align: center; text-decoration: none; color: #005a9e; font-weight: bold; font-size: 0.88em; flex: 1; min-width: 120px; }
+        .action-btn {
+            background: #f0f4ff; border: 1px solid #b0c4ff; border-radius: 7px;
+            padding: 0; text-align: center; text-decoration: none; color: #005a9e;
+            font-weight: bold; font-size: 0.88em; flex: 1; min-width: 120px;
+            display: flex; flex-direction: column; align-items: center; justify-content: center;
+            min-height: 72px;
+        }
         .action-btn:hover { background: #dce8ff; }
         .action-btn .icon { font-size: 1.4em; display: block; margin-bottom: 3px; }
+        /* Dropdown action buttons match the same height/style */
+        .action-btn-wrap {
+            background: #f0f4ff; border: 1px solid #b0c4ff; border-radius: 7px;
+            flex: 1; min-width: 120px; min-height: 72px;
+            display: flex; flex-direction: column; align-items: center; justify-content: center;
+            padding: 8px 10px; gap: 4px;
+        }
+        .action-btn-wrap .icon { font-size: 1.4em; }
+        .action-btn-wrap select {
+            width: 100%; border: none; background: transparent; font-weight: bold;
+            color: #005a9e; cursor: pointer; font-size: 0.88em; text-align: center;
+            outline: none; padding: 0;
+        }
+        .action-btn-wrap:hover { background: #dce8ff; }
+        .action-btn-wrap .go-row { display: flex; gap: 4px; align-items: center; width: 100%; }
+        .action-btn-wrap .go-row select { flex: 1; }
 
         /* Slideshow */
         .slideshow-wrap { position: relative; }
@@ -84,12 +110,13 @@
 <div class="topbar">
     <h1>🏫 Teacher Dashboard</h1>
     <div class="topbar-links">
-        <a href="/group_results">📊 Group Results</a>
-        <a href="/manage_subjects">📁 Practical Tests</a>
-        <a href="/manage_tests">📝 Theory Tests</a>
-        <a href="/admin">👥 Admin Panel</a>
+        <a href="/group_results">📊 Results</a>
+        <a href="/manage_subjects">📁 Practical</a>
+        <a href="/manage_tests">📝 Theory</a>
+        <a href="/admin">👥 Admin</a>
         <a href="/attendance">📅 Attendance</a>
-        <a href="/recent_activity">🕐 Activity Log</a>
+        <a href="/recent_activity">🕐 Activity</a>
+        <span class="topbar-user">👤 <a href="/edit_user/{{ session_username }}">{{ session_username }}</a></span>
         <a href="/logout">Logout</a>
     </div>
 </div>
@@ -125,32 +152,29 @@
             <a href="/admin" class="action-btn"><span class="icon">👥</span>Admin Panel</a>
             <a href="/manage_subjects" class="action-btn"><span class="icon">📁</span>Practical Tests</a>
             <a href="/manage_tests" class="action-btn"><span class="icon">📝</span>Theory Tests</a>
-            <div style="flex:1; min-width:140px;">
-                <div class="action-btn" style="cursor:default;">
-                    <span class="icon">📥</span>
-                    <form method="get" id="exportForm" style="margin:0;">
-                        <select name="_export_target" onchange="handleExport(this)" style="width:100%; border:none; background:transparent; font-weight:bold; color:#005a9e; cursor:pointer; font-size:0.88em;">
-                            <option value="">Export Data ▾</option>
-                            <option value="/export/results">Results (Excel)</option>
-                            <option value="/export_attendance_form">Attendance (Excel)</option>
-                            <option value="/recent_activity">Activity Log</option>
-                        </select>
-                    </form>
-                </div>
+
+            <!-- Export dropdown -->
+            <div class="action-btn-wrap">
+                <span class="icon">📥</span>
+                <select onchange="handleExport(this)">
+                    <option value="">Export Data ▾</option>
+                    <option value="/export/results">Results (Excel)</option>
+                    <option value="/export_attendance_form">Attendance (Excel)</option>
+                    <option value="/recent_activity">Activity Log</option>
+                </select>
             </div>
-            <!-- View as learner for group -->
-            <div style="flex:1; min-width:160px;">
-                <div class="action-btn" style="cursor:default;">
-                    <span class="icon">👁</span>
-                    <form method="get" id="viewGroupForm" style="margin:0; display:flex; gap:4px; align-items:center; flex-wrap:wrap;">
-                        <select id="viewGroupSelect" style="flex:1; border:none; background:transparent; font-weight:bold; color:#005a9e; font-size:0.88em;">
-                            <option value="">View Group ▾</option>
-                            {% for g in groups %}
-                            <option value="/view_as_student/{{ g }}">{{ g }}</option>
-                            {% endfor %}
-                        </select>
-                        <button type="button" class="btn btn-primary btn-sm" onclick="goToGroup()">Go</button>
-                    </form>
+
+            <!-- View group dropdown -->
+            <div class="action-btn-wrap">
+                <span class="icon">👁</span>
+                <div class="go-row">
+                    <select id="viewGroupSelect">
+                        <option value="">View Group ▾</option>
+                        {% for g in groups %}
+                        <option value="/view_as_student/{{ g }}">{{ g }}</option>
+                        {% endfor %}
+                    </select>
+                    <button type="button" class="btn btn-primary btn-sm" onclick="goToGroup()">Go</button>
                 </div>
             </div>
         </div>
@@ -294,7 +318,7 @@
     </div>
 
     <!-- ── At-Risk Learners ─────────────────────────────────────────── -->
-    <div class="grid-2 mb section-gap">
+    <div class="grid-3 mb section-gap">
 
         <div class="card">
             <h3>🚨 At-Risk: Low Marks (&lt;50%)</h3>
@@ -330,6 +354,24 @@
             </table>
             {% else %}
             <p style="color:#107C10; font-size:0.9em;">✔ No attendance concerns.</p>
+            {% endif %}
+        </div>
+
+        <div class="card">
+            <h3>⚠️ Students Without Classes</h3>
+            {% if students_without_classes %}
+            <table>
+                <tr><th>Name</th><th>Username</th><th></th></tr>
+                {% for uname, name in students_without_classes %}
+                <tr>
+                    <td><a href="/learner_record/{{ uname }}">{{ name or uname }}</a></td>
+                    <td style="color:#888; font-size:0.85em;">{{ uname }}</td>
+                    <td><span class="badge badge-warn">No Class</span></td>
+                </tr>
+                {% endfor %}
+            </table>
+            {% else %}
+            <p style="color:#107C10; font-size:0.9em;">✔ All students have assigned classes.</p>
             {% endif %}
         </div>
     </div>

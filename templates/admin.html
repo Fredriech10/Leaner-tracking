@@ -7,11 +7,14 @@
         * { box-sizing: border-box; }
         body { font-family: Arial, sans-serif; margin: 0; padding: 0; background: #f0f2f5; color: #222; }
 
-        .topbar { background: #005a9e; color: white; padding: 14px 24px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px; }
-        .topbar h1 { margin: 0; font-size: 1.15em; }
-        .topbar-links { display: flex; gap: 16px; flex-wrap: wrap; }
-        .topbar-links a { color: white; text-decoration: none; font-size: 0.88em; opacity: 0.85; }
+        .topbar { background: #005a9e; color: white; padding: 12px 24px; display: flex; justify-content: space-between; align-items: center; flex-wrap: nowrap; gap: 10px; position: sticky; top: 0; z-index: 999; }
+        .topbar h1 { margin: 0; font-size: 1.05em; white-space: nowrap; }
+        .topbar-links { display: flex; gap: 10px; align-items: center; flex-wrap: nowrap; }
+        .topbar-links a { color: white; text-decoration: none; font-size: 0.82em; opacity: 0.9; white-space: nowrap; }
         .topbar-links a:hover { opacity: 1; text-decoration: underline; }
+        .topbar-user { color: white; font-size: 0.82em; white-space: nowrap; border-left: 1px solid rgba(255,255,255,0.35); padding-left: 10px; }
+        .topbar-user a { color: white; text-decoration: none; font-weight: bold; }
+        .topbar-user a:hover { text-decoration: underline; }
 
         .page { padding: 20px 24px; max-width: 1400px; margin: 0 auto; }
 
@@ -59,16 +62,31 @@
 <div class="topbar">
     <h1>👥 Admin Panel</h1>
     <div class="topbar-links">
-        <a href="/teacher_dashboard">← Back to Dashboard</a>
+        <a href="/teacher_dashboard">← Dashboard</a>
         <a href="/attendance">📅 Attendance</a>
-        <a href="/manage_subjects">📁 Practical Tests</a>
-        <a href="/manage_tests">📝 Theory Tests</a>
-        <a href="/recent_activity">🕐 Activity Log</a>
+        <a href="/manage_subjects">📁 Practical</a>
+        <a href="/manage_tests">📝 Theory</a>
+        <a href="/recent_activity">🕐 Activity</a>
+        <span class="topbar-user">👤 <a href="/edit_user/{{ session_username }}">{{ session_username }}</a></span>
         <a href="/logout">Logout</a>
     </div>
 </div>
 
 <div class="page">
+
+{% with messages = get_flashed_messages(with_categories=true) %}
+{% if messages %}
+<div style="margin-bottom: 16px;">
+    {% for category, message in messages %}
+    <div style="background: {% if category == 'error' %}#f7c5c5{% elif category == 'success' %}#c8f7c5{% else %}#e3f2fd{% endif %}; 
+         color: {% if category == 'error' %}#A4262C{% elif category == 'success' %}#107C10{% else %}#0078D4{% endif %}; 
+         padding: 12px; border-radius: 6px; border: 1px solid {% if category == 'error' %}#e3a8a8{% elif category == 'success' %}#a8e3a8{% else %}#a8d4f7{% endif %};">
+        {{ message }}
+    </div>
+    {% endfor %}
+</div>
+{% endif %}
+{% endwith %}
 
 <!-- Stats -->
 <div class="stats">
@@ -115,12 +133,24 @@
 <!-- Users Table -->
 <div class="card">
     <h3>User Management</h3>
+    <div style="margin-bottom: 16px;">
+        <div style="margin-bottom: 12px;">
+            <a href="/download_user_template" class="btn btn-secondary" style="margin-right: 12px;">📄 Download Template</a>
+            <span style="font-size: 0.85em; color: #666;">Download the Excel template with the correct format</span>
+        </div>
+        <form method="post" action="/import_users" enctype="multipart/form-data" style="display: inline-block; margin-right: 12px;">
+            <input type="file" name="excel_file" accept=".xlsx,.xls" required style="margin-right: 8px;">
+            <button type="submit" class="btn btn-primary">📥 Import Users from Excel</button>
+        </form>
+        <span style="font-size: 0.85em; color: #666;">Upload an Excel file with username, full_name, and group columns</span>
+    </div>
     <table id="usersTable">
         <thead>
             <tr>
                 <th><a href="/admin?sort=username&order={% if sort == 'username' and order == 'asc' %}desc{% else %}asc{% endif %}{% if search %}&search={{ search }}{% endif %}{% if selected_group %}&group={{ selected_group }}{% endif %}">Username{% if sort == 'username' %} {{ '↑' if order == 'asc' else '↓' }}{% endif %}</a></th>
                 <th><a href="/admin?sort=full_name&order={% if sort == 'full_name' and order == 'asc' %}desc{% else %}asc{% endif %}{% if search %}&search={{ search }}{% endif %}{% if selected_group %}&group={{ selected_group }}{% endif %}">Full Name{% if sort == 'full_name' %} {{ '↑' if order == 'asc' else '↓' }}{% endif %}</a></th>
                 <th><a href="/admin?sort=group_name&order={% if sort == 'group_name' and order == 'asc' %}desc{% else %}asc{% endif %}{% if search %}&search={{ search }}{% endif %}{% if selected_group %}&group={{ selected_group }}{% endif %}">Group{% if sort == 'group_name' %} {{ '↑' if order == 'asc' else '↓' }}{% endif %}</a></th>
+                <th><a href="/admin?sort=teacher_username&order={% if sort == 'teacher_username' and order == 'asc' %}desc{% else %}asc{% endif %}{% if search %}&search={{ search }}{% endif %}{% if selected_group %}&group={{ selected_group }}{% endif %}">Teacher{% if sort == 'teacher_username' %} {{ '↑' if order == 'asc' else '↓' }}{% endif %}</a></th>
                 <th><a href="/admin?sort=role&order={% if sort == 'role' and order == 'asc' %}desc{% else %}asc{% endif %}{% if search %}&search={{ search }}{% endif %}{% if selected_group %}&group={{ selected_group }}{% endif %}">Role{% if sort == 'role' %} {{ '↑' if order == 'asc' else '↓' }}{% endif %}</a></th>
                 <th><a href="/admin?sort=last_active&order={% if sort == 'last_active' and order == 'asc' %}desc{% else %}asc{% endif %}{% if search %}&search={{ search }}{% endif %}{% if selected_group %}&group={{ selected_group }}{% endif %}">Last Active{% if sort == 'last_active' %} {{ '↑' if order == 'asc' else '↓' }}{% endif %}</a></th>
                 <th>Actions</th>
@@ -132,16 +162,17 @@
             <td><a href="/learner_record/{{ user[0] }}" style="color:#005a9e; font-weight:bold;">{{ user[0] }}</a></td>
             <td>{{ user[1] or "—" }}</td>
             <td>{{ user[2] or "—" }}</td>
+            <td>{{ user[3] or '—' }}</td>
             <td>
-                {% if user[3] == 'teacher' %}
+                {% if user[4] == 'teacher' %}
                     <span class="badge badge-teacher">Teacher</span>
-                {% elif user[3] == 'admin' %}
+                {% elif user[4] == 'admin' %}
                     <span class="badge badge-admin">Admin</span>
                 {% else %}
                     <span class="badge badge-student">Student</span>
                 {% endif %}
             </td>
-            <td style="color:#888; font-size:0.85em;">{{ user[4][:16] if user[4] else '—' }}</td>
+            <td style="color:#888; font-size:0.85em;">{{ user[5][:16] if user[5] else '—' }}</td>
             <td>
                 <div class="action-links">
                     <a href="/edit_user/{{ user[0] }}">✏️ Edit</a>

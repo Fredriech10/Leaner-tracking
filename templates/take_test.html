@@ -4,7 +4,15 @@
     <meta charset="UTF-8">
     <title>{{ test[1] }}</title>
     <style>
-        body { font-family: Arial, sans-serif; padding: 20px; max-width: 800px; margin: 0 auto; }
+        * { box-sizing: border-box; }
+        body { font-family: Arial, sans-serif; margin: 0; padding: 0; background: #f0f2f5; color: #222; }
+        .topbar { background: #0078D4; color: white; padding: 12px 24px; display: flex; justify-content: space-between; align-items: center; flex-wrap: nowrap; gap: 10px; position: sticky; top: 0; z-index: 999; }
+        .topbar h1 { margin: 0; font-size: 1.05em; white-space: nowrap; }
+        .topbar-links { display: flex; gap: 10px; align-items: center; flex-wrap: nowrap; }
+        .topbar-links a { color: white; text-decoration: none; font-size: 0.82em; opacity: 0.9; white-space: nowrap; }
+        .topbar-links a:hover { opacity: 1; text-decoration: underline; }
+        .topbar-user { color: white; font-size: 0.82em; white-space: nowrap; border-left: 1px solid rgba(255,255,255,0.35); padding-left: 10px; }
+        .page { padding: 20px 24px; max-width: 950px; margin: 0 auto; }
         .question-block { border: 1px solid #ddd; border-radius: 8px; padding: 20px; margin-bottom: 20px; background: #fafafa; }
         .question-block h3 { margin: 0 0 12px 0; font-size: 1em; color: #222; }
         .option-label { display: flex; align-items: center; gap: 10px; padding: 8px 12px; border: 1px solid #ddd; border-radius: 5px; margin-bottom: 6px; cursor: pointer; background: white; }
@@ -33,6 +41,17 @@
 </head>
 <body>
 
+<div class="topbar">
+    <h1>📚 Student Portal</h1>
+    <div class="topbar-links">
+        <a href="/student_dashboard">🏠 Dashboard</a>
+        <a href="/my_tasks">📁 Tasks</a>
+        <a href="/tests">📝 Tests</a>
+        <span class="topbar-user">👤 {{ session_username }}</span>
+    </div>
+</div>
+
+<div class="page">
 {% if test[3] and test[3] > 0 %}
 <div class="timer-bar" id="timerBar">
     <span>⏱ Time Remaining</span>
@@ -43,7 +62,7 @@
 <h2>📝 {{ test[1] }}</h2>
 {% if test[2] %}<p style="color:#555;">Subject: {{ test[2] }}</p>{% endif %}
 
-<form method="post" id="testForm">
+<form method="post" id="testForm" autocomplete="off">
     <input type="hidden" name="auto_submitted" value="0">
 
 
@@ -97,12 +116,13 @@
                    placeholder="Type the correct word..."
                    pattern="\S+" title="One word only — no spaces allowed"
                    style="text-transform:none;"
-                   oninput="this.value=this.value.replace(/\s/g,'')">  
+                   autocomplete="off"
+                   oninput="this.value=this.value.replace(/\s/g,'')">
         </div>
 
     {# ── Fill in the Blank ── #}
     {% elif q_type == 'fill_in' %}
-        <input type="text" name="q_{{ q_id }}" placeholder="Type your answer..." required>
+        <input type="text" name="q_{{ q_id }}" placeholder="Type your answer..." autocomplete="off" required>
 
     {# ── Match Column A to B ── #}
     {% elif q_type == 'match' %}
@@ -152,6 +172,7 @@
 <button type="submit" class="submit-btn" onclick="return confirmSubmit()">✅ Submit Test</button>
 </form>
 
+</div>
 <script>
 // ── Timer ──────────────────────────────────────────────────────────────
 {% if test[3] and test[3] > 0 %}

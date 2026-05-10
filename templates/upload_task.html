@@ -4,7 +4,15 @@
     <meta charset="UTF-8">
     <title>Upload - {{ subject_name }} {{ task_name }}</title>
     <style>
-        body { font-family: Arial, sans-serif; padding: 20px; max-width: 760px; margin: 0 auto; background: #f4f6fb; color: #1f2937; }
+        * { box-sizing: border-box; }
+        body { font-family: Arial, sans-serif; margin: 0; padding: 0; background: #f4f6fb; color: #1f2937; }
+        .topbar { background: #0078D4; color: white; padding: 12px 24px; display: flex; justify-content: space-between; align-items: center; flex-wrap: nowrap; gap: 10px; position: sticky; top: 0; z-index: 999; }
+        .topbar h1 { margin: 0; font-size: 1.05em; white-space: nowrap; }
+        .topbar-links { display: flex; gap: 10px; align-items: center; flex-wrap: nowrap; }
+        .topbar-links a { color: white; text-decoration: none; font-size: 0.82em; opacity: 0.9; white-space: nowrap; }
+        .topbar-links a:hover { opacity: 1; text-decoration: underline; }
+        .topbar-user { color: white; font-size: 0.82em; white-space: nowrap; border-left: 1px solid rgba(255,255,255,0.35); padding-left: 10px; }
+        .page { padding: 20px 24px; max-width: 950px; margin: 0 auto; }
         a.action-link { color: #0078D4; text-decoration: none; font-weight: 600; }
         a.action-link:hover { text-decoration: underline; }
         .card { background: #ffffff; border: 1px solid #dde2ea; border-radius: 16px; padding: 26px; box-shadow: 0 18px 40px rgba(15, 23, 42, 0.06); }
@@ -19,25 +27,56 @@
         .submit-btn { width: 100%; margin-top: 24px; padding: 14px 18px; border: none; border-radius: 12px; background: #0078D4; color: white; font-size: 1rem; font-weight: 700; cursor: pointer; transition: background 0.2s; }
         .submit-btn:hover { background: #005a9e; }
         .message { font-size: 0.95em; color: #334155; margin-top: 12px; }
+        .split-panel { display: flex; flex-wrap: wrap; gap: 24px; margin-top: 18px; }
+        .left-panel, .right-panel { flex: 1 1 320px; min-width: 280px; }
+        .right-panel { background: #f8fafc; border: 1px solid #dbe6f0; border-radius: 14px; padding: 18px; }
+        .section-title { font-size: 1rem; font-weight: 700; margin-bottom: 12px; color: #0f4fa1; }
+        .question-box { white-space: pre-wrap; line-height: 1.65; color: #24324a; font-size: 0.95rem; padding: 12px; background: white; border: 1px solid #d6dde8; border-radius: 10px; }
+        .question-box.empty { color: #7b8794; font-style: italic; background: #f4f6f9; }
     </style>
 </head>
 <body>
-    <p><a href="/student_dashboard" class="action-link">← Back to Dashboard</a></p>
+
+<div class="topbar">
+    <h1>📚 Student Portal</h1>
+    <div class="topbar-links">
+        <a href="/student_dashboard">🏠 Dashboard</a>
+        <a href="/my_tasks">📁 Tasks</a>
+        <a href="/tests">📝 Tests</a>
+        <span class="topbar-user">👤 {{ session_username }}</span>
+        <a href="/logout">Logout</a>
+    </div>
+</div>
+
+<div class="page">
     <div class="card">
         <h2>Upload - {{ subject_name|upper }} ({{ task_name }})</h2>
-        {% if sample_link_html %}
-            <div class="sample-link">{{ sample_link_html | safe }}</div>
-        {% endif %}
-        <form method="post" enctype="multipart/form-data" id="uploadForm">
-            <div class="upload-area" id="uploadArea">
-                <p id="uploadMessage">Drag & drop your file here, or click to choose a file.</p>
-                <small>Supported file types include Word, Excel, PowerPoint, Access, and HTML.</small>
+        <div class="split-panel">
+            <div class="left-panel">
+                {% if sample_link_html %}
+                    <div class="sample-link">{{ sample_link_html | safe }}</div>
+                {% endif %}
+                <form method="post" enctype="multipart/form-data" id="uploadForm">
+                    <div class="upload-area" id="uploadArea">
+                        <p id="uploadMessage">Drag & drop your file here, or click to choose a file.</p>
+                        <small>Supported file types include Word, Excel, PowerPoint, Access, and HTML.</small>
+                    </div>
+                    <input type="file" name="file" id="fileInput" accept=".doc,.docx,.xls,.xlsx,.csv,.ppt,.pptx,.mdb,.accdb,.html,.htm" required>
+                    <button type="submit" class="submit-btn">Upload</button>
+                    <p class="message">If you have a sample file, download it above before uploading.</p>
+                </form>
             </div>
-            <input type="file" name="file" id="fileInput" accept=".doc,.docx,.xls,.xlsx,.csv,.ppt,.pptx,.mdb,.accdb,.html,.htm" required>
-            <button type="submit" class="submit-btn">Upload</button>
-            <p class="message">If you have a sample file, download it above before uploading.</p>
-        </form>
+            <div class="right-panel">
+                <div class="section-title">Task Questions</div>
+                {% if question_text %}
+                    <div class="question-box">{{ question_text | safe }}</div>
+                {% else %}
+                    <div class="question-box empty">No task questions have been added yet.</div>
+                {% endif %}
+            </div>
+        </div>
     </div>
+</div>
 
     <script>
         const uploadArea = document.getElementById('uploadArea');

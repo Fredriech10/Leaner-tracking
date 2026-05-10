@@ -1,11 +1,59 @@
-<h1>Recent Activity</h1>
-<p><a href="/teacher_dashboard">← Back to Dashboard</a></p>
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Recent Activity</title>
+    <style>
+        * { box-sizing: border-box; }
+        body { font-family: Arial, sans-serif; margin: 0; padding: 0; background: #f0f2f5; color: #222; }
+        .topbar { background: #005a9e; color: white; padding: 12px 24px; display: flex; justify-content: space-between; align-items: center; flex-wrap: nowrap; gap: 10px; position: sticky; top: 0; z-index: 999; }
+        .topbar h1 { margin: 0; font-size: 1.05em; white-space: nowrap; }
+        .topbar-links { display: flex; gap: 10px; align-items: center; flex-wrap: nowrap; }
+        .topbar-links a { color: white; text-decoration: none; font-size: 0.82em; opacity: 0.9; white-space: nowrap; }
+        .topbar-links a:hover { opacity: 1; text-decoration: underline; }
+        .topbar-user { color: white; font-size: 0.82em; white-space: nowrap; border-left: 1px solid rgba(255,255,255,0.35); padding-left: 10px; }
+        .topbar-user a { color: white; text-decoration: none; font-weight: bold; }
+        .topbar-user a:hover { text-decoration: underline; }
+        .page { padding: 20px 24px; max-width: 1200px; margin: 0 auto; }
+        .card { background: white; border-radius: 8px; padding: 18px; border: 1px solid #ddd; }
+        table { width: 100%; border-collapse: collapse; font-size: 0.88em; }
+        th { background: #f5f5f5; padding: 8px 12px; text-align: left; font-size: 0.85em; color: #555; border-bottom: 2px solid #ddd; }
+        td { padding: 7px 12px; border-bottom: 1px solid #f0f0f0; }
+        tr:last-child td { border-bottom: none; }
+        tr:hover td { background: #fafafa; }
+    </style>
+</head>
+<body>
 
-<h2>Activity Log</h2>
-<ul>
-{% for activity in activities %}
-<li>{{ activity[2] }} - {{ activity[0] }} {{ activity[1] }}</li>
-{% else %}
-<li>No recent activity.</li>
-{% endfor %}
-</ul>
+<div class="topbar">
+    <h1>🕐 Activity Log</h1>
+    <div class="topbar-links">
+        <a href="/teacher_dashboard">← Dashboard</a>
+        <a href="/admin">👥 Admin</a>
+        <a href="/manage_subjects">📁 Practical</a>
+        <a href="/manage_tests">📝 Theory</a>
+        <span class="topbar-user">👤 <a href="/edit_user/{{ session_username }}">{{ session_username }}</a></span>
+        <a href="/logout">Logout</a>
+    </div>
+</div>
+
+<div class="page">
+    <div class="card">
+        <h3 style="margin:0 0 14px 0; font-size:0.95em; color:#005a9e; border-bottom:2px solid #f0f0f0; padding-bottom:6px;">🕐 Recent Activity</h3>
+        <table>
+            <tr><th>Time</th><th>User</th><th>Action</th></tr>
+            {% for activity in activities %}
+            <tr>
+                <td style="color:#888; white-space:nowrap;">{{ activity[2] }}</td>
+                <td style="font-weight:bold;">{{ activity[0] }}</td>
+                <td>{{ activity[1] }}</td>
+            </tr>
+            {% else %}
+            <tr><td colspan="3" style="color:#888; text-align:center;">No recent activity.</td></tr>
+            {% endfor %}
+        </table>
+    </div>
+</div>
+
+</body>
+</html>

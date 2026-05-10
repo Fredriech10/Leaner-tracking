@@ -7,11 +7,14 @@
         * { box-sizing: border-box; }
         body { font-family: Arial, sans-serif; margin: 0; padding: 0; background: #f0f2f5; color: #222; }
 
-        .topbar { background: #005a9e; color: white; padding: 14px 24px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px; }
-        .topbar h1 { margin: 0; font-size: 1.15em; }
-        .topbar-links { display: flex; gap: 16px; flex-wrap: wrap; }
-        .topbar-links a { color: white; text-decoration: none; font-size: 0.88em; opacity: 0.85; }
+        .topbar { background: #005a9e; color: white; padding: 12px 24px; display: flex; justify-content: space-between; align-items: center; flex-wrap: nowrap; gap: 10px; position: sticky; top: 0; z-index: 999; }
+        .topbar h1 { margin: 0; font-size: 1.05em; white-space: nowrap; }
+        .topbar-links { display: flex; gap: 10px; align-items: center; flex-wrap: nowrap; }
+        .topbar-links a { color: white; text-decoration: none; font-size: 0.82em; opacity: 0.9; white-space: nowrap; }
         .topbar-links a:hover { opacity: 1; text-decoration: underline; }
+        .topbar-user { color: white; font-size: 0.82em; white-space: nowrap; border-left: 1px solid rgba(255,255,255,0.35); padding-left: 10px; }
+        .topbar-user a { color: white; text-decoration: none; font-weight: bold; }
+        .topbar-user a:hover { text-decoration: underline; }
 
         .page { padding: 20px 24px; max-width: 800px; margin: 0 auto; }
 
@@ -39,9 +42,10 @@
 <div class="topbar">
     <h1>✏️ Edit User</h1>
     <div class="topbar-links">
-        <a href="/learner_record/{{ user[0] }}">← Back to Learner Record</a>
-        <a href="/admin">Admin Panel</a>
-        <a href="/teacher_dashboard">Dashboard</a>
+        <a href="/learner_record/{{ user[0] }}">← Learner Record</a>
+        <a href="/admin">👥 Admin</a>
+        <a href="/teacher_dashboard">🏠 Dashboard</a>
+        <span class="topbar-user">👤 <a href="/edit_user/{{ session_username }}">{{ session_username }}</a></span>
         <a href="/logout">Logout</a>
     </div>
 </div>
@@ -66,6 +70,27 @@
         <div class="form-group">
             <label for="group_name">Group</label>
             <input type="text" id="group_name" name="group_name" value="{{ user[2] or '' }}" placeholder="Enter group name">
+        </div>
+
+        <div class="form-group">
+            <label for="teacher_username">Assigned Teacher</label>
+            <select id="teacher_username" name="teacher_username">
+                <option value="">-- No teacher assigned --</option>
+                {% for teacher in all_teachers %}
+                <option value="{{ teacher[0] }}" {{ 'selected' if teacher[0] == user[3] else '' }}>{{ teacher[1] or teacher[0] }}</option>
+                {% endfor %}
+            </select>
+        </div>
+
+        <div class="form-group">
+            <label for="role">Role</label>
+            <select id="role" name="role">
+                <option value="student" {% if user[4] == 'student' %}selected{% endif %}>Student</option>
+                <option value="teacher" {% if user[4] == 'teacher' %}selected{% endif %}>Teacher</option>
+                {% if current_role == 'admin' %}
+                <option value="admin" {% if user[4] == 'admin' %}selected{% endif %}>Admin</option>
+                {% endif %}
+            </select>
         </div>
         
         <div style="display: flex; gap: 8px;">

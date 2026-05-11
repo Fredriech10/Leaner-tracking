@@ -2584,7 +2584,8 @@ def import_users():
         flash("No file selected", "error")
         return redirect(url_for("admin_panel"))
     
-    if not file.filename.lower().endswith(('.xlsx', '.xls')):
+    filename = file.filename or ""
+    if not filename.lower().endswith(('.xlsx', '.xls')):
         flash("Please upload an Excel file (.xlsx or .xls)", "error")
         return redirect(url_for("admin_panel"))
     
@@ -4202,8 +4203,64 @@ def manage_tests():
         f'<input type="checkbox" name="teachers" value="{escape(t[0])}"> {escape(t[1] or t[0])}</label>'
         for t in teachers
     )
+
+    test_list = ""
+    for test in tests:
+        test_id = test[0]
+        test_title = escape(test[1] or "")
+        test_subject = escape(test[2] or "")
+        assign_date = test[3] or '—'
+        time_limit_val = test[4] or 0
+        is_active = bool(test[5])
+        groups_text = escape(test[6] or 'All Groups')
+        question_count = test[7] or 0
+        allow_multiple = bool(test[8])
+        max_attempts = test[9] or 1
+        show_answers = bool(test[10])
+        teachers_text = escape(test[11] or 'All Teachers')
+
+        status_badge = '<span class="badge-active">Active</span>' if is_active else '<span class="badge-inactive">Inactive</span>'
+        attempt_text = f'{max_attempts} max' if allow_multiple else '1 (single)'
+        toggle_label = 'Deactivate' if is_active else 'Activate'
+        toggle_class = 'btn-warning' if is_active else 'btn-success'
+
+        test_list += f"""
+        <tr>
+            <td>{test_title}</td>
+            <td>{test_subject or '—'}</td>
+            <td>{groups_text}</td>
+            <td>{teachers_text}</td>
+            <td>{question_count}</td>
+            <td>{assign_date}</td>
+            <td>{time_limit_val if time_limit_val else 'No limit'}</td>
+            <td>{attempt_text}</td>
+            <td>{'✔ Yes' if show_answers else '✘ No'}</td>
+            <td>{status_badge}</td>
+            <td style="white-space:nowrap; vertical-align:middle;">
+                <a href="/manage_tests/{test_id}/questions" class="btn btn-primary" title="Edit questions">✏️</a>
+                <a href="/manage_tests/{test_id}/edit" class="btn btn-warning" title="Edit settings">⚙️</a>
+                <button type="button" class="btn btn-success" title="Reuse: copy questions into a new test"
+                    onclick="openReuseModal(this)"
+                    data-test-id="{test_id}"
+                    data-title="{test_title}"
+                    data-subject="{test_subject}"
+                    data-time-limit="{time_limit_val}"
+                    data-allow-multiple="{1 if allow_multiple else 0}"
+                    data-max-attempts="{max_attempts}"
+                    data-show-answers="{1 if show_answers else 0}">📋</button>
+                <form method="post" action="/manage_tests/{test_id}/toggle" style="display:inline-flex; margin:0;">
+                    <button type="submit" class="btn {toggle_class}" title="{toggle_label}">{'⏸' if is_active else '▶'}</button>
+                </form>
+                <form method="post" action="/manage_tests/{test_id}/delete" style="display:inline-flex; margin:0;"
+                      onsubmit="return confirm('⚠️ WARNING: Delete this test, all questions, AND ALL STUDENT SUBMISSIONS?\n\nThis will permanently remove:\n- All test questions\n- All student attempts and scores\n- Test from Group Results\n\nThis action CANNOT be undone!')">
+                    <button type="submit" class="btn btn-danger" title="Delete test">🗑</button>
+                </form>
+            </td>
+        </tr>
+        """
+
     conn.close()
-    return render_template("manage_tests.html", tests=tests, groups=groups, teacher_checkboxes=teacher_checkboxes)
+    return render_template("manage_tests.html", tests=tests, groups=groups, teacher_checkboxes=teacher_checkboxes, test_list=test_list)
 
 
 @app.route("/manage_tests/create", methods=["POST"])

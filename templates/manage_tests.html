@@ -140,7 +140,7 @@
 </div>
 
 <h3>Existing Tests</h3>
-{% if tests %}
+{% if test_list %}
 <table>
     <tr>
         <th>Title</th>
@@ -155,45 +155,7 @@
         <th>Status</th>
         <th>Actions</th>
     </tr>
-    {% for t in tests %}
-    <tr>
-        <td>{{ t[1] }}</td>
-        <td>{{ t[2] or '—' }}</td>
-        <td>{{ t[6] or 'All Groups' }}</td>
-        <td>{{ t[11] or 'All Teachers' }}</td>
-        <td>{{ t[7] }}</td>
-        <td>{{ t[3] or '—' }}</td>
-        <td>{{ t[4] ~ ' min' if t[4] else 'No limit' }}</td>
-        <td>
-            {% if t[8] %}
-                {{ t[9] ~ ' max' }}
-            {% else %}
-                1 (single)
-            {% endif %}
-        </td>
-        <td>{{ '✔ Yes' if t[10] else '✘ No' }}</td>
-        <td>
-            {% if t[5] %}
-                <span class="badge-active">Active</span>
-            {% else %}
-                <span class="badge-inactive">Inactive</span>
-            {% endif %}
-        </td>
-        <td style="white-space:nowrap; vertical-align:middle;">
-            <a href="/manage_tests/{{ t[0] }}/questions" class="btn btn-primary" title="Edit questions">✏️</a>
-            <a href="/manage_tests/{{ t[0] }}/edit" class="btn btn-warning" title="Edit settings">⚙️</a>
-            <button type="button" class="btn btn-success" title="Reuse: copy questions into a new test"
-                onclick="openReuseModal({{ t[0] }}, {{ t[1]|tojson }}, {{ (t[2] or '')|tojson }}, {{ t[4] or 0 }}, {{ 1 if t[8] else 0 }}, {{ t[9] or 1 }}, {{ 1 if t[10] else 0 }})">📋</button>
-            <form method="post" action="/manage_tests/{{ t[0] }}/toggle" style="display:inline-flex; margin:0;">
-                <button type="submit" class="btn {{ 'btn-warning' if t[5] else 'btn-success' }}" title="{{ 'Deactivate' if t[5] else 'Activate' }}">{{ '⏸' if t[5] else '▶' }}</button>
-            </form>
-            <form method="post" action="/manage_tests/{{ t[0] }}/delete" style="display:inline-flex; margin:0;"
-                  onsubmit="return confirm('⚠️ WARNING: Delete this test, all questions, AND ALL STUDENT SUBMISSIONS?\n\nThis will permanently remove:\n- All test questions\n- All student attempts and scores\n- Test from Group Results\n\nThis action CANNOT be undone!')">
-                <button type="submit" class="btn btn-danger" title="Delete test">🗑</button>
-            </form>
-        </td>
-    </tr>
-    {% endfor %}
+    {{ test_list | safe }}
 </table>
 {% else %}
 <p>No tests created yet.</p>
@@ -262,16 +224,25 @@ function toggleMaxAttempts(checkbox) {
 function toggleReuseAttempts(checkbox) {
     document.getElementById('reuseAttemptsGroup').style.display = checkbox.checked ? 'block' : 'none';
 }
-function openReuseModal(testId, title, subject, timeLimit, allowMultiple, maxAttempts, showAnswers) {
+function openReuseModal(button) {
+    const data = button.dataset;
+    const testId = data.testId;
+    const title = data.title || '';
+    const subject = data.subject || '';
+    const timeLimit = Number(data.timeLimit) || 0;
+    const allowMultiple = data.allowMultiple === '1';
+    const maxAttempts = Number(data.maxAttempts) || 3;
+    const showAnswers = data.showAnswers === '1';
+
     document.getElementById('reuseForm').action = '/manage_tests/' + testId + '/reuse';
     document.getElementById('reuse_title').value = title + ' (Copy)';
-    document.getElementById('reuse_subject').value = subject || '';
-    document.getElementById('reuse_time').value = timeLimit || 0;
+    document.getElementById('reuse_subject').value = subject;
+    document.getElementById('reuse_time').value = timeLimit;
     const allowCb = document.getElementById('reuse_allow_multiple');
-    allowCb.checked = !!allowMultiple;
+    allowCb.checked = allowMultiple;
     toggleReuseAttempts(allowCb);
-    document.getElementById('reuse_max_attempts').value = maxAttempts || 3;
-    document.getElementById('reuse_show_answers').checked = !!showAnswers;
+    document.getElementById('reuse_max_attempts').value = maxAttempts;
+    document.getElementById('reuse_show_answers').checked = showAnswers;
     // Clear group checkboxes
     document.querySelectorAll('#reuseModal input[name="groups"]').forEach(cb => cb.checked = false);
     // Set today as default date

@@ -93,6 +93,7 @@
         .type-tag { font-size: 0.75em; padding: 1px 6px; border-radius: 8px; margin-left: 4px; vertical-align: middle; }
         .tag-practical { background: #e8f5e9; color: #107C10; }
         .tag-theory { background: #e3f2fd; color: #0078D4; }
+        .score-none { color: #666; font-style: italic; }
         .btn { padding: 7px 14px; border: none; border-radius: 4px; cursor: pointer; font-size: 0.88em; text-decoration: none; display: inline-block; }
         .btn-primary { background: #005a9e; color: white; }
         .btn-sm { padding: 4px 10px; font-size: 0.82em; }
@@ -149,6 +150,7 @@
         <div class="actions">
             <a href="/group_results" class="action-btn"><span class="icon">📊</span>Group Results</a>
             <a href="/attendance" class="action-btn"><span class="icon">📅</span>Attendance</a>
+            <a href="/risk_learners" class="action-btn"><span class="icon">🚨</span>Risk Learners</a>
             <a href="/admin" class="action-btn"><span class="icon">👥</span>Admin Panel</a>
             <a href="/manage_subjects" class="action-btn"><span class="icon">📁</span>Practical Tests</a>
             <a href="/manage_tests" class="action-btn"><span class="icon">📝</span>Theory Tests</a>
@@ -236,8 +238,7 @@
         <!-- Class Averages per Subject per Group (Slideshow) -->
         <div class="card">
             <h3>📈 Class Averages per Subject</h3>
-            {% set all_groups = class_avgs.keys() | list + theory_class_avgs.keys() | list | unique | list %}
-            {% set slide_groups = (class_avgs.keys() | list + theory_class_avgs.keys() | list) | unique | list %}
+            {% set slide_groups = subject_avgs.keys() | list %}
             {% if slide_groups %}
             <div class="slideshow-wrap" id="classSlideshow">
                 <div class="slide-nav">
@@ -249,23 +250,21 @@
                 <div class="slide" data-group="{{ grp }}">
                     <table>
                         <tr><th>Subject</th><th>Type</th><th>Avg</th><th>Count</th></tr>
-                        {% for subj, avg, cnt in class_avgs.get(grp, []) %}
+                        {% for subj, avg, cnt, atype in subject_avgs.get(grp, []) %}
                         <tr>
                             <td>{{ subj }}</td>
-                            <td><span class="type-tag tag-practical">Practical</span></td>
-                            <td><span class="{{ 'score-high' if avg >= 60 else ('score-mid' if avg >= 40 else 'score-low') }}">{{ avg }}%</span></td>
+                            <td><span class="type-tag {{ 'tag-practical' if atype == 'Practical' else 'tag-theory' }}">{{ atype }}</span></td>
+                            <td>
+                                {% if avg is not none %}
+                                <span class="{{ 'score-high' if avg >= 60 else ('score-mid' if avg >= 40 else 'score-low') }}">{{ avg }}%</span>
+                                {% else %}
+                                <span class="score-none">—</span>
+                                {% endif %}
+                            </td>
                             <td style="color:#888;">{{ cnt }}</td>
                         </tr>
                         {% endfor %}
-                        {% for subj, avg, cnt in theory_class_avgs.get(grp, []) %}
-                        <tr>
-                            <td>{{ subj }}</td>
-                            <td><span class="type-tag tag-theory">Theory</span></td>
-                            <td><span class="{{ 'score-high' if avg >= 60 else ('score-mid' if avg >= 40 else 'score-low') }}">{{ avg }}%</span></td>
-                            <td style="color:#888;">{{ cnt }}</td>
-                        </tr>
-                        {% endfor %}
-                        {% if not class_avgs.get(grp) and not theory_class_avgs.get(grp) %}
+                        {% if not subject_avgs.get(grp) %}
                         <tr><td colspan="4" style="color:#888;">No results yet.</td></tr>
                         {% endif %}
                     </table>
@@ -321,52 +320,36 @@
     <div class="grid-3 mb section-gap">
 
         <div class="card">
-            <h3>🚨 At-Risk: Low Marks (&lt;50%)</h3>
-            {% if at_risk_marks %}
+            <h3>🚨 At-Risk Learners <a href="/risk_learners" style="font-size:0.85em; float:right; color:#005a9e; text-decoration:none;">View full list →</a></h3>
+            {% if at_risk_students %}
             <table>
-                <tr><th>Name</th><th>Group</th><th>Avg</th><th></th></tr>
-                {% for uname, name, grp, avg in at_risk_marks %}
+                <tr><th>Name</th><th>Group</th><th>Risk Score</th><th>Status</th><th>Reason</th></tr>
+                {% for student in at_risk_students %}
                 <tr>
-                    <td><a href="/learner_record/{{ uname }}">{{ name or uname }}</a></td>
-                    <td>{{ grp or '—' }}</td>
-                    <td><span class="score-low">{{ avg or '—' }}{% if avg %}%{% endif %}</span></td>
-                    <td><span class="badge badge-risk">At Risk</span></td>
+                    <td><a href="/learner_record/{{ student.username }}">{{ student.name }}</a></td>
+                    <td>{{ student.group }}</td>
+                    <td><span class="{{ 'score-low' if student.score <= 40 else ('score-mid' if student.score <= 70 else 'score-low') }}">{{ student.score }}%</span></td>
+                    <td><span class="badge badge-risk">{{ student.status }}</span></td>
+                    <td>{{ student.reason }}</td>
                 </tr>
                 {% endfor %}
             </table>
             {% else %}
-            <p style="color:#107C10; font-size:0.9em;">✔ No learners below 50%.</p>
+            <p style="color:#107C10; font-size:0.9em;">✔ No learners currently flagged as at risk.</p>
             {% endif %}
         </div>
 
         <div class="card">
-            <h3>🚨 At-Risk: Low Attendance (&lt;60%)</h3>
-            {% if at_risk_att %}
-            <table>
-                <tr><th>Name</th><th>Days Absent</th><th></th></tr>
-                {% for name, absent in at_risk_att %}
-                <tr>
-                    <td>{{ name }}</td>
-                    <td>{{ absent }}</td>
-                    <td><span class="badge badge-risk">At Risk</span></td>
-                </tr>
-                {% endfor %}
-            </table>
-            {% else %}
-            <p style="color:#107C10; font-size:0.9em;">✔ No attendance concerns.</p>
-            {% endif %}
-        </div>
-
-        <div class="card">
-            <h3>⚠️ Students Without Classes</h3>
+            <h3>⚠️ Students Without Classes or Teachers</h3>
             {% if students_without_classes %}
             <table>
-                <tr><th>Name</th><th>Username</th><th></th></tr>
+                <tr><th>Name</th><th>Username</th><th>Status</th><th></th></tr>
                 {% for uname, name in students_without_classes %}
                 <tr>
                     <td><a href="/learner_record/{{ uname }}">{{ name or uname }}</a></td>
                     <td style="color:#888; font-size:0.85em;">{{ uname }}</td>
-                    <td><span class="badge badge-warn">No Class</span></td>
+                    <td><span class="badge badge-warn">Unassigned</span></td>
+                    <td><a href="/edit_user/{{ uname }}?next=/teacher_dashboard" class="btn btn-sm">✏️ Assign</a></td>
                 </tr>
                 {% endfor %}
             </table>
@@ -437,7 +420,7 @@
             <tr><th>Group</th><th>Missing Submissions</th><th></th></tr>
             {% for grp, cnt in missing_by_group %}
             <tr>
-                <td><a href="/attendance?group={{ grp }}">{{ grp }}</a></td>
+                <td><a href="/view_as_student/{{ grp }}">{{ grp }}</a></td>
                 <td>{{ cnt }}</td>
                 <td><span class="badge {{ 'badge-risk' if cnt > 10 else 'badge-warn' }}">{{ cnt }} missing</span></td>
             </tr>
@@ -464,18 +447,43 @@ const dotsContainer = document.getElementById('slideDots');
 const slideLabel = document.getElementById('slideLabel');
 let currentSlide = 0;
 
+let autoSlideTimer = null;
+let manualPauseTimeout = null;
+const autoAdvanceDelay = 5000;
+const manualPauseDelay = 60000;
+
 if (slides.length) {
     // Build dots
     slides.forEach((_, i) => {
         const dot = document.createElement('div');
         dot.className = 'slide-dot' + (i === 0 ? ' active' : '');
-        dot.onclick = () => goToSlide(i);
+        dot.onclick = () => { pauseAutoAdvance(); goToSlide(i); };
         dotsContainer.appendChild(dot);
     });
     goToSlide(0);
+    startAutoAdvance();
+}
 
-    // Auto-advance every 5 seconds
-    setInterval(() => changeSlide(1), 5000);
+function startAutoAdvance() {
+    stopAutoAdvance();
+    autoSlideTimer = setInterval(() => {
+        goToSlide((currentSlide + 1) % slides.length);
+    }, autoAdvanceDelay);
+}
+
+function stopAutoAdvance() {
+    if (autoSlideTimer) {
+        clearInterval(autoSlideTimer);
+        autoSlideTimer = null;
+    }
+}
+
+function pauseAutoAdvance() {
+    stopAutoAdvance();
+    if (manualPauseTimeout) {
+        clearTimeout(manualPauseTimeout);
+    }
+    manualPauseTimeout = setTimeout(startAutoAdvance, manualPauseDelay);
 }
 
 function goToSlide(n) {
@@ -488,6 +496,7 @@ function goToSlide(n) {
 }
 
 function changeSlide(dir) {
+    pauseAutoAdvance();
     goToSlide(currentSlide + dir);
 }
 </script>

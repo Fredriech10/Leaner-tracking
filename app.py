@@ -787,6 +787,13 @@ def get_groups(username=None):
     return groups
 
 
+def add_learner_note_entry(cursor, username, note, created_by, flag=""):
+    cursor.execute("""
+        INSERT INTO learner_notes (username, note, flag, created_by, created_at)
+        VALUES (?, ?, ?, ?, ?)
+    """, (username, note, flag, created_by, datetime.now().isoformat()))
+
+
 def get_group_late_threshold(group, date):
     conn = get_db()
     cursor = conn.cursor()
@@ -812,6 +819,18 @@ def get_group_late_threshold(group, date):
 
     late_cutoff = min_dt + timedelta(minutes=6)
     return late_cutoff.strftime("%H:%M")
+
+
+def is_attendance_editable(date_str, role='teacher'):
+    """Check if attendance for a date can be edited (not locked after 10 days)."""
+    if role == 'admin':  # Admins can always edit
+        return True
+    try:
+        date_obj = datetime.strptime(date_str, '%Y-%m-%d').date()
+        days_diff = (datetime.now().date() - date_obj).days
+        return days_diff <= 10
+    except ValueError:
+        return False  # Invalid date, treat as locked
 
 
 def get_attendance_data(group, start_date=None, end_date=None, teacher_username=None):
@@ -2014,6 +2033,121 @@ def teacher_dashboard():
     # ─ Low attendance learners
     low_attendance = get_low_attendance_learners(10, None, username if role == 'teacher' else None)
 
+    # ─ Combined risk score for learners
+    cursor.execute(f"""
+        SELECT u.username, u.full_name, u.group_name,
+               ROUND(AVG(b.best_score), 1) as avg_score
+        FROM users u
+        LEFT JOIN (
+            SELECT username, subject, task, MAX(score) as best_score
+            FROM results GROUP BY username, subject, task
+        ) b ON u.username = b.username
+        WHERE u.role = 'student' {group_filter_clause}
+        GROUP BY u.username
+    """, group_filter_params)
+    students = cursor.fetchall()
+
+    risk_learners = []
+    for uname, full_name, grp, avg_score in students:
+        avg_score = avg_score or 0
+        present_days = 0
+        for day in days_21:
+            cursor.execute("SELECT 1 FROM login_history WHERE username = ? AND date = ?", (uname, day))
+            if cursor.fetchone():
+                present_days += 1
+                continue
+            cursor.execute("SELECT status FROM attendance_override WHERE username = ? AND date = ?", (uname, day))
+            override = cursor.fetchone()
+            if override and override[0] == 'present':
+                present_days += 1
+
+        attendance_pct = round((present_days / len(days_21)) * 100) if days_21 else 0
+
+        cursor.execute("""
+            SELECT COUNT(DISTINCT t.id)
+            FROM task_groups tg
+            JOIN tasks t ON t.id = tg.task_id
+            JOIN subjects s ON s.id = t.subject_id
+            WHERE tg.group_name = ?
+              AND t.assign_date <= ?
+              AND t.task_type = 'practical'
+        """, (grp, today))
+        total_practical = cursor.fetchone()[0] or 0
+
+        cursor.execute("""
+            SELECT COUNT(DISTINCT t.id)
+            FROM task_groups tg
+            JOIN tasks t ON t.id = tg.task_id
+            JOIN subjects s ON s.id = t.subject_id
+            WHERE tg.group_name = ?
+              AND t.assign_date <= ?
+              AND t.task_type = 'practical'
+              AND NOT EXISTS (
+                  SELECT 1 FROM results r
+                  WHERE r.username = ?
+                    AND r.subject = s.name
+                    AND r.task = t.name
+              )
+        """, (grp, today, uname))
+        missing_practical = cursor.fetchone()[0] or 0
+
+        cursor.execute("""
+            SELECT COUNT(DISTINCT tt.id)
+            FROM theory_tests tt
+            LEFT JOIN theory_test_groups ttg ON tt.id = ttg.test_id
+            WHERE (ttg.group_name = ? OR ttg.group_name IS NULL)
+              AND tt.assign_date <= ?
+        """, (grp, today))
+        total_theory = cursor.fetchone()[0] or 0
+
+        cursor.execute("""
+            SELECT COUNT(DISTINCT tt.id)
+            FROM theory_tests tt
+            LEFT JOIN theory_test_groups ttg ON tt.id = ttg.test_id
+            WHERE (ttg.group_name = ? OR ttg.group_name IS NULL)
+              AND tt.assign_date <= ?
+              AND NOT EXISTS (
+                  SELECT 1 FROM theory_submissions ts
+                  WHERE ts.username = ?
+                    AND ts.test_id = tt.id
+              )
+        """, (grp, today, uname))
+        missing_theory = cursor.fetchone()[0] or 0
+
+        total_assigned = total_practical + total_theory
+        missing_pct = round((missing_practical + missing_theory) / total_assigned * 100) if total_assigned else 0
+
+        risk_score = round((100 - attendance_pct) * 0.4 + (100 - avg_score) * 0.4 + missing_pct * 0.2)
+        if risk_score <= 40:
+            status = 'Safe'
+        elif risk_score <= 70:
+            status = 'At Risk'
+        else:
+            status = 'High Risk'
+
+        reasons = []
+        if attendance_pct < 60:
+            reasons.append(f"A {attendance_pct}% < 60%")
+        if avg_score < 40:
+            reasons.append(f"AVG {avg_score}% < 40%")
+        if missing_pct > 70:
+            reasons.append(f"Missing {missing_pct}% > 70%")
+        if not reasons:
+            reasons.append("multiple risk factors")
+
+        if status != 'Safe':
+            risk_learners.append({
+                'username': uname,
+                'name': full_name or uname,
+                'group': grp or '—',
+                'score': risk_score,
+                'status': status,
+                'reason': ' + '.join(reasons)
+            })
+
+    risk_learners.sort(key=lambda x: x['score'], reverse=True)
+    at_risk_students = risk_learners[:10]
+
     # ─ Recent activity (last 20)
     if role == 'teacher':
         cursor.execute("""
@@ -2060,6 +2194,30 @@ def teacher_dashboard():
     recent_submissions = cursor.fetchall()
 
     # ─ Class averages per subject per group (best score per student per task)
+    from collections import defaultdict
+
+    # Build practical subjects per group from assigned tasks so new subjects appear even without results.
+    practical_subjects = defaultdict(set)
+    if role == 'teacher' and groups:
+        placeholders = ",".join("?" for _ in groups)
+        cursor.execute(f"""
+            SELECT tg.group_name, s.name
+            FROM task_groups tg
+            JOIN tasks t ON t.id = tg.task_id
+            JOIN subjects s ON s.id = t.subject_id
+            WHERE t.task_type = 'practical' AND tg.group_name IN ({placeholders})
+        """, groups)
+    else:
+        cursor.execute("""
+            SELECT tg.group_name, s.name
+            FROM task_groups tg
+            JOIN tasks t ON t.id = tg.task_id
+            JOIN subjects s ON s.id = t.subject_id
+            WHERE t.task_type = 'practical'
+        """)
+    for group_name, subject in cursor.fetchall():
+        practical_subjects[group_name].add(subject)
+
     if role == 'teacher':
         cursor.execute(f"""
             SELECT u.group_name, b.subject, ROUND(AVG(b.best_score),1), COUNT(*)
@@ -2084,32 +2242,38 @@ def teacher_dashboard():
             GROUP BY u.group_name, b.subject
             ORDER BY u.group_name, b.subject
         """)
-    class_avgs_raw = cursor.fetchall()
+    practical_avgs_raw = cursor.fetchall()
 
-    from collections import defaultdict
-    class_avgs = defaultdict(list)
-    for group_name, subject, avg, cnt in class_avgs_raw:
-        class_avgs[group_name].append((subject, avg, cnt))
-    class_avgs = dict(class_avgs)
+    practical_avgs = { (g, subj): (avg, cnt) for g, subj, avg, cnt in practical_avgs_raw }
 
-    # ─ Theory averages per subject per group (best attempt per student per test)
+    subject_avgs = defaultdict(list)
+    for group_name, subjects in practical_subjects.items():
+        for subject in sorted(subjects):
+            avg, cnt = practical_avgs.get((group_name, subject), (None, 0))
+            subject_avgs[group_name].append((subject, avg, cnt, 'Practical'))
+
+    # Add any practical subjects that appear only in results but aren't assigned through tasks
+    for group_name, subject, avg, cnt in practical_avgs_raw:
+        if subject not in practical_subjects.get(group_name, set()):
+            subject_avgs[group_name].append((subject, avg, cnt, 'Practical'))
+
+    # ─ Combined theory averages per group
     if role == 'teacher':
         cursor.execute(f"""
-            SELECT u.group_name, tt.subject, ROUND(AVG(b.best_pct),1), COUNT(*)
+            SELECT u.group_name, ROUND(AVG(b.best_pct),1), COUNT(*)
             FROM (
                 SELECT username, test_id, MAX(percentage) as best_pct
                 FROM theory_submissions GROUP BY username, test_id
             ) b
             JOIN theory_tests tt ON b.test_id = tt.id
             JOIN users u ON u.username = b.username
-            WHERE u.group_name IS NOT NULL AND u.role = 'student'
-              AND tt.subject IS NOT NULL AND tt.subject != '' {group_filter_clause}
-            GROUP BY u.group_name, tt.subject
-            ORDER BY u.group_name, tt.subject
+            WHERE u.group_name IS NOT NULL AND u.role = 'student' {group_filter_clause}
+            GROUP BY u.group_name
+            ORDER BY u.group_name
         """, group_filter_params)
     else:
         cursor.execute("""
-            SELECT u.group_name, tt.subject, ROUND(AVG(b.best_pct),1), COUNT(*)
+            SELECT u.group_name, ROUND(AVG(b.best_pct),1), COUNT(*)
             FROM (
                 SELECT username, test_id, MAX(percentage) as best_pct
                 FROM theory_submissions GROUP BY username, test_id
@@ -2117,15 +2281,59 @@ def teacher_dashboard():
             JOIN theory_tests tt ON b.test_id = tt.id
             JOIN users u ON u.username = b.username
             WHERE u.group_name IS NOT NULL AND u.role = 'student'
-              AND tt.subject IS NOT NULL AND tt.subject != ''
-            GROUP BY u.group_name, tt.subject
-            ORDER BY u.group_name, tt.subject
+            GROUP BY u.group_name
+            ORDER BY u.group_name
         """)
     theory_avgs_raw = cursor.fetchall()
-    theory_class_avgs = defaultdict(list)
-    for group_name, subject, avg, cnt in theory_avgs_raw:
-        theory_class_avgs[group_name].append((subject, avg, cnt))
-    theory_class_avgs = dict(theory_class_avgs)
+
+    theory_avgs = {group_name: (avg, cnt) for group_name, avg, cnt in theory_avgs_raw}
+
+    # Add Theory row for groups with theory assignments or results
+    theory_groups = set()
+    if role == 'teacher' and groups:
+        placeholders = ",".join("?" for _ in groups)
+        cursor.execute(f"""
+            SELECT DISTINCT ttg.group_name
+            FROM theory_tests tt
+            JOIN theory_test_groups ttg ON tt.id = ttg.test_id
+            WHERE tt.assign_date IS NOT NULL AND ttg.group_name IN ({placeholders})
+        """, groups)
+        theory_groups.update(row[0] for row in cursor.fetchall() if row[0])
+
+        cursor.execute("""
+            SELECT 1
+            FROM theory_tests tt
+            LEFT JOIN theory_test_groups ttg ON tt.id = ttg.test_id
+            WHERE tt.assign_date IS NOT NULL AND ttg.group_name IS NULL
+            LIMIT 1
+        """)
+        if cursor.fetchone():
+            theory_groups.update(groups)
+    else:
+        cursor.execute("""
+            SELECT DISTINCT ttg.group_name
+            FROM theory_tests tt
+            JOIN theory_test_groups ttg ON tt.id = ttg.test_id
+            WHERE tt.assign_date IS NOT NULL AND ttg.group_name IS NOT NULL
+        """)
+        theory_groups.update(row[0] for row in cursor.fetchall() if row[0])
+
+        cursor.execute("""
+            SELECT 1
+            FROM theory_tests tt
+            LEFT JOIN theory_test_groups ttg ON tt.id = ttg.test_id
+            WHERE tt.assign_date IS NOT NULL AND ttg.group_name IS NULL
+            LIMIT 1
+        """)
+        if cursor.fetchone():
+            cursor.execute("SELECT DISTINCT group_name FROM users WHERE group_name IS NOT NULL")
+            theory_groups.update(row[0] for row in cursor.fetchall() if row[0])
+
+    for group_name in sorted(theory_groups):
+        avg, cnt = theory_avgs.get(group_name, (None, 0))
+        subject_avgs[group_name].append(("Theory", avg, cnt, 'Theory'))
+
+    subject_avgs = dict(subject_avgs)
 
     # ─ Recent theory submissions (best per student per test)
     if role == 'teacher':
@@ -2209,46 +2417,14 @@ def teacher_dashboard():
         """)
         bottom_performers = cursor.fetchall()
 
-    # ─ At-risk: low marks (<50%) using best score per task
-    if role == 'teacher':
-        cursor.execute(f"""
-            SELECT u.username, u.full_name, u.group_name,
-                   ROUND(AVG(b.best_score),1) as avg_score
-            FROM users u
-            LEFT JOIN (
-                SELECT username, subject, task, MAX(score) as best_score
-                FROM results GROUP BY username, subject, task
-            ) b ON u.username = b.username
-            WHERE u.role = 'student' {group_filter_clause}
-            GROUP BY u.username
-            HAVING avg_score < 50 OR avg_score IS NULL
-            ORDER BY avg_score ASC LIMIT 10
-        """, group_filter_params)
-    else:
-        cursor.execute("""
-            SELECT u.username, u.full_name, u.group_name,
-                   ROUND(AVG(b.best_score),1) as avg_score
-            FROM users u
-            LEFT JOIN (
-                SELECT username, subject, task, MAX(score) as best_score
-                FROM results GROUP BY username, subject, task
-            ) b ON u.username = b.username
-            WHERE u.role = 'student'
-            GROUP BY u.username
-            HAVING avg_score < 50 OR avg_score IS NULL
-            ORDER BY avg_score ASC LIMIT 10
-        """)
-    at_risk_marks = cursor.fetchall()
-
-    # At-risk by attendance (< 60% in last 21 days)
-    at_risk_att = [(name, absent) for name, absent in low_attendance
-                   if len(days_21) > 0 and (len(days_21) - absent) / len(days_21) < 0.6]
-
-    # ─ Students without assigned classes
+    # ─ Students without assigned classes or teachers
     cursor.execute("""
         SELECT username, full_name
         FROM users
-        WHERE role = 'student' AND (group_name IS NULL OR group_name = '')
+        WHERE role = 'student' AND (
+            (group_name IS NULL OR group_name = '') OR
+            (teacher_username IS NULL OR teacher_username = '')
+        )
         ORDER BY full_name, username
     """)
     students_without_classes = cursor.fetchall()
@@ -2303,12 +2479,10 @@ def teacher_dashboard():
         recent_activities=recent_activities,
         recent_submissions=recent_submissions,
         recent_theory_submissions=recent_theory_submissions,
-        class_avgs=class_avgs,
-        theory_class_avgs=theory_class_avgs,
+        subject_avgs=subject_avgs,
         top_performers=top_performers,
         bottom_performers=bottom_performers,
-        at_risk_marks=at_risk_marks,
-        at_risk_att=at_risk_att,
+        at_risk_students=at_risk_students,
         students_without_classes=students_without_classes,
         missing_by_group=missing_by_group,
         active_term=get_active_term_range(),
@@ -2452,6 +2626,22 @@ def attendance():
 
     selected_group = request.args.get("group")
     edit_mode = request.args.get("edit") == "1"   # ✅ key line
+    range_param = request.args.get("range", "week")
+
+    # Calculate date range
+    today = datetime.now().strftime("%Y-%m-%d")
+    if range_param == "week":
+        start_date = (datetime.now() - timedelta(days=7)).strftime("%Y-%m-%d")
+        end_date = today
+    elif range_param == "2weeks":
+        start_date = (datetime.now() - timedelta(days=14)).strftime("%Y-%m-%d")
+        end_date = today
+    elif range_param == "month":
+        start_date = (datetime.now() - timedelta(days=30)).strftime("%Y-%m-%d")
+        end_date = today
+    else:
+        start_date = (datetime.now() - timedelta(days=7)).strftime("%Y-%m-%d")
+        end_date = today
 
     groups = get_groups(username) if role == 'teacher' else get_groups()
 
@@ -2462,7 +2652,7 @@ def attendance():
     data = []
 
     if selected_group:
-        days, data = get_attendance_data(selected_group, teacher_username=username if role == 'teacher' else None)
+        days, data = get_attendance_data(selected_group, start_date, end_date, teacher_username=username if role == 'teacher' else None)
 
     # Get excluded dates
     conn = get_db()
@@ -2742,6 +2932,16 @@ def edit_user(username):
     conn = get_db()
     cursor = conn.cursor()
 
+    cursor.execute("SELECT username, full_name, group_name, teacher_username, role FROM users WHERE username = ?", (username,))
+    user = cursor.fetchone()
+    if not user:
+        conn.close()
+        return "User not found", 404
+
+    if get_user_role(admin_user) == "teacher" and (user[2] or user[3]):
+        conn.close()
+        return "Access denied", 403
+
     if request.method == "POST":
         full_name = request.form.get("full_name")
         group_name = request.form.get("group_name")
@@ -2764,8 +2964,6 @@ def edit_user(username):
             return redirect(next_url)
         return redirect(url_for("admin_panel"))
 
-    cursor.execute("SELECT username, full_name, group_name, teacher_username, role FROM users WHERE username = ?", (username,))
-    user = cursor.fetchone()
     all_teachers = get_teachers()
     current_role = get_user_role(admin_user)
     conn.close()
@@ -3276,6 +3474,161 @@ def export_attendance():
 
     return send_file(file_path, as_attachment=True)
 
+@app.route("/risk_learners")
+def risk_learners():
+    username = session.get("username")
+    if not username:
+        return redirect(url_for("login"))
+
+    role = get_user_role(username)
+    if role not in ["teacher", "admin"]:
+        return "Access denied", 403
+
+    selected_group = request.args.get("group")
+    groups = get_groups(username) if role == 'teacher' else get_groups()
+
+    # Teachers can only view their own groups
+    if role == 'teacher' and selected_group and selected_group not in groups:
+        selected_group = None
+
+    if not selected_group:
+        return render_template("Riks_learners.html", groups=groups, selected_group=None)
+
+    conn = get_db()
+    cursor = conn.cursor()
+
+    # Get students for this group
+    if role == 'teacher':
+        cursor.execute("""
+            SELECT username, full_name
+            FROM users
+            WHERE group_name = ? AND role = 'student' AND teacher_username = ?
+            ORDER BY full_name
+        """, (selected_group, username))
+    else:
+        cursor.execute("""
+            SELECT username, full_name
+            FROM users
+            WHERE group_name = ? AND role = 'student'
+            ORDER BY full_name
+        """, (selected_group,))
+    students_raw = cursor.fetchall()
+
+    days_21 = get_last_21_days()
+    today = datetime.now().strftime("%Y-%m-%d")
+    risk_students = []
+
+    for student_username, full_name in students_raw:
+        cursor.execute("""
+            SELECT ROUND(AVG(best_score), 1)
+            FROM (
+                SELECT subject, task, MAX(score) as best_score
+                FROM results
+                WHERE username = ?
+                GROUP BY subject, task
+            )
+        """, (student_username,))
+        avg_score = cursor.fetchone()[0] or 0
+
+        present_days = 0
+        for day in days_21:
+            cursor.execute("SELECT 1 FROM login_history WHERE username = ? AND date = ?", (student_username, day))
+            if cursor.fetchone():
+                present_days += 1
+                continue
+            cursor.execute("SELECT status FROM attendance_override WHERE username = ? AND date = ?", (student_username, day))
+            override = cursor.fetchone()
+            if override and override[0] == 'present':
+                present_days += 1
+
+        attendance_pct = round((present_days / len(days_21)) * 100) if days_21 else 0
+
+        cursor.execute("""
+            SELECT COUNT(DISTINCT t.id)
+            FROM task_groups tg
+            JOIN tasks t ON t.id = tg.task_id
+            WHERE tg.group_name = ?
+              AND t.assign_date <= ?
+        """, (selected_group, today))
+        total_assigned = cursor.fetchone()[0] or 0
+
+        cursor.execute("""
+            SELECT COUNT(DISTINCT t.id)
+            FROM task_groups tg
+            JOIN tasks t ON t.id = tg.task_id
+            JOIN subjects s ON s.id = t.subject_id
+            WHERE tg.group_name = ?
+              AND t.assign_date <= ?
+              AND NOT EXISTS (
+                  SELECT 1 FROM results r
+                  WHERE r.username = ?
+                    AND r.subject = s.name
+                    AND r.task = t.name
+              )
+        """, (selected_group, today, student_username))
+        missing_practical = cursor.fetchone()[0] or 0
+
+        cursor.execute("""
+            SELECT COUNT(DISTINCT tt.id)
+            FROM theory_tests tt
+            LEFT JOIN theory_test_groups ttg ON tt.id = ttg.test_id
+            WHERE (ttg.group_name = ? OR ttg.group_name IS NULL)
+              AND tt.assign_date <= ?
+        """, (selected_group, today))
+        total_theory = cursor.fetchone()[0] or 0
+
+        cursor.execute("""
+            SELECT COUNT(DISTINCT tt.id)
+            FROM theory_tests tt
+            LEFT JOIN theory_test_groups ttg ON tt.id = ttg.test_id
+            WHERE (ttg.group_name = ? OR ttg.group_name IS NULL)
+              AND tt.assign_date <= ?
+              AND NOT EXISTS (
+                  SELECT 1 FROM theory_submissions ts
+                  WHERE ts.username = ?
+                    AND ts.test_id = tt.id
+              )
+        """, (selected_group, today, student_username))
+        missing_theory = cursor.fetchone()[0] or 0
+
+        total_tasks = total_assigned + total_theory
+        missing_pct = round((missing_practical + missing_theory) / total_tasks * 100) if total_tasks else 0
+
+        risk_score = round((100 - attendance_pct) * 0.4 + (100 - avg_score) * 0.4 + missing_pct * 0.2)
+        if risk_score <= 40:
+            status = 'Safe'
+        elif risk_score <= 70:
+            status = 'At Risk'
+        else:
+            status = 'High Risk'
+
+        reasons = []
+        if attendance_pct < 60:
+            reasons.append(f"A {attendance_pct}%")
+        if avg_score < 40:
+            reasons.append(f"AVG{avg_score}%")
+        if missing_pct > 70:
+            reasons.append(f"Missing {missing_pct}%")
+        if not reasons:
+            reasons.append("balanced risk factors")
+
+        risk_students.append({
+            'username': student_username,
+            'name': full_name or student_username,
+            'group': selected_group,
+            'attendance_pct': attendance_pct,
+            'avg_score': avg_score,
+            'missing_pct': missing_pct,
+            'score': risk_score,
+            'status': status,
+            'reason': ' + '.join(reasons)
+        })
+
+    conn.close()
+    return render_template("Riks_learners.html", groups=groups, selected_group=selected_group,
+                           risk_students=risk_students)
+
+
 @app.route("/group_results")
 def group_results():
     username = session.get("username")
@@ -3523,6 +3876,10 @@ def reset_attendance():
         WHERE username IN ({placeholders}) AND date = ?
         """, (*users, date))
 
+        for user in users:
+            add_learner_note_entry(cursor, user,
+                f"Attendance reset for {date} in group {group}.", username)
+
     conn.commit()
     conn.close()
 
@@ -3555,12 +3912,19 @@ def mark_all_present():
     if users:
         # 🔹 Mark all as present (insert/update overrides)
         for user in users:
+            cursor.execute("SELECT status FROM attendance_override WHERE username = ? AND date = ?", (user, date))
+            previous = cursor.fetchone()
+
             cursor.execute("""
             INSERT INTO attendance_override (username, date, status)
             VALUES (?, ?, ?)
             ON CONFLICT(username, date)
             DO UPDATE SET status = excluded.status
             """, (user, date, "present"))
+
+            if previous is None or previous[0] != "present":
+                add_learner_note_entry(cursor, user,
+                    f"Marked present for {date} in group {group}.", username)
 
     conn.commit()
     log_activity(username, f"marked all in {group} present on {date}")
@@ -3615,12 +3979,19 @@ def save_attendance():
             status = "present"
 
         # 🔹 Insert override ONLY if needed
+        cursor.execute("SELECT status FROM attendance_override WHERE username = ? AND date = ?", (user, day))
+        previous = cursor.fetchone()
+
         cursor.execute("""
         INSERT INTO attendance_override (username, date, status)
         VALUES (?, ?, ?)
         ON CONFLICT(username, date)
         DO UPDATE SET status = excluded.status
         """, (user, day, status))
+
+        if previous is None or previous[0] != status:
+            add_learner_note_entry(cursor, user,
+                f"Attendance manually set to {status.upper()} for {day}.", username)
 
     conn.commit()
     log_activity(username, f"saved attendance for {group}")
@@ -3726,12 +4097,19 @@ def mark_all_absent():
     if users:
         # 🔹 Mark all as absent (insert/update overrides)
         for user in users:
+            cursor.execute("SELECT status FROM attendance_override WHERE username = ? AND date = ?", (user, date))
+            previous = cursor.fetchone()
+
             cursor.execute("""
             INSERT INTO attendance_override (username, date, status)
             VALUES (?, ?, ?)
             ON CONFLICT(username, date)
             DO UPDATE SET status = excluded.status
             """, (user, date, "absent"))
+
+            if previous is None or previous[0] != "absent":
+                add_learner_note_entry(cursor, user,
+                    f"Marked absent for {date} in group {group}.", username)
 
     conn.commit()
     log_activity(username, f"marked all in {group} absent on {date}")

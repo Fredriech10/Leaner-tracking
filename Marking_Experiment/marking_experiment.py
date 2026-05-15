@@ -9,6 +9,7 @@ from __future__ import annotations
 import json
 import zipfile
 from dataclasses import dataclass, field
+from enum import Enum
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Tuple
 
@@ -183,6 +184,13 @@ MARKING_SCHEMA: Dict[str, Any] = {
         "report": "layout/summary",
     },
 }
+
+class CheckOutcome(Enum):
+    PASS = "PASS"
+    FAIL = "FAIL"
+    ERROR = "ERROR"
+    SKIPPED = "SKIPPED"
+
 
 FEEDBACK_TEMPLATES: Dict[Tuple[str, str], Dict[str, str]] = {
     ("paragraph_formatting", "alignment"): {

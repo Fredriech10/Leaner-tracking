@@ -7,35 +7,9 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Tuple
 
-from .marking_experiment import CheckResult, MarkingSession, format_feedback
-
-
-@dataclass
-class CheckerResult:
-    passed: bool
-    actual: Any = None
-    details: Optional[Dict[str, Any]] = None
-
-    def __post_init__(self):
-        if self.details is None:
-            self.details = {}
-
-
-class BaseChecker:
-    program = ""
-
-    def can_handle(self, program: str) -> bool:
-        return program.lower() == self.program
-
-    def check(
-        self,
-        domain: str,
-        check_type: str,
-        target: Dict[str, Any],
-        expected: Any,
-        file_path: Path,
-    ) -> CheckerResult:
-        raise NotImplementedError("Checker must implement check()")
+from .checks import get_rule_checker
+from .checker_types import BaseChecker, CheckerResult
+from .marking_experiment import CheckResult, CheckOutcome, MarkingSession, format_feedback
 
 
 class ExcelChecker(BaseChecker):
@@ -134,13 +108,11 @@ class MarkingEngine:
             total_marks=int(task_definition.get("total_marks", 0)),
         )
 
-        checker = self._find_checker(program)
-        if checker is None:
-            raise ValueError(f"No checker available for program: {program}")
+        rule_checker = get_rule_checker(program)
 
         for question in task_definition.get("questions", []):
-            result = self._run_question(question, checker, file_path)
-            session.results.append(result)
+            results = self._run_question(question, rule_checker, file_path)
+            session.results.extend(results)
 
         return session
 
@@ -153,38 +125,58 @@ class MarkingEngine:
     def _run_question(
         self,
         question: Dict[str, Any],
-        checker: BaseChecker,
+        rule_checker: Any,
         file_path: Path,
-    ) -> CheckResult:
-        domain = str(question.get("domain", ""))
-        check_type = str(question.get("type", ""))
-        target = question.get("target", {})
-        expected = question.get("expected")
-        marks = int(question.get("marks", 1))
+    ) -> List[CheckResult]:
+        question_number = str(question.get("question_number", "0"))
         description = str(question.get("description", "No description provided."))
+        rules = question.get("rules") if isinstance(question.get("rules"), list) else [
+            {
+                "domain": question.get("domain", ""),
+                "type": question.get("type", ""),
+                "target": question.get("target", {}),
+                "expected": question.get("expected"),
+                "marks": int(question.get("marks", 1)),
+                "description": description,
+            }
+        ]
 
-        checker_result = checker.check(domain, check_type, target, expected, file_path)
+        results: List[CheckResult] = []
+        for idx, rule in enumerate(rules, start=1):
+            domain = str(rule.get("domain", ""))
+            check_type = str(rule.get("type", rule.get("property", "")))
+            target = rule.get("target", {}) or {}
+            expected = rule.get("expected")
+            marks = int(rule.get("marks", 1))
+            rule_description = str(rule.get("description", description))
+            rule_number = question_number if len(rules) == 1 else f"{question_number}.{idx}"
 
-        details = checker_result.details or {}
-        feedback_context = {
-            "expected": expected,
-            "actual": checker_result.actual,
-            "expected_name": expected if isinstance(expected, str) else str(expected),
-            "actual_name": checker_result.actual if isinstance(checker_result.actual, str) else str(checker_result.actual),
-            **details,
-        }
+            checker_result = rule_checker(file_path, rule)
+            details = checker_result.details or {}
+            feedback_context = {
+                "expected": expected,
+                "actual": checker_result.actual,
+                "expected_name": expected if isinstance(expected, str) else str(expected),
+                "actual_name": checker_result.actual if isinstance(checker_result.actual, str) else str(checker_result.actual),
+                **details,
+            }
+            feedback = format_feedback(domain, check_type, checker_result.passed, feedback_context)
+            outcome = CheckOutcome.PASS if checker_result.passed else CheckOutcome.FAIL
+            results.append(
+                CheckResult(
+                    question_number=rule_number,
+                    description=rule_description,
+                    marks=marks,
+                    passed=checker_result.passed,
+                    outcome=outcome,
+                    feedback=feedback,
+                    actual=checker_result.actual,
+                    expected=expected,
+                    details=details,
+                )
+            )
 
-        feedback = format_feedback(domain, check_type, checker_result.passed, feedback_context)
-        return CheckResult(
-            question_number=question.get("question_number", "0"),
-            description=description,
-            marks=marks,
-            passed=checker_result.passed,
-            feedback=feedback,
-            actual=checker_result.actual,
-            expected=expected,
-            details=checker_result.details or {},
-        )
+        return results
 
 
 def build_example_task() -> Dict[str, Any]:

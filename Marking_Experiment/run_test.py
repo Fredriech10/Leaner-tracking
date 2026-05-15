@@ -12,6 +12,7 @@ sys.path.insert(0, str(ROOT))
 
 from Marking_Experiment.marksheet_parser import MarksheetParser
 from Marking_Experiment.engine import MarkingEngine
+from Marking_Experiment.task_checker import CheckOutcome, run_task_checks, summarize_check_results
 
 QP_PATH    = ROOT / "Bulletpont questions.docx"
 MEMO_PATH  = ROOT / "Bulletpont Memo.docx"
@@ -104,13 +105,14 @@ def main() -> None:
         print(f"        target={q['target']}")
         print(f"        expected={str(q['expected']).encode('ascii', errors='replace').decode('ascii')}")
 
-    task_definition = {
-        "task_name": "CAT Test 1 Auto-Marked",
-        "program": "word",
-        "file": SUBMISSION.name,
-        "total_marks": sum(int(q.get("marks", 1)) for q in result.questions),
-        "questions": result.questions,
-    }
+    task_definition = parser.build_task_definition(
+        qp_text,
+        memo_text,
+        program="word",
+        filename=str(QP_PATH),
+        task_name="CAT Test 1 Auto-Marked",
+        submission_filename=SUBMISSION.name,
+    )
 
     # Save the generated task JSON next to this script for inspection
     task_json_path = Path(__file__).parent / "generated_task.json"
@@ -132,6 +134,13 @@ def main() -> None:
             for k, v in r.details.items():
                 if k != "type":
                     print(f"         {k}: {v}")
+
+    print("\n--- JSON task checker results ---")
+    statuses = run_task_checks(task_definition, SUBMISSION)
+    summary = summarize_check_results(statuses)
+    print(f"Outcome summary: {summary}")
+    for status in statuses:
+        print(f"  [{status.outcome.value}] Q{status.question_number} ({status.marks}mk) — {status.description}")
 
     print("\n" + "=" * 60)
     print(f"FINAL SCORE: {session.score} / {session.total_marks}")

@@ -16,7 +16,7 @@ from .marking_experiment import MARKING_SCHEMA
 @dataclass
 class ParseResult:
     questions: List[Dict[str, Any]]
-    warnings: List[str] = None
+    warnings: Optional[List[str]] = None
 
     def __post_init__(self):
         if self.warnings is None:
@@ -24,7 +24,7 @@ class ParseResult:
 
 
 class MarksheetParser:
-    def __init__(self, model: str = None, backend: str = "openai") -> None:
+    def __init__(self, model: Optional[str] = None, backend: str = "openai") -> None:
         self.backend = backend.lower()
         if model is None:
             self.model = "gpt-4o-mini" if self.backend == "openai" else "phi3:instruct"
@@ -74,6 +74,51 @@ class MarksheetParser:
                 f"LLM parsing failed and heuristic fallback found no questions. LLM error: {llm_error}"
             )
 
+    def build_task_definition(
+        self,
+        question_paper_text: str,
+        marksheet_text: str,
+        program: str = "word",
+        filename: Optional[str] = None,
+        task_name: Optional[str] = None,
+        submission_filename: Optional[str] = None,
+    ) -> Dict[str, Any]:
+        result = self.parse(question_paper_text, marksheet_text, program, filename)
+        if task_name is None:
+            task_name = "Generated Marking Task"
+
+        questions: List[Dict[str, Any]] = []
+        for q in result.questions:
+            if isinstance(q.get("rules"), list):
+                questions.append(q)
+                continue
+            questions.append(
+                {
+                    "question_number": q.get("question_number", ""),
+                    "description": q.get("description", ""),
+                    "target": q.get("target", {}),
+                    "rules": [
+                        {
+                            "domain": q.get("domain", ""),
+                            "type": q.get("type", ""),
+                            "target": q.get("target", {}),
+                            "expected": q.get("expected"),
+                            "marks": int(q.get("marks", 1)),
+                            "description": q.get("description", ""),
+                        }
+                    ],
+                }
+            )
+
+        total_marks = sum(int(rule.get("marks", 1)) for question in questions for rule in question.get("rules", []))
+        return {
+            "task_name": task_name,
+            "program": program,
+            "file": submission_filename or "",
+            "total_marks": total_marks,
+            "questions": questions,
+        }
+
     def _parse_memo_tables(self, marksheet_text: str, program: str) -> List[Dict[str, Any]]:
         if program.lower() != "word":
             return []
@@ -106,14 +151,14 @@ class MarksheetParser:
             WD_PARAGRAPH_ALIGNMENT.JUSTIFY: "justify",
         }
 
-        document = Document(file_path)
+        document = Document(str(file_path))
         parts: List[str] = []
         for idx, paragraph in enumerate(document.paragraphs):
             text = paragraph.text.strip()
             if not text:
                 continue
             hints = []
-            align = align_map.get(paragraph.alignment)
+            align = align_map.get(paragraph.alignment) if paragraph.alignment is not None else None
             if align:
                 hints.append(f"align={align}")
             fmt = paragraph.paragraph_format
@@ -710,7 +755,6 @@ class MarksheetParser:
                     url,
                     json=payload,
                     timeout=120,
-                    proxies={"http": None, "https": None},
                 )
                 if response.status_code == 404:
                     last_error = RuntimeError(

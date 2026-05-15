@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import re
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Tuple
 
@@ -73,6 +74,24 @@ class WordChecker(BaseChecker):
         return theme_color, theme_tint, theme_shade, value
 
     def _match_color(self, expected: Any, actual_hex: Optional[str], actual_theme_name: Optional[str]) -> bool:
+        named_colors = {
+            "black": {"000000"},
+            "blue": {"0000FF", "0070C0", "4472C4", "1F497D"},
+            "green": {"008000", "00B050", "70AD47"},
+            "red": {"FF0000", "C00000"},
+            "white": {"FFFFFF"},
+            "yellow": {"FFFF00", "FFC000"},
+        }
+        if isinstance(expected, str) and actual_hex:
+            allowed = named_colors.get(expected.strip().lower())
+            if allowed and actual_hex.upper() in allowed:
+                return True
+            theme_aliases = {
+                "black": {"tx1", "dk1"},
+                "white": {"bg1", "lt1"},
+            }
+            if actual_hex.lower() in theme_aliases.get(expected.strip().lower(), set()):
+                return True
         expected_value = normalize_hex_color(str(expected)) if isinstance(expected, str) else None
         if expected_value and actual_hex:
             if expected_value == actual_hex:
@@ -195,6 +214,46 @@ class WordChecker(BaseChecker):
                 if not text or text.lower() in run.text.lower():
                     return run
         return None
+
+    def _document_text(self, document: Document, file_path: Path) -> str:
+        parts = [p.text for p in document.paragraphs if p.text]
+        for section in document.sections:
+            for part in (
+                section.header,
+                section.even_page_header,
+                section.first_page_header,
+                section.footer,
+                section.even_page_footer,
+                section.first_page_footer,
+            ):
+                try:
+                    parts.extend(p.text for p in part.paragraphs if p.text)
+                except Exception:
+                    continue
+
+        for part_name in (
+            "word/document.xml",
+            "word/header1.xml",
+            "word/header2.xml",
+            "word/header3.xml",
+            "word/footer1.xml",
+            "word/footer2.xml",
+            "word/footer3.xml",
+        ):
+            xml = _read_docx_part(file_path, part_name)
+            if not xml:
+                continue
+            try:
+                root = etree.fromstring(xml.encode("utf-8"))
+            except Exception:
+                continue
+            for node in root.iter(f"{{{NAMESPACES['w']}}}t"):
+                if node.text:
+                    parts.append(node.text)
+            for node in root.iter(f"{{{NAMESPACES['w']}}}instrText"):
+                if node.text:
+                    parts.append(node.text)
+        return "\n".join(parts)
 
     def _paragraph_num_pr(self, paragraph):
         pPr = paragraph._p.pPr
@@ -575,7 +634,7 @@ class WordChecker(BaseChecker):
 
         elif check_type == "contains_text":
             text_to_find = expected.get("text", "") if isinstance(expected, dict) else str(expected)
-            found = any(text_to_find.lower() in p.text.lower() for p in document.paragraphs)
+            found = text_to_find.lower() in self._document_text(document, file_path).lower()
             passed = found
             actual = text_to_find if found else None
 
@@ -604,7 +663,9 @@ class WordChecker(BaseChecker):
         paragraphs = self._find_paragraphs(document, target)
         if not paragraphs:
             return CheckerResult(passed=False, details={"reason": "Font target not found."})
-        run = self._find_run(paragraphs)
+        locator, target_value = self._target_locator(target)
+        run_text = str(target_value) if locator == "contains_text" and target_value is not None else None
+        run = self._find_run(paragraphs, run_text)
         if run is None:
             return CheckerResult(passed=False, details={"reason": "No run found for font target."})
 
@@ -893,30 +954,14 @@ class WordChecker(BaseChecker):
             return CheckerResult(passed=passed, actual=passed, details={"type": check_type})
 
         if check_type == "contains_date":
-            import re
-
             date_pattern = re.compile(
                 r"(\b\d{1,2}[/-]\d{1,2}[/-]\d{2,4}\b)|"
+                r"(\b\d{4}[/-]\d{1,2}[/-]\d{1,2}\b)|"
                 r"(\b(?:Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Sept|Oct|Nov|Dec)[a-z]*\s+\d{1,2},\s*\d{4}\b)|"
                 r"(\b\d{1,2}\s+(?:January|February|March|April|May|June|July|August|September|October|November|December)\s+\d{4}\b)",
                 re.IGNORECASE,
             )
-            found = False
-            for paragraph in document.paragraphs:
-                if date_pattern.search(paragraph.text):
-                    found = True
-                    break
-            if not found:
-                section = document.sections[0]
-                for header_part in (section.header, section.even_page_header, section.first_page_header):
-                    if header_part is None:
-                        continue
-                    for paragraph in header_part.paragraphs:
-                        if date_pattern.search(paragraph.text):
-                            found = True
-                            break
-                    if found:
-                        break
+            found = bool(date_pattern.search(self._document_text(document, file_path)))
             return CheckerResult(passed=found, actual={"contains_date": found}, details={"type": check_type})
 
         return CheckerResult(passed=False, details={"reason": "Unsupported document check."})
@@ -952,29 +997,32 @@ class WordChecker(BaseChecker):
         expected: Any,
         file_path: Path,
     ) -> CheckerResult:
-        """Handle object-domain checks (image, smartart). Returns graceful not-implemented for unsupported types."""
+        """Handle object-domain checks (images and SmartArt) using raw Word XML."""
         WNS = "http://schemas.openxmlformats.org/wordprocessingml/2006/main"
         NS_A = "http://schemas.openxmlformats.org/drawingml/2006/main"
         NS_PIC = "http://schemas.openxmlformats.org/drawingml/2006/picture"
         NS_DGM = "http://schemas.openxmlformats.org/drawingml/2006/diagram"
+        ns = {"a": NS_A, "pic": NS_PIC, "wp": "http://schemas.openxmlformats.org/drawingml/2006/wordprocessingDrawing"}
 
         doc_xml = _read_docx_part(file_path, "word/document.xml")
         if not doc_xml:
             return CheckerResult(passed=False, details={"reason": "Document XML not readable."})
         root = etree.fromstring(doc_xml.encode("utf-8"))
+        pictures = root.xpath(".//pic:pic", namespaces=ns)
+
+        def picture_extent_cm(pic) -> Optional[float]:
+            extents = pic.xpath("ancestor::*[local-name()='inline' or local-name()='anchor'][1]/*[local-name()='extent'][1]")
+            if not extents:
+                return None
+            cx = extents[0].get("cx")
+            return round(int(cx) / 360000.0, 2) if cx else None
 
         if check_type == "image_width":
             exp_cm = float(expected.get("width_cm", 5.0)) if isinstance(expected, dict) else 5.0
-            # Look for cx attribute on <wp:extent> (in EMU; 1 cm = 360000 EMU)
-            NS_WP = "http://schemas.openxmlformats.org/drawingml/2006/wordprocessingDrawing"
-            extents = root.findall(f".//{{{NS_WP}}}extent")
-            for ext in extents:
-                cx = ext.get("cx")
-                if cx:
-                    actual_cm = int(cx) / 360000.0
-                    passed = abs(actual_cm - exp_cm) < 0.1
-                    return CheckerResult(passed=passed, actual=round(actual_cm, 2), details={"type": check_type})
-            return CheckerResult(passed=False, details={"reason": "No image extent found."})
+            widths = [width for width in (picture_extent_cm(pic) for pic in pictures) if width is not None]
+            closest = min(widths, key=lambda width: abs(width - exp_cm)) if widths else None
+            passed = any(abs(width - exp_cm) < 0.3 for width in widths)
+            return CheckerResult(passed=passed, actual=closest, details={"type": check_type, "widths_cm": widths})
 
         if check_type == "smartart":
             # Check for presence of a diagram (SmartArt) in the document
@@ -993,41 +1041,102 @@ class WordChecker(BaseChecker):
             return CheckerResult(passed=passed, actual={"found": has_smartart}, details={"type": check_type})
 
         if check_type == "smartart_text":
-            # Check diagram data XML files for text content
-            rels_xml = _read_docx_part(file_path, "word/_rels/document.xml.rels")
             contains = expected.get("contains", "") if isinstance(expected, dict) else str(expected)
-            found_text = False
-            if rels_xml:
-                import re as _re
-                diagram_targets = _re.findall(r'Target="([^"]*diagram[^"]*data[^"]*\.xml)"', rels_xml, _re.IGNORECASE)
-                for dt in diagram_targets:
-                    part = dt if dt.startswith("word/") else f"word/{dt.lstrip('../')}"
-                    dxml = _read_docx_part(file_path, part)
-                    if dxml and contains.lower() in dxml.lower():
-                        found_text = True
-                        break
-            return CheckerResult(passed=found_text, actual={"searched_for": contains}, details={"type": check_type})
+            expected_terms = [term.strip().lower() for term in re.split(r"[,;]", contains) if term.strip()]
+            diagram_text = self._diagram_text(file_path)
+            lower_text = diagram_text.lower()
+            found_text = all(term in lower_text for term in expected_terms) if expected_terms else bool(diagram_text)
+            return CheckerResult(
+                passed=found_text,
+                actual={"text": diagram_text, "searched_for": contains},
+                details={"type": check_type},
+            )
 
         if check_type == "smartart_color":
-            # Check for colorful scheme in diagram style XML
-            rels_xml = _read_docx_part(file_path, "word/_rels/document.xml.rels")
-            found_colorful = False
-            if rels_xml:
-                import re as _re
-                style_targets = _re.findall(r'Target="([^"]*diagram[^"]*style[^"]*\.xml)"', rels_xml, _re.IGNORECASE)
-                for st in style_targets:
-                    part = st if st.startswith("word/") else f"word/{st.lstrip('../')}"
-                    sxml = _read_docx_part(file_path, part)
-                    if sxml and "colorful" in sxml.lower():
-                        found_colorful = True
-                        break
+            scheme = expected.get("scheme", "colorful") if isinstance(expected, dict) else str(expected)
+            found_colorful = self._diagram_color_scheme(file_path).lower() == str(scheme).lower()
             return CheckerResult(passed=found_colorful, actual={"colorful": found_colorful}, details={"type": check_type})
 
-        if check_type in ("image_border", "image_crop"):
-            # These require deep image XML inspection — return graceful not-implemented
-            return CheckerResult(passed=False, details={"reason": f"{check_type} check not yet implemented.", "type": check_type})
+        if check_type == "image_crop":
+            expected_shape = expected.get("shape", "oval") if isinstance(expected, dict) else str(expected)
+            expected_prst = {"oval": "ellipse", "circle": "ellipse"}.get(str(expected_shape).lower(), str(expected_shape).lower())
+            shapes = [
+                geom.get("prst", "").lower()
+                for pic in pictures
+                for geom in pic.xpath(".//pic:spPr/a:prstGeom", namespaces=ns)
+            ]
+            passed = expected_prst in shapes
+            return CheckerResult(passed=passed, actual={"shapes": shapes}, details={"type": check_type})
+
+        if check_type == "image_border":
+            expected_width = float(expected.get("width_pt", 0)) if isinstance(expected, dict) and expected.get("width_pt") is not None else None
+            expected_color = expected.get("color") if isinstance(expected, dict) else None
+            borders = []
+            for pic in pictures:
+                for line in pic.xpath(".//pic:spPr/a:ln", namespaces=ns):
+                    width_pt = round(int(line.get("w", "0")) / 12700.0, 2)
+                    color = None
+                    srgb = line.find(".//a:srgbClr", namespaces=ns)
+                    scheme = line.find(".//a:schemeClr", namespaces=ns)
+                    if srgb is not None:
+                        color = srgb.get("val", "").upper()
+                    elif scheme is not None:
+                        color = scheme.get("val", "")
+                    borders.append({"width_pt": width_pt, "color": color})
+            passed = bool(borders)
+            if expected_width is not None:
+                passed = passed and any(abs(border["width_pt"] - expected_width) < 0.2 for border in borders)
+            if expected_color:
+                passed = passed and any(self._match_color(expected_color, border["color"], border["color"]) for border in borders)
+            return CheckerResult(passed=passed, actual={"borders": borders}, details={"type": check_type})
 
         return CheckerResult(passed=False, details={"reason": f"Unsupported object check type '{check_type}'."})
+
+    def _relationship_targets(self, file_path: Path, type_fragment: str) -> List[str]:
+        rels_xml = _read_docx_part(file_path, "word/_rels/document.xml.rels")
+        if not rels_xml:
+            return []
+        try:
+            root = etree.fromstring(rels_xml.encode("utf-8"))
+        except Exception:
+            return []
+        targets = []
+        for rel in root:
+            rel_type = rel.get("Type", "")
+            target = rel.get("Target", "")
+            if type_fragment.lower() in rel_type.lower() and target:
+                targets.append(target if target.startswith("word/") else f"word/{target.lstrip('../')}")
+        return targets
+
+    def _diagram_text(self, file_path: Path) -> str:
+        parts = []
+        for part in self._relationship_targets(file_path, "diagramData"):
+            xml = _read_docx_part(file_path, part)
+            if not xml:
+                continue
+            try:
+                root = etree.fromstring(xml.encode("utf-8"))
+            except Exception:
+                continue
+            for node in root.iter("{http://schemas.openxmlformats.org/drawingml/2006/main}t"):
+                if node.text:
+                    parts.append(node.text)
+        return " ".join(parts)
+
+    def _diagram_color_scheme(self, file_path: Path) -> str:
+        for part in self._relationship_targets(file_path, "diagramColors"):
+            xml = _read_docx_part(file_path, part)
+            if not xml:
+                continue
+            try:
+                root = etree.fromstring(xml.encode("utf-8"))
+            except Exception:
+                continue
+            for node in root.iter("{http://schemas.openxmlformats.org/drawingml/2006/diagram}cat"):
+                scheme = node.get("type")
+                if scheme:
+                    return scheme
+        return ""
 
     def check(
         self,

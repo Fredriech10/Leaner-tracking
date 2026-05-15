@@ -12,7 +12,7 @@ from lxml import etree
 from zipfile import ZipFile
 
 from ..checker_types import CheckerResult
-from marking_experiment import resolve_theme_color_name
+from ..marking_experiment import resolve_theme_color_name
 
 NAMESPACES = {"w": "http://schemas.openxmlformats.org/wordprocessingml/2006/main"}
 

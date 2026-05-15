@@ -3,15 +3,10 @@
 from __future__ import annotations
 
 from pathlib import Path
+import re
 from typing import Any, Callable, Dict
 
-from .font import check_font_rule
-from .paragraph_formatting import check_paragraph_formatting_rule
-from .table import check_table_rule
-from .list import check_list_rule
-from .document import check_document_rule
-from .object import check_object_rule
-from .advanced import check_advanced_rule
+from ..word_checker import WordChecker
 
 
 def _normalize_rule(rule: Dict[str, Any]) -> Dict[str, Any]:
@@ -19,32 +14,37 @@ def _normalize_rule(rule: Dict[str, Any]) -> Dict[str, Any]:
         normalized = dict(rule)
         normalized["type"] = normalized["property"]
         return normalized
+    description = str(rule.get("description", "")).lower()
+    if rule.get("domain") == "font" and rule.get("type") == "bold" and "bold" in description:
+        color_match = re.search(r"\b(red|blue|green|black|yellow)\b", description)
+        text_match = re.search(r'"([^"]+)"', str(rule.get("description", "")))
+        if color_match:
+            normalized = dict(rule)
+            normalized["type"] = "bold_and_color"
+            normalized["target"] = {"locator": "contains_text", "value": text_match.group(1)} if text_match else normalized.get("target", {})
+            normalized["expected"] = {"bold": True, "color": color_match.group(1)}
+            return normalized
+    if rule.get("domain") == "document" and rule.get("type") == "page_border" and "border" in description and "page" not in description:
+        normalized = dict(rule)
+        normalized["domain"] = "object"
+        normalized["type"] = "image_border"
+        width_match = re.search(r"(\d+(?:\.\d+)?)\s*pt", description)
+        color_match = re.search(r"\b(red|blue|green|black|yellow|white)\b", description)
+        normalized["expected"] = {
+            "width_pt": float(width_match.group(1)) if width_match else 1.0,
+            "color": color_match.group(1) if color_match else None,
+        }
+        return normalized
     return rule
 
 
 def check_word_rule(file_path: Path, rule: Dict[str, Any]):
     rule = _normalize_rule(rule)
     domain = str(rule.get("domain", ""))
-
-    # Dispatch to domain-specific checkers
-    if domain == "font":
-        return check_font_rule(rule, file_path)
-    elif domain == "paragraph_formatting":
-        return check_paragraph_formatting_rule(rule, file_path)
-    elif domain == "table":
-        return check_table_rule(rule, file_path)
-    elif domain == "list":
-        return check_list_rule(rule, file_path)
-    elif domain == "document":
-        return check_document_rule(rule, file_path)
-    elif domain == "object":
-        return check_object_rule(rule, file_path)
-    elif domain == "advanced":
-        return check_advanced_rule(rule, file_path)
-    else:
-        # Fallback for unknown domains
-        from ..checker_types import CheckerResult
-        return CheckerResult(passed=False, details={"reason": f"Unknown domain: {domain}"})
+    check_type = str(rule.get("type", ""))
+    target = rule.get("target", {}) or {}
+    expected = rule.get("expected")
+    return WordChecker().check(domain, check_type, target, expected, file_path)
 
 
 def get_word_rule_checker(program: str) -> Callable[[Path, Dict[str, Any]], Any]:

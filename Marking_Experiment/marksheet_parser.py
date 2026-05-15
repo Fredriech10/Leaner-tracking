@@ -364,7 +364,7 @@ class MarksheetParser:
         elif "first page only" in desc_lower:
             check_type = "page_border"
             expected = {"style": "double", "first_page_only": True}
-        elif "page border" in desc_lower or "double-line" in desc_lower or "double line" in desc_lower or "border applied" in desc_lower or ("style" in desc_lower and "double" in desc_lower):
+        elif "page border" in desc_lower or "double-line page" in desc_lower or "double line page" in desc_lower or ("style" in desc_lower and "double" in desc_lower and "page" in desc_lower):
             check_type = "page_border"
             style_match = re.search(r"double|single|thick|dashed|dotted", desc_lower)
             color_match = re.search(r"colour[:\s]+(blue|red|green|black|yellow)|color[:\s]+(blue|red|green|black|yellow)", desc_lower)
@@ -501,7 +501,7 @@ class MarksheetParser:
             target = {"locator": "after_heading", "value": heading_match.group(1).strip()} if heading_match else {"locator": "document"}
             val_match = re.search(r"(\d+(?:\.\d+)?)\s*cm", desc_lower)
             expected = float(val_match.group(1)) if val_match else 0.5
-        elif "border" in desc_lower and "paragraph" not in desc_lower:
+        elif "border" in desc_lower and ("paragraph" in desc_lower or "under" in desc_lower or "after" in desc_lower or "below" in desc_lower):
             domain = "paragraph_formatting"
             check_type = "border"
             heading_match = re.search(r'(?:under|after|below|located under|paragraph under)\s+(?:the\s+)?(?:heading\s+)?["\']?([A-Za-z0-9 ]+)["\']?', desc)
@@ -535,7 +535,13 @@ class MarksheetParser:
             domain = "font"
             heading_match = re.search(r'(?:under|after|below|in|of)\s+["\']?([A-Za-z0-9 ]+)["\']?', desc)
             target = {"locator": "after_heading", "value": heading_match.group(1).strip()} if heading_match else {"locator": "paragraph_index", "value": 0}
-            if "font size" in desc_lower:
+            if "bold" in desc_lower and any(color in desc_lower for color in ("red", "blue", "green", "black", "yellow")):
+                check_type = "bold_and_color"
+                text_match = re.search(r'"([^"]+)"', desc)
+                target = {"locator": "contains_text", "value": text_match.group(1)} if text_match else {"locator": "document"}
+                color_match = re.search(r"(red|blue|green|black|yellow)", desc_lower)
+                expected = {"bold": True, "color": color_match.group(1) if color_match else "red"}
+            elif "font size" in desc_lower:
                 check_type = "size"
                 val_match = re.search(r"(\d+(?:\.\d+)?)\s*pt", desc_lower)
                 expected = float(val_match.group(1)) if val_match else 12.0

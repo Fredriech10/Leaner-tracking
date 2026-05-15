@@ -7,7 +7,7 @@ from typing import Any, Dict
 
 from docx import Document
 
-from checker_types import CheckerResult
+from ..checker_types import CheckerResult
 from .word_utils import _find_tables, _find_paragraphs
 
 

@@ -59,7 +59,7 @@
     row17: ['', '2 pt black border applied', '1', '']
     row18: ['1.5.1', 'Custom Bullets', '', '']
     row19: ['', 'Bullet character from Wingdings used', '1', '']
-    row20: ['', 'Correct symbol (Code 118 - checkmark) selected', '2', '']
+    row20: ['', 'Correct symbol (Code 252 - checkmark) selected', '2', '']
     row21: ['1.6.1', 'SmartArt: Type', '', '']
     row22: ['', 'Basic Process SmartArt inserted', '1', '']
     row23: ['1.6.2', 'SmartArt: Text', '', '']

@@ -7,7 +7,7 @@ from typing import Any, Dict
 
 from docx import Document
 
-from checker_types import CheckerResult
+from ..checker_types import CheckerResult
 
 
 def check_document_rule(rule: Dict[str, Any], file_path: Path) -> CheckerResult:

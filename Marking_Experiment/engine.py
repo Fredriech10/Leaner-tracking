@@ -168,7 +168,7 @@ class MarkingEngine:
                     description=rule_description,
                     marks=marks,
                     passed=checker_result.passed,
-                    outcome=outcome,
+
                     feedback=feedback,
                     actual=checker_result.actual,
                     expected=expected,

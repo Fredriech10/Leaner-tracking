@@ -7,195 +7,319 @@
     {
       "question_number": "1.1.1.1",
       "description": "Title: HERITAGE TOUR 2025 correctly entered",
-      "domain": "paragraph_formatting",
-      "type": "contains_text",
       "target": {
         "locator": "document"
       },
-      "expected": {
-        "text": "HERITAGE TOUR 2025"
-      },
-      "marks": 1
+      "rules": [
+        {
+          "domain": "paragraph_formatting",
+          "type": "contains_text",
+          "target": {
+            "locator": "document"
+          },
+          "expected": {
+            "text": "HERITAGE TOUR 2025"
+          },
+          "marks": 1,
+          "description": "Title: HERITAGE TOUR 2025 correctly entered"
+        }
+      ]
     },
     {
       "question_number": "1.1.1.2",
       "description": "Subtitle: EXPLORING SOUTH AFRICAN CULTURE entered",
-      "domain": "paragraph_formatting",
-      "type": "contains_text",
       "target": {
         "locator": "document"
       },
-      "expected": {
-        "text": "EXPLORING SOUTH AFRICAN CULTURE"
-      },
-      "marks": 1
+      "rules": [
+        {
+          "domain": "paragraph_formatting",
+          "type": "contains_text",
+          "target": {
+            "locator": "document"
+          },
+          "expected": {
+            "text": "EXPLORING SOUTH AFRICAN CULTURE"
+          },
+          "marks": 1,
+          "description": "Subtitle: EXPLORING SOUTH AFRICAN CULTURE entered"
+        }
+      ]
     },
     {
       "question_number": "1.1.1.3",
       "description": "Current date inserted via content control",
-      "domain": "document",
-      "type": "contains_date",
       "target": {
         "locator": "document"
       },
-      "expected": {
-        "format": "date"
-      },
-      "marks": 1
+      "rules": [
+        {
+          "domain": "document",
+          "type": "contains_date",
+          "target": {
+            "locator": "document"
+          },
+          "expected": {
+            "format": "date"
+          },
+          "marks": 1,
+          "description": "Current date inserted via content control"
+        }
+      ]
     },
     {
       "question_number": "1.2.1.1",
       "description": "Title style applied to \"South African Heritage Tour\"",
-      "domain": "advanced",
-      "type": "style_applied",
       "target": {
         "locator": "contains_text",
         "value": "South African Heritage Tour"
       },
-      "expected": {
-        "style": "Title"
-      },
-      "marks": 1
+      "rules": [
+        {
+          "domain": "advanced",
+          "type": "style_applied",
+          "target": {
+            "locator": "contains_text",
+            "value": "South African Heritage Tour"
+          },
+          "expected": {
+            "style": "Title"
+          },
+          "marks": 1,
+          "description": "Title style applied to \"South African Heritage Tour\""
+        }
+      ]
     },
     {
       "question_number": "1.2.2.1",
       "description": "Heading 1 style applied to all section headings",
-      "domain": "advanced",
-      "type": "style_applied",
       "target": {
         "locator": "document"
       },
-      "expected": {
-        "style": "Heading 1"
-      },
-      "marks": 2
+      "rules": [
+        {
+          "domain": "advanced",
+          "type": "style_applied",
+          "target": {
+            "locator": "document"
+          },
+          "expected": {
+            "style": "Heading 1"
+          },
+          "marks": 2,
+          "description": "Heading 1 style applied to all section headings"
+        }
+      ]
     },
     {
       "question_number": "1.3.1.1",
       "description": "All instances of \"trip\" replaced with \"Adventure\"",
-      "domain": "paragraph_formatting",
-      "type": "contains_text",
       "target": {
         "locator": "document"
       },
-      "expected": {
-        "text": "Adventure"
-      },
-      "marks": 1
+      "rules": [
+        {
+          "domain": "paragraph_formatting",
+          "type": "contains_text",
+          "target": {
+            "locator": "document"
+          },
+          "expected": {
+            "text": "Adventure"
+          },
+          "marks": 1,
+          "description": "All instances of \"trip\" replaced with \"Adventure\""
+        }
+      ]
     },
     {
       "question_number": "1.3.2.1",
       "description": "Text \"Adventure\" is Bold AND Red",
-      "domain": "font",
-      "type": "bold",
       "target": {
         "locator": "paragraph_index",
         "value": 0
       },
-      "expected": true,
-      "marks": 2
+      "rules": [
+        {
+          "domain": "font",
+          "type": "bold",
+          "target": {
+            "locator": "paragraph_index",
+            "value": 0
+          },
+          "expected": true,
+          "marks": 2,
+          "description": "Text \"Adventure\" is Bold AND Red"
+        }
+      ]
     },
     {
       "question_number": "1.4.1.1",
       "description": "Flag image cropped specifically to an Oval shape",
-      "domain": "object",
-      "type": "image_crop",
       "target": {
         "locator": "document"
       },
-      "expected": {
-        "shape": "oval"
-      },
-      "marks": 2
+      "rules": [
+        {
+          "domain": "object",
+          "type": "image_crop",
+          "target": {
+            "locator": "document"
+          },
+          "expected": {
+            "shape": "oval"
+          },
+          "marks": 2,
+          "description": "Flag image cropped specifically to an Oval shape"
+        }
+      ]
     },
     {
       "question_number": "1.4.2.1",
       "description": "Width set to 5 cm",
-      "domain": "object",
-      "type": "image_width",
       "target": {
         "locator": "document"
       },
-      "expected": {
-        "width_cm": 5.0
-      },
-      "marks": 1
+      "rules": [
+        {
+          "domain": "object",
+          "type": "image_width",
+          "target": {
+            "locator": "document"
+          },
+          "expected": {
+            "width_cm": 5.0
+          },
+          "marks": 1,
+          "description": "Width set to 5 cm"
+        }
+      ]
     },
     {
       "question_number": "1.4.2.2",
       "description": "2 pt black border applied",
-      "domain": "document",
-      "type": "page_border",
       "target": {
         "locator": "document"
       },
-      "expected": {
-        "style": "double"
-      },
-      "marks": 1
+      "rules": [
+        {
+          "domain": "document",
+          "type": "page_border",
+          "target": {
+            "locator": "document"
+          },
+          "expected": {
+            "style": "double"
+          },
+          "marks": 1,
+          "description": "2 pt black border applied"
+        }
+      ]
     },
     {
       "question_number": "1.5.1.1",
       "description": "Bullet character from Wingdings used",
-      "domain": "list",
-      "type": "bullet_char",
       "target": {
         "locator": "style_name",
         "value": "List Paragraph"
       },
-      "expected": "wingdings",
-      "marks": 1
+      "rules": [
+        {
+          "domain": "list",
+          "type": "bullet_char",
+          "target": {
+            "locator": "style_name",
+            "value": "List Paragraph"
+          },
+          "expected": "wingdings",
+          "marks": 1,
+          "description": "Bullet character from Wingdings used"
+        }
+      ]
     },
     {
       "question_number": "1.5.1.2",
       "description": "Correct symbol (Code 252 - checkmark) selected",
-      "domain": "list",
-      "type": "bullet_char",
       "target": {
         "locator": "style_name",
         "value": "List Paragraph"
       },
-      "expected": "",
-      "marks": 2
+      "rules": [
+        {
+          "domain": "list",
+          "type": "bullet_char",
+          "target": {
+            "locator": "style_name",
+            "value": "List Paragraph"
+          },
+          "expected": "",
+          "marks": 2,
+          "description": "Correct symbol (Code 252 - checkmark) selected"
+        }
+      ]
     },
     {
       "question_number": "1.6.1.1",
       "description": "Basic Process SmartArt inserted",
-      "domain": "object",
-      "type": "smartart",
       "target": {
         "locator": "document"
       },
-      "expected": {
-        "type": "basic process"
-      },
-      "marks": 1
+      "rules": [
+        {
+          "domain": "object",
+          "type": "smartart",
+          "target": {
+            "locator": "document"
+          },
+          "expected": {
+            "type": "basic process"
+          },
+          "marks": 1,
+          "description": "Basic Process SmartArt inserted"
+        }
+      ]
     },
     {
       "question_number": "1.6.2.1",
       "description": "Correct text (Plan, Explore, Reflect) entered in order",
-      "domain": "object",
-      "type": "smartart_text",
       "target": {
         "locator": "document"
       },
-      "expected": {
-        "contains": "Plan, Explore, Reflect"
-      },
-      "marks": 2
+      "rules": [
+        {
+          "domain": "object",
+          "type": "smartart_text",
+          "target": {
+            "locator": "document"
+          },
+          "expected": {
+            "contains": "Plan, Explore, Reflect"
+          },
+          "marks": 2,
+          "description": "Correct text (Plan, Explore, Reflect) entered in order"
+        }
+      ]
     },
     {
       "question_number": "1.6.3.1",
       "description": "Any \"Colorful\" color scheme applied",
-      "domain": "object",
-      "type": "smartart_color",
       "target": {
         "locator": "document"
       },
-      "expected": {
-        "scheme": "colorful"
-      },
-      "marks": 1
+      "rules": [
+        {
+          "domain": "object",
+          "type": "smartart_color",
+          "target": {
+            "locator": "document"
+          },
+          "expected": {
+            "scheme": "colorful"
+          },
+          "marks": 1,
+          "description": "Any \"Colorful\" color scheme applied"
+        }
+      ]
     }
   ]
 }

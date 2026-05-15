@@ -7,7 +7,7 @@ from typing import Any, Dict
 
 from docx import Document
 
-from checker_types import CheckerResult
+from ..checker_types import CheckerResult
 from .word_utils import _find_paragraphs, ALIGNMENT_MAP, _read_docx_part
 from lxml import etree
 

@@ -239,9 +239,9 @@ class MarksheetParser:
         for row in rows:
             if not any(cell.strip() for cell in row):
                 continue
-            first  = row[0].strip() if len(row) >= 1 else ""
+            first = row[0].strip() if len(row) >= 1 else ""
             second = row[1].strip() if len(row) >= 2 else ""
-            third  = row[2].strip() if len(row) >= 3 else ""
+            third = row[2].strip() if len(row) >= 3 else ""
 
             # Section header: non-empty first col
             if first:

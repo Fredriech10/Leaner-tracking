@@ -1,0 +1,17 @@
+{
+  "task_name": "Generated Task",
+  "program": "word",
+  "file": "student_file.docx",
+  "total_marks": 5,
+  "questions": [
+    {
+      "question_number": "1",
+      "description": "Format the document to meet professional standards.",
+      "domain": "paragraph_formatting",
+      "type": "target",
+      "target": {},
+      "expected": {},
+      "marks": 5
+    }
+  ]
+}

@@ -1,0 +1,44 @@
+{
+  "task_name": "Experimental Word Marking Task",
+  "program": "word",
+  "file": "sample.docx",
+  "total_marks": 4,
+  "questions": [
+    {
+      "question_number": "1",
+      "description": "Set the paragraph under the heading 'Introduction' to justified alignment.",
+      "marks": 1,
+      "domain": "paragraph_formatting",
+      "type": "alignment",
+      "target": { "locator": "after_heading", "value": "Introduction" },
+      "expected": "justify"
+    },
+    {
+      "question_number": "2",
+      "description": "Set the first paragraph font size to 12pt.",
+      "marks": 1,
+      "domain": "font",
+      "type": "size",
+      "target": { "locator": "paragraph_index", "value": 0 },
+      "expected": 12
+    },
+    {
+      "question_number": "3",
+      "description": "Merge the top row of the first table across all columns.",
+      "marks": 1,
+      "domain": "table",
+      "type": "merge_horizontal",
+      "target": { "locator": "table_index", "value": 0 },
+      "expected": { "row": 0, "col_start": 0, "col_end": 2 }
+    },
+    {
+      "question_number": "4",
+      "description": "Check the heading text in the first merged table cell.",
+      "marks": 1,
+      "domain": "table",
+      "type": "cell_text",
+      "target": { "locator": "table_index", "value": 0 },
+      "expected": { "row": 0, "col": 0, "text": "Sales Report", "tolerance": true }
+    }
+  ]
+}

@@ -1,0 +1,75 @@
+
+======== Paragraph formatting Questions.docx ========
+  Paragraphs: 10  Tables: 1
+  [P0] style='Normal' al=None ls=1.0 sb=None sa=None | COMPUTER APPLICATIONS TECHNOLOGY | font=Times New Roman sz=12.0 bold=True italic=None
+  [P1] style='Normal' al=None ls=1.0 sb=None sa=None | GRADE 10 PRACTICAL TEST: PARAGRAPH FORMATTING | font=Times New Roman sz=12.0 bold=True italic=None
+  [P2] style='Normal' al=None ls=1.0 sb=None sa=None | TIME: 20 Minutes MARKS: 15 | font=Times New Roman sz=12.0 bold=True italic=None
+  [P3] style='Normal' al=None ls=1.0 sb=None sa=None | SCENARIO You are editing a report on "The Impact of E-Waste." You must | font=Times New Roman sz=12.0 bold=True italic=None
+  [P4] style='Normal' al=None ls=1.0 sb=None sa=None | INSTRUCTIONS | font=Times New Roman sz=12.0 bold=True italic=None
+  [P5] style='Normal' al=None ls=1.0 sb=5.0 sa=5.0 | All edits are to be made on page 2 of this document | font=Google Sans Text sz=10.5 bold=None italic=None
+  [P6] style='Normal' al=None ls=1.0 sb=5.0 sa=5.0 | Follow the instructions below to format specific paragraphs. | font=Google Sans Text sz=10.5 bold=None italic=None
+  [P7] style='Normal' al=None ls=1.0 sb=5.0 sa=5.0 | Use the help functions of the program if necessary. | font=Google Sans Text sz=10.5 bold=None italic=None
+  [T0]:
+    row0: ['No.', 'Question', 'Marks']
+    row1: ['1.1', 'General Alignment', '']
+    row2: ['1.1.1', 'Locate the paragraph under the heading "Introducti', '(1)']
+    row3: ['1.2', 'Indentation', '']
+    row4: ['1.2.1', 'Locate the paragraph starting with "Electronic was', '(2)']
+    row5: ['1.2.2', 'Apply a First Line Indent of 0.5 cm to the paragra', '(2)']
+    row6: ['1.3', 'Line and Paragraph Spacing', '']
+    row7: ['1.3.1', 'Set the Line Spacing for the paragraph located und', '(2)']
+    row8: ['1.3.2', 'Add 12 pt spacing Before the paragraph under the h', '(2)']
+    row9: ['1.4', 'Borders and Shading', '']
+    row10: ['1.4.1', 'Apply a 3 pt blue border around the paragraph unde', '(2)']
+    row11: ['1.4.2', 'Apply Light Grey shading/fill to the same paragrap', '(1)']
+    row12: ['1.5', 'Special Formatting', '']
+    row13: ['1.5.1', 'Apply a Drop Cap to the first letter under the Dis', '(3)']
+    row14: ['', 'TOTAL', '15']
+
+======== Paragraph formatting Memo.docx ========
+  Paragraphs: 3  Tables: 1
+  [P0] style='Normal' al=None ls=1.0 sb=None sa=None | MARKING GUIDELINE (MEMO) | font=Times New Roman sz=12.0 bold=True italic=None
+  [P1] style='Normal' al=None ls=1.0 sb=None sa=None | QUESTION 1: WORD PROCESSING | font=Times New Roman sz=12.0 bold=True italic=None
+  [T0]:
+    row0: ['No.', 'Criteria', 'Max Mark', 'Learner Mark']
+    row1: ['1.1.1', 'Page Setup', '', '']
+    row2: ['', 'Document size set to A4', '1', '']
+    row3: ['', 'Orientation set to Portrait', '1', '']
+    row4: ['1.1.2', 'Margins', '', '']
+    row5: ['', 'All margins (Top, Bottom, Left, Right) set to 2.5 ', '2', '']
+    row6: ['1.1.3', 'Hyphenation', '', '']
+    row7: ['', 'Automatic hyphenation enabled for the whole docume', '1', '']
+    row8: ['1.2.1', 'Alignment', '', '']
+    row9: ['', 'Paragraph alignment set to Justified', '1', '']
+    row10: ['1.2.2', 'Line Spacing', '', '']
+    row11: ['', 'Spacing set to "Exactly"', '1', '']
+    row12: ['', 'Measurement set to 15 pt', '1', '']
+    row13: ['1.2.3', 'Indentation', '', '']
+    row14: ['', 'First Line indent applied', '1', '']
+    row15: ['', 'Measurement set to 0.5 cm', '1', '']
+    row16: ['1.3.1', 'Page Border', '', '']
+    row17: ['', 'Style: Double-line and Colour: Blue', '1', '']
+    row18: ['', 'Setting: "First page only" applied', '1', '']
+    row19: ['1.3.2', 'Watermark', '', '']
+    row20: ['', 'Text "CAT Test" inserted', '1', '']
+    row21: ['', 'Colour set to Blue', '1', '']
+    row22: ['', 'Layout set to Diagonal', '1', '']
+    row23: ['', 'TOTAL', '', '']
+
+======== Paragraph formatting Learner DATA.docx ========
+  Paragraphs: 16  Tables: 0
+  [P0] style='Title' al=None ls=None sb=None sa=None | The Growing Crisis of Electronic Waste | font=None sz=None bold=None italic=None
+  [P1] style='Heading 1' al=None ls=None sb=None sa=None | Introduction | font=None sz=None bold=None italic=None
+  [P2] style='Normal' al=justify ls=None sb=None sa=None | E-waste, refers to discarded electrical or electronic devices. Used el | font=None sz=None bold=None italic=None
+  [P3] style='Normal' al=None ls=None sb=None sa=None | Electronic waste is particularly dangerous because it contains toxic c | font=None sz=None bold=None italic=None
+  [P4] style='Heading 1' al=None ls=None sb=None sa=None | Global Trends | font=None sz=None bold=None italic=None
+  [P5] style='Normal' al=None ls=None sb=None sa=None | According to recent reports, the world produces over 50 million tonnes | font=None sz=None bold=None italic=None
+  [P6] style='Heading 1' al=None ls=None sb=None sa=None | Environmental Impact | font=None sz=None bold=None italic=None
+  [P7] style='Normal' al=None ls=None sb=None sa=None | The extraction of precious metals from e-waste, such as gold and coppe | font=None sz=None bold=None italic=None
+  [P8] style='Heading 1' al=None ls=None sb=None sa=None | Health Risks | font=None sz=None bold=None italic=None
+  [P9] style='Normal' al=None ls=190500.0 sb=None sa=None | Exposure to the hazardous materials found in e-waste can lead to serio | font=None sz=None bold=None italic=None
+  [P10] style='Heading 1' al=None ls=None sb=None sa=None | Disposal | font=None sz=None bold=None italic=None
+  [P11] style='Normal' al=None ls=551815.0 sb=None sa=None | V | font=None sz=58.0 bold=None italic=None
+  [P12] style='Normal' al=None ls=None sb=None sa=None | ideo provides a powerful way to help you prove your point. When you cl | font=None sz=None bold=None italic=None
+  [P13] style='Heading 1' al=None ls=None sb=None sa=None | Conclusion | font=None sz=None bold=None italic=None
+  [P14] style='Normal' al=None ls=None sb=None sa=None | Addressing the e-waste crisis requires a multi-faceted approach involv | font=None sz=None bold=None italic=None

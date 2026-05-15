@@ -1,0 +1,83 @@
+
+======== Bulletpont questions.docx ========
+  Paragraphs: 9  Tables: 1
+  [P0] style='Normal' al=None ls=1.0 ls_rule=SINGLE (0) sb=None sa=None fi_cm=None num=False | COMPUTER APPLICATIONS TECHNOLOGY | font=Times New Roman sz=12.0 bold=True italic=None
+  [P1] style='Normal' al=None ls=1.0 ls_rule=SINGLE (0) sb=None sa=None fi_cm=None num=False | GRADE 10 PRACTICAL TEST: ADVANCED WORD PROCESSING | font=Times New Roman sz=12.0 bold=True italic=None
+  [P2] style='Normal' al=None ls=1.0 ls_rule=SINGLE (0) sb=None sa=None fi_cm=None num=False | TIME: 30 Minutes MARKS: 20 | font=Times New Roman sz=12.0 bold=True italic=None
+  [P3] style='Normal' al=None ls=1.0 ls_rule=SINGLE (0) sb=None sa=None fi_cm=None num=False | SCENARIO You are editing a promotional document for a school | font=Times New Roman sz=12.0 bold=True italic=None
+  [P4] style='Normal' al=None ls=1.0 ls_rule=SINGLE (0) sb=None sa=None fi_cm=None num=False | INSTRUCTIONS | font=Times New Roman sz=12.0 bold=True italic=None
+  [P5] style='Normal' al=None ls=1.0 ls_rule=SINGLE (0) sb=5.0 sa=5.0 fi_cm=None num=True | Open the document 1HeritageTour.docx. | font=Google Sans Text sz=10.5 bold=None italic=None
+  [P6] style='Normal' al=None ls=1.0 ls_rule=SINGLE (0) sb=5.0 sa=5.0 fi_cm=None num=True | Follow the instructions below to edit the cover page, styles | font=Google Sans Text sz=10.5 bold=None italic=None
+  [P7] style='Normal' al=None ls=1.0 ls_rule=SINGLE (0) sb=5.0 sa=5.0 fi_cm=None num=True | Use the symbols or images provided in your data folder where | font=Google Sans Text sz=10.5 bold=None italic=None
+  [T0]:
+    row0: ['No.', 'Question', 'Marks']
+    row1: ['1.1', 'Cover Page Editing', '']
+    row2: ['1.1.1', 'Complete the existing cover page:', '']
+    row3: ['', '• Set the Document Title to: HERITAGE TOUR 2025', '(1)']
+    row4: ['', '• Set the Subtitle to: EXPLORING SOUTH AFRICAN CUL', '(1)']
+    row5: ['', '• Insert the current date using the date content c', '(1)']
+    row6: ['1.2', 'Styles', '']
+    row7: ['1.2.1', 'Apply the Title style to the main heading "South A', '(1)']
+    row8: ['1.2.2', 'Apply the Heading 1 style to all other main sectio', '(2)']
+    row9: ['1.3', 'Find and Replace', '']
+    row10: ['1.3.1', 'Find all occurrences of the word "trip" and replac', '(1)']
+    row11: ['1.3.2', 'Ensure the replacement word "Adventure" appears in', '(2)']
+    row12: ['1.4', 'Image Shape Cropping', '']
+    row13: ['1.4.1', 'Locate the image of the South African flag. Crop t', '(2)']
+    row14: ['1.4.2', 'Set the width of the cropped image to 5 cm and app', '(2)']
+    row15: ['1.5', 'Custom Bullet List', '']
+    row16: ['1.5.1', 'Locate the list of provinces under the "Itinerary"', '']
+    row17: ['', '• Apply a custom bullet using Wingdings character ', '(3)']
+    row18: ['1.6', 'SmartArt', '']
+    row19: ['1.6.1', 'Insert a Basic Process SmartArt diagram at the end', '(1)']
+    row20: ['1.6.2', 'Enter the following text into the three stages: Pl', '(2)']
+    row21: ['1.6.3', 'Change the SmartArt color to any of the Colorful o', '(1)']
+    row22: ['', 'TOTAL', '20']
+
+======== Bulletpont Memo.docx ========
+  Paragraphs: 3  Tables: 1
+  [P0] style='Normal' al=None ls=1.0 ls_rule=SINGLE (0) sb=None sa=None fi_cm=None num=False | MARKING GUIDELINE (MEMO) | font=Times New Roman sz=12.0 bold=True italic=None
+  [P1] style='Normal' al=None ls=1.0 ls_rule=SINGLE (0) sb=None sa=None fi_cm=None num=False | QUESTION 1: WORD PROCESSING | font=Times New Roman sz=12.0 bold=True italic=None
+  [T0]:
+    row0: ['No.', 'Criteria', 'Max Mark', 'Learner Mark']
+    row1: ['1.1.1', 'Cover Page', '', '']
+    row2: ['', 'Title: HERITAGE TOUR 2025 correctly entered', '1', '']
+    row3: ['', 'Subtitle: EXPLORING SOUTH AFRICAN CULTURE entered', '1', '']
+    row4: ['', 'Current date inserted via content control', '1', '']
+    row5: ['1.2.1', 'Styles: Title', '', '']
+    row6: ['', 'Title style applied to "South African Heritage Tou', '1', '']
+    row7: ['1.2.2', 'Styles: Heading 1', '', '']
+    row8: ['', 'Heading 1 style applied to all section headings', '2', '']
+    row9: ['1.3.1', 'Find and Replace: Text', '', '']
+    row10: ['', 'All instances of "trip" replaced with "Adventure"', '1', '']
+    row11: ['1.3.2', 'Find and Replace: Format', '', '']
+    row12: ['', 'Text "Adventure" is Bold AND Red', '2', '']
+    row13: ['1.4.1', 'Image: Shape Crop', '', '']
+    row14: ['', 'Flag image cropped specifically to an Oval shape', '2', '']
+    row15: ['1.4.2', 'Image: Size/Border', '', '']
+    row16: ['', 'Width set to 5 cm', '1', '']
+    row17: ['', '2 pt black border applied', '1', '']
+    row18: ['1.5.1', 'Custom Bullets', '', '']
+    row19: ['', 'Bullet character from Wingdings used', '1', '']
+    row20: ['', 'Correct symbol (Code 118 - checkmark) selected', '2', '']
+    row21: ['1.6.1', 'SmartArt: Type', '', '']
+    row22: ['', 'Basic Process SmartArt inserted', '1', '']
+    row23: ['1.6.2', 'SmartArt: Text', '', '']
+    row24: ['', 'Correct text (Plan, Explore, Reflect) entered in o', '2', '']
+    row25: ['1.6.3', 'SmartArt: Color', '', '']
+    row26: ['', 'Any "Colorful" color scheme applied', '1', '']
+    row27: ['', 'TOTAL', '20', '']
+
+======== Bulletpont learner data.docx ========
+  Paragraphs: 15  Tables: 0
+  [P0] style='Title' al=None ls=None ls_rule=None sb=None sa=None fi_cm=None num=False | South African Heritage Tour | font=None sz=None bold=None italic=None
+  [P1] style='Heading 1' al=None ls=None ls_rule=None sb=None sa=None fi_cm=None num=False | Introduction | font=None sz=None bold=None italic=None
+  [P2] style='Normal' al=None ls=1.0 ls_rule=SINGLE (0) sb=None sa=None fi_cm=None num=False | Welcome to the annual school adventure. This adventure is de | font=Times New Roman sz=12.0 bold=None italic=None
+  [P3] style='Heading 1' al=None ls=None ls_rule=None sb=None sa=None fi_cm=None num=False | Itinerary | font=None sz=None bold=None italic=None
+  [P4] style='Normal' al=None ls=1.0 ls_rule=SINGLE (0) sb=None sa=None fi_cm=None num=False | We will be visiting the following provinces on this adventur | font=Times New Roman sz=12.0 bold=None italic=None
+  [P5] style='List Paragraph' al=None ls=1.0 ls_rule=SINGLE (0) sb=None sa=None fi_cm=None num=True | Gauteng | font=Times New Roman sz=12.0 bold=None italic=None
+  [P6] style='List Paragraph' al=None ls=1.0 ls_rule=SINGLE (0) sb=None sa=None fi_cm=None num=True | Western Cape | font=Times New Roman sz=12.0 bold=None italic=None
+  [P7] style='List Paragraph' al=None ls=1.0 ls_rule=SINGLE (0) sb=None sa=None fi_cm=None num=True | KwaZulu-Natal | font=Times New Roman sz=12.0 bold=None italic=None
+  [P8] style='List Paragraph' al=None ls=1.0 ls_rule=SINGLE (0) sb=None sa=None fi_cm=None num=True | Limpopo | font=Times New Roman sz=12.0 bold=None italic=None
+  [P10] style='Heading 1' al=None ls=None ls_rule=None sb=None sa=None fi_cm=None num=False | Conclusion | font=None sz=None bold=None italic=None
+  [P11] style='Normal' al=None ls=1.0 ls_rule=SINGLE (0) sb=None sa=None fi_cm=None num=False | We hope this adventure inspires you to appreciate the divers | font=Times New Roman sz=12.0 bold=None italic=None

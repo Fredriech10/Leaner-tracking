@@ -1,0 +1,24 @@
+# Marking Experiment - Python Dependencies
+# Pin versions for deterministic, reproducible behavior
+
+# Core document handling
+python-docx==0.8.11
+lxml==4.9.3
+
+# LLM integrations
+openai==1.14.0
+requests==2.31.0
+
+# Utilities
+python-dateutil==2.8.2
+urllib3==2.1.0
+
+# Optional: for development and testing
+pytest==7.4.3
+pytest-cov==4.1.0
+mypy==1.7.1
+ruff==0.1.13
+black==23.12.1
+
+# Optional: for Ollama testing
+# (Ollama is installed separately as a service)

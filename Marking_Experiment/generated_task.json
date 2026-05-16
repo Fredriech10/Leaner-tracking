@@ -136,18 +136,21 @@
       "question_number": "1.3.2.1",
       "description": "Text \"Adventure\" is Bold AND Red",
       "target": {
-        "locator": "paragraph_index",
-        "value": 0
+        "locator": "contains_text",
+        "value": "Adventure"
       },
       "rules": [
         {
           "domain": "font",
-          "type": "bold",
+          "type": "bold_and_color",
           "target": {
-            "locator": "paragraph_index",
-            "value": 0
+            "locator": "contains_text",
+            "value": "Adventure"
           },
-          "expected": true,
+          "expected": {
+            "bold": true,
+            "color": "red"
+          },
           "marks": 2,
           "description": "Text \"Adventure\" is Bold AND Red"
         }
@@ -203,13 +206,14 @@
       },
       "rules": [
         {
-          "domain": "document",
-          "type": "page_border",
+          "domain": "object",
+          "type": "image_border",
           "target": {
             "locator": "document"
           },
           "expected": {
-            "style": "double"
+            "width_pt": 2.0,
+            "color": "black"
           },
           "marks": 1,
           "description": "2 pt black border applied"

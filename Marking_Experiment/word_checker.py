@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import logging
 import re
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Tuple
@@ -14,6 +15,13 @@ from zipfile import ZipFile
 
 from .checker_types import BaseChecker, CheckerResult
 from .marking_experiment import resolve_theme_color_name
+from .utils import (
+    compare_numeric, emu_to_pt, emu_to_cm, cm_to_emu, 
+    normalize_hex_color, TOLERANCE_PT, TOLERANCE_CM
+)
+from .targeting import find_best_candidate_paragraph, find_table
+
+logger = logging.getLogger(__name__)
 
 
 NAMESPACES = {"w": "http://schemas.openxmlformats.org/wordprocessingml/2006/main"}
@@ -30,13 +38,6 @@ ALIGNMENT_MAP = {
 
 def xml_find(element, xpath: str):
     return element.find(xpath, namespaces=NAMESPACES)
-
-
-def normalize_hex_color(color: Optional[str]) -> Optional[str]:
-    if not color:
-        return None
-    value = color.strip().upper().lstrip("#")
-    return value if len(value) == 6 else value
 
 
 def _xml_tree_from_oxml(oxml_element) -> Optional[etree._Element]:
@@ -108,82 +109,33 @@ class WordChecker(BaseChecker):
         return locator, target.get("value")
 
     def _find_paragraphs(self, document: Document, target: Dict[str, Any]) -> List[Any]:
-        locator, value = self._target_locator(target)
-        value = str(value) if value is not None else ""
-        if locator == "paragraph_index":
-            try:
-                idx = int(value)
-                # If the indexed paragraph has no formatting, scan all body paragraphs
-                p = document.paragraphs[idx]
+        """Find paragraphs using robust targeting with fallbacks.
+        
+        Uses the targeting module for intelligent paragraph discovery.
+        """
+        try:
+            best_para = find_best_candidate_paragraph(document, target)
+            if best_para:
+                return [best_para]
+        except Exception as e:
+            logger.warning(f"Error in paragraph targeting: {e}")
+        
+        # Fallback to first non-empty paragraph
+        for p in document.paragraphs:
+            if p.text.strip():
                 return [p]
-            except (IndexError, ValueError):
-                return []
-        if locator == "after_heading":
-            for idx, paragraph in enumerate(document.paragraphs):
-                if value.lower() in paragraph.text.lower():
-                    return document.paragraphs[idx + 1 : idx + 2]
-            return []
-        if locator == "style_name":
-            return [p for p in document.paragraphs if p.style and p.style.name == value]
-        if locator == "contains_text":
-            return [p for p in document.paragraphs if value.lower() in p.text.lower()]
-        if locator == "header_contains_text":
-            section = document.sections[0]
-            header = section.header
-            if not header:
-                return []
-            # Match on plain text; if value is empty return all header paragraphs
-            if value:
-                return [p for p in header.paragraphs if value.lower() in p.text.lower()]
-            return list(header.paragraphs)
-        if locator == "footer_contains_text":
-            section = document.sections[0]
-            footer = section.footer
-            if not footer:
-                return []
-            # Match on plain text first
-            matched = [p for p in footer.paragraphs if value.lower() in p.text.lower()]
-            if matched:
-                return matched
-            # Fall back: return all footer paragraphs (covers field-code-only footers)
-            return list(footer.paragraphs)
-        if locator == "starts_with":
-            return [p for p in document.paragraphs if p.text.strip().lower().startswith(value.lower())]
-        if locator == "document":
-            return list(document.paragraphs)
-        if locator == "near_text":
-            return [p for p in document.paragraphs if value.lower() in p.text.lower()]
+        
         return []
 
     def _find_table(self, document: Document, target: Dict[str, Any]) -> Optional[Any]:
-        locator, value = self._target_locator(target)
-        if locator == "table_index":
-            try:
-                return document.tables[int(value)]
-            except (IndexError, ValueError):
-                return None
-        if locator == "table_near_text" or locator == "near_text":
-            needle = str(value).lower()
-            for paragraph in document.paragraphs:
-                if needle in paragraph.text.lower():
-                    next_table = self._find_table_after_paragraph(document, paragraph)
-                    if next_table is not None:
-                        return next_table
-            return None
-        return None
-
-    def _find_table_after_paragraph(self, document: Document, paragraph) -> Optional[Any]:
-        paragraphs = list(document.element.body.iterchildren())
-        target_xml = paragraph._p
-        found = False
-        for element in paragraphs:
-            if element is target_xml:
-                found = True
-                continue
-            if found and element.tag == qn("w:tbl"):
-                tbl = element
-                from docx.table import Table
-                return Table(tbl, document)
+        """Find table using robust targeting."""
+        try:
+            return find_table(document, target)
+        except Exception as e:
+            logger.warning(f"Error finding table: {e}")
+            # Fallback to first table
+            if document.tables:
+                return document.tables[0]
         return None
 
     def _get_table_cell(self, table, row: int, col: int) -> Optional[Any]:
@@ -576,9 +528,9 @@ class WordChecker(BaseChecker):
             raw_rule = best_para.paragraph_format.line_spacing_rule
             # Convert EMU to pt (1 pt = 12700 EMU)
             if isinstance(raw_ls, (int, float)) and raw_ls > 100:
-                actual_pt = raw_ls / 12700.0
+                actual_pt = emu_to_pt(int(raw_ls))
             elif isinstance(raw_ls, (int, float)):
-                actual_pt = raw_ls
+                actual_pt = float(raw_ls)
             else:
                 actual_pt = None
             actual = {"rule": str(raw_rule), "value_pt": round(actual_pt, 2) if actual_pt else None}
@@ -592,11 +544,11 @@ class WordChecker(BaseChecker):
                 elif exp_rule == "atLeast" and raw_rule is not None:
                     rule_ok = "LEAST" in str(raw_rule).upper()
                 if exp_unit == "pt" and actual_pt is not None and exp_val > 0:
-                    passed = rule_ok and abs(actual_pt - exp_val) < 0.5
+                    passed = rule_ok and compare_numeric(actual_pt, exp_val, tolerance=TOLERANCE_PT, unit="pt")
                 elif exp_unit == "pt" and exp_val == 0:
                     passed = rule_ok
                 elif exp_unit == "lines" and actual_pt is not None:
-                    passed = rule_ok and abs(actual_pt - exp_val) < 0.1
+                    passed = rule_ok and compare_numeric(actual_pt, exp_val, tolerance=TOLERANCE_PT, unit="lines")
                 else:
                     passed = False
             else:
@@ -605,18 +557,20 @@ class WordChecker(BaseChecker):
         elif check_type == "space_before":
             sb = paragraph.paragraph_format.space_before
             actual = round(sb.pt, 1) if sb else None
-            try:
-                passed = actual is not None and abs(actual - float(expected)) < 0.5
-            except Exception:
+            if actual is not None:
+                passed = compare_numeric(actual, float(expected), tolerance=TOLERANCE_PT, unit="pt")
+            else:
                 passed = False
+            return CheckerResult(passed=passed, actual=actual, details={"type": check_type})
 
         elif check_type == "space_after":
             sa = paragraph.paragraph_format.space_after
             actual = round(sa.pt, 1) if sa else None
-            try:
-                passed = actual is not None and abs(actual - float(expected)) < 0.5
-            except Exception:
+            if actual is not None:
+                passed = compare_numeric(actual, float(expected), tolerance=TOLERANCE_PT, unit="pt")
+            else:
                 passed = False
+            return CheckerResult(passed=passed, actual=actual, details={"type": check_type})
 
         elif check_type == "first_line_indent":
             # Search all paragraphs for one with a first line indent applied
@@ -626,11 +580,13 @@ class WordChecker(BaseChecker):
                     if p.paragraph_format.first_line_indent is not None:
                         fi = p.paragraph_format.first_line_indent
                         break
-            actual = round(fi / 360000.0, 2) if fi is not None else None
-            try:
-                passed = actual is not None and abs(actual - float(expected)) < 0.05
-            except Exception:
+            # Convert EMU to cm (360000 EMU = 1 cm)
+            actual = emu_to_cm(int(fi)) if fi is not None else None
+            if actual is not None:
+                passed = compare_numeric(actual, float(expected), tolerance=TOLERANCE_CM, unit="cm")
+            else:
                 passed = False
+            return CheckerResult(passed=passed, actual=actual, details={"type": check_type})
 
         elif check_type == "contains_text":
             text_to_find = expected.get("text", "") if isinstance(expected, dict) else str(expected)
@@ -685,7 +641,10 @@ class WordChecker(BaseChecker):
             )
         if check_type == "size":
             actual = run.font.size.pt if run.font.size else None
-            passed = float(actual) == float(expected)
+            if actual is not None:
+                passed = compare_numeric(actual, float(expected), tolerance=TOLERANCE_PT, unit="pt")
+            else:
+                passed = False
             return CheckerResult(passed=passed, actual=actual, details={"type": check_type})
         if check_type == "bold":
             actual = bool(run.font.bold)
@@ -1025,20 +984,61 @@ class WordChecker(BaseChecker):
             return CheckerResult(passed=passed, actual=closest, details={"type": check_type, "widths_cm": widths})
 
         if check_type == "smartart":
-            # Check for presence of a diagram (SmartArt) in the document
+            # Check for presence AND optionally match SmartArt layout/type.
             dg_data = root.findall(f".//{{{NS_DGM}}}relIds")
-            # Also check rels for diagrams
             rels_xml = _read_docx_part(file_path, "word/_rels/document.xml.rels")
             has_smartart = bool(dg_data)
             if not has_smartart and rels_xml:
                 has_smartart = "diagram" in rels_xml.lower()
-            if isinstance(expected, dict):
-                exp_type = expected.get("type", "").lower()
-                # We can only verify presence, not specific type without parsing diagram XML
-                passed = has_smartart
-            else:
-                passed = has_smartart
-            return CheckerResult(passed=passed, actual={"found": has_smartart}, details={"type": check_type})
+
+            # If no SmartArt at all, fail.
+            if not has_smartart:
+                return CheckerResult(passed=False, actual={"found": False}, details={"type": check_type})
+
+            # If expected includes a type, attempt to extract diagram kind.
+            # SmartArt "type" typically appears in diagram XML as a layout name.
+            # We use heuristic matching against diagram parts.
+            if isinstance(expected, dict) and expected.get("type"):
+                exp_type = str(expected.get("type")).lower()
+
+                found_any = False
+                matched_any = False
+
+                # Search all diagramData / diagram parts.
+                for part in self._relationship_targets(file_path, "diagramData"):
+                    xml = _read_docx_part(file_path, part)
+                    if not xml:
+                        continue
+                    try:
+                        droot = etree.fromstring(xml.encode("utf-8"))
+                    except Exception:
+                        continue
+
+                    found_any = True
+                    # Common containers: a:sp or diagram elements with attributes.
+                    # We extract any attributes/names that look like a layout/type.
+                    text_blob = []
+                    # Collect text nodes.
+                    for n in droot.iter():
+                        if n.text and n.text.strip():
+                            text_blob.append(n.text.strip())
+                    blob = " ".join(text_blob).lower()
+
+                    # Heuristic: match expected type anywhere in diagram data text.
+                    if exp_type in blob:
+                        matched_any = True
+                        break
+
+                # If we couldn’t inspect diagramData parts, fall back to presence-only.
+                passed = matched_any if found_any else has_smartart
+                return CheckerResult(
+                    passed=passed,
+                    actual={"found": has_smartart, "matched_type": matched_any if found_any else None, "expected_type": exp_type},
+                    details={"type": check_type},
+                )
+
+            # Presence-only if no type was provided.
+            return CheckerResult(passed=True, actual={"found": True}, details={"type": check_type})
 
         if check_type == "smartart_text":
             contains = expected.get("contains", "") if isinstance(expected, dict) else str(expected)

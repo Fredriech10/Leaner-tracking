@@ -1,0 +1,154 @@
+{
+  "task_name": "Generated Task",
+  "program": "word",
+  "file": "COMPUTER APPLICATIONS TECHNOLOGY test 1 (3).docx",
+  "total_marks": 15,
+  "questions": [
+    {
+      "question_number": "1.1.1.1",
+      "description": "Document size set to A4",
+      "domain": "document",
+      "type": "paper_size",
+      "target": {
+        "locator": "document"
+      },
+      "expected": "A4",
+      "marks": 1
+    },
+    {
+      "question_number": "1.1.1.2",
+      "description": "Orientation set to Portrait",
+      "domain": "document",
+      "type": "orientation",
+      "target": {
+        "locator": "document"
+      },
+      "expected": "portrait",
+      "marks": 1
+    },
+    {
+      "question_number": "1.1.2.1",
+      "description": "All margins (Top, Bottom, Left, Right) set to 2.5 cm",
+      "domain": "document",
+      "type": "margins",
+      "target": {
+        "locator": "document"
+      },
+      "expected": {
+        "top": 2.5,
+        "bottom": 2.5,
+        "left": 2.5,
+        "right": 2.5
+      },
+      "marks": 2
+    },
+    {
+      "question_number": "1.1.3.1",
+      "description": "Automatic hyphenation enabled for the whole document",
+      "domain": "document",
+      "type": "hyphenation",
+      "target": {
+        "locator": "document"
+      },
+      "expected": true,
+      "marks": 1
+    },
+    {
+      "question_number": "1.2.1.1",
+      "description": "Paragraph alignment set to Justified",
+      "domain": "paragraph_formatting",
+      "type": "alignment",
+      "target": {
+        "locator": "paragraph_index",
+        "value": 2
+      },
+      "expected": "justify",
+      "marks": 1
+    },
+    {
+      "question_number": "1.2.2.1",
+      "description": "Spacing set to \"Exactly\"",
+      "domain": "paragraph_formatting",
+      "type": "line_spacing",
+      "target": {
+        "locator": "paragraph_index",
+        "value": 2
+      },
+      "expected": {
+        "rule": "exact",
+        "value": 15.0,
+        "unit": "pt"
+      },
+      "marks": 2
+    },
+    {
+      "question_number": "1.2.3.1",
+      "description": "First Line indent applied",
+      "domain": "paragraph_formatting",
+      "type": "first_line_indent",
+      "target": {
+        "locator": "document"
+      },
+      "expected": 0.5,
+      "marks": 2
+    },
+    {
+      "question_number": "1.3.1.1",
+      "description": "Style: Double-line and Colour: Blue",
+      "domain": "document",
+      "type": "watermark",
+      "target": {
+        "locator": "document"
+      },
+      "expected": "Blue",
+      "marks": 1
+    },
+    {
+      "question_number": "1.3.1.2",
+      "description": "Setting: \"First page only\" applied",
+      "domain": "document",
+      "type": "page_border",
+      "target": {
+        "locator": "document"
+      },
+      "expected": {
+        "style": "double",
+        "first_page_only": true
+      },
+      "marks": 1
+    },
+    {
+      "question_number": "1.3.2.1",
+      "description": "Text \"CAT Test\" inserted",
+      "domain": "document",
+      "type": "watermark",
+      "target": {
+        "locator": "document"
+      },
+      "expected": "CAT Test",
+      "marks": 1
+    },
+    {
+      "question_number": "1.3.2.2",
+      "description": "Colour set to Blue",
+      "domain": "document",
+      "type": "watermark",
+      "target": {
+        "locator": "document"
+      },
+      "expected": "Blue",
+      "marks": 1
+    },
+    {
+      "question_number": "1.3.2.3",
+      "description": "Layout set to Diagonal",
+      "domain": "document",
+      "type": "watermark",
+      "target": {
+        "locator": "document"
+      },
+      "expected": "Diagonal",
+      "marks": 1
+    }
+  ]
+}

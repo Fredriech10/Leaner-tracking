@@ -558,10 +558,12 @@ class WordChecker(BaseChecker):
             sb = paragraph.paragraph_format.space_before
             actual = round(sb.pt, 1) if sb else None
             if actual is not None:
-                passed = compare_numeric(actual, float(expected), tolerance=TOLERANCE_PT, unit="pt")
+                exp_val = expected.get("value") if isinstance(expected, dict) else expected
+                passed = compare_numeric(actual, float(exp_val), tolerance=TOLERANCE_PT, unit="pt")
             else:
                 passed = False
             return CheckerResult(passed=passed, actual=actual, details={"type": check_type})
+
 
         elif check_type == "space_after":
             sa = paragraph.paragraph_format.space_after
@@ -583,10 +585,19 @@ class WordChecker(BaseChecker):
             # Convert EMU to cm (360000 EMU = 1 cm)
             actual = emu_to_cm(int(fi)) if fi is not None else None
             if actual is not None:
-                passed = compare_numeric(actual, float(expected), tolerance=TOLERANCE_CM, unit="cm")
+                # expected can be a dict (e.g. {"value": 0.5, "unit": "cm"}) or a raw number.
+                exp_val = expected.get("value") if isinstance(expected, dict) else expected
+                exp_unit = expected.get("unit") if isinstance(expected, dict) else None
+                # If expected provided a unit, prefer it; otherwise assume cm.
+                unit = exp_unit if exp_unit in ("cm", "pt", "lines") else "cm"
+                try:
+                    passed = compare_numeric(actual, float(exp_val), tolerance=TOLERANCE_CM, unit=unit)
+                except TypeError:
+                    passed = False
             else:
                 passed = False
             return CheckerResult(passed=passed, actual=actual, details={"type": check_type})
+
 
         elif check_type == "contains_text":
             text_to_find = expected.get("text", "") if isinstance(expected, dict) else str(expected)

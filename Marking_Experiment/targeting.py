@@ -47,41 +47,58 @@ def find_paragraphs_by_index(document: Document, index: int) -> List[Paragraph]:
     return []
 
 
-def find_paragraphs_after_heading(document: Document, heading_text: str, fuzzy: bool = True, similarity_threshold: float = 0.8) -> List[Paragraph]:
+def find_paragraphs_after_heading(
+    document: Document,
+    heading_text: str,
+    fuzzy: bool = True,
+    similarity_threshold: float = 0.8,
+) -> List[Paragraph]:
     """Find paragraph after a heading (primary strategy with fuzzy fallback).
-    
-    Args:
-        document: Word document.
-        heading_text: Text to match in heading.
-        fuzzy: If True, use fuzzy matching for heading text (handles typos/case differences).
-        similarity_threshold: Minimum similarity for fuzzy matching (0.0 to 1.0).
-    
+
+    Supports minor variations:
+    - strips ellipsis markers ("...") from the supplied heading_text
+    - case-insensitive substring matching
+    - fuzzy matching when substring matching fails
+
     Returns:
         List of next paragraphs after matching heading(s).
     """
-    results = []
-    heading_lower = heading_text.lower()
-    
+    results: List[Paragraph] = []
+
+    raw_heading = str(heading_text or "")
+    heading_lower = raw_heading.replace("...", " ").strip().lower()
+    if not heading_lower:
+        return results
+
     for idx, paragraph in enumerate(document.paragraphs):
-        para_text = paragraph.text.strip()
-        
-        # Exact match or substring match (primary)
-        if heading_lower in para_text.lower():
+        para_text = (paragraph.text or "").strip()
+        if not para_text:
+            continue
+
+        para_lower = para_text.lower()
+
+        # 1) Exact match or substring match
+        if heading_lower in para_lower:
             if idx + 1 < len(document.paragraphs):
                 next_para = document.paragraphs[idx + 1]
-                if next_para.text.strip():  # Skip empty paragraphs
+                if next_para.text.strip():
                     results.append(next_para)
-        # Fuzzy match (fallback)
-        elif fuzzy and similarity_threshold > 0:
-            similarity = string_similarity(heading_text, para_text)
+            continue
+
+        # 2) Fuzzy match fallback
+        if fuzzy and similarity_threshold > 0:
+            similarity = string_similarity(heading_lower, para_lower)
             if similarity >= similarity_threshold:
                 if idx + 1 < len(document.paragraphs):
                     next_para = document.paragraphs[idx + 1]
                     if next_para.text.strip():
                         results.append(next_para)
-                        logger.debug(f"Fuzzy matched heading '{heading_text}' to '{para_text}' (similarity: {similarity:.2f})")
-    
+                        logger.debug(
+                            f"Fuzzy matched heading '{raw_heading}' to '{para_text}' (similarity: {similarity:.2f})"
+                        )
+
     return results
+
 
 
 def find_paragraphs_by_style(document: Document, style_name: str, fuzzy: bool = True, similarity_threshold: float = 0.8) -> List[Paragraph]:
@@ -222,12 +239,52 @@ def find_best_candidate_paragraph(document: Document, target: Dict[str, Any]) ->
                 logger.debug(f"Found paragraph starting with '{value}'")
                 return para
     
-    # Strategy 6: Fallback to document (first non-empty)
+    # Strategy 6: After a paragraph match -> next non-empty paragraph
+    if locator == "after_paragraph" and value:
+        raw_needle = str(value).lower()
+        # Allow minor variations:
+        # - treat "..." as wildcard (strip trailing/inner ellipsis markers)
+        # - compare using substring OR fuzzy similarity if direct match fails
+        needle = raw_needle.replace("...", " ").strip()
+        if not needle:
+            return None
+
+        # 1) direct substring match
+        found_index: Optional[int] = None
+        for idx, para in enumerate(document.paragraphs):
+            if needle in (para.text or "").lower():
+                found_index = idx
+                break
+
+        # 2) fuzzy match fallback
+        if found_index is None:
+            best_sim = 0.0
+            best_idx: Optional[int] = None
+            for idx, para in enumerate(document.paragraphs):
+                para_text = (para.text or "").strip().lower()
+                if not para_text:
+                    continue
+                sim = string_similarity(needle, para_text)
+                if sim > best_sim:
+                    best_sim = sim
+                    best_idx = idx
+            if best_idx is not None and best_sim >= 0.75:
+                found_index = best_idx
+
+        if found_index is not None:
+            for j in range(found_index + 1, len(document.paragraphs)):
+                next_para = document.paragraphs[j]
+                if next_para.text.strip():
+                    return next_para
+
+
+    # Strategy 7: Fallback to document (first non-empty)
     if locator == "document" or locator == "near_text":
         for para in document.paragraphs:
             if para.text.strip():
                 logger.debug(f"Fallback: using first non-empty paragraph")
                 return para
+
     
     # Last resort: if target indicates "document", return first paragraph
     if not candidates and locator in ("document", ""):

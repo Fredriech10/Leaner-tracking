@@ -97,10 +97,29 @@ def run_task_checks(
                 actual = checker_result.actual
                 details = checker_result.details or {}
             except Exception as exc:
+                # Keep error in output details, but also emit full traceback to terminal/log.
+                import traceback
+                tb = traceback.format_exc()
+
+                print(
+                    "[Marking_Experiment] Check ERROR\n"
+                    f"  program={task_definition.get('program')}\n"
+                    f"  file={file_path}\n"
+                    f"  question={question_number}\n"
+                    f"  rule_index={idx}\n"
+                    f"  domain={domain}\n"
+                    f"  type={check_type}\n"
+                    f"  target={target}\n"
+                    f"  expected={expected}\n"
+                    f"  exc={exc}\n"
+                    f"  traceback={tb}"
+                )
+
                 passed = False
                 outcome = CheckOutcome.ERROR
                 actual = None
-                details = {"error": str(exc)}
+                details = {"error": str(exc), "traceback": tb}
+
 
             results.append(
                 CheckStatus(

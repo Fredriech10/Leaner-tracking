@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+import logging
 from pathlib import Path
 import tkinter as tk
 from tkinter import filedialog, messagebox
@@ -13,9 +14,30 @@ from .marking_experiment import MARKING_SCHEMA
 from .marksheet_parser import MarksheetParser
 from .task_template import build_task_template, save_task_template
 
+logger = logging.getLogger("marking_experiment_ui")
+
+
+def _setup_logging() -> None:
+    # File logger (keeps logs even if UI shows only a short message).
+    # We avoid duplicate handlers if main() is called multiple times.
+    if logger.handlers:
+        return
+
+    log_path = Path(__file__).resolve().parent / "marking_experiment.log"
+    log_path.parent.mkdir(parents=True, exist_ok=True)
+
+    logger.setLevel(logging.INFO)
+    file_handler = logging.FileHandler(log_path, encoding="utf-8")
+    file_handler.setLevel(logging.INFO)
+    formatter = logging.Formatter("%(asctime)s [%(levelname)s] %(name)s: %(message)s")
+    file_handler.setFormatter(formatter)
+
+    logger.addHandler(file_handler)
+
 
 class MarkingExperimentApp:
     def __init__(self, root: tk.Tk) -> None:
+        _setup_logging()
         self.root = root
         self.root.title("Marking Experiment")
         self.engine = MarkingEngine()
@@ -250,6 +272,13 @@ class MarkingExperimentApp:
             )
             return
 
+        logger.info(
+            "Generate Task JSON clicked. backend=%s question_paper=%s marksheet=%s",
+            self.backend_var.get(),
+            str(self.question_paper_path),
+            str(self.marksheet_path),
+        )
+
         ext = self.question_paper_path.suffix.lower()
         if ext in {".xlsx", ".xls"}:
             program = "excel"
@@ -271,13 +300,30 @@ class MarkingExperimentApp:
             parser = MarksheetParser(backend=self.backend_var.get())
             parsed = parser.parse(question_paper_text, marksheet_text, program=program)
         except Exception as exc:
-            messagebox.showerror("Generate task JSON", f"Unable to generate task JSON:\n{exc}")
+            logger.exception(
+                "Generate Task JSON failed (exception). backend=%s program=%s question_paper=%s marksheet=%s",
+                self.backend_var.get(),
+                program,
+                str(self.question_paper_path),
+                str(self.marksheet_path),
+            )
+            log_path = Path(__file__).resolve().parent / "marking_experiment.log"
+            messagebox.showerror(
+                "Generate task JSON",
+                f"Unable to generate task JSON:\n{exc}\n\nSee logs: {log_path}",
+            )
             return
 
         if parsed.warnings:
+            logger.warning(
+                "Generate Task JSON produced warnings. backend=%s program=%s warnings=%s",
+                self.backend_var.get(),
+                program,
+                parsed.warnings,
+            )
             messagebox.showwarning(
                 "Generate task JSON",
-                "Task JSON generated, but there were warnings:\n" + "\n".join(parsed.warnings),
+                "Task JSON generated, but there were warnings:\n" + "\n".join(parsed.warnings) + "\n\nSee logs for details.",
             )
 
         default_file = self.file_path.name if self.file_path else f"student_file.{ext.lstrip('.')}"

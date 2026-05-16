@@ -110,11 +110,28 @@ class MarkingEngine:
 
         rule_checker = get_rule_checker(program)
 
+        import traceback
+        print(f"[Marking_Experiment] Running engine program={program} file={file_path} questions={len(task_definition.get('questions', []))}")
         for question in task_definition.get("questions", []):
-            results = self._run_question(question, rule_checker, file_path)
-            session.results.extend(results)
+            try:
+                results = self._run_question(question, rule_checker, file_path)
+                session.results.extend(results)
+            except Exception as exc:
+                tb = traceback.format_exc()
+                print(
+                    "[Marking_Experiment] Engine error while running question\n"
+                    f"  file={file_path}\n"
+                    f"  program={program}\n"
+                    f"  question={question}\n"
+                    f"  exc={exc}\n"
+                    f"  traceback={tb}"
+                )
+                # Continue marking, but mark engine-level failure as a skipped block.
+                # We avoid crashing the UI.
+                continue
 
         return session
+
 
     def _find_checker(self, program: str) -> Optional[BaseChecker]:
         for checker in self.checkers:
@@ -151,30 +168,54 @@ class MarkingEngine:
             rule_description = str(rule.get("description", description))
             rule_number = question_number if len(rules) == 1 else f"{question_number}.{idx}"
 
-            checker_result = rule_checker(file_path, rule)
-            details = checker_result.details or {}
-            feedback_context = {
-                "expected": expected,
-                "actual": checker_result.actual,
-                "expected_name": expected if isinstance(expected, str) else str(expected),
-                "actual_name": checker_result.actual if isinstance(checker_result.actual, str) else str(checker_result.actual),
-                **details,
-            }
-            feedback = format_feedback(domain, check_type, checker_result.passed, feedback_context)
-            outcome = CheckOutcome.PASS if checker_result.passed else CheckOutcome.FAIL
+            try:
+                checker_result = rule_checker(file_path, rule)
+                details = checker_result.details or {}
+                feedback_context = {
+                    "expected": expected,
+                    "actual": checker_result.actual,
+                    "expected_name": expected if isinstance(expected, str) else str(expected),
+                    "actual_name": checker_result.actual if isinstance(checker_result.actual, str) else str(checker_result.actual),
+                    **details,
+                }
+                feedback = format_feedback(domain, check_type, checker_result.passed, feedback_context)
+                outcome = CheckOutcome.PASS if checker_result.passed else CheckOutcome.FAIL
+                passed = checker_result.passed
+                actual = checker_result.actual
+            except Exception as exc:
+                # Mark the check as unable to be performed and continue.
+                import traceback
+                tb = traceback.format_exc()
+                outcome = CheckOutcome.SKIPPED
+                passed = False
+                actual = None
+                details = {"reason": "Check unable to be performed", "error": str(exc), "traceback": tb}
+                feedback = f"SKIPPED: Unable to perform check for {domain}/{check_type}: {exc}"
+            # If the checker signals failure due to unsupported/unknown rule mapping, treat as SKIPPED.
+            if not ("error" in (details or {})) and isinstance(details, dict) and details.get("reason"):
+                r = str(details.get("reason", "")).lower()
+                if "not implemented" in r or "unsupported" in r or "not readable" in r:
+                    outcome = CheckOutcome.SKIPPED
+                    passed = False
+                    if actual is None:
+                        actual = None
+                    feedback = f"SKIPPED: {details.get('reason')}"
+
+
             results.append(
                 CheckResult(
                     question_number=rule_number,
                     description=rule_description,
                     marks=marks,
-                    passed=checker_result.passed,
+                    passed=passed,
 
                     feedback=feedback,
-                    actual=checker_result.actual,
+                    actual=actual,
                     expected=expected,
                     details=details,
                 )
             )
+
 
         return results
 

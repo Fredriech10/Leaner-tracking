@@ -27,7 +27,7 @@ class MarksheetParser:
     def __init__(self, model: Optional[str] = None, backend: str = "openai") -> None:
         self.backend = backend.lower()
         if model is None:
-            self.model = "gpt-4o-mini" if self.backend == "openai" else "phi3:instruct"
+            self.model = "gpt-4o-mini" if self.backend == "openai" else "qwen2.5-coder:7b-instruct-q4_K_M"
         else:
             self.model = model
         self.openai = None
@@ -741,8 +741,13 @@ class MarksheetParser:
         except ImportError:
             raise RuntimeError("requests is not installed. Install it with 'pip install requests' to use Ollama backend.")
 
-        url = "http://127.0.0.1:11434/v1/chat/completions"
-        payload = {
+        base_url = os.environ.get("OLLAMA_HTTP_BASE_URL", "http://127.0.0.1:11434").rstrip("/")
+        candidate_urls = [
+            f"{base_url}/v1/chat/completions",
+            f"{base_url}/v1/completions",
+        ]
+
+        payload_chat = {
             "model": self.model,
             "messages": [
                 {"role": "system", "content": "You convert free-form exam instructions into structured marking JSON."},
@@ -752,37 +757,53 @@ class MarksheetParser:
             "max_tokens": 1200,
         }
 
+        payload_completion = {
+            "model": self.model,
+            "prompt": (
+                "You are a strict JSON generator for exam marking tasks.\n"
+                "OUTPUT RULES: ONLY valid JSON. NO markdown. NO explanations.\n\n"
+                f"INPUT DATA:\n{prompt}\n\nOUTPUT: Valid JSON only."
+            ),
+            "temperature": 0.0,
+            "max_tokens": 1200,
+        }
+
         session = requests.Session()
         session.trust_env = False
-        last_error = None
-        for attempt in range(2):
-            try:
-                response = session.post(
-                    url,
-                    json=payload,
-                    timeout=120,
-                )
-                if response.status_code == 404:
-                    last_error = RuntimeError(
-                        "Ollama API endpoint not found. Ensure Ollama is running and use the /v1/chat/completions endpoint. "
-                        f"Received 404 from {url}."
-                    )
+
+        last_error: Optional[BaseException] = None
+        for url in candidate_urls:
+            payload = payload_chat if url.endswith("/v1/chat/completions") else payload_completion
+            for _attempt in range(2):
+                try:
+                    response = session.post(url, json=payload, timeout=120)
+                    if response.status_code in (404, 405):
+                        last_error = RuntimeError(f"Ollama endpoint not usable (status={response.status_code}) at {url}.")
+                        continue
+
+                    response.raise_for_status()
+                    data = response.json()
+
+                    if isinstance(data, dict) and data.get("error"):
+                        last_error = RuntimeError(f"Ollama API returned an error: {data.get('error')}")
+                        continue
+
+                    # OpenAI-compatible chat response
+                    if isinstance(data, dict) and isinstance(data.get("choices"), list) and data["choices"]:
+                        choice0 = data["choices"][0]
+                        if isinstance(choice0, dict):
+                            msg = choice0.get("message") or {}
+                            content = msg.get("content")
+                            if content:
+                                return str(content).strip()
+                            text = choice0.get("text")
+                            if text:
+                                return str(text).strip()
+
+                    last_error = RuntimeError("Ollama API response did not contain expected 'choices' fields.")
+                except (requests.RequestException, ValueError, KeyError, IndexError) as exc:
+                    last_error = exc
                     continue
-                if response.status_code == 405:
-                    last_error = RuntimeError(
-                        "Ollama API method not allowed. Ensure you are POSTing to /v1/chat/completions. "
-                        f"Received 405 from {url}."
-                    )
-                    continue
-                response.raise_for_status()
-                data = response.json()
-                if isinstance(data, dict) and data.get("error"):
-                    last_error = RuntimeError(f"Ollama API returned an error: {data.get('error')}")
-                    continue
-                return data["choices"][0]["message"]["content"].strip()
-            except (requests.RequestException, ValueError, KeyError) as exc:
-                last_error = exc
-                continue
 
         if last_error is not None:
             try:

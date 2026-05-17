@@ -76,6 +76,47 @@ def _match_color(expected: Any, actual_hex: Optional[str], actual_theme_name: Op
     return False
 
 
+def _run_xml_tree(run) -> Optional[etree._Element]:
+    if run is None or not hasattr(run, "_r"):
+        return None
+    try:
+        return etree.fromstring(run._r.xml.encode("utf-8"))
+    except Exception:
+        return None
+
+
+def _font_xml_element(run, tag_name: str):
+    tree = _run_xml_tree(run)
+    if tree is None:
+        return None
+    return tree.find(f".//w:{tag_name}", namespaces=NAMESPACES)
+
+
+def _font_xml_bool(run, tag_name: str) -> bool:
+    return _font_xml_element(run, tag_name) is not None
+
+
+def _font_xml_val(run, tag_name: str) -> Optional[str]:
+    element = _font_xml_element(run, tag_name)
+    if element is None:
+        return None
+    return element.get(qn("w:val")) or None
+
+
+def _resolve_font_theme(run) -> Optional[str]:
+    tree = _run_xml_tree(run)
+    if tree is None:
+        return None
+    fonts = tree.find(".//w:rFonts", namespaces=NAMESPACES)
+    if fonts is None:
+        return None
+    for attr in ("asciiTheme", "hAnsiTheme", "csTheme", "eastAsiaTheme"):
+        theme_val = fonts.get(qn(f"w:{attr}"))
+        if theme_val:
+            return theme_val
+    return None
+
+
 def _target_locator(target: Dict[str, Any]) -> Tuple[str, Any]:
     locator = target.get("locator")
     if isinstance(locator, dict):

@@ -8,6 +8,7 @@ from pathlib import Path
 from typing import Any, Dict, List, Optional, Tuple
 
 from docx import Document
+from docx.enum.section import WD_SECTION_START
 from docx.enum.text import WD_PARAGRAPH_ALIGNMENT
 from docx.oxml.ns import qn
 from lxml import etree
@@ -100,6 +101,42 @@ class WordChecker(BaseChecker):
         if isinstance(expected, str) and actual_theme_name:
             return expected.lower() == actual_theme_name.lower()
         return False
+
+    def _run_xml_tree(self, run) -> Optional[etree._Element]:
+        if run is None or not hasattr(run, "_r"):
+            return None
+        try:
+            return etree.fromstring(run._r.xml.encode("utf-8"))
+        except Exception:
+            return None
+
+    def _font_xml_element(self, run, tag_name: str):
+        tree = self._run_xml_tree(run)
+        if tree is None:
+            return None
+        return tree.find(f".//w:{tag_name}", namespaces=NAMESPACES)
+
+    def _font_xml_bool(self, run, tag_name: str) -> bool:
+        return self._font_xml_element(run, tag_name) is not None
+
+    def _font_xml_val(self, run, tag_name: str) -> Optional[str]:
+        element = self._font_xml_element(run, tag_name)
+        if element is None:
+            return None
+        return element.get(qn("w:val")) or None
+
+    def _resolve_font_theme(self, run) -> Optional[str]:
+        tree = self._run_xml_tree(run)
+        if tree is None:
+            return None
+        fonts = tree.find(".//w:rFonts", namespaces=NAMESPACES)
+        if fonts is None:
+            return None
+        for attr in ("asciiTheme", "hAnsiTheme", "csTheme", "eastAsiaTheme"):
+            theme_val = fonts.get(qn(f"w:{attr}"))
+            if theme_val:
+                return theme_val
+        return None
 
     def _target_locator(self, target: Dict[str, Any]) -> Tuple[str, Any]:
         locator = target.get("locator")
@@ -206,6 +243,223 @@ class WordChecker(BaseChecker):
                 if node.text:
                     parts.append(node.text)
         return "\n".join(parts)
+
+    def _gather_header_text(self, section) -> str:
+        values = []
+        for header_part in (section.header, section.even_page_header, section.first_page_header):
+            try:
+                values.extend(p.text.strip() for p in header_part.paragraphs if p.text.strip())
+            except Exception:
+                continue
+        return " ".join(values).strip()
+
+    def _gather_footer_text(self, section) -> str:
+        values = []
+        for footer_part in (section.footer, section.even_page_footer, section.first_page_footer):
+            try:
+                values.extend(p.text.strip() for p in footer_part.paragraphs if p.text.strip())
+            except Exception:
+                continue
+        return " ".join(values).strip()
+
+    def _document_part_contains_page_field(self, file_path: Path, prefix: str) -> bool:
+        for idx in range(1, 7):
+            xml = _read_docx_part(file_path, f"{prefix}{idx}.xml")
+            if not xml:
+                continue
+            try:
+                root = etree.fromstring(xml.encode("utf-8"))
+            except Exception:
+                continue
+            for node in root.iter(f"{{{NAMESPACES['w']}}}instrText"):
+                if node.text and "page" in node.text.lower():
+                    return True
+            for node in root.findall(f".//{{{NAMESPACES['w']}}}fldSimple"):
+                instr = node.get(qn("w:instr"))
+                if instr and "page" in instr.lower():
+                    return True
+        return False
+
+    def _page_number_format(self, file_path: Path) -> str:
+        xml = _read_docx_part(file_path, "word/document.xml")
+        if xml:
+            try:
+                root = etree.fromstring(xml.encode("utf-8"))
+                fmt = root.find(".//w:pgNumType", namespaces=NAMESPACES)
+                if fmt is not None:
+                    fmt_val = fmt.get(qn("w:fmt"))
+                    if fmt_val:
+                        normalize = {
+                            "decimal": "1",
+                            "lowerroman": "i",
+                            "upperroman": "I",
+                            "lowerletter": "a",
+                            "upperletter": "A",
+                        }
+                        return normalize.get(fmt_val.lower(), fmt_val)
+            except Exception:
+                pass
+        return "1"
+
+    def _section_break_type(self, section) -> str:
+        if hasattr(section, "start_type"):
+            mapping = {
+                WD_SECTION_START.NEW_PAGE: "nextPage",
+                WD_SECTION_START.CONTINUOUS: "continuous",
+                WD_SECTION_START.ODD_PAGE: "odd",
+                WD_SECTION_START.EVEN_PAGE: "even",
+            }
+            return mapping.get(section.start_type, str(section.start_type).lower())
+        return "nextPage"
+
+    def _line_number_settings(self, section) -> dict:
+        actual = {"enabled": False, "start": None, "interval": None}
+        sectPr = getattr(section, "_sectPr", None)
+        if sectPr is None:
+            return actual
+        ln_node = sectPr.find(qn("w:lnNumType"))
+        if ln_node is None:
+            return actual
+        actual["enabled"] = True
+        if ln_node.get(qn("w:start")):
+            try:
+                actual["start"] = int(ln_node.get(qn("w:start")))
+            except Exception:
+                pass
+        if ln_node.get(qn("w:countBy")):
+            try:
+                actual["interval"] = int(ln_node.get(qn("w:countBy")))
+            except Exception:
+                pass
+        return actual
+
+    def _mirror_margins_enabled(self, section) -> bool:
+        sectPr = getattr(section, "_sectPr", None)
+        if sectPr is None:
+            return False
+        return sectPr.find(qn("w:mirrorMargins")) is not None
+
+    def _page_background_color(self, file_path: Path) -> Optional[str]:
+        xml = _read_docx_part(file_path, "word/document.xml")
+        if not xml:
+            return None
+        try:
+            root = etree.fromstring(xml.encode("utf-8"))
+            bg = root.find(".//w:background", namespaces=NAMESPACES)
+            if bg is None:
+                return None
+            color = bg.get(qn("w:color"))
+            if color:
+                return normalize_hex_color(color)
+        except Exception:
+            pass
+        return None
+
+    def _count_page_breaks(self, file_path: Path) -> int:
+        xml = _read_docx_part(file_path, "word/document.xml")
+        if not xml:
+            return 0
+        try:
+            root = etree.fromstring(xml.encode("utf-8"))
+        except Exception:
+            return 0
+        page_br = root.findall(".//w:br[@w:type='page']", namespaces=NAMESPACES)
+        page_breaks = root.findall(".//w:lastRenderedPageBreak", namespaces=NAMESPACES)
+        return len(page_br) + len(page_breaks)
+
+    def _parse_boolean(self, value: Any) -> Optional[bool]:
+        if isinstance(value, bool):
+            return value
+        if value is None:
+            return None
+        normalized = str(value).strip().lower()
+        if normalized in {"true", "yes", "1", "on", "y"}:
+            return True
+        if normalized in {"false", "no", "0", "off", "n"}:
+            return False
+        return None
+
+    def _paragraph_xml_tree(self, paragraph):
+        try:
+            return etree.fromstring(paragraph._p.xml.encode("utf-8"))
+        except Exception:
+            return None
+
+    def _paragraph_has_rtl(self, paragraph) -> bool:
+        tree = self._paragraph_xml_tree(paragraph)
+        if tree is None:
+            return False
+        bidi = tree.find(".//w:bidi", namespaces=NAMESPACES)
+        text_dir = tree.find(".//w:textDirection", namespaces=NAMESPACES)
+        return bidi is not None or text_dir is not None
+
+    def _paragraph_outline_level(self, paragraph) -> Optional[int]:
+        tree = self._paragraph_xml_tree(paragraph)
+        if tree is None:
+            return None
+        outline = tree.find(".//w:outlineLvl", namespaces=NAMESPACES)
+        if outline is None:
+            return None
+        try:
+            return int(outline.get(qn("w:val")))
+        except Exception:
+            return None
+
+    def _check_tab_stops(self, paragraph, expected: Any) -> tuple[bool, Any]:
+        tab_stops = paragraph.paragraph_format.tab_stops
+        actual = []
+        for tab in tab_stops:
+            position_cm = None
+            try:
+                position_cm = round(float(tab.position.cm), 2)
+            except Exception:
+                pass
+            actual.append(
+                {
+                    "position_cm": position_cm,
+                    "alignment": tab.alignment.name.lower() if hasattr(tab.alignment, "name") else str(tab.alignment).lower() if tab.alignment is not None else None,
+                    "leader": tab.leader.name.lower() if hasattr(tab.leader, "name") else str(tab.leader).lower() if tab.leader is not None else None,
+                }
+            )
+
+        if expected is None:
+            return (len(actual) > 0, actual)
+
+        passed = True
+        if isinstance(expected, dict):
+            if expected.get("count") is not None:
+                try:
+                    passed = passed and len(actual) == int(expected["count"])
+                except Exception:
+                    passed = False
+            if expected.get("position_cm") is not None:
+                position_ok = any(
+                    compare_numeric(tab["position_cm"], float(expected["position_cm"]), tolerance=TOLERANCE_CM, unit="cm")
+                    for tab in actual
+                    if tab["position_cm"] is not None
+                )
+                passed = passed and position_ok
+            if expected.get("alignment") is not None:
+                alignment_ok = any(
+                    tab["alignment"] == str(expected["alignment"]).strip().lower()
+                    for tab in actual
+                    if tab["alignment"] is not None
+                )
+                passed = passed and alignment_ok
+            if expected.get("leader") is not None:
+                leader_ok = any(
+                    tab["leader"] == str(expected["leader"]).strip().lower()
+                    for tab in actual
+                    if tab["leader"] is not None
+                )
+                passed = passed and leader_ok
+        else:
+            try:
+                passed = len(actual) == int(expected)
+            except Exception:
+                passed = False
+
+        return passed, actual
 
     def _paragraph_num_pr(self, paragraph):
         pPr = paragraph._p.pPr
@@ -554,7 +808,6 @@ class WordChecker(BaseChecker):
                 passed = False
             return CheckerResult(passed=passed, actual=actual, details={"type": check_type})
 
-
         elif check_type == "space_after":
             sa = paragraph.paragraph_format.space_after
             actual = round(sa.pt, 1) if sa else None
@@ -567,13 +820,10 @@ class WordChecker(BaseChecker):
 
         elif check_type == "first_line_indent":
             fi = paragraph.paragraph_format.first_line_indent
-            # Convert EMU to cm (360000 EMU = 1 cm)
-            actual = emu_to_cm(int(fi)) if fi is not None else None
+            actual = float(fi.cm) if fi is not None else None
             if actual is not None:
-                # expected can be a dict (e.g. {"value": 0.5, "unit": "cm"}) or a raw number.
                 exp_val = expected.get("value") if isinstance(expected, dict) else expected
                 exp_unit = expected.get("unit") if isinstance(expected, dict) else None
-                # If expected provided a unit, prefer it; otherwise assume cm.
                 unit = exp_unit if exp_unit in ("cm", "pt", "lines") else "cm"
                 try:
                     passed = compare_numeric(actual, float(exp_val), tolerance=TOLERANCE_CM, unit=unit)
@@ -583,6 +833,77 @@ class WordChecker(BaseChecker):
                 passed = False
             return CheckerResult(passed=passed, actual=actual, details={"type": check_type})
 
+        elif check_type == "hanging_indent":
+            fi = paragraph.paragraph_format.first_line_indent
+            actual = abs(float(fi.cm)) if fi is not None and float(fi.cm) < 0 else None
+            if actual is not None:
+                exp_val = expected.get("value") if isinstance(expected, dict) else expected
+                passed = compare_numeric(actual, float(exp_val), tolerance=TOLERANCE_CM, unit="cm")
+            else:
+                passed = False
+            return CheckerResult(passed=passed, actual=actual, details={"type": check_type})
+
+        elif check_type == "left_indent":
+            li = paragraph.paragraph_format.left_indent
+            actual = float(li.cm) if li is not None else None
+            if actual is not None:
+                exp_val = expected.get("value") if isinstance(expected, dict) else expected
+                passed = compare_numeric(actual, float(exp_val), tolerance=TOLERANCE_CM, unit="cm")
+            else:
+                passed = False
+            return CheckerResult(passed=passed, actual=actual, details={"type": check_type})
+
+        elif check_type == "right_indent":
+            ri = paragraph.paragraph_format.right_indent
+            actual = float(ri.cm) if ri is not None else None
+            if actual is not None:
+                exp_val = expected.get("value") if isinstance(expected, dict) else expected
+                passed = compare_numeric(actual, float(exp_val), tolerance=TOLERANCE_CM, unit="cm")
+            else:
+                passed = False
+            return CheckerResult(passed=passed, actual=actual, details={"type": check_type})
+
+        elif check_type == "right_to_left":
+            actual = self._paragraph_has_rtl(paragraph)
+            expected_bool = self._parse_boolean(expected)
+            passed = actual if expected_bool is None else actual == expected_bool
+            return CheckerResult(passed=passed, actual=actual, details={"type": check_type})
+
+        elif check_type == "keep_with_next":
+            actual = bool(paragraph.paragraph_format.keep_with_next)
+            expected_bool = self._parse_boolean(expected)
+            passed = actual if expected_bool is None else actual == expected_bool
+            return CheckerResult(passed=passed, actual=actual, details={"type": check_type})
+
+        elif check_type == "keep_lines_together":
+            actual = bool(paragraph.paragraph_format.keep_together)
+            expected_bool = self._parse_boolean(expected)
+            passed = actual if expected_bool is None else actual == expected_bool
+            return CheckerResult(passed=passed, actual=actual, details={"type": check_type})
+
+        elif check_type == "widow_orphan_control":
+            actual = bool(paragraph.paragraph_format.widow_control)
+            expected_bool = self._parse_boolean(expected)
+            passed = actual if expected_bool is None else actual == expected_bool
+            return CheckerResult(passed=passed, actual=actual, details={"type": check_type})
+
+        elif check_type == "page_break_before":
+            actual = bool(paragraph.paragraph_format.page_break_before)
+            expected_bool = self._parse_boolean(expected)
+            passed = actual if expected_bool is None else actual == expected_bool
+            return CheckerResult(passed=passed, actual=actual, details={"type": check_type})
+
+        elif check_type == "outline_level":
+            actual = self._paragraph_outline_level(paragraph)
+            if actual is not None:
+                exp_val = expected.get("value") if isinstance(expected, dict) else expected
+                passed = compare_numeric(actual, float(exp_val), tolerance=0, unit="")
+            else:
+                passed = False
+            return CheckerResult(passed=passed, actual=actual, details={"type": check_type})
+
+        elif check_type == "tabs":
+            passed, actual = self._check_tab_stops(paragraph, expected)
 
         elif check_type == "contains_text":
             text_to_find = expected.get("text", "") if isinstance(expected, dict) else str(expected)
@@ -649,6 +970,69 @@ class WordChecker(BaseChecker):
         if check_type == "italic":
             actual = bool(run.font.italic)
             passed = actual == bool(expected)
+            return CheckerResult(passed=passed, actual=actual, details={"type": check_type})
+        if check_type == "underline":
+            actual = run.font.underline
+            if isinstance(expected, str):
+                passed = str(actual).lower().endswith(expected.lower()) if actual is not None else False
+            else:
+                passed = bool(actual) == bool(expected)
+            return CheckerResult(passed=passed, actual=str(actual) if actual is not None else None, details={"type": check_type})
+        if check_type == "strikethrough":
+            actual = bool(run.font.strike)
+            passed = actual == bool(expected)
+            return CheckerResult(passed=passed, actual=actual, details={"type": check_type})
+        if check_type == "double_strikethrough":
+            actual = self._font_xml_bool(run, "dstrike")
+            passed = actual == bool(expected)
+            return CheckerResult(passed=passed, actual=actual, details={"type": check_type})
+        if check_type == "superscript":
+            actual = bool(run.font.superscript)
+            passed = actual == bool(expected)
+            return CheckerResult(passed=passed, actual=actual, details={"type": check_type})
+        if check_type == "subscript":
+            actual = bool(run.font.subscript)
+            passed = actual == bool(expected)
+            return CheckerResult(passed=passed, actual=actual, details={"type": check_type})
+        if check_type == "all_caps":
+            actual = bool(run.font.all_caps)
+            passed = actual == bool(expected)
+            return CheckerResult(passed=passed, actual=actual, details={"type": check_type})
+        if check_type == "small_caps":
+            actual = bool(run.font.small_caps)
+            passed = actual == bool(expected)
+            return CheckerResult(passed=passed, actual=actual, details={"type": check_type})
+        if check_type == "shadow":
+            actual = bool(run.font.shadow)
+            passed = actual == bool(expected)
+            return CheckerResult(passed=passed, actual=actual, details={"type": check_type})
+        if check_type == "outline":
+            actual = bool(run.font.outline)
+            passed = actual == bool(expected)
+            return CheckerResult(passed=passed, actual=actual, details={"type": check_type})
+        if check_type == "emboss":
+            actual = bool(run.font.emboss)
+            passed = actual == bool(expected)
+            return CheckerResult(passed=passed, actual=actual, details={"type": check_type})
+        if check_type == "hidden":
+            actual = bool(run.font.hidden)
+            passed = actual == bool(expected)
+            return CheckerResult(passed=passed, actual=actual, details={"type": check_type})
+        if check_type == "font_name":
+            actual = run.font.name
+            passed = str(actual).lower() == str(expected).lower() if actual else False
+            return CheckerResult(passed=passed, actual=actual, details={"type": check_type})
+        if check_type == "font_theme":
+            actual = self._resolve_font_theme(run)
+            passed = str(actual).lower() == str(expected).lower() if actual else False
+            return CheckerResult(passed=passed, actual=actual, details={"type": check_type})
+        if check_type == "character_spacing":
+            actual = self._font_xml_val(run, "spacing")
+            passed = str(actual) == str(expected)
+            return CheckerResult(passed=passed, actual=actual, details={"type": check_type})
+        if check_type == "kerning":
+            actual = self._font_xml_val(run, "kerning")
+            passed = str(actual) == str(expected)
             return CheckerResult(passed=passed, actual=actual, details={"type": check_type})
         if check_type == "bold_and_color":
             bold_ok = bool(run.font.bold)
@@ -893,6 +1277,104 @@ class WordChecker(BaseChecker):
                 if jc is not None:
                     actual = jc.get(f"{{{WNS}}}val", "left").lower()
             passed = actual == str(expected).lower()
+            return CheckerResult(passed=passed, actual=actual, details={"type": check_type})
+        if check_type == "header_content":
+            actual = self._gather_header_text(section)
+            if isinstance(expected, bool):
+                passed = bool(actual) == expected
+            else:
+                passed = str(expected).lower() in actual.lower()
+            return CheckerResult(passed=passed, actual=actual, details={"type": check_type})
+        if check_type == "footer_content":
+            actual = self._gather_footer_text(section)
+            if isinstance(expected, bool):
+                passed = bool(actual) == expected
+            else:
+                passed = str(expected).lower() in actual.lower()
+            return CheckerResult(passed=passed, actual=actual, details={"type": check_type})
+        if check_type == "header_differs":
+            actual = bool(section.different_first_page_header_footer)
+            expected_bool = self._parse_boolean(expected)
+            passed = actual if expected_bool is None else actual == expected_bool
+            return CheckerResult(passed=passed, actual=actual, details={"type": check_type})
+        if check_type == "footer_differs":
+            actual = bool(section.different_first_page_header_footer)
+            expected_bool = self._parse_boolean(expected)
+            passed = actual if expected_bool is None else actual == expected_bool
+            return CheckerResult(passed=passed, actual=actual, details={"type": check_type})
+        if check_type == "page_number_in_header":
+            actual = self._document_part_contains_page_field(file_path, "word/header")
+            expected_bool = self._parse_boolean(expected)
+            passed = actual if expected_bool is None else actual == expected_bool
+            return CheckerResult(passed=passed, actual=actual, details={"type": check_type})
+        if check_type == "page_number_in_footer":
+            actual = self._document_part_contains_page_field(file_path, "word/footer")
+            expected_bool = self._parse_boolean(expected)
+            passed = actual if expected_bool is None else actual == expected_bool
+            return CheckerResult(passed=passed, actual=actual, details={"type": check_type})
+        if check_type == "page_number_format":
+            actual = self._page_number_format(file_path)
+            passed = str(actual).lower() == str(expected).strip().lower()
+            return CheckerResult(passed=passed, actual=actual, details={"type": check_type})
+        if check_type == "page_break":
+            actual_count = self._count_page_breaks(file_path)
+            expected_bool = self._parse_boolean(expected)
+            if isinstance(expected, dict) and expected.get("count") is not None:
+                try:
+                    passed = actual_count == int(expected["count"])
+                except Exception:
+                    passed = False
+            elif expected_bool is not None:
+                passed = actual_count > 0 if expected_bool else actual_count == 0
+            else:
+                try:
+                    passed = actual_count == int(expected)
+                except Exception:
+                    passed = actual_count > 0
+            return CheckerResult(passed=passed, actual=actual_count, details={"type": check_type})
+        if check_type == "section_page_break_type":
+            actual = self._section_break_type(section)
+            expected_value = str(expected).strip().lower()
+            normalized = expected_value.replace(" ", "")
+            passed = actual.lower() == normalized
+            return CheckerResult(passed=passed, actual=actual, details={"type": check_type})
+        if check_type == "line_numbers":
+            actual = self._line_number_settings(section)
+            if isinstance(expected, dict):
+                passed = True
+                if "enabled" in expected:
+                    expected_enabled = self._parse_boolean(expected["enabled"])
+                    passed = passed and actual["enabled"] == expected_enabled
+                if "start" in expected:
+                    passed = passed and actual["start"] == int(expected["start"])
+                if "interval" in expected:
+                    passed = passed and actual["interval"] == int(expected["interval"])
+            else:
+                expected_bool = self._parse_boolean(expected)
+                passed = actual["enabled"] if expected_bool is None else actual["enabled"] == expected_bool
+            return CheckerResult(passed=passed, actual=actual, details={"type": check_type})
+        if check_type == "gutter_margin":
+            actual = float(section.gutter.cm) if section.gutter is not None else None
+            if actual is not None and expected is not None:
+                passed = compare_numeric(actual, float(expected), tolerance=TOLERANCE_CM, unit="cm")
+            else:
+                passed = False
+            return CheckerResult(passed=passed, actual=actual, details={"type": check_type})
+        if check_type == "mirror_margins":
+            actual = self._mirror_margins_enabled(section)
+            expected_bool = self._parse_boolean(expected)
+            passed = actual if expected_bool is None else actual == expected_bool
+            return CheckerResult(passed=passed, actual=actual, details={"type": check_type})
+        if check_type == "page_color":
+            actual = self._page_background_color(file_path)
+            if isinstance(expected, dict):
+                expected_color = expected.get("color")
+            else:
+                expected_color = expected
+            if expected_color is not None:
+                passed = normalize_hex_color(str(expected_color)) == actual
+            else:
+                passed = actual is not None
             return CheckerResult(passed=passed, actual=actual, details={"type": check_type})
         if check_type == "hyphenation":
             # Read from word/settings.xml — <w:autoHyphenation w:val="1"/>

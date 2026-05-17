@@ -3,13 +3,17 @@
 from __future__ import annotations
 
 from pathlib import Path
-from typing import Any, Dict
+from typing import Any, Dict, Optional
 
 from docx import Document
+from docx.oxml.ns import qn
 
 from ..checker_types import CheckerResult
+from ..utils import compare_numeric, TOLERANCE_CM
 from .word_utils import _find_paragraphs, ALIGNMENT_MAP, _read_docx_part
 from lxml import etree
+
+NAMESPACES = {"w": "http://schemas.openxmlformats.org/wordprocessingml/2006/main"}
 
 
 def check_paragraph_formatting_rule(rule: Dict[str, Any], file_path: Path) -> CheckerResult:
@@ -97,11 +101,94 @@ def check_paragraph_formatting_rule(rule: Dict[str, Any], file_path: Path) -> Ch
                 if p.paragraph_format.first_line_indent is not None:
                     fi = p.paragraph_format.first_line_indent
                     break
-        actual = round(fi / 360000.0, 2) if fi is not None else None
+        actual = float(fi.cm) if fi is not None else None
         try:
             passed = actual is not None and abs(actual - float(expected)) < 0.05
         except Exception:
             passed = False
+        return CheckerResult(passed=passed, actual=actual, details={"type": check_type})
+
+    elif check_type == "hanging_indent":
+        fi = paragraph.paragraph_format.first_line_indent
+        actual = abs(float(fi.cm)) if fi is not None and float(fi.cm) < 0 else None
+        if actual is not None:
+            try:
+                passed = abs(actual - float(expected)) < 0.05
+            except Exception:
+                passed = False
+        else:
+            passed = False
+        return CheckerResult(passed=passed, actual=actual, details={"type": check_type})
+
+    elif check_type == "left_indent":
+        li = paragraph.paragraph_format.left_indent
+        actual = float(li.cm) if li is not None else None
+        if actual is not None:
+            try:
+                passed = abs(actual - float(expected)) < 0.05
+            except Exception:
+                passed = False
+        else:
+            passed = False
+        return CheckerResult(passed=passed, actual=actual, details={"type": check_type})
+
+    elif check_type == "right_indent":
+        ri = paragraph.paragraph_format.right_indent
+        actual = float(ri.cm) if ri is not None else None
+        if actual is not None:
+            try:
+                passed = abs(actual - float(expected)) < 0.05
+            except Exception:
+                passed = False
+        else:
+            passed = False
+        return CheckerResult(passed=passed, actual=actual, details={"type": check_type})
+
+    elif check_type == "right_to_left":
+        actual = _paragraph_has_rtl(paragraph)
+        expected_bool = _parse_boolean(expected)
+        passed = actual if expected_bool is None else actual == expected_bool
+        return CheckerResult(passed=passed, actual=actual, details={"type": check_type})
+
+    elif check_type == "keep_with_next":
+        actual = bool(paragraph.paragraph_format.keep_with_next)
+        expected_bool = _parse_boolean(expected)
+        passed = actual if expected_bool is None else actual == expected_bool
+        return CheckerResult(passed=passed, actual=actual, details={"type": check_type})
+
+    elif check_type == "keep_lines_together":
+        actual = bool(paragraph.paragraph_format.keep_together)
+        expected_bool = _parse_boolean(expected)
+        passed = actual if expected_bool is None else actual == expected_bool
+        return CheckerResult(passed=passed, actual=actual, details={"type": check_type})
+
+    elif check_type == "widow_orphan_control":
+        actual = bool(paragraph.paragraph_format.widow_control)
+        expected_bool = _parse_boolean(expected)
+        passed = actual if expected_bool is None else actual == expected_bool
+        return CheckerResult(passed=passed, actual=actual, details={"type": check_type})
+
+    elif check_type == "page_break_before":
+        actual = bool(paragraph.paragraph_format.page_break_before)
+        expected_bool = _parse_boolean(expected)
+        passed = actual if expected_bool is None else actual == expected_bool
+        return CheckerResult(passed=passed, actual=actual, details={"type": check_type})
+
+    elif check_type == "outline_level":
+        actual = _paragraph_outline_level(paragraph)
+        if actual is not None:
+            exp_val = expected.get("value") if isinstance(expected, dict) else expected
+            try:
+                passed = int(actual) == int(exp_val)
+            except Exception:
+                passed = False
+        else:
+            passed = False
+        return CheckerResult(passed=passed, actual=actual, details={"type": check_type})
+
+    elif check_type == "tabs":
+        passed, actual = _check_tab_stops(paragraph, expected)
+        return CheckerResult(passed=passed, actual=actual, details={"type": check_type})
 
     elif check_type == "contains_text":
         text_to_find = expected.get("text", "") if isinstance(expected, dict) else str(expected)
@@ -174,6 +261,105 @@ def _check_para_border(paragraph, expected: Any, file_path: Path) -> tuple[bool,
                         passed = False
                 except Exception:
                     pass
+    return passed, actual
+
+
+def _parse_boolean(value: Any) -> Optional[bool]:
+    if isinstance(value, bool):
+        return value
+    if value is None:
+        return None
+    normalized = str(value).strip().lower()
+    if normalized in {"true", "yes", "1", "on", "y"}:
+        return True
+    if normalized in {"false", "no", "0", "off", "n"}:
+        return False
+    return None
+
+
+def _paragraph_xml_tree(paragraph):
+    try:
+        return etree.fromstring(paragraph._p.xml.encode("utf-8"))
+    except Exception:
+        return None
+
+
+def _paragraph_has_rtl(paragraph) -> bool:
+    tree = _paragraph_xml_tree(paragraph)
+    if tree is None:
+        return False
+    bidi = tree.find(".//w:bidi", namespaces=NAMESPACES)
+    text_dir = tree.find(".//w:textDirection", namespaces=NAMESPACES)
+    return bidi is not None or text_dir is not None
+
+
+def _paragraph_outline_level(paragraph) -> Optional[int]:
+    tree = _paragraph_xml_tree(paragraph)
+    if tree is None:
+        return None
+    outline = tree.find(".//w:outlineLvl", namespaces=NAMESPACES)
+    if outline is None:
+        return None
+    try:
+        return int(outline.get(qn("w:val")))
+    except Exception:
+        return None
+
+
+def _check_tab_stops(paragraph, expected: Any) -> tuple[bool, Any]:
+    tab_stops = paragraph.paragraph_format.tab_stops
+    actual = []
+    for tab in tab_stops:
+        position_cm = None
+        try:
+            position_cm = round(float(tab.position.cm), 2)
+        except Exception:
+            pass
+        actual.append(
+            {
+                "position_cm": position_cm,
+                "alignment": tab.alignment.name.lower() if hasattr(tab.alignment, "name") else str(tab.alignment).lower() if tab.alignment is not None else None,
+                "leader": tab.leader.name.lower() if hasattr(tab.leader, "name") else str(tab.leader).lower() if tab.leader is not None else None,
+            }
+        )
+
+    if expected is None:
+        return (len(actual) > 0, actual)
+
+    passed = True
+    if isinstance(expected, dict):
+        if expected.get("count") is not None:
+            try:
+                passed = passed and len(actual) == int(expected["count"])
+            except Exception:
+                passed = False
+        if expected.get("position_cm") is not None:
+            position_ok = any(
+                compare_numeric(tab["position_cm"], float(expected["position_cm"]), tolerance=TOLERANCE_CM, unit="cm")
+                for tab in actual
+                if tab["position_cm"] is not None
+            )
+            passed = passed and position_ok
+        if expected.get("alignment") is not None:
+            alignment_ok = any(
+                tab["alignment"] == str(expected["alignment"]).strip().lower()
+                for tab in actual
+                if tab["alignment"] is not None
+            )
+            passed = passed and alignment_ok
+        if expected.get("leader") is not None:
+            leader_ok = any(
+                tab["leader"] == str(expected["leader"]).strip().lower()
+                for tab in actual
+                if tab["leader"] is not None
+            )
+            passed = passed and leader_ok
+    else:
+        try:
+            passed = len(actual) == int(expected)
+        except Exception:
+            passed = False
+
     return passed, actual
 
 

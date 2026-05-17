@@ -281,7 +281,10 @@ class WordChecker(BaseChecker):
             passed = passed and actual["italic"] == bool(expected["italic"])
         if "size" in expected:
             actual["size"] = run.font.size.pt if run.font.size else None
-            passed = passed and float(actual["size"] or 0) == float(expected["size"])
+            if actual["size"] is not None:
+                passed = passed and compare_numeric(float(actual["size"]), float(expected["size"]), tolerance=TOLERANCE_PT, unit="pt")
+            else:
+                passed = False
         if "color" in expected:
             theme_color, theme_tint, theme_shade, value = self._resolve_color_info(run, None)
             actual["color"] = value
@@ -509,23 +512,10 @@ class WordChecker(BaseChecker):
         if check_type == "alignment":
             actual = ALIGNMENT_MAP.get(paragraph.alignment, "left")
             passed = actual == str(expected).lower()
-            # If not found on target paragraph, scan all body paragraphs
-            if not passed:
-                for p in document.paragraphs:
-                    if ALIGNMENT_MAP.get(p.alignment, "left") == str(expected).lower():
-                        passed = True
-                        actual = str(expected).lower()
-                        break
 
         elif check_type == "line_spacing":
-            # Search all paragraphs for one with explicit line spacing applied
-            best_para = paragraph
-            for p in document.paragraphs:
-                if p.paragraph_format.line_spacing is not None:
-                    best_para = p
-                    break
-            raw_ls = best_para.paragraph_format.line_spacing
-            raw_rule = best_para.paragraph_format.line_spacing_rule
+            raw_ls = paragraph.paragraph_format.line_spacing
+            raw_rule = paragraph.paragraph_format.line_spacing_rule
             # Convert EMU to pt (1 pt = 12700 EMU)
             if isinstance(raw_ls, (int, float)) and raw_ls > 100:
                 actual_pt = emu_to_pt(int(raw_ls))
@@ -548,7 +538,7 @@ class WordChecker(BaseChecker):
                 elif exp_unit == "pt" and exp_val == 0:
                     passed = rule_ok
                 elif exp_unit == "lines" and actual_pt is not None:
-                    passed = rule_ok and compare_numeric(actual_pt, exp_val, tolerance=TOLERANCE_PT, unit="lines")
+                    passed = rule_ok and compare_numeric(actual_pt, exp_val, tolerance=TOLERANCE_LINES, unit="lines")
                 else:
                     passed = False
             else:
@@ -569,19 +559,14 @@ class WordChecker(BaseChecker):
             sa = paragraph.paragraph_format.space_after
             actual = round(sa.pt, 1) if sa else None
             if actual is not None:
-                passed = compare_numeric(actual, float(expected), tolerance=TOLERANCE_PT, unit="pt")
+                exp_val = expected.get("value") if isinstance(expected, dict) else expected
+                passed = compare_numeric(actual, float(exp_val), tolerance=TOLERANCE_PT, unit="pt")
             else:
                 passed = False
             return CheckerResult(passed=passed, actual=actual, details={"type": check_type})
 
         elif check_type == "first_line_indent":
-            # Search all paragraphs for one with a first line indent applied
             fi = paragraph.paragraph_format.first_line_indent
-            if fi is None:
-                for p in document.paragraphs:
-                    if p.paragraph_format.first_line_indent is not None:
-                        fi = p.paragraph_format.first_line_indent
-                        break
             # Convert EMU to cm (360000 EMU = 1 cm)
             actual = emu_to_cm(int(fi)) if fi is not None else None
             if actual is not None:

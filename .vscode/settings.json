@@ -11,5 +11,7 @@
   },
   "[jinja-html]": {
     "editor.defaultFormatter": null
-  }
+  },
+  "editor.defaultFormatter": "Blackboxapp.blackboxagent",
+  "editor.defaultFoldingRangeProvider": "Blackboxapp.blackboxagent"
 }

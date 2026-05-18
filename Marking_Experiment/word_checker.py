@@ -1280,18 +1280,27 @@ class WordChecker(BaseChecker):
             return CheckerResult(passed=passed, actual=actual, details={"type": check_type})
         if check_type == "header_content":
             actual = self._gather_header_text(section)
+            # expected can be:
+            # - bool: True => header has non-empty content, False => empty
+            # - str: substring match (case-insensitive)
             if isinstance(expected, bool):
-                passed = bool(actual) == expected
+                passed = bool(actual.strip()) == expected
+            elif isinstance(expected, str):
+                passed = expected.strip().lower() in actual.lower()
             else:
-                passed = str(expected).lower() in actual.lower()
+                passed = bool(actual.strip())
             return CheckerResult(passed=passed, actual=actual, details={"type": check_type})
+
         if check_type == "footer_content":
             actual = self._gather_footer_text(section)
             if isinstance(expected, bool):
-                passed = bool(actual) == expected
+                passed = bool(actual.strip()) == expected
+            elif isinstance(expected, str):
+                passed = expected.strip().lower() in actual.lower()
             else:
-                passed = str(expected).lower() in actual.lower()
+                passed = bool(actual.strip())
             return CheckerResult(passed=passed, actual=actual, details={"type": check_type})
+
         if check_type == "header_differs":
             actual = bool(section.different_first_page_header_footer)
             expected_bool = self._parse_boolean(expected)
@@ -1633,6 +1642,16 @@ class WordChecker(BaseChecker):
             return self._check_table(document, check_type, target, expected)
         if domain == "list":
             return self._check_list(document, check_type, target, expected)
+
+        # Hyperlinks & cross-references are parsed at XML/package level.
+        if domain == "object" and check_type in ("hyperlink_url", "hyperlink_text"):
+            from .checks.hyperlink import check_hyperlink_rule
+            return check_hyperlink_rule({"type": check_type, "target": target, "expected": expected}, file_path)
+
+        if domain == "advanced" and check_type in ("cross_reference", "cross_reference_target"):
+            from .checks.cross_reference import check_cross_reference_rule
+            return check_cross_reference_rule({"type": check_type, "target": target, "expected": expected}, file_path)
+
         if domain == "advanced" and check_type == "bookmark":
             return self._check_bookmark(file_path, expected)
         if domain == "advanced" and check_type == "bibliography":
@@ -1646,3 +1665,4 @@ class WordChecker(BaseChecker):
         if domain == "paragraph_formatting" and check_type in ("header_alignment", "footer_alignment"):
             return self._check_document(document, check_type, expected, file_path)
         return CheckerResult(passed=False, details={"reason": f"Unsupported domain '{domain}'."})
+

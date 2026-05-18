@@ -145,6 +145,11 @@ This document analyzes the current Word document checking capabilities in the Ma
 - ❌ `cross_reference` - Cross-reference presence
 - ❌ `cross_reference_target` - Cross-ref target validation
 
+Note:
+- Current WordChecker implementation supports only **presence/count-style** hyperlink checks via `Marking_Experiment/checks/object.py` (e.g. `hyperlink_count`).
+- It does **not** yet validate hyperlink destination URLs nor cross-reference targets/content.
+
+
 ### Image/Object Properties
 - ❌ `image_rotation` - Image rotation angle
 - ❌ `image_compression` - Image compression state
@@ -176,23 +181,33 @@ This document analyzes the current Word document checking capabilities in the Ma
 - ❌ `table_banding` - Row/column banding
 
 ### Header/Footer Content
-- Status: no dedicated header/footer content and numbering checks are implemented yet
-- ❌ `header_content` - Header text verification
-- ❌ `footer_content` - Footer text verification
-- ❌ `header_differs` - Different first page header
-- ❌ `footer_differs` - Different first page footer
-- ❌ `page_number_in_header` - Page numbers in headers
-- ❌ `page_number_in_footer` - Page numbers in footers
-- ❌ `page_number_format` - Number format (1, i, I, a, A)
+- Status: dedicated header/footer content + header/footer differs + page-number presence + page-number format are implemented
+- ✅ `header_content` - Header text verification (bool non-empty or substring match)
+- ✅ `footer_content` - Footer text verification (bool non-empty or substring match)
+- ✅ `header_differs` - Different first page header
+- ✅ `footer_differs` - Different first page footer
+- ✅ `page_number_in_header` - Page numbers in headers
+- ✅ `page_number_in_footer` - Page numbers in footers
+- ✅ `page_number_format` - Number format (1, i, I, a, A)
+
+Verification:
+- Updated implementations in `Marking_Experiment/word_checker.py`.
+- Confirmed module compiles with `python -m py_compile Marking_Experiment/word_checker.py`.
+
 
 ### Page Setup & Layout
-- Status: section and layout-specific document settings remain unimplemented
-- ❌ `page_break` - Page break presence/count
-- ❌ `section_page_break_type` - Section break type (continuous, odd, even, next page)
-- ❌ `line_numbers` - Line numbering settings
-- ❌ `gutter_margin` - Gutter margin
-- ❌ `mirror_margins` - Mirror margins setting
-- ❌ `page_color` - Page background color
+- Status: implemented using `python-docx` + raw XML checks in `word_checker.py`.
+- ✅ `page_break` - Page break presence/count
+- ✅ `section_page_break_type` - Section break type (continuous, odd, even, next page)
+- ✅ `line_numbers` - Line numbering settings
+- ✅ `gutter_margin` - Gutter margin
+- ✅ `mirror_margins` - Mirror margins setting
+- ✅ `page_color` - Page background color
+
+Verification:
+- Updated implementations in `Marking_Experiment/word_checker.py`.
+- Confirmed module compiles with `python -m py_compile Marking_Experiment/word_checker.py`.
+
 
 ### Bibliography & Sources
 - ❌ `sources` - Sources/citations count

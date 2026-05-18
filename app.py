@@ -462,15 +462,17 @@ def init_db():
 
     # Seed initial subjects if empty
     cursor.execute("SELECT COUNT(*) FROM subjects")
-    if cursor.fetchone()[0] == 0:
+    subjects_count = cursor.fetchone()[0]
+    is_new_db = subjects_count == 0
+    if is_new_db:
         initial_subjects = ["Word", "Excel", "Access", "HTML"]
         for subj in initial_subjects:
             cursor.execute("INSERT INTO subjects (name, created_by, created_at) VALUES (?, ?, ?)",
                            (subj, "system", datetime.now().isoformat()))
 
-    # Seed initial tasks if empty
+    # Seed initial tasks only for a fresh database
     cursor.execute("SELECT COUNT(*) FROM tasks")
-    if cursor.fetchone()[0] == 0:
+    if cursor.fetchone()[0] == 0 and is_new_db:
         cursor.execute("SELECT id, name FROM subjects")
         subjects = cursor.fetchall()
         today = datetime.now().date().isoformat()

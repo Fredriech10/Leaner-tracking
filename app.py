@@ -2653,8 +2653,19 @@ def attendance():
     days = []
     data = []
 
+    daily_present_counts = {}
+    daily_absent_counts = {}
+
     if selected_group:
         days, data = get_attendance_data(selected_group, start_date, end_date, teacher_username=username if role == 'teacher' else None)
+
+        # Daily totals across all learners in the selected group
+        for day in days:
+            present = sum(1 for row in data if row.get("days", {}).get(day))
+            total = len(data)
+            daily_present_counts[day] = present
+            daily_absent_counts[day] = total - present
+
 
     # Get excluded dates
     conn = get_db()
@@ -2675,6 +2686,8 @@ def attendance():
         selected_group=selected_group,
         days=days,
         data=data,
+        daily_present_counts=daily_present_counts,
+        daily_absent_counts=daily_absent_counts,
         edit_mode=edit_mode,
         today=datetime.now().strftime("%Y-%m-%d"),
         excluded_dates=excluded_dates,

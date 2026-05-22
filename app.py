@@ -2645,10 +2645,101 @@ def attendance():
         start_date = (datetime.now() - timedelta(days=7)).strftime("%Y-%m-%d")
         end_date = today
 
-    groups = get_groups(username) if role == 'teacher' else get_groups()
+    groups = get_groups(username) if role == "teacher" else get_groups()
 
-    if role == 'teacher' and selected_group and selected_group not in groups:
+    if role == "teacher" and selected_group and selected_group not in groups:
         selected_group = None
+
+    # ─────────────────────────────────────────────────────────────
+    # Auto-exclude: on every attendance load, find past business
+    # days where (total present across group) == 0 and add to
+    # excluded_dates with reason='auto_excluded'.
+    # Scope: past 90 days, but not before the active term start.
+    # ─────────────────────────────────────────────────────────────
+    conn = get_db()
+    cursor = conn.cursor()
+
+    # Active term start boundary (if any)
+    active_term = get_active_term_range()
+    active_term_start = None
+    if active_term:
+        active_term_start = active_term[0]
+
+    today_date = datetime.now().date()
+    start_boundary = today_date - timedelta(days=90)
+    if active_term_start:
+        try:
+            active_start_date = datetime.strptime(active_term_start, "%Y-%m-%d").date()
+            if active_start_date > start_boundary:
+                start_boundary = active_start_date
+        except Exception:
+            pass
+
+    # Eligible days: business days only, strictly day < today
+    yesterday = today_date - timedelta(days=1)
+    cur_day = start_boundary
+    eligible_days = []
+    while cur_day <= yesterday:
+        if cur_day.weekday() < 5:
+            eligible_days.append(cur_day.strftime("%Y-%m-%d"))
+        cur_day += timedelta(days=1)
+
+    # Load existing excluded dates for quick duplicate prevention
+    cursor.execute("SELECT date, group_name FROM excluded_dates")
+    existing_excluded = {(r[0], r[1]) for r in cursor.fetchall()}
+
+    groups_to_check = groups if selected_group is None else ([selected_group] if selected_group in groups else [])
+    for group in groups_to_check:
+        # Get students in the group (and teacher constraint if needed)
+        if role == "teacher":
+            cursor.execute(
+                "SELECT username FROM users WHERE group_name = ? AND role = 'student' AND teacher_username = ?",
+                (group, username),
+            )
+        else:
+            cursor.execute(
+                "SELECT username FROM users WHERE group_name = ? AND role = 'student'",
+                (group,),
+            )
+        student_usernames = [r[0] for r in cursor.fetchall()]
+        if not student_usernames:
+            continue
+
+        # Pre-check: count of distinct present per day
+        for day in eligible_days:
+            # total present == login_history present OR manual override present
+            placeholders = ",".join("?" * len(student_usernames))
+
+            cursor.execute(f"""
+                SELECT COUNT(DISTINCT username)
+                FROM (
+                    SELECT username
+                    FROM login_history
+                    WHERE date = ? AND username IN ({placeholders})
+                    UNION
+                    SELECT a.username
+                    FROM attendance_override a
+                    WHERE a.date = ? AND a.status = 'present'
+                      AND a.username IN ({placeholders})
+                      AND NOT EXISTS (
+                          SELECT 1 FROM login_history lh
+                          WHERE lh.date = ? AND lh.username = a.username
+                      )
+                ) p
+            """, (*([day] + student_usernames), day, *student_usernames, day))
+            present_count = cursor.fetchone()[0] or 0
+
+            if present_count == 0 and (day, group) not in existing_excluded:
+                cursor.execute("""
+                    INSERT INTO excluded_dates (date, group_name, reason, created_by, created_at)
+                    VALUES (?, ?, ?, ?, ?)
+                    ON CONFLICT(date, group_name) DO NOTHING
+                """, (day, group, "auto_excluded", username, datetime.now().isoformat()))
+                existing_excluded.add((day, group))
+
+    conn.commit()
+    conn.close()
+    # ─────────────────────────────────────────────────────────────
 
     days = []
     data = []
@@ -2665,7 +2756,6 @@ def attendance():
             total = len(data)
             daily_present_counts[day] = present
             daily_absent_counts[day] = total - present
-
 
     # Get excluded dates
     conn = get_db()

@@ -213,10 +213,11 @@
             <h3>🔴 Lowest Attendance (Last 21 Days)</h3>
             {% if low_attendance %}
             <table>
-                <tr><th>Name</th><th>Days Absent</th><th></th></tr>
-                {% for name, absent in low_attendance %}
+                <tr><th>Name</th><th>Username</th><th>Days Absent</th><th></th></tr>
+                {% for name, username, absent in low_attendance %}
                 <tr>
-                    <td>{{ name }}</td>
+                    <td><a href="/learner_record/{{ username }}">{{ name }}</a></td>
+                    <td>{{ username }}</td>
                     <td>{{ absent }}</td>
                     <td>
                         <span class="badge {{ 'badge-risk' if absent >= 5 else 'badge-warn' }}">

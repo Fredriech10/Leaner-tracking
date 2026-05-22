@@ -33,6 +33,20 @@ def get_last_21_days():
 
     return list(reversed(days))
 
+def get_days_in_active_term():
+    term_range = get_active_term_range()
+    if not term_range:
+        return []
+    start_date, end_date = term_range
+    days = []
+    current = datetime.strptime(start_date, "%Y-%m-%d").date()
+    end = datetime.strptime(end_date, "%Y-%m-%d").date()
+    while current <= end:
+        if current.weekday() < 5:
+            days.append(current.strftime("%Y-%m-%d"))
+        current += timedelta(days=1)
+    return days
+
 def get_last_7_days():
     days = []
     current = datetime.now().date()
@@ -707,44 +721,73 @@ def get_overall_average(username):
     return round(result[0], 1) if result[0] else 0
 
 def get_low_attendance_learners(limit=10, groups=None, teacher_username=None):
-    days = get_last_21_days()
+    """
+    Lowest attendance (days absent) for the teacher dashboard.
+
+    Must match learner_record attendance window/logic:
+    - Business days: get_last_21_days()
+    - Excluded dates:
+        * global exclusions (excluded_dates.group_name IS NULL)
+        * group-specific exclusions (excluded_dates.group_name = learner group)
+    """
+    days_all = get_last_21_days()
     conn = get_db()
     cursor = conn.cursor()
 
-    # Get excluded dates (global only for cross-group summary)
+    # Excluded days: global + per-group
     cursor.execute("SELECT date FROM excluded_dates WHERE group_name IS NULL")
-    excluded = {row[0] for row in cursor.fetchall()}
-    days = [d for d in days if d not in excluded]
+    excluded_global = {row[0] for row in cursor.fetchall()}
 
+    cursor.execute("SELECT date, group_name FROM excluded_dates WHERE group_name IS NOT NULL")
+    excluded_by_group = {}
+    for date_str, group_name in cursor.fetchall():
+        excluded_by_group.setdefault(group_name, set()).add(date_str)
+
+    # Learners (include group_name so we can apply group-specific exclusions)
     if teacher_username:
         cursor.execute(
-            "SELECT username, full_name FROM users WHERE role = 'student' AND teacher_username = ?",
-            (teacher_username,))
+            "SELECT username, full_name, group_name FROM users WHERE role = 'student' AND teacher_username = ?",
+            (teacher_username,),
+        )
     elif groups:
         placeholders = ",".join("?" for _ in groups)
-        cursor.execute(f"SELECT username, full_name FROM users WHERE role = 'student' AND group_name IN ({placeholders})", groups)
+        cursor.execute(
+            f"SELECT username, full_name, group_name FROM users WHERE role = 'student' AND group_name IN ({placeholders})",
+            groups,
+        )
     else:
-        cursor.execute("SELECT username, full_name FROM users WHERE role = 'student'")
+        cursor.execute("SELECT username, full_name, group_name FROM users WHERE role = 'student'")
     learners = cursor.fetchall()
 
     results = []
-    for username, full_name in learners:
+    for username, full_name, learner_group in learners:
+        excluded_for_learner = excluded_by_group.get(learner_group, set())
+
+        days = [d for d in days_all if d not in excluded_global and d not in excluded_for_learner]
+
         present = 0
         for day in days:
-            cursor.execute("SELECT 1 FROM login_history WHERE username = ? AND date = ?", (username, day))
+            cursor.execute(
+                "SELECT 1 FROM login_history WHERE username = ? AND date = ?",
+                (username, day),
+            )
             if cursor.fetchone():
                 present += 1
                 continue
-            cursor.execute("SELECT status FROM attendance_override WHERE username = ? AND date = ?", (username, day))
+
+            cursor.execute(
+                "SELECT status FROM attendance_override WHERE username = ? AND date = ?",
+                (username, day),
+            )
             override = cursor.fetchone()
             if override and override[0] == "present":
                 present += 1
 
         absent = len(days) - present
-        results.append((full_name or username, absent))
+        results.append((full_name or username, username, absent))
 
     conn.close()
-    results.sort(key=lambda x: x[1], reverse=True)
+    results.sort(key=lambda x: x[2], reverse=True)
     return results[:limit]
 
 
@@ -3100,13 +3143,33 @@ def learner_record(username):
         if not row or row[0] != admin_user:
             conn.close()
             return "Access denied", 403
-
     # ── Attendance ────────────────────────────────────────────────────
+    # Must match teacher_dashboard “Lowest Attendance (Last 21 Days)”
     days = get_last_21_days()
     history = []
     cursor.execute("SELECT group_name FROM users WHERE username = ?", (username,))
     group_row = cursor.fetchone()
     user_group = group_row[0] if group_row else None
+
+    def is_date_excluded_for_group(date_str, group_name):
+        # Exclude if it's globally excluded (group_name IS NULL)
+        cursor.execute(
+            "SELECT 1 FROM excluded_dates WHERE date = ? AND group_name IS NULL",
+            (date_str,),
+        )
+        if cursor.fetchone():
+            return True
+
+        # Or if it's excluded for the learner's specific group
+        if group_name is not None:
+            cursor.execute(
+                "SELECT 1 FROM excluded_dates WHERE date = ? AND group_name = ?",
+                (date_str, group_name),
+            )
+            if cursor.fetchone():
+                return True
+
+        return False
 
     for day in days:
         cursor.execute("SELECT MIN(login_time) FROM login_history WHERE username = ? AND date = ?", (username, day))
@@ -3115,15 +3178,22 @@ def learner_record(username):
         if login_time:
             time_str = login_time.split(" ")[1][:5]
             late = cutoff is not None and time_str > cutoff
-            history.append({"date": day, "status": "Present", "time": time_str, "late": late, "note": "Auto"})
+
+            if not is_date_excluded_for_group(day, user_group):
+                history.append({"date": day, "status": "Present", "time": time_str, "late": late, "note": "Auto"})
         else:
             cursor.execute("SELECT status FROM attendance_override WHERE username = ? AND date = ?", (username, day))
             override = cursor.fetchone()
             if override and override[0] == "present":
-                history.append({"date": day, "status": "Present", "time": "12:00", "late": False, "note": "Manual"})
+                if not is_date_excluded_for_group(day, user_group):
+                    history.append({"date": day, "status": "Present", "time": "12:00", "late": False, "note": "Manual"})
             else:
-                history.append({"date": day, "status": "Absent", "time": "", "late": False, "note": "Manual" if override else "Auto"})
+                # Only record absent for non-excluded days
+                if not is_date_excluded_for_group(day, user_group):
+                    history.append({"date": day, "status": "Absent", "time": "", "late": False, "note": "Manual" if override else "Auto"})
 
+    # totals must respect excluded days for the learner's group:
+    # - history only includes non-excluded days
     total_days = len(history)
     present_days = sum(1 for h in history if h["status"] == "Present")
     absent_days = total_days - present_days
@@ -3623,6 +3693,18 @@ def risk_learners():
     today = datetime.now().strftime("%Y-%m-%d")
     risk_students = []
 
+    # Apply excluded-day filtering exactly like learner_record:
+    # - exclude globally where excluded_dates.group_name IS NULL
+    # - exclude where excluded_dates.group_name == selected_group
+    cursor.execute("""
+        SELECT date
+        FROM excluded_dates
+        WHERE group_name IS NULL OR group_name = ?
+    """, (selected_group,))
+    excluded_days = {r[0] for r in cursor.fetchall()}
+
+    filtered_days_21 = [d for d in days_21 if d not in excluded_days]
+
     for student_username, full_name in students_raw:
         cursor.execute("""
             SELECT ROUND(AVG(best_score), 1)
@@ -3633,10 +3715,23 @@ def risk_learners():
                 GROUP BY subject, task
             )
         """, (student_username,))
-        avg_score = cursor.fetchone()[0] or 0
+        avg_task = cursor.fetchone()[0] or 0
+
+        cursor.execute("""
+            SELECT ROUND(AVG(best_theory), 1)
+            FROM (
+                SELECT test_id, MAX(percentage) as best_theory
+                FROM theory_submissions
+                WHERE username = ?
+                GROUP BY test_id
+            )
+        """, (student_username,))
+        avg_thoery = cursor.fetchone()[0] or 0
+
+        avg_score = round((avg_task + avg_thoery) / 2, 1) if avg_task and avg_thoery else (avg_task or avg_thoery)
 
         present_days = 0
-        for day in days_21:
+        for day in filtered_days_21:
             cursor.execute("SELECT 1 FROM login_history WHERE username = ? AND date = ?", (student_username, day))
             if cursor.fetchone():
                 present_days += 1
@@ -3646,7 +3741,7 @@ def risk_learners():
             if override and override[0] == 'present':
                 present_days += 1
 
-        attendance_pct = round((present_days / len(days_21)) * 100) if days_21 else 0
+        attendance_pct = round((present_days / len(filtered_days_21)) * 100) if filtered_days_21 else 0
 
         cursor.execute("""
             SELECT COUNT(DISTINCT t.id)
@@ -3730,8 +3825,12 @@ def risk_learners():
         })
 
     conn.close()
-    return render_template("Riks_learners.html", groups=groups, selected_group=selected_group,
-                           risk_students=risk_students)
+    return render_template(
+        "Riks_learners.html",
+        groups=groups,
+        selected_group=selected_group,
+        risk_students=risk_students
+    )
 
 
 @app.route("/group_results")

@@ -862,7 +862,7 @@ def get_group_late_threshold(group, date):
     except ValueError:
         min_dt = datetime.strptime(min_login, "%Y-%m-%d %H:%M:%S")
 
-    late_cutoff = min_dt + timedelta(minutes=6)
+    late_cutoff = min_dt + timedelta(minutes=4)
     return late_cutoff.strftime("%H:%M")
 
 

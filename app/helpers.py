@@ -87,7 +87,7 @@ def get_group_late_threshold(group, date):
         min_dt = datetime.fromisoformat(min_login)
     except ValueError:
         min_dt = datetime.strptime(min_login, "%Y-%m-%d %H:%M:%S")
-    return (min_dt + timedelta(minutes=4)).strftime("%H:%M")
+    return (min_dt + timedelta(minutes=3)).strftime("%H:%M")
 
 
 def get_attendance_data(group, start_date=None, end_date=None):

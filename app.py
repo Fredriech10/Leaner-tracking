@@ -1123,6 +1123,7 @@ def student_dashboard():
         FROM (SELECT subject, task, MAX(score) as best_score FROM results WHERE username = ? GROUP BY subject, task)
         GROUP BY subject
     """, (username,))
+    
     subject_avgs = cursor.fetchall()
 
     cursor.execute("""
@@ -3793,8 +3794,13 @@ def risk_learners():
 
         total_tasks = total_assigned + total_theory
         missing_pct = round((missing_practical + missing_theory) / total_tasks * 100) if total_tasks else 0
-
-        risk_score = round((100 - attendance_pct) * 0.4 + (100 - avg_score) * 0.4 + missing_pct * 0.2)
+        # Adjust the calculation of risk score if assignment is missing but attendance and scores are good, to avoid labeling as high risk just for missing a recently assigned task
+        adjusted_missing_pct = missing_pct
+        adjusted_score_penalty = 100 - avg_score
+        if missing_pct > 70 and attendance_pct >= 60 and (avg_score >= 50 or avg_score == 0):
+            adjusted_missing_pct = 70
+            adjusted_score_penalty = 60
+        risk_score = round((100 - attendance_pct) * 0.55 + adjusted_score_penalty * 0.35 + adjusted_missing_pct * 0.1)
         if risk_score <= 40:
             status = 'Safe'
         elif risk_score <= 70:
@@ -3805,7 +3811,7 @@ def risk_learners():
         reasons = []
         if attendance_pct < 60:
             reasons.append(f"A {attendance_pct}%")
-        if avg_score < 40:
+        if avg_score < 50 and avg_score > 0:
             reasons.append(f"AVG{avg_score}%")
         if missing_pct > 70:
             reasons.append(f"Missing {missing_pct}%")

@@ -63,10 +63,14 @@ def _infer_domain(program: str) -> str:
     return program
 
 
-def _map_check_to_question(check: Dict[str, Any]) -> Dict[str, Any]:
+def _map_check_to_question(check: Dict[str, Any], idx: int) -> Dict[str, Any]:
+
     check_type = check.get("type")
     expected = check.get("expected")
-    marks = int(check.get("mark", 1))
+
+    # Force exactly 1 mark per check (no aggregation; your structured expectations already define per-check properties).
+    marks = 1
+
 
     program = _infer_program(str(check_type))
 
@@ -160,8 +164,22 @@ def _map_check_to_question(check: Dict[str, Any]) -> Dict[str, Any]:
             # Preserve the full original anchor for later refinement.
             target["_anchor"] = dict(anchor)
 
-    question_number = str(check.get("question"))
-    description = f"{domain}.{engine_check_type}"
+    # structured_expectations check.id contains the unique letter suffix already (e.g. Q1.1.2a)
+    # Engine expects `question_number` per check so each check counts as its own 1 mark.
+    # We preserve the full id, but also normalize to engine-friendly form.
+    check_id = check.get("id")
+    if check_id is None:
+        question_number = str(check.get("question", check.get("question_number", 0)))
+    else:
+        # Convert Qx.y.z... style ids to a dotted engine number: 1.1.2a, 2.1.3b, etc.
+        # Example: "Q1.1.2a" -> "1.1.2a"
+        s = str(check_id).strip()
+        s = re.sub(r"^Q", "", s, flags=re.IGNORECASE)
+        question_number = s
+
+    description = f"{domain}.{engine_check_type}" 
+
+
 
     return {
         "question_number": question_number,
@@ -179,7 +197,8 @@ def convert(structured_path: Path, out_task_path: Path) -> None:
     structured = json.loads(structured_path.read_text(encoding="utf-8"))
     checks: List[Dict[str, Any]] = structured.get("checks", [])
 
-    questions = [_map_check_to_question(c) for c in checks]
+    questions = [_map_check_to_question(c, idx) for idx, c in enumerate(checks, start=1)]
+
     total_marks = sum(int(q["marks"]) for q in questions)
 
     # Determine overall program

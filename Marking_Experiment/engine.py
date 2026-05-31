@@ -88,6 +88,7 @@ from .word_checker import WordChecker
 
 
 class MarkingEngine:
+
     def __init__(self, checkers: Optional[List[BaseChecker]] = None):
         if checkers is None:
             checkers = [WordChecker(), ExcelChecker(), HTMLChecker(), AccessChecker()]
@@ -163,6 +164,39 @@ class MarkingEngine:
         for idx, rule in enumerate(rules, start=1):
             domain = str(rule.get("domain", ""))
             check_type = str(rule.get("type", rule.get("property", "")))
+
+            # Compatibility mapping for document-level checks generated from structured expectations.
+            # Many expected values are stored in the "expected" dict with unit strings (e.g. "2.5cm"),
+            # while some WordChecker implementations compare raw numeric cm values.
+            if domain == "document" and check_type == "margins" and isinstance(rule.get("expected"), dict):
+                exp_dict = rule.get("expected")
+                # If values are strings like "2.5cm", normalize into numeric cm.
+                def _parse_cm(v: Any) -> Optional[float]:
+                    if v is None:
+                        return None
+                    if isinstance(v, (int, float)):
+                        return float(v)
+                    m = re.search(r"(\d+(?:\.\d+)?)\s*cm", str(v).lower())
+                    return float(m.group(1)) if m else None
+
+                top = _parse_cm(exp_dict.get("top"))
+                bottom = _parse_cm(exp_dict.get("bottom"))
+                left = _parse_cm(exp_dict.get("left"))
+                right = _parse_cm(exp_dict.get("right"))
+
+                # Replace margins dict check with existing alias checks.
+                # WordChecker supports numeric cm via check_type "margin_top_bottom_cm" and "margin_left_right_cm".
+                if top is not None and bottom is not None and abs(top - bottom) < 1e-6:
+                    rule = dict(rule)
+                    rule["type"] = "margin_top_bottom_cm"
+                    rule["expected"] = top
+                    check_type = "margin_top_bottom_cm"
+                elif left is not None and right is not None and abs(left - right) < 1e-6:
+                    rule = dict(rule)
+                    rule["type"] = "margin_left_right_cm"
+                    rule["expected"] = left
+                    check_type = "margin_left_right_cm"
+
 
             target = rule.get("target", {}) or {}
 

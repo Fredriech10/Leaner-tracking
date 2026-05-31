@@ -1,0 +1,105 @@
+{
+  "task_name": "Generated Task",
+  "program": "word",
+  "file": "student_file.docx",
+  "total_marks": 15,
+  "questions": [
+    {
+      "question_number": "1.1.1",
+      "description": "Set the document paper size to A4 and the orientation to Portrait.",
+      "domain": "document",
+      "type": "paper_size",
+      "target": {
+        "locator": "document"
+      },
+      "expected": {
+        "size": "A4",
+        "orientation": "Portrait"
+      },
+      "marks": 2
+    },
+    {
+      "question_number": "1.1.2",
+      "description": "Adjust the document margins to 2.5 cm on all sides.",
+      "domain": "document",
+      "type": "margins",
+      "target": {
+        "locator": "document"
+      },
+      "expected": {
+        "top": "2.5cm",
+        "bottom": "2.5cm",
+        "left": "2.5cm",
+        "right": "2.5cm"
+      },
+      "marks": 2
+    },
+    {
+      "question_number": "1.2.1",
+      "description": "Apply a double-line page border to the first page only.",
+      "domain": "document",
+      "type": "page_border",
+      "target": {
+        "locator": "first_page"
+      },
+      "expected": {
+        "style": "double-line"
+      },
+      "marks": 3
+    },
+    {
+      "question_number": "1.2.2",
+      "description": "Insert a text watermark with the words 'CAT TEST'. Set the colour to Blue and the layout to Diagonal.",
+      "domain": "document",
+      "type": "watermark",
+      "target": {
+        "locator": "document"
+      },
+      "expected": {
+        "text": "CAT TEST",
+        "color": "Blue",
+        "layout": "Diagonal"
+      },
+      "marks": 3
+    },
+    {
+      "question_number": "1.3.1",
+      "description": "Insert your Name and Surname in the header, aligned to the right.",
+      "domain": "document",
+      "type": "header_text",
+      "target": {
+        "locator": "header"
+      },
+      "expected": {
+        "text": "Your Name and Surname",
+        "alignment": "right"
+      },
+      "marks": 1
+    },
+    {
+      "question_number": "1.3.2",
+      "description": "Insert automatic page numbering in the footer using the format 'Page X of Y', aligned to the center.",
+      "domain": "document",
+      "type": "footer_text",
+      "target": {
+        "locator": "footer"
+      },
+      "expected": {
+        "text": "Page X of Y",
+        "alignment": "center"
+      },
+      "marks": 3
+    },
+    {
+      "question_number": "1.4.1",
+      "description": "Apply a setting to the document so that the text automatically hyphenates.",
+      "domain": "document",
+      "type": "hyphenation",
+      "target": {
+        "locator": "document"
+      },
+      "expected": {},
+      "marks": 1
+    }
+  ]
+}

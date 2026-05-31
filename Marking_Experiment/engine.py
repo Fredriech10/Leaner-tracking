@@ -140,6 +140,7 @@ class MarkingEngine:
         return None
 
     def _run_question(
+
         self,
         question: Dict[str, Any],
         rule_checker: Any,
@@ -162,7 +163,14 @@ class MarkingEngine:
         for idx, rule in enumerate(rules, start=1):
             domain = str(rule.get("domain", ""))
             check_type = str(rule.get("type", rule.get("property", "")))
+
             target = rule.get("target", {}) or {}
+
+            # NOTE: do not do ad-hoc remaps here; keep engine generic.
+            # Rule mapping must be implemented by the converter (structured_expectations_to_task)
+            # and/or by extending WordChecker.
+
+
             expected = rule.get("expected")
             marks = int(rule.get("marks", 1))
             rule_description = str(rule.get("description", description))

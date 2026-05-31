@@ -301,7 +301,7 @@ class MarkingExperimentApp:
             parsed = parser.parse(question_paper_text, marksheet_text, program=program)
         except Exception as exc:
             logger.exception(
-                "Generate Task JSON failed (exception). backend=%s program=%s question_paper=%s marksheet=%s",
+                "Generate task JSON failed (exception). backend=%s program=%s question_paper=%s marksheet=%s",
                 self.backend_var.get(),
                 program,
                 str(self.question_paper_path),

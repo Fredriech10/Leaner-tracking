@@ -1,0 +1,1197 @@
+{
+  "task_name": "CAT Gr 10 Practical Uber Tasks",
+  "program": "word",
+  "file": "COMPUTER APPLICATIONS TECHNOLOGY test 1 memo.docx",
+  "total_marks": 100,
+  "questions": [
+    {
+      "question_number": "1",
+      "description": "document.paper_size",
+      "marks": 1,
+      "domain": "document",
+      "type": "paper_size",
+      "target": {},
+      "expected": "A4"
+    },
+    {
+      "question_number": "1",
+      "description": "document.margin_top_bottom_cm",
+      "marks": 1,
+      "domain": "document",
+      "type": "margin_top_bottom_cm",
+      "target": {},
+      "expected": 2
+    },
+    {
+      "question_number": "1",
+      "description": "document.margin_left_right_cm",
+      "marks": 1,
+      "domain": "document",
+      "type": "margin_left_right_cm",
+      "target": {},
+      "expected": 3
+    },
+    {
+      "question_number": "1",
+      "description": "document.page_border",
+      "marks": 1,
+      "domain": "document",
+      "type": "page_border",
+      "target": {},
+      "expected": "single_line_present"
+    },
+    {
+      "question_number": "1",
+      "description": "paragraph_formatting.unnecessary_spaces_removed",
+      "marks": 1,
+      "domain": "paragraph_formatting",
+      "type": "unnecessary_spaces_removed",
+      "target": {
+        "paragraph_starts_with": "The idea",
+        "paragraph_ends_with": "electronically"
+      },
+      "expected": true
+    },
+    {
+      "question_number": "1",
+      "description": "font.registered_symbol_applied",
+      "marks": 1,
+      "domain": "font",
+      "type": "registered_symbol_applied",
+      "target": {
+        "paragraph_starts_with": "The idea",
+        "paragraph_ends_with": "electronically",
+        "text": "Uber"
+      },
+      "expected": "Uber® or Uber with registered symbol"
+    },
+    {
+      "question_number": "1",
+      "description": "advanced.comment_present",
+      "marks": 1,
+      "domain": "advanced",
+      "type": "comment_present",
+      "target": {
+        "text": "hail"
+      },
+      "expected": true
+    },
+    {
+      "question_number": "1",
+      "description": "advanced.comment_text",
+      "marks": 1,
+      "domain": "advanced",
+      "type": "comment_text",
+      "target": {
+        "text": "hail"
+      },
+      "expected": "Hail means calling out for or signalling somebody to come to you."
+    },
+    {
+      "question_number": "1",
+      "description": "paragraph_formatting.bulleted_list",
+      "marks": 1,
+      "domain": "paragraph_formatting",
+      "type": "bulleted_list",
+      "target": {
+        "heading": "How the Uber app works",
+        "paragraph_index_after_heading": 1
+      },
+      "expected": true
+    },
+    {
+      "question_number": "1",
+      "description": "paragraph_formatting.picture_bullet",
+      "marks": 1,
+      "domain": "paragraph_formatting",
+      "type": "picture_bullet",
+      "target": {
+        "heading": "How the Uber app works",
+        "paragraph_index_after_heading": 1
+      },
+      "expected": true
+    },
+    {
+      "question_number": "1",
+      "description": "paragraph_formatting.bullet_point_count",
+      "marks": 1,
+      "domain": "paragraph_formatting",
+      "type": "bullet_point_count",
+      "target": {
+        "heading": "How the Uber app works"
+      },
+      "expected": 3
+    },
+    {
+      "question_number": "1",
+      "description": "font.bold_correctly_applied",
+      "marks": 1,
+      "domain": "font",
+      "type": "bold_correctly_applied",
+      "target": {
+        "heading": "How the Uber app works",
+        "paragraph_index_after_heading": 1
+      },
+      "expected": true
+    },
+    {
+      "question_number": "1",
+      "description": "font.underline_correctly_applied",
+      "marks": 1,
+      "domain": "font",
+      "type": "underline_correctly_applied",
+      "target": {
+        "heading": "How the Uber app works",
+        "paragraph_index_after_heading": 1
+      },
+      "expected": true
+    },
+    {
+      "question_number": "1",
+      "description": "font.superscript",
+      "marks": 1,
+      "domain": "font",
+      "type": "superscript",
+      "target": {
+        "text": "GPS"
+      },
+      "expected": true
+    },
+    {
+      "question_number": "1",
+      "description": "font.italic",
+      "marks": 1,
+      "domain": "font",
+      "type": "italic",
+      "target": {
+        "text": "estimated"
+      },
+      "expected": true
+    },
+    {
+      "question_number": "1",
+      "description": "table.text_direction",
+      "marks": 1,
+      "domain": "table",
+      "type": "text_direction",
+      "target": {
+        "locator": "table_index",
+        "value": 0,
+        "_anchor": {
+          "after_paragraph": "Uber has also encouraged traditional taxi services to adopt similar technologies, such as app-based booking systems. As a result, consumers benefit from improved services and increased competition.",
+          "cell_text": "Uber",
+          "row": 1,
+          "column": 2
+        }
+      },
+      "expected": "upwards"
+    },
+    {
+      "question_number": "1",
+      "description": "table.vertical_alignment",
+      "marks": 1,
+      "domain": "table",
+      "type": "vertical_alignment",
+      "target": {
+        "locator": "table_index",
+        "value": 0,
+        "_anchor": {
+          "after_paragraph": "Uber has also encouraged traditional taxi services to adopt similar technologies, such as app-based booking systems. As a result, consumers benefit from improved services and increased competition.",
+          "cell_text": "Uber",
+          "row": 1,
+          "column": 2
+        }
+      },
+      "expected": "middle"
+    },
+    {
+      "question_number": "1",
+      "description": "table.row_height_applied",
+      "marks": 1,
+      "domain": "table",
+      "type": "row_height_applied",
+      "target": {
+        "locator": "table_index",
+        "value": 0,
+        "_anchor": {
+          "after_paragraph": "Uber has also encouraged traditional taxi services to adopt similar technologies, such as app-based booking systems. As a result, consumers benefit from improved services and increased competition.",
+          "rows": "3 onwards"
+        }
+      },
+      "expected": true
+    },
+    {
+      "question_number": "1",
+      "description": "table.row_height_cm",
+      "marks": 1,
+      "domain": "table",
+      "type": "row_height_cm",
+      "target": {
+        "locator": "table_index",
+        "value": 0,
+        "_anchor": {
+          "after_paragraph": "Uber has also encouraged traditional taxi services to adopt similar technologies, such as app-based booking systems. As a result, consumers benefit from improved services and increased competition.",
+          "rows": "3 onwards"
+        }
+      },
+      "expected": 0.5
+    },
+    {
+      "question_number": "1",
+      "description": "table.row_deleted",
+      "marks": 1,
+      "domain": "table",
+      "type": "row_deleted",
+      "target": {
+        "locator": "table_index",
+        "value": 0,
+        "_anchor": {
+          "after_paragraph": "Uber has also encouraged traditional taxi services to adopt similar technologies, such as app-based booking systems. As a result, consumers benefit from improved services and increased competition.",
+          "row_text": "Driver Rating"
+        }
+      },
+      "expected": true
+    },
+    {
+      "question_number": "1",
+      "description": "table.outside_border_color",
+      "marks": 1,
+      "domain": "table",
+      "type": "outside_border_color",
+      "target": {
+        "locator": "table_index",
+        "value": 0,
+        "_anchor": {
+          "after_paragraph": "Uber has also encouraged traditional taxi services to adopt similar technologies, such as app-based booking systems. As a result, consumers benefit from improved services and increased competition."
+        }
+      },
+      "expected": "red"
+    },
+    {
+      "question_number": "1",
+      "description": "table.outside_border_style",
+      "marks": 1,
+      "domain": "table",
+      "type": "outside_border_style",
+      "target": {
+        "locator": "table_index",
+        "value": 0,
+        "_anchor": {
+          "after_paragraph": "Uber has also encouraged traditional taxi services to adopt similar technologies, such as app-based booking systems. As a result, consumers benefit from improved services and increased competition."
+        }
+      },
+      "expected": "double_line"
+    },
+    {
+      "question_number": "1",
+      "description": "table.outside_border_applied",
+      "marks": 1,
+      "domain": "table",
+      "type": "outside_border_applied",
+      "target": {
+        "locator": "table_index",
+        "value": 0,
+        "_anchor": {
+          "after_paragraph": "Uber has also encouraged traditional taxi services to adopt similar technologies, such as app-based booking systems. As a result, consumers benefit from improved services and increased competition."
+        }
+      },
+      "expected": true
+    },
+    {
+      "question_number": "1",
+      "description": "table.outside_border_width_pt",
+      "marks": 1,
+      "domain": "table",
+      "type": "outside_border_width_pt",
+      "target": {
+        "locator": "table_index",
+        "value": 0,
+        "_anchor": {
+          "after_paragraph": "Uber has also encouraged traditional taxi services to adopt similar technologies, such as app-based booking systems. As a result, consumers benefit from improved services and increased competition."
+        }
+      },
+      "expected": 1.5
+    },
+    {
+      "question_number": "1",
+      "description": "paragraph_formatting.word_found",
+      "marks": 1,
+      "domain": "paragraph_formatting",
+      "type": "word_found",
+      "target": {
+        "word": "taxi",
+        "case_sensitive": false
+      },
+      "expected": true
+    },
+    {
+      "question_number": "1",
+      "description": "document.author_contains_value",
+      "marks": 1,
+      "domain": "document",
+      "type": "author_contains_value",
+      "target": {
+        "word": "taxi",
+        "expected_count": 6
+      },
+      "expected": "6"
+    },
+    {
+      "question_number": "1",
+      "description": "document.author",
+      "marks": 1,
+      "domain": "document",
+      "type": "author",
+      "target": {},
+      "expected": "6"
+    },
+    {
+      "question_number": "1",
+      "description": "paragraph_formatting.style_applied",
+      "marks": 1,
+      "domain": "paragraph_formatting",
+      "type": "style_applied",
+      "target": {
+        "heading": "Social and Economic Impact",
+        "paragraph_starts_with": "Uber has both"
+      },
+      "expected": "Intense Quote"
+    },
+    {
+      "question_number": "1",
+      "description": "paragraph_formatting.correct_target_paragraph",
+      "marks": 1,
+      "domain": "paragraph_formatting",
+      "type": "correct_target_paragraph",
+      "target": {
+        "heading": "Social and Economic Impact",
+        "paragraph_starts_with": "Uber has both"
+      },
+      "expected": true
+    },
+    {
+      "question_number": "1",
+      "description": "advanced.numbering_format",
+      "marks": 1,
+      "domain": "advanced",
+      "type": "numbering_format",
+      "target": {
+        "style": "Heading 2"
+      },
+      "expected": "capital_letters"
+    },
+    {
+      "question_number": "1",
+      "description": "advanced.all_required_headings_use_style",
+      "marks": 1,
+      "domain": "advanced",
+      "type": "all_required_headings_use_style",
+      "target": {
+        "style": "Heading 2"
+      },
+      "expected": true
+    },
+    {
+      "question_number": "2",
+      "description": "document.template",
+      "marks": 1,
+      "domain": "document",
+      "type": "template",
+      "target": {
+        "cover_page": true
+      },
+      "expected": "Integral"
+    },
+    {
+      "question_number": "2",
+      "description": "document.title_present",
+      "marks": 1,
+      "domain": "document",
+      "type": "title_present",
+      "target": {
+        "content_control": "Document Title"
+      },
+      "expected": true
+    },
+    {
+      "question_number": "2",
+      "description": "document.title_text",
+      "marks": 1,
+      "domain": "document",
+      "type": "title_text",
+      "target": {
+        "content_control": "Document Title"
+      },
+      "expected": "Analysis of the Types of People Who Use Uber"
+    },
+    {
+      "question_number": "2",
+      "description": "document.author_name_present",
+      "marks": 1,
+      "domain": "document",
+      "type": "author_name_present",
+      "target": {
+        "content_control": "Author"
+      },
+      "expected": true
+    },
+    {
+      "question_number": "2",
+      "description": "document.author_control_box_filled",
+      "marks": 1,
+      "domain": "document",
+      "type": "author_control_box_filled",
+      "target": {
+        "content_control": "Author"
+      },
+      "expected": true
+    },
+    {
+      "question_number": "2",
+      "description": "document.image_replaced",
+      "marks": 1,
+      "domain": "document",
+      "type": "image_replaced",
+      "target": {
+        "cover_page": true
+      },
+      "expected": true
+    },
+    {
+      "question_number": "2",
+      "description": "document.image_source_or_match",
+      "marks": 1,
+      "domain": "document",
+      "type": "image_source_or_match",
+      "target": {
+        "cover_page": true
+      },
+      "expected": "2Hailing.png"
+    },
+    {
+      "question_number": "2",
+      "description": "document.other_content_controls_deleted",
+      "marks": 1,
+      "domain": "document",
+      "type": "other_content_controls_deleted",
+      "target": {
+        "cover_page": true
+      },
+      "expected": true
+    },
+    {
+      "question_number": "2",
+      "description": "paragraph_formatting.all_instances_replaced_with_same_word",
+      "marks": 1,
+      "domain": "paragraph_formatting",
+      "type": "all_instances_replaced_with_same_word",
+      "target": {
+        "original_word": "drivers",
+        "case_sensitive": false
+      },
+      "expected": true
+    },
+    {
+      "question_number": "2",
+      "description": "font.double_underline",
+      "marks": 1,
+      "domain": "font",
+      "type": "double_underline",
+      "target": {
+        "text": "drivers",
+        "case_sensitive": false
+      },
+      "expected": true
+    },
+    {
+      "question_number": "2",
+      "description": "font.font_color",
+      "marks": 1,
+      "domain": "font",
+      "type": "font_color",
+      "target": {
+        "text": "drivers",
+        "case_sensitive": false
+      },
+      "expected": "red"
+    },
+    {
+      "question_number": "2",
+      "description": "paragraph_formatting.autocorrect_entry",
+      "marks": 1,
+      "domain": "paragraph_formatting",
+      "type": "autocorrect_entry",
+      "target": {
+        "misspelling": "Ubber",
+        "correction": "Uber"
+      },
+      "expected": "Ubber -> Uber"
+    },
+    {
+      "question_number": "2",
+      "description": "object.textbox_inserted_under_heading",
+      "marks": 1,
+      "domain": "object",
+      "type": "textbox_inserted_under_heading",
+      "target": {
+        "heading": "9. Road-Related Dangers"
+      },
+      "expected": true
+    },
+    {
+      "question_number": "2",
+      "description": "object.textbox_position",
+      "marks": 1,
+      "domain": "object",
+      "type": "textbox_position",
+      "target": {
+        "heading": "9. Road-Related Dangers"
+      },
+      "expected": "right_hand_side"
+    },
+    {
+      "question_number": "2",
+      "description": "object.second_paragraph_moved_into_textbox",
+      "marks": 1,
+      "domain": "object",
+      "type": "second_paragraph_moved_into_textbox",
+      "target": {
+        "heading": "9. Road-Related Dangers",
+        "source_paragraph_index_after_heading": 2
+      },
+      "expected": true
+    },
+    {
+      "question_number": "2",
+      "description": "object.text_style",
+      "marks": 1,
+      "domain": "object",
+      "type": "text_style",
+      "target": {
+        "heading": "9. Road-Related Dangers"
+      },
+      "expected": "Quote"
+    },
+    {
+      "question_number": "2",
+      "description": "object.shadow_effect",
+      "marks": 1,
+      "domain": "object",
+      "type": "shadow_effect",
+      "target": {
+        "heading": "9. Road-Related Dangers"
+      },
+      "expected": true
+    },
+    {
+      "question_number": "3",
+      "description": "paragraph_formatting.sheet_name",
+      "marks": 1,
+      "domain": "paragraph_formatting",
+      "type": "sheet_name",
+      "target": {
+        "source_sheet": "Sheet 1"
+      },
+      "expected": "Categories"
+    },
+    {
+      "question_number": "3",
+      "description": "paragraph_formatting.tab_color",
+      "marks": 1,
+      "domain": "paragraph_formatting",
+      "type": "tab_color",
+      "target": {
+        "sheet": "Categories"
+      },
+      "expected": "yellow"
+    },
+    {
+      "question_number": "3",
+      "description": "paragraph_formatting.number_format",
+      "marks": 1,
+      "domain": "paragraph_formatting",
+      "type": "number_format",
+      "target": {
+        "sheet": "Bookings",
+        "range": "E:E"
+      },
+      "expected": "currency"
+    },
+    {
+      "question_number": "3",
+      "description": "paragraph_formatting.font_size_pt",
+      "marks": 1,
+      "domain": "paragraph_formatting",
+      "type": "font_size_pt",
+      "target": {
+        "sheet": "Bookings",
+        "range": "1:1"
+      },
+      "expected": 16
+    },
+    {
+      "question_number": "3",
+      "description": "paragraph_formatting.operation",
+      "marks": 1,
+      "domain": "paragraph_formatting",
+      "type": "operation",
+      "target": {
+        "sheet": "Bookings",
+        "cell": "K3",
+        "booking": "CNR002"
+      },
+      "expected": "subtraction"
+    },
+    {
+      "question_number": "3",
+      "description": "paragraph_formatting.reference",
+      "marks": 1,
+      "domain": "paragraph_formatting",
+      "type": "reference",
+      "target": {
+        "sheet": "Bookings",
+        "cell": "K3"
+      },
+      "expected": "D3"
+    },
+    {
+      "question_number": "3",
+      "description": "paragraph_formatting.operand",
+      "marks": 1,
+      "domain": "paragraph_formatting",
+      "type": "operand",
+      "target": {
+        "sheet": "Bookings",
+        "cell": "K3"
+      },
+      "expected": 60
+    },
+    {
+      "question_number": "3",
+      "description": "paragraph_formatting.function",
+      "marks": 1,
+      "domain": "paragraph_formatting",
+      "type": "function",
+      "target": {
+        "sheet": "Bookings",
+        "cell": "K4"
+      },
+      "expected": "MAX"
+    },
+    {
+      "question_number": "3",
+      "description": "paragraph_formatting.operation",
+      "marks": 1,
+      "domain": "paragraph_formatting",
+      "type": "operation",
+      "target": {
+        "sheet": "Bookings",
+        "cell": "K4"
+      },
+      "expected": "division"
+    },
+    {
+      "question_number": "3",
+      "description": "paragraph_formatting.range",
+      "marks": 1,
+      "domain": "paragraph_formatting",
+      "type": "range",
+      "target": {
+        "sheet": "Bookings",
+        "cell": "K4"
+      },
+      "expected": "D2:D50"
+    },
+    {
+      "question_number": "3",
+      "description": "paragraph_formatting.operand",
+      "marks": 1,
+      "domain": "paragraph_formatting",
+      "type": "operand",
+      "target": {
+        "sheet": "Bookings",
+        "cell": "K4"
+      },
+      "expected": 60
+    },
+    {
+      "question_number": "3",
+      "description": "paragraph_formatting.function",
+      "marks": 1,
+      "domain": "paragraph_formatting",
+      "type": "function",
+      "target": {
+        "sheet": "Bookings",
+        "cell": "K5"
+      },
+      "expected": "SUM"
+    },
+    {
+      "question_number": "3",
+      "description": "paragraph_formatting.range",
+      "marks": 1,
+      "domain": "paragraph_formatting",
+      "type": "range",
+      "target": {
+        "sheet": "Bookings",
+        "cell": "K5"
+      },
+      "expected": "E2:E50"
+    },
+    {
+      "question_number": "3",
+      "description": "paragraph_formatting.function",
+      "marks": 1,
+      "domain": "paragraph_formatting",
+      "type": "function",
+      "target": {
+        "sheet": "Bookings",
+        "cell": "K7"
+      },
+      "expected": "COUNTA"
+    },
+    {
+      "question_number": "3",
+      "description": "paragraph_formatting.range",
+      "marks": 1,
+      "domain": "paragraph_formatting",
+      "type": "range",
+      "target": {
+        "sheet": "Bookings",
+        "cell": "K7"
+      },
+      "expected": "B2:B50"
+    },
+    {
+      "question_number": "3",
+      "description": "paragraph_formatting.formula",
+      "marks": 1,
+      "domain": "paragraph_formatting",
+      "type": "formula",
+      "target": {
+        "sheet": "Bookings",
+        "cell": "K8",
+        "booking": "CNR007"
+      },
+      "expected": "=D8+60"
+    },
+    {
+      "question_number": "3",
+      "description": "paragraph_formatting.formula",
+      "marks": 1,
+      "domain": "paragraph_formatting",
+      "type": "formula",
+      "target": {
+        "sheet": "Bookings",
+        "cell": "K9"
+      },
+      "expected": "=SUM(F2:F50)"
+    },
+    {
+      "question_number": "3",
+      "description": "paragraph_formatting.operation",
+      "marks": 1,
+      "domain": "paragraph_formatting",
+      "type": "operation",
+      "target": {
+        "sheet": "Bookings",
+        "cell": "K10",
+        "bookings": [
+          "CNR015",
+          "CNR026",
+          "CNR014"
+        ]
+      },
+      "expected": "addition"
+    },
+    {
+      "question_number": "3",
+      "description": "paragraph_formatting.reference",
+      "marks": 1,
+      "domain": "paragraph_formatting",
+      "type": "reference",
+      "target": {
+        "sheet": "Bookings",
+        "cell": "K10"
+      },
+      "expected": "E16"
+    },
+    {
+      "question_number": "3",
+      "description": "paragraph_formatting.reference",
+      "marks": 1,
+      "domain": "paragraph_formatting",
+      "type": "reference",
+      "target": {
+        "sheet": "Bookings",
+        "cell": "K10"
+      },
+      "expected": "E27"
+    },
+    {
+      "question_number": "3",
+      "description": "paragraph_formatting.reference",
+      "marks": 1,
+      "domain": "paragraph_formatting",
+      "type": "reference",
+      "target": {
+        "sheet": "Bookings",
+        "cell": "K10"
+      },
+      "expected": "E45"
+    },
+    {
+      "question_number": "3",
+      "description": "paragraph_formatting.operation",
+      "marks": 1,
+      "domain": "paragraph_formatting",
+      "type": "operation",
+      "target": {
+        "sheet": "Bookings",
+        "cell": "K11",
+        "booking": "CNR010"
+      },
+      "expected": "division"
+    },
+    {
+      "question_number": "3",
+      "description": "paragraph_formatting.reference",
+      "marks": 1,
+      "domain": "paragraph_formatting",
+      "type": "reference",
+      "target": {
+        "sheet": "Bookings",
+        "cell": "K11"
+      },
+      "expected": "E11"
+    },
+    {
+      "question_number": "3",
+      "description": "paragraph_formatting.operand",
+      "marks": 1,
+      "domain": "paragraph_formatting",
+      "type": "operand",
+      "target": {
+        "sheet": "Bookings",
+        "cell": "K11"
+      },
+      "expected": 21.31
+    },
+    {
+      "question_number": "3",
+      "description": "paragraph_formatting.calculated_value",
+      "marks": 1,
+      "domain": "paragraph_formatting",
+      "type": "calculated_value",
+      "target": {
+        "sheet": "Bookings",
+        "cell": "K3"
+      },
+      "expected": 13.4
+    },
+    {
+      "question_number": "3",
+      "description": "paragraph_formatting.calculated_value",
+      "marks": 1,
+      "domain": "paragraph_formatting",
+      "type": "calculated_value",
+      "target": {
+        "sheet": "Bookings",
+        "cell": "K5"
+      },
+      "expected": 24856.8
+    },
+    {
+      "question_number": "3",
+      "description": "paragraph_formatting.calculated_value",
+      "marks": 1,
+      "domain": "paragraph_formatting",
+      "type": "calculated_value",
+      "target": {
+        "sheet": "Bookings",
+        "cell": "K7"
+      },
+      "expected": 49
+    },
+    {
+      "question_number": "3",
+      "description": "paragraph_formatting.calculated_value",
+      "marks": 1,
+      "domain": "paragraph_formatting",
+      "type": "calculated_value",
+      "target": {
+        "sheet": "Bookings",
+        "cell": "K10"
+      },
+      "expected": 1545.9
+    },
+    {
+      "question_number": "3",
+      "description": "paragraph_formatting.calculated_value",
+      "marks": 1,
+      "domain": "paragraph_formatting",
+      "type": "calculated_value",
+      "target": {
+        "sheet": "Bookings",
+        "cell": "K11"
+      },
+      "expected": 5.65
+    },
+    {
+      "question_number": "4",
+      "description": "paragraph_formatting.width_shows_all_details",
+      "marks": 1,
+      "domain": "paragraph_formatting",
+      "type": "width_shows_all_details",
+      "target": {
+        "column": "C"
+      },
+      "expected": true
+    },
+    {
+      "question_number": "4",
+      "description": "paragraph_formatting.spelling_corrected",
+      "marks": 1,
+      "domain": "paragraph_formatting",
+      "type": "spelling_corrected",
+      "target": {
+        "cell": "C27"
+      },
+      "expected": true
+    },
+    {
+      "question_number": "4",
+      "description": "paragraph_formatting.fill_color",
+      "marks": 1,
+      "domain": "paragraph_formatting",
+      "type": "fill_color",
+      "target": {
+        "cell": "C27"
+      },
+      "expected": "yellow"
+    },
+    {
+      "question_number": "4",
+      "description": "paragraph_formatting.row_shading",
+      "marks": 1,
+      "domain": "paragraph_formatting",
+      "type": "row_shading",
+      "target": {
+        "range": "2:2"
+      },
+      "expected": true
+    },
+    {
+      "question_number": "4",
+      "description": "paragraph_formatting.bold",
+      "marks": 1,
+      "domain": "paragraph_formatting",
+      "type": "bold",
+      "target": {
+        "range": "2:2"
+      },
+      "expected": true
+    },
+    {
+      "question_number": "4",
+      "description": "paragraph_formatting.borders_distinguish_from_data_cells",
+      "marks": 1,
+      "domain": "paragraph_formatting",
+      "type": "borders_distinguish_from_data_cells",
+      "target": {
+        "range": "2:2"
+      },
+      "expected": true
+    },
+    {
+      "question_number": "4",
+      "description": "paragraph_formatting.operation",
+      "marks": 1,
+      "domain": "paragraph_formatting",
+      "type": "operation",
+      "target": {
+        "cell": "I3",
+        "customer": "Customer1",
+        "cost_per_km_cell": "G1"
+      },
+      "expected": "multiplication"
+    },
+    {
+      "question_number": "4",
+      "description": "paragraph_formatting.reference",
+      "marks": 1,
+      "domain": "paragraph_formatting",
+      "type": "reference",
+      "target": {
+        "cell": "I3"
+      },
+      "expected": "F3"
+    },
+    {
+      "question_number": "4",
+      "description": "paragraph_formatting.absolute_reference",
+      "marks": 1,
+      "domain": "paragraph_formatting",
+      "type": "absolute_reference",
+      "target": {
+        "cell": "I3"
+      },
+      "expected": "$G$1"
+    },
+    {
+      "question_number": "4",
+      "description": "paragraph_formatting.calculated_value",
+      "marks": 1,
+      "domain": "paragraph_formatting",
+      "type": "calculated_value",
+      "target": {
+        "cell": "I3"
+      },
+      "expected": 496542.06
+    },
+    {
+      "question_number": "4",
+      "description": "paragraph_formatting.function",
+      "marks": 1,
+      "domain": "paragraph_formatting",
+      "type": "function",
+      "target": {
+        "cell": "I4"
+      },
+      "expected": "MIN"
+    },
+    {
+      "question_number": "4",
+      "description": "paragraph_formatting.range",
+      "marks": 1,
+      "domain": "paragraph_formatting",
+      "type": "range",
+      "target": {
+        "cell": "I4"
+      },
+      "expected": "E3:E77"
+    },
+    {
+      "question_number": "4",
+      "description": "paragraph_formatting.function",
+      "marks": 1,
+      "domain": "paragraph_formatting",
+      "type": "function",
+      "target": {
+        "cell": "I5"
+      },
+      "expected": "MAX"
+    },
+    {
+      "question_number": "4",
+      "description": "paragraph_formatting.operation",
+      "marks": 1,
+      "domain": "paragraph_formatting",
+      "type": "operation",
+      "target": {
+        "cell": "I5"
+      },
+      "expected": "subtraction"
+    },
+    {
+      "question_number": "4",
+      "description": "paragraph_formatting.function",
+      "marks": 1,
+      "domain": "paragraph_formatting",
+      "type": "function",
+      "target": {
+        "cell": "I5"
+      },
+      "expected": "MIN"
+    },
+    {
+      "question_number": "4",
+      "description": "paragraph_formatting.range",
+      "marks": 1,
+      "domain": "paragraph_formatting",
+      "type": "range",
+      "target": {
+        "cell": "I5"
+      },
+      "expected": "D3:D77"
+    },
+    {
+      "question_number": "4",
+      "description": "paragraph_formatting.calculated_value",
+      "marks": 1,
+      "domain": "paragraph_formatting",
+      "type": "calculated_value",
+      "target": {
+        "cell": "I5"
+      },
+      "expected": 3684
+    },
+    {
+      "question_number": "4",
+      "description": "paragraph_formatting.function",
+      "marks": 1,
+      "domain": "paragraph_formatting",
+      "type": "function",
+      "target": {
+        "cell": "I6"
+      },
+      "expected": "AVERAGE"
+    },
+    {
+      "question_number": "4",
+      "description": "paragraph_formatting.range",
+      "marks": 1,
+      "domain": "paragraph_formatting",
+      "type": "range",
+      "target": {
+        "cell": "I6"
+      },
+      "expected": "F3:F77"
+    },
+    {
+      "question_number": "4",
+      "description": "paragraph_formatting.formula",
+      "marks": 1,
+      "domain": "paragraph_formatting",
+      "type": "formula",
+      "target": {
+        "cell": "I7",
+        "customer": "Customer1"
+      },
+      "expected": "=E3/F3"
+    },
+    {
+      "question_number": "4",
+      "description": "paragraph_formatting.function",
+      "marks": 1,
+      "domain": "paragraph_formatting",
+      "type": "function",
+      "target": {
+        "cell": "I8"
+      },
+      "expected": "COUNT"
+    },
+    {
+      "question_number": "4",
+      "description": "paragraph_formatting.range",
+      "marks": 1,
+      "domain": "paragraph_formatting",
+      "type": "range",
+      "target": {
+        "cell": "I8"
+      },
+      "expected": "D3:D77"
+    },
+    {
+      "question_number": "4",
+      "description": "paragraph_formatting.formula",
+      "marks": 1,
+      "domain": "paragraph_formatting",
+      "type": "formula",
+      "target": {
+        "cell": "I9"
+      },
+      "expected": "=AVERAGE(D3:D77)"
+    }
+  ]
+}

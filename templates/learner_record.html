@@ -188,6 +188,7 @@
                         {{ avg }}%
                     </span>
                 </td>
+                <td>{{ (r[5] // 60) }}m {{ (r[5] % 60) }}s</td>
             </tr>
             {% endfor %}
         </table>
@@ -252,11 +253,11 @@
         <h3>📝 Theory Test Results</h3>
         {% if theory_results %}
         <table>
-            <tr><th>Test</th><th>Score</th><th>%</th><th>Date</th></tr>
+            <tr><th>Item</th><th>Score</th><th>%</th><th>Time</th><th>Date</th></tr>
             {% for r in theory_results %}
             <tr>
                 <td>{{ r[0] }}</td>
-                <td>{{ r[1] }}/{{ r[2] }}</td>
+                <td>{% if r[6] == 'lesson' %}Completed{% else %}{{ r[1] }}/{{ r[2] }}{% endif %}</td>
                 <td>
                     <span style="color: {{ '#107C10' if r[3] >= 60 else ('#ff8c00' if r[3] >= 40 else '#A4262C') }}; font-weight:bold;">
                         {{ r[3] }}%

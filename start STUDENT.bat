@@ -2,4 +2,4 @@
 title Learner Tracking
 echo %USERNAME% | findstr /I /B "MELHS" >nul && exit /b
 echo Opening Learner Tracking for %USERNAME%...
-powershell -Command "Start-Process 'chrome' -ArgumentList 'http://MELHS-CGM04VM5G:5000/auto_login?username=%USERNAME%' -WindowStyle Minimized"
+powershell -Command "Start-Process 'chrome' -ArgumentList 'http://%COMPUTERNAME%:5000/auto_login?username=%USERNAME%^&attendance=lab^&pc=%COMPUTERNAME%' -WindowStyle Minimized"

@@ -5018,6 +5018,8 @@ def manage_test_questions(test_id):
             q_text = externalize_data_uri_images(request.form.get("question_text", "").strip())
             q_type = request.form.get("question_type", "")
             marks = int(request.form.get("marks", 1))
+            if q_type in LESSON_SLIDE_TYPES:
+                marks = 0
 
             cursor.execute("SELECT COUNT(*) FROM theory_questions WHERE test_id = ?", (test_id,))
             order_index = cursor.fetchone()[0]
@@ -5102,6 +5104,8 @@ def manage_test_questions(test_id):
             q_text = externalize_data_uri_images(request.form.get("question_text", "").strip())
             marks = int(request.form.get("marks", 1))
             q_type = request.form.get("question_type", "")
+            if q_type in LESSON_SLIDE_TYPES:
+                marks = 0
 
             cursor.execute("UPDATE theory_questions SET question_text = ?, marks = ? WHERE id = ?",
                            (q_text, marks, q_id))

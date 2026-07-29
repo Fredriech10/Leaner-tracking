@@ -257,14 +257,10 @@
         overflow: hidden !important;
     }
 
-    .slide-box {
+    .page .slide-box {
         max-width: 100% !important;
         overflow: auto !important;
         line-height: 1.25 !important;
-    }
-
-    .slide-box.text-box {
-        font-size: clamp(0.8rem, 2.6vw, 1.05rem) !important;
     }
 
     table {
@@ -321,7 +317,7 @@
         display: block !important;
         width: 100% !important;
         min-height: 0 !important;
-        aspect-ratio: 4 / 3 !important;
+        aspect-ratio: 16 / 9 !important;
         overflow: hidden !important;
     }
 
@@ -388,6 +384,15 @@
         margin: 0 !important;
     }
 
+    .deck-viewport .content-text.slide-layout .slide-surface {
+        position: absolute !important;
+        left: 0 !important;
+        top: 0 !important;
+        width: 960px !important;
+        height: 540px !important;
+        transform-origin: top left !important;
+    }
+
     .deck-viewport .content-text .slide-box,
     .rte-editor .slide-box,
     .mini-slide-stage .slide-box {
@@ -400,7 +405,7 @@
     .mini-slide-stage .slide-box img {
         width: 100% !important;
         height: 100% !important;
-        object-fit: contain !important;
+        object-fit: cover !important;
         max-height: none !important;
         margin: 0 !important;
     }

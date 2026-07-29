@@ -138,18 +138,41 @@
         .content-slide {
             background-color: rgba(255,255,255,0.94);
         }
+        .slide-designed {
+            padding: 0;
+            background-color: transparent;
+            border-color: transparent;
+            box-shadow: none;
+        }
+        .slide-designed.content-slide {
+            background-color: transparent;
+        }
+        .slide-designed .slide-kicker {
+            display: none;
+        }
         .slide-kicker { color: #0f766e; font-size: 0.82em; font-weight: bold; text-transform: uppercase; letter-spacing: 0.08em; margin-bottom: 10px; }
         .question-title { margin: 0 0 16px; font-size: 1.18em; line-height: 1.45; color: #0f172a; }
         .content-text { font-size: 1.22em; line-height: 1.65; color: #1f2937; margin-top: 22px; }
         .content-text.slide-layout {
             position: relative;
+            width: 100%;
             height: 100%;
             min-height: 0;
             max-height: none;
-            margin-top: 10px;
+            margin: 0;
             overflow: hidden;
             border-radius: 8px;
-            background: rgba(255,255,255,0.52);
+            background: transparent;
+            font-size: 1em;
+            line-height: 1.5;
+        }
+        .content-text.slide-layout .slide-surface {
+            position: absolute;
+            left: 0;
+            top: 0;
+            width: 960px;
+            height: 540px;
+            transform-origin: top left;
         }
         .content-text h1 { font-size: 2.2em; line-height: 1.05; margin: 0 0 14px; color: #0f172a; }
         .content-text h2 { font-size: 1.55em; line-height: 1.15; margin: 0 0 12px; color: #0f766e; }
@@ -180,18 +203,22 @@
             overflow: hidden;
             background: rgba(255,255,255,0.78);
             padding: 10px;
-            font-size: 0.9em;
+            font-size: 1.05em;
         }
         .content-text .slide-box.image-box { padding: 0; background: transparent; }
         .content-text .slide-box.image-box img {
             width: 100%;
             height: 100%;
             max-height: none;
-            object-fit: contain;
+            object-fit: cover;
             margin: 0;
+            background: transparent;
+            box-shadow: none;
+            border-radius: 0;
         }
         .content-text .slide-box.text-box { color: #0f172a; }
-        .content-text .box-resize-handle { display: none; }
+        .content-text .box-resize-handle,
+        .content-text .box-delete-btn { display: none; }
         .content-text .slide-bg {
             display: none;
         }
@@ -295,25 +322,28 @@
                 min-height: 0;
                 max-height: none;
                 width: 100%;
-                aspect-ratio: 4 / 3;
+                aspect-ratio: 16 / 9;
             }
             .slide {
                 padding: 18px 14px;
                 min-height: 0;
                 border-radius: 8px;
             }
+            .slide-designed {
+                padding: 0;
+            }
             .slide-kicker { font-size: 0.74em; margin-bottom: 8px; }
             .content-text { font-size: 1.08em; line-height: 1.5; }
             .content-text h1 { font-size: 1.75em; }
             .content-text h2 { font-size: 1.38em; }
-            .content-text .slide-box {
+            .content-text:not(.slide-layout) .slide-box {
                 padding: 8px;
                 font-size: 1em;
             }
-            .content-text .slide-box.text-box h1 { font-size: 1.55em; }
-            .content-text .slide-box.text-box h2 { font-size: 1.28em; }
-            .content-text .slide-box.text-box p,
-            .content-text .slide-box.text-box li { font-size: 1.02em; }
+            .content-text:not(.slide-layout) .slide-box.text-box h1 { font-size: 1.55em; }
+            .content-text:not(.slide-layout) .slide-box.text-box h2 { font-size: 1.28em; }
+            .content-text:not(.slide-layout) .slide-box.text-box p,
+            .content-text:not(.slide-layout) .slide-box.text-box li { font-size: 1.02em; }
             .question-title { font-size: 1em; }
             .option-label { padding: 11px 10px; gap: 9px; }
             .match-container { grid-template-columns: 1fr; gap: 12px; }
@@ -380,7 +410,7 @@
 {% set q_id = q[0] %}
 {% set q_type = q[2] %}
 {% set marks = q[3] %}
-            <section class="slide {{ 'content-slide' if q_type in ['content_slide', 'title_slide', 'heading_slide'] }} {{ 'active no-motion' if loop.index0 == (initial_slide | default(0)) }}" data-slide="{{ loop.index0 }}" {% if test[7] %}style="background-image:linear-gradient(rgba(255,255,255,0.10), rgba(255,255,255,0.10)), url('{{ test[7] }}'); background-size: {{ test[8] if test|length > 8 else 'cover' }}; background-position: center; background-repeat: no-repeat;"{% endif %}>
+            <section class="slide {{ 'content-slide' if q_type in ['content_slide', 'title_slide', 'heading_slide'] }} {{ 'slide-designed' if 'slide-box' in (q[1] or '') }} {{ 'active no-motion' if loop.index0 == (initial_slide | default(0)) }}" data-slide="{{ loop.index0 }}" {% if test[7] %}style="background-image:linear-gradient(rgba(255,255,255,0.10), rgba(255,255,255,0.10)), url('{{ test[7] }}'); background-size: {{ test[8] if test|length > 8 else 'cover' }}; background-position: center; background-repeat: no-repeat;"{% endif %}>
                 <div class="slide-kicker">
                     {% if q_type == 'title_slide' %}Title Slide
                     {% elif q_type == 'heading_slide' %}Heading Slide
@@ -388,7 +418,11 @@
                     {% else %}Question {{ loop.index }}{% endif %}
                 </div>
                 {% if q_type in ['content_slide', 'title_slide', 'heading_slide'] %}
-                    <div class="content-text {{ 'slide-layout' if 'slide-box' in (q[1] or '') }}">{{ q[1] | safe }}</div>
+                    {% if 'slide-box' in (q[1] or '') %}
+                    <div class="content-text slide-layout"><div class="slide-surface">{{ q[1] | safe }}</div></div>
+                    {% else %}
+                    <div class="content-text">{{ q[1] | safe }}</div>
+                    {% endif %}
                 {% else %}
                     <h3 class="question-title">
                         {{ q[1] | safe }}
@@ -572,6 +606,17 @@ function goToSlide(index) {
 function updateDeckHeight() {
     var viewport = document.getElementById('deckViewport');
     if (viewport) viewport.style.height = '';
+    scaleSlideSurfaces();
+}
+function scaleSlideSurfaces() {
+    Array.prototype.slice.call(document.querySelectorAll('.content-text.slide-layout')).forEach(function (container) {
+        var surface = container.querySelector('.slide-surface');
+        if (!surface) return;
+        var scaleX = container.clientWidth / 960;
+        var scaleY = container.clientHeight / 540;
+        var scale = Math.min(scaleX, scaleY);
+        surface.style.transform = 'scale(' + scale + ')';
+    });
 }
 function changeSlide(dir) {
     if (restrictForwardSlides && dir > 0 && currentSlide >= maxViewedSlide + 1) return;
@@ -685,6 +730,8 @@ window.addEventListener('blur', function () {
     else triggerAutoSubmit();
 });
 {% endif %}
+window.addEventListener('resize', scaleSlideSurfaces);
+scaleSlideSurfaces();
 </script>
 </body>
 </html>

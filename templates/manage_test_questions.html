@@ -114,7 +114,7 @@
         .mini-slide-stage .slide-box.image-box img {
             width: 100%;
             height: 100%;
-            object-fit: contain;
+            object-fit: cover;
             margin: 0;
             max-height: none;
             box-shadow: none;
@@ -123,6 +123,7 @@
         .mini-slide-stage .slide-box.text-box h1 { font-size: 1.5em; margin: 0 0 6px; }
         .mini-slide-stage .slide-box.text-box p { margin: 0 0 6px; }
         .mini-slide-stage .box-resize-handle { display: none; }
+        .mini-slide-stage .box-delete-btn { display: none; }
         .mini-slide-stage .slide-bg,
         .rte-editor .slide-bg { display: none; }
         .question-thumb {
@@ -160,10 +161,17 @@
             border: 1px solid #cbd5e1;
             border-radius: 8px;
             background-color: #f8fbff;
-            padding: 12px;
+            padding: 0;
             line-height: 1.5;
             position: relative;
             overflow: hidden;
+        }
+        .rte-editor > :not(.slide-box) {
+            margin-left: 12px;
+            margin-right: 12px;
+        }
+        .rte-editor > :not(.slide-box):first-child {
+            margin-top: 12px;
         }
         .rte-editor:focus { outline: none; border-color: #0078D4; box-shadow: 0 0 0 3px rgba(0,120,212,0.15); }
         .rte-editor img { display: block; max-width: 100%; max-height: 320px; object-fit: contain; border-radius: 8px; margin: 12px auto; box-shadow: 0 12px 28px rgba(15,23,42,0.16); }
@@ -223,7 +231,7 @@
         .slide-box:hover, .slide-box.selected { border-color: #0078D4; box-shadow: 0 8px 18px rgba(0,120,212,0.14); }
         .slide-box.text-box { font-size: 1.05em; color: #0f172a; }
         .slide-box.image-box { padding: 0; background: transparent; }
-        .slide-box.image-box img { width: 100%; height: 100%; max-height: none; object-fit: contain; margin: 0; pointer-events: none; }
+        .slide-box.image-box img { width: 100%; height: 100%; max-height: none; object-fit: cover; margin: 0; pointer-events: none; }
         .slide-box { z-index: 1; }
         .box-resize-handle {
             position: absolute;
@@ -245,6 +253,32 @@
             height: 7px;
             border-right: 2px solid white;
             border-bottom: 2px solid white;
+        }
+        .box-delete-btn {
+            position: absolute;
+            right: -10px;
+            top: -10px;
+            width: 24px;
+            height: 24px;
+            min-height: 24px;
+            border: 2px solid white;
+            border-radius: 50%;
+            background: #dc2626;
+            color: white;
+            cursor: pointer;
+            display: none;
+            align-items: center;
+            justify-content: center;
+            font-size: 16px;
+            line-height: 1;
+            font-weight: bold;
+            padding: 0;
+            z-index: 4;
+            box-shadow: 0 6px 16px rgba(15,23,42,0.22);
+        }
+        .slide-box:hover .box-delete-btn,
+        .slide-box.selected .box-delete-btn {
+            display: flex;
         }
         @keyframes riseIn { from { opacity: 0; transform: translateY(12px); } to { opacity: 1; transform: translateY(0); } }
         @keyframes spin { to { transform: rotate(360deg); } }
@@ -273,7 +307,7 @@
             }
             .rte-editor {
                 min-height: 320px;
-                aspect-ratio: 4 / 3;
+                aspect-ratio: 16 / 9;
             }
             .slide-box {
                 min-width: 70px;
@@ -388,7 +422,7 @@
                         <option value="match">Match Columns</option>
                     </select>
                 </div>
-                <div class="form-group">
+                <div class="form-group" id="marksGroup">
                     <label>Marks</label>
                     <input type="number" name="marks" id="marksInput" value="0" min="0" max="10">
                 </div>
@@ -482,7 +516,11 @@
                             <h3 class="slide-title" style="margin-top:8px;">Slide {{ loop.index }}</h3>
                         </div>
                         <div style="display:flex;gap:8px;align-items:center;">
+                            {% if q_type in ['content_slide', 'title_slide', 'heading_slide'] %}
+                            <span class="badge marks">No marks</span>
+                            {% else %}
                             <span class="badge marks">{{ q[3] }} mark{{ 's' if q[3] != 1 }}</span>
+                            {% endif %}
                             <span class="drag-handle" draggable="true" title="Drag slide to reorder">Move</span>
                         </div>
                     </div>
@@ -529,7 +567,7 @@
                             <input type="hidden" name="question_text" id="hidden_rte_edit_{{ q_id }}" value="{{ q[1] | e }}">
                             <div class="rte-help">Use Text Box and image buttons to build the slide. Drag a box from its empty area, or hold Alt while dragging, to move it.</div>
                         </div>
-                        <div class="form-group" style="max-width:140px;">
+                        <div class="form-group" style="max-width:140px;{% if q_type in ['content_slide', 'title_slide', 'heading_slide'] %}display:none;{% endif %}">
                             <label>Marks</label>
                             <input type="number" name="marks" value="{{ q[3] }}" min="0" max="10">
                         </div>
@@ -600,6 +638,7 @@ function buildRTE(editorId, hiddenId, initialHtml) {
                 Upload Image
                 <input type="file" accept="image/*" style="display:none;" onchange="insertImageFile('${editorId}', this)">
             </label>
+            <button type="button" class="rte-btn" onmousedown="event.preventDefault(); deleteSelectedSlideBox('${editorId}')">Delete Selected</button>
         </div>
         <div class="rte-editor" id="${editorId}" contenteditable="true"></div>
     `;
@@ -697,23 +736,60 @@ function createSlideBox(extraClass, html, width, height) {
     box.style.width = width + 'px';
     box.style.height = height + 'px';
     box.innerHTML = html;
-    ensureResizeHandle(box);
+    ensureBoxControls(box);
     return box;
 }
 function prepareSlideBoxes(editor) {
     editor.querySelectorAll('.slide-box').forEach(box => {
         box.contentEditable = 'true';
-        ensureResizeHandle(box);
+        ensureBoxControls(box);
         box.addEventListener('input', () => syncRTE(editor.id, 'hidden_' + editor.id));
     });
 }
-function ensureResizeHandle(box) {
+function ensureBoxControls(box) {
     if (!box.querySelector(':scope > .box-resize-handle')) {
         const handle = document.createElement('span');
         handle.className = 'box-resize-handle';
         handle.contentEditable = 'false';
         box.appendChild(handle);
     }
+    if (!box.querySelector(':scope > .box-delete-btn')) {
+        const del = document.createElement('button');
+        del.type = 'button';
+        del.className = 'box-delete-btn';
+        del.contentEditable = 'false';
+        del.title = 'Delete this box';
+        del.setAttribute('aria-label', 'Delete this box');
+        del.innerHTML = '&times;';
+        del.addEventListener('mousedown', event => {
+            event.preventDefault();
+            event.stopPropagation();
+        });
+        del.addEventListener('click', event => {
+            event.preventDefault();
+            event.stopPropagation();
+            deleteSlideBox(box);
+        });
+        box.appendChild(del);
+    }
+}
+function deleteSlideBox(box) {
+    const editor = box.closest('.rte-editor');
+    box.remove();
+    if (editor) {
+        syncRTE(editor.id, 'hidden_' + editor.id);
+        editor.focus();
+    }
+}
+function deleteSelectedSlideBox(editorId) {
+    const editor = document.getElementById(editorId);
+    if (!editor) return;
+    const selected = editor.querySelector('.slide-box.selected');
+    if (!selected) {
+        alert('Select a text box or image first.');
+        return;
+    }
+    deleteSlideBox(selected);
 }
 let dragBox = null;
 let dragEditor = null;
@@ -901,7 +977,9 @@ function syncRTE(editorId, hiddenId) {
     const hidden = document.getElementById(hiddenId);
     if (editor && hidden) {
         normalizeSlideBoxes(editor);
-        hidden.value = editor.innerHTML;
+        const cleanCopy = editor.cloneNode(true);
+        cleanCopy.querySelectorAll('.box-resize-handle, .box-delete-btn').forEach(control => control.remove());
+        hidden.value = cleanCopy.innerHTML;
     }
 }
 function syncAllRTEs() {
@@ -933,10 +1011,12 @@ function toggleEdit(qId) {
 function showFields(containerId, type) {
     const container = document.getElementById(containerId);
     const marks = document.getElementById('marksInput');
+    const marksGroup = document.getElementById('marksGroup');
     container.innerHTML = '';
     const isLessonSlide = ['content_slide', 'title_slide', 'heading_slide'].includes(type);
     marks.value = isLessonSlide ? 0 : 1;
     marks.readOnly = isLessonSlide;
+    if (marksGroup) marksGroup.style.display = isLessonSlide ? 'none' : 'block';
     if (type === 'title_slide') {
         const editor = document.getElementById('rte_add');
         if (editor && !editor.innerHTML.trim()) {

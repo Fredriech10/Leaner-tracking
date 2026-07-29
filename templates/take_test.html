@@ -31,8 +31,13 @@
         .topbar-links { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; justify-content: flex-end; }
         .topbar-links a { color: white; text-decoration: none; font-size: 0.82em; opacity: 0.9; }
         .topbar-links a:hover { opacity: 1; text-decoration: underline; }
+        .topbar-links a + a,
+        .topbar-links a + .topbar-user {
+            border-left: 1px solid rgba(255,255,255,0.35);
+            padding-left: 10px;
+        }
         .topbar-user { font-size: 0.82em; border-left: 1px solid rgba(255,255,255,0.35); padding-left: 10px; }
-        .page { padding: 22px 24px 34px; max-width: 1040px; margin: 0 auto; }
+        .page { padding: 22px 24px 34px; width: 90%; max-width: 90%; margin: 0 auto; }
         .lesson-shell { display: grid; grid-template-columns: 190px 1fr; gap: 18px; align-items: start; }
         .lesson-map {
             position: sticky;
@@ -273,6 +278,26 @@
         .nav-btn:disabled { opacity: 0.45; cursor: not-allowed; transform: none; box-shadow: none; }
         .hint { color: #64748b; font-size: 0.9em; }
         .back-lessons { display: inline-block; margin-bottom: 12px; color: #005a9e; text-decoration: none; font-weight: bold; }
+        .below-deck-actions {
+            display: flex;
+            justify-content: center;
+            margin-top: 14px;
+        }
+        .back-lessons-btn {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            min-height: 44px;
+            padding: 12px 18px;
+            border-radius: 8px;
+            background: #475569;
+            color: white;
+            font-weight: bold;
+            text-decoration: none;
+        }
+        .back-lessons-btn:hover {
+            background: #334155;
+        }
         @keyframes enterFromRight {
             from { opacity: 1; transform: translateX(100%); }
             to { opacity: 1; transform: translateX(0); }
@@ -299,6 +324,11 @@
             }
             .topbar h1 { font-size: 1em; }
             .topbar-links { width: 100%; justify-content: flex-start; gap: 8px; }
+            .topbar-links a + a,
+            .topbar-links a + .topbar-user {
+                border-left: 0;
+                padding-left: 0;
+            }
             .topbar-user { border-left: 0; padding-left: 0; }
             .page { padding: 14px 12px 24px; }
             .deck-header h2 { font-size: 1.42em; }
@@ -370,13 +400,12 @@
     <div class="topbar-links">
         <a href="/student_dashboard">Dashboard</a>
         <a href="/my_tasks">Tasks</a>
-        <a href="/tests">Tests</a>
+        <a href="/tests">Back to Lessons & Tests</a>
         <span class="topbar-user">{{ session_username }}</span>
     </div>
 </div>
 
 <div class="page">
-<a href="/tests" class="back-lessons">Back to Lessons & Tests</a>
 {% if is_preview %}
 <div class="preview-banner">Preview Mode: this lesson can be viewed while inactive and no learner attempt will be saved.</div>
 {% endif %}
@@ -493,6 +522,9 @@
                 {% else %}
                 <button type="submit" class="submit-btn" id="submitBtn" onclick="return confirmSubmit()" style="display:none;">{{ 'Complete Lesson' if is_lesson_only else 'Submit Test' }}</button>
                 {% endif %}
+            </div>
+            <div class="below-deck-actions">
+                <a href="/tests" class="back-lessons-btn">Back to Lessons & Tests</a>
             </div>
         </main>
     </div>

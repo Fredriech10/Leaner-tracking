@@ -4,3 +4,5 @@ openpyxl
 python-docx
 beautifulsoup4
 pyodbc
+python-pptx
+Pillow

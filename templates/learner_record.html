@@ -14,7 +14,7 @@
         .topbar-user { color: white; font-size: 0.82em; white-space: nowrap; border-left: 1px solid rgba(255,255,255,0.35); padding-left: 10px; }
         .topbar-user a { color: white; text-decoration: none; font-weight: bold; }
         .topbar-user a:hover { text-decoration: underline; }
-        .page { padding: 20px 24px; max-width: 1300px; margin: 0 auto; }
+        .page { padding: 20px 24px; width: 90%; max-width: 90%; margin: 0 auto; }
         h2 { margin-bottom: 4px; }
         .subtitle { color: #666; font-size: 0.95em; margin-bottom: 20px; }
 
@@ -44,13 +44,45 @@
 
         /* Badges */
         .badge { padding: 2px 8px; border-radius: 10px; font-size: 0.8em; font-weight: bold; }
-        .badge-present { background: #c8f7c5; color: #107C10; }
+        .badge-present { background: #dbeafe; color: #1d4ed8; }
         .badge-absent { background: #f7c5c5; color: #A4262C; }
         .badge-late { background: #ffe0b2; color: #b36b00; }
         .badge-submitted { background: #c8f7c5; color: #107C10; }
         .badge-missing { background: #f7c5c5; color: #A4262C; }
         .badge-flag { background: #fff3cd; color: #856404; }
         .badge-support { background: #f7c5c5; color: #A4262C; }
+        .badge-progress { background: #fff7ed; color: #9a3412; }
+        .badge-lesson { background: #e0f2fe; color: #075985; }
+        .badge-test { background: #fef3c7; color: #92400e; }
+        .progress-track { height: 9px; background: #e5e7eb; border-radius: 99px; overflow: hidden; min-width: 120px; }
+        .progress-fill { height: 100%; background: linear-gradient(90deg, #0078D4, #16a34a); border-radius: 99px; }
+        .progress-cell { display: grid; gap: 4px; }
+        .progress-note { font-size: 0.78em; color: #64748b; }
+        .calendar-controls { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-bottom: 10px; }
+        .calendar-controls button { border: 1px solid #cbd5e1; background: #fff; color: #0f172a; border-radius: 6px; padding: 7px 12px; cursor: pointer; font-weight: bold; }
+        .calendar-controls button:disabled { opacity: 0.45; cursor: not-allowed; }
+        .calendar-current { font-weight: bold; color: #0f172a; text-align: center; flex: 1; }
+        .attendance-slider { position: relative; overflow: hidden; padding: 0 0 12px; }
+        .attendance-month { display: none; width: 100%; border: 1px solid #e5e7eb; border-radius: 8px; padding: 12px; background: #f8fafc; }
+        .attendance-month.active { display: block; }
+        .attendance-month h4 { margin: 0 0 10px; color: #0f172a; font-size: 0.95em; }
+        .attendance-calendar { display: grid; grid-template-columns: repeat(5, minmax(54px, 1fr)); gap: 8px; }
+        .calendar-head { font-size: 0.75em; font-weight: bold; color: #64748b; text-align: center; padding-bottom: 2px; }
+        .day-tile { min-height: 72px; border-radius: 8px; padding: 8px; border: 1px solid transparent; display: flex; flex-direction: column; justify-content: space-between; }
+        .day-tile .date { font-weight: bold; font-size: 0.88em; }
+        .day-tile .status { font-size: 0.78em; font-weight: bold; }
+        .day-tile .time { font-size: 0.75em; opacity: 0.85; }
+        .day-normal { background: #fff; border-color: #e5e7eb; color: #334155; justify-content: flex-start; }
+        .day-present { background: #dbeafe; border-color: #93c5fd; color: #1e3a8a; }
+        .day-absent { background: #fee2e2; border-color: #fca5a5; color: #7f1d1d; }
+        .day-late { background: #fef3c7; border-color: #fbbf24; color: #78350f; }
+        .calendar-legend { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 12px; font-size: 0.82em; color: #555; }
+        .legend-dot { width: 10px; height: 10px; border-radius: 50%; display: inline-block; margin-right: 5px; }
+        .legend-present { background: #3b82f6; }
+        .legend-absent { background: #ef4444; }
+        .legend-late { background: #f59e0b; }
+        .legend-normal { background: #cbd5e1; }
+        .attendance-list-card { display: none; }
 
         /* Trend */
         .trend-improving { color: #107C10; font-weight: bold; }
@@ -196,8 +228,56 @@
         {% endif %}
     </div>
 
-    <!-- Recent Attendance -->
+    <!-- Attendance Calendar -->
     <div class="card">
+        <h3>Attendance Calendar ({{ attendance_year }})</h3>
+        <div class="calendar-controls">
+            <button type="button" id="prevMonthBtn">Previous</button>
+            <div class="calendar-current" id="calendarCurrentMonth"></div>
+            <button type="button" id="nextMonthBtn">Next</button>
+        </div>
+        <div class="attendance-slider">
+            {% for month in attendance_months %}
+            <section class="attendance-month {% if loop.last %}active{% endif %}" data-month-name="{{ month.name }}">
+                <h4>{{ month.name }}</h4>
+                <div class="attendance-calendar">
+                    <div class="calendar-head">Mon</div>
+                    <div class="calendar-head">Tue</div>
+                    <div class="calendar-head">Wed</div>
+                    <div class="calendar-head">Thu</div>
+                    <div class="calendar-head">Fri</div>
+                    {% if month.days %}
+                        {% for blank in range(month.days[0].weekday) %}
+                        <div></div>
+                        {% endfor %}
+                    {% endif %}
+                    {% for row in month.days %}
+                    <div class="day-tile {% if row.status == 'Present' and row.late %}day-late{% elif row.status == 'Present' %}day-present{% elif row.status == 'Absent' %}day-absent{% else %}day-normal{% endif %}">
+                        <div class="date">{{ row.date[8:] }}</div>
+                        {% if row.status != 'Normal' %}
+                        <div>
+                            <div class="status">
+                                {% if row.status == 'Present' and row.late %}Late{% elif row.status == 'Present' %}Present{% else %}Absent{% endif %}
+                            </div>
+                            <div class="time">{{ row.time or '—' }}</div>
+                        </div>
+                        {% endif %}
+                    </div>
+                    {% endfor %}
+                </div>
+            </section>
+            {% endfor %}
+        </div>
+        <div class="calendar-legend">
+            <span><span class="legend-dot legend-present"></span>Present</span>
+            <span><span class="legend-dot legend-absent"></span>Absent</span>
+            <span><span class="legend-dot legend-late"></span>Late</span>
+            <span><span class="legend-dot legend-normal"></span>No record / excluded</span>
+        </div>
+    </div>
+
+    <!-- Recent Attendance -->
+    <div class="card attendance-list-card">
         <h3>🗓 Recent Attendance (Last 10 Days)</h3>
         <table>
             <tr><th>Date</th><th>Status</th><th>Time</th></tr>
@@ -218,6 +298,86 @@
             {% endfor %}
         </table>
     </div>
+</div>
+
+<!-- Learning Progress -->
+<div class="card full" style="margin-bottom:18px;">
+    <h3>Learning Progress</h3>
+    <div class="stat-row" style="margin-bottom:14px;">
+        <div class="stat {{ 'green' if learning_summary.overall_completion >= 80 else ('orange' if learning_summary.overall_completion >= 50 else 'red') }}">
+            <div class="val">{{ learning_summary.overall_completion }}%</div>
+            <div class="lbl">Overall Done</div>
+        </div>
+        <div class="stat green">
+            <div class="val">{{ learning_summary.practical_done }}/{{ learning_summary.practical_total }}</div>
+            <div class="lbl">Practical</div>
+        </div>
+        <div class="stat green">
+            <div class="val">{{ learning_summary.theory_done }}/{{ learning_summary.theory_total }}</div>
+            <div class="lbl">Lessons & Tests</div>
+        </div>
+        <div class="stat orange">
+            <div class="val">{{ learning_summary.theory_in_progress }}</div>
+            <div class="lbl">In Progress</div>
+        </div>
+        <div class="stat red">
+            <div class="val">{{ learning_summary.missing_total }}</div>
+            <div class="lbl">Missing</div>
+        </div>
+        <div class="stat">
+            {% set total_minutes = (learning_summary.theory_time_seconds // 60) %}
+            <div class="val">{{ total_minutes // 60 }}h {{ total_minutes % 60 }}m</div>
+            <div class="lbl">Lesson/Test Time</div>
+        </div>
+    </div>
+
+    {% if learning_progress %}
+    <table>
+        <tr><th>Subject</th><th>Item</th><th>Type</th><th>Status</th><th>Progress</th><th>Score</th><th>Attempts</th><th>Time</th><th>Last Update</th></tr>
+        {% for item in learning_progress %}
+        <tr>
+            <td>{{ item.subject }}</td>
+            <td>{{ item.title }}</td>
+            <td><span class="badge {{ 'badge-lesson' if item.kind == 'Lesson' else 'badge-test' }}">{{ item.kind }}</span></td>
+            <td>
+                {% if item.status == 'Completed' %}
+                    <span class="badge badge-submitted">Completed</span>
+                {% elif item.status == 'In progress' %}
+                    <span class="badge badge-progress">In progress</span>
+                {% else %}
+                    <span class="badge badge-missing">Not started</span>
+                {% endif %}
+            </td>
+            <td>
+                <div class="progress-cell">
+                    <div class="progress-track"><div class="progress-fill" style="width:{{ item.progress_pct }}%;"></div></div>
+                    <div class="progress-note">
+                        {{ item.progress_pct }}%
+                        {% if item.total and item.has_progress %} | {{ item.viewed }}/{{ item.total }} slides{% elif item.total %} | 0/--{% endif %}
+                    </div>
+                </div>
+            </td>
+            <td>{% if item.kind == 'Lesson' and item.status == 'Completed' %}100%{% elif item.score is not none %}{{ item.score }}%{% else %}—{% endif %}</td>
+            <td>{{ item.attempts }}</td>
+            <td>{{ item.time_spent // 60 }}m {{ item.time_spent % 60 }}s</td>
+            <td>{{ item.updated_at[:16] if item.updated_at else '—' }}</td>
+        </tr>
+        {% endfor %}
+    </table>
+    {% else %}
+    <p style="color:#888; font-size:0.9em;">No assigned lessons or tests yet.</p>
+    {% endif %}
+
+    {% if missing_items %}
+    <div style="margin-top:14px;">
+        <strong style="font-size:0.9em;color:#555;">Needs attention:</strong>
+        <div style="display:flex; gap:8px; flex-wrap:wrap; margin-top:8px;">
+            {% for item in missing_items %}
+            <span class="badge badge-missing">{{ item.type }}: {{ item.title }}</span>
+            {% endfor %}
+        </div>
+    </div>
+    {% endif %}
 </div>
 
 <!-- ── Row 3: Recent Results + Theory ──────────────────────────────── -->
@@ -252,11 +412,11 @@
         <h3>📝 Theory Test Results</h3>
         {% if theory_results %}
         <table>
-            <tr><th>Test</th><th>Score</th><th>%</th><th>Date</th></tr>
+            <tr><th>Item</th><th>Score</th><th>%</th><th>Time</th><th>Date</th></tr>
             {% for r in theory_results %}
             <tr>
                 <td>{{ r[0] }}</td>
-                <td>{{ r[1] }}/{{ r[2] }}</td>
+                <td>{% if r[6] == 'lesson' %}Completed{% else %}{{ r[1] }}/{{ r[2] }}{% endif %}</td>
                 <td>
                     <span style="color: {{ '#107C10' if r[3] >= 60 else ('#ff8c00' if r[3] >= 40 else '#A4262C') }}; font-weight:bold;">
                         {{ r[3] }}%
@@ -387,6 +547,31 @@
     </form>
 </div>
 </div>
+
+<script>
+(function () {
+    const months = Array.from(document.querySelectorAll('.attendance-month'));
+    const label = document.getElementById('calendarCurrentMonth');
+    const prev = document.getElementById('prevMonthBtn');
+    const next = document.getElementById('nextMonthBtn');
+    if (!months.length || !label || !prev || !next) return;
+
+    let current = months.findIndex(month => month.classList.contains('active'));
+    if (current < 0) current = months.length - 1;
+
+    function showMonth(index) {
+        current = Math.max(0, Math.min(months.length - 1, index));
+        months.forEach((month, i) => month.classList.toggle('active', i === current));
+        label.textContent = months[current].dataset.monthName || '';
+        prev.disabled = current === 0;
+        next.disabled = current === months.length - 1;
+    }
+
+    prev.addEventListener('click', () => showMonth(current - 1));
+    next.addEventListener('click', () => showMonth(current + 1));
+    showMonth(current);
+})();
+</script>
 
 </body>
 </html>

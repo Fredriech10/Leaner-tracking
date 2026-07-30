@@ -7,7 +7,10 @@ import os
 import sqlite3
 import random
 import zipfile
+import base64
+import mimetypes
 import re
+import uuid
 from flask import send_file
 import pandas as pd
 import io
@@ -15,6 +18,51 @@ from io import BytesIO
 from xml.etree import ElementTree as ET
 
 TIMEOUT = 60
+LESSON_SLIDE_TYPES = ("content_slide", "title_slide", "heading_slide")
+DATA_URI_IMAGE_RE = re.compile(r"data:(image/[a-zA-Z0-9.+-]+);base64,([A-Za-z0-9+/=\r\n]+)")
+LESSON_ASSET_DIR = os.path.join("static", "uploads", "lesson_assets")
+MAX_LESSON_IMAGE_DIMENSION = 1600
+
+def save_data_uri_image(data_uri):
+    match = DATA_URI_IMAGE_RE.fullmatch(data_uri.strip())
+    if not match:
+        return data_uri
+    mime_type, encoded = match.groups()
+    raw_image = base64.b64decode(encoded)
+    os.makedirs(LESSON_ASSET_DIR, exist_ok=True)
+    try:
+        from PIL import Image
+
+        image = Image.open(BytesIO(raw_image))
+        image.thumbnail((MAX_LESSON_IMAGE_DIMENSION, MAX_LESSON_IMAGE_DIMENSION))
+        filename = f"{uuid.uuid4().hex}.webp"
+        filepath = os.path.join(LESSON_ASSET_DIR, filename)
+        if image.mode not in ("RGB", "RGBA"):
+            image = image.convert("RGBA" if "A" in image.getbands() else "RGB")
+        save_kwargs = {"format": "WEBP", "quality": 82, "method": 6}
+        if image.mode == "RGBA":
+            save_kwargs["lossless"] = False
+        image.save(filepath, **save_kwargs)
+    except Exception:
+        ext = mimetypes.guess_extension(mime_type) or ".png"
+        if ext == ".jpe":
+            ext = ".jpg"
+        filename = f"{uuid.uuid4().hex}{ext}"
+        filepath = os.path.join(LESSON_ASSET_DIR, filename)
+        with open(filepath, "wb") as asset_file:
+            asset_file.write(raw_image)
+    return f"/static/uploads/lesson_assets/{filename}"
+
+def externalize_data_uri_images(html_or_uri):
+    if not html_or_uri:
+        return html_or_uri
+    return DATA_URI_IMAGE_RE.sub(lambda match: save_data_uri_image(match.group(0)), html_or_uri)
+
+def safe_int(value, default=0):
+    try:
+        return int(value)
+    except (TypeError, ValueError):
+        return default
 
 def update_active_user(username):
     """Update the last seen time for a user in the active_users dict"""
@@ -35,6 +83,42 @@ def get_last_21_days():
         limit += 1
 
     return list(reversed(days))
+
+def get_last_7_days():
+    days = []
+    current = datetime.now().date()
+    term_days = get_all_term_days()  # empty set if no terms configured
+    limit = 0
+
+    while len(days) < 7 and limit < 365:
+        s = current.strftime("%Y-%m-%d")
+        if current.weekday() < 5 and (not term_days or s in term_days):
+            days.append(s)
+        current -= timedelta(days=1)
+        limit += 1
+
+    return list(reversed(days))
+
+# 🔹 Database setup
+def get_current_year_attendance_days():
+    days = []
+    current = datetime(datetime.now().year, 1, 1).date()
+    today = datetime.now().date()
+
+    while current <= today:
+        s = current.strftime("%Y-%m-%d")
+        if current.weekday() < 5:
+            days.append(s)
+        current += timedelta(days=1)
+
+    return days
+
+DB_NAME = "school.db"
+INTERACTIVE_LEARNING_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "INTERACTIVE LEARNING")
+
+def get_db():
+    return sqlite3.connect(DB_NAME)
+
 
 def get_days_in_active_term():
     term_range = get_active_term_range()
@@ -328,6 +412,8 @@ def init_db():
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         title TEXT,
         subject TEXT,
+        background_image TEXT,
+        background_fit TEXT DEFAULT 'cover',
         assign_date TEXT,  -- YYYY-MM-DD
         time_limit INTEGER,
         allow_multiple INTEGER DEFAULT 0,
@@ -376,8 +462,22 @@ def init_db():
                 cursor.execute("ALTER TABLE theory_tests ADD COLUMN max_attempts INTEGER DEFAULT 1")
             if "show_answers" not in cols:
                 cursor.execute("ALTER TABLE theory_tests ADD COLUMN show_answers INTEGER DEFAULT 1")
+            if "background_image" not in cols:
+                cursor.execute("ALTER TABLE theory_tests ADD COLUMN background_image TEXT")
+            if "background_fit" not in cols:
+                cursor.execute("ALTER TABLE theory_tests ADD COLUMN background_fit TEXT DEFAULT 'cover'")
     except Exception as e:
         print(f"Note: theory_tests migration: {e}")
+
+    try:
+        cursor.execute("PRAGMA table_info(theory_tests)")
+        cols = [c[1] for c in cursor.fetchall()]
+        if "background_image" not in cols:
+            cursor.execute("ALTER TABLE theory_tests ADD COLUMN background_image TEXT")
+        if "background_fit" not in cols:
+            cursor.execute("ALTER TABLE theory_tests ADD COLUMN background_fit TEXT DEFAULT 'cover'")
+    except Exception as e:
+        print(f"Note: theory_tests background migration: {e}")
 
     cursor.execute("""
     CREATE TABLE IF NOT EXISTS theory_test_groups (
@@ -434,6 +534,102 @@ def init_db():
         marks_awarded INTEGER DEFAULT 0,
         FOREIGN KEY (submission_id) REFERENCES theory_submissions (id),
         FOREIGN KEY (question_id) REFERENCES theory_questions (id)
+    )
+    """)
+
+    cursor.execute("""
+    CREATE TABLE IF NOT EXISTS theory_progress (
+        test_id INTEGER,
+        username TEXT,
+        current_slide INTEGER DEFAULT 0,
+        max_slide INTEGER DEFAULT 0,
+        time_spent_seconds INTEGER DEFAULT 0,
+        completed INTEGER DEFAULT 0,
+        updated_at TEXT,
+        PRIMARY KEY (test_id, username),
+        FOREIGN KEY (test_id) REFERENCES theory_tests (id)
+    )
+    """)
+
+    try:
+        cursor.execute("PRAGMA table_info(theory_progress)")
+        progress_cols = [c[1] for c in cursor.fetchall()]
+        if "max_slide" not in progress_cols:
+            cursor.execute("ALTER TABLE theory_progress ADD COLUMN max_slide INTEGER DEFAULT 0")
+        if "time_spent_seconds" not in progress_cols:
+            cursor.execute("ALTER TABLE theory_progress ADD COLUMN time_spent_seconds INTEGER DEFAULT 0")
+    except Exception as e:
+        print(f"Note: theory_progress migration: {e}")
+
+    try:
+        cursor.execute("PRAGMA table_info(theory_submissions)")
+        sub_cols = [c[1] for c in cursor.fetchall()]
+        if "time_spent_seconds" not in sub_cols:
+            cursor.execute("ALTER TABLE theory_submissions ADD COLUMN time_spent_seconds INTEGER DEFAULT 0")
+        if "submission_type" not in sub_cols:
+            cursor.execute("ALTER TABLE theory_submissions ADD COLUMN submission_type TEXT DEFAULT 'test'")
+    except Exception as e:
+        print(f"Note: theory_submissions time/type migration: {e}")
+
+
+
+    cursor.execute("""
+    CREATE TABLE IF NOT EXISTS theory_lesson_groups (
+        lesson_id INTEGER,
+        group_name TEXT,
+        PRIMARY KEY (lesson_id, group_name),
+        FOREIGN KEY (lesson_id) REFERENCES theory_lessons (id)
+    )
+    """)
+
+    cursor.execute("""
+    CREATE TABLE IF NOT EXISTS theory_lesson_teachers (
+        lesson_id INTEGER,
+        teacher_username TEXT,
+        PRIMARY KEY (lesson_id, teacher_username),
+        FOREIGN KEY (lesson_id) REFERENCES theory_lessons (id)
+    )
+    """)
+
+    cursor.execute("""
+    CREATE TABLE IF NOT EXISTS theory_lesson_checkpoints (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        lesson_id INTEGER,
+        slide_number INTEGER,
+        question_text TEXT,
+        option_a TEXT,
+        option_b TEXT,
+        option_c TEXT,
+        option_d TEXT,
+        correct_option TEXT,
+        explanation TEXT,
+        sort_order INTEGER DEFAULT 0,
+        FOREIGN KEY (lesson_id) REFERENCES theory_lessons (id)
+    )
+    """)
+
+    cursor.execute("""
+    CREATE TABLE IF NOT EXISTS theory_lesson_progress (
+        lesson_id INTEGER,
+        username TEXT,
+        current_slide INTEGER DEFAULT 1,
+        completed_at TEXT,
+        PRIMARY KEY (lesson_id, username),
+        FOREIGN KEY (lesson_id) REFERENCES theory_lessons (id)
+    )
+    """)
+
+    cursor.execute("""
+    CREATE TABLE IF NOT EXISTS theory_lesson_checkpoint_answers (
+        lesson_id INTEGER,
+        checkpoint_id INTEGER,
+        username TEXT,
+        selected_option TEXT,
+        is_correct INTEGER DEFAULT 0,
+        answered_at TEXT,
+        PRIMARY KEY (checkpoint_id, username),
+        FOREIGN KEY (lesson_id) REFERENCES theory_lessons (id),
+        FOREIGN KEY (checkpoint_id) REFERENCES theory_lesson_checkpoints (id)
     )
     """)
 
@@ -544,81 +740,6 @@ def init_db():
     """)
 
     cursor.execute("""
-    CREATE TABLE IF NOT EXISTS theory_lessons (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        title TEXT,
-        subject TEXT,
-        assign_date TEXT,
-        ppt_relative_path TEXT,
-        linked_test_id INTEGER,
-        created_by TEXT,
-        created_at TEXT,
-        is_active INTEGER DEFAULT 1,
-        FOREIGN KEY (linked_test_id) REFERENCES theory_tests (id)
-    )
-    """)
-
-    cursor.execute("""
-    CREATE TABLE IF NOT EXISTS theory_lesson_groups (
-        lesson_id INTEGER,
-        group_name TEXT,
-        PRIMARY KEY (lesson_id, group_name),
-        FOREIGN KEY (lesson_id) REFERENCES theory_lessons (id)
-    )
-    """)
-
-    cursor.execute("""
-    CREATE TABLE IF NOT EXISTS theory_lesson_teachers (
-        lesson_id INTEGER,
-        teacher_username TEXT,
-        PRIMARY KEY (lesson_id, teacher_username),
-        FOREIGN KEY (lesson_id) REFERENCES theory_lessons (id)
-    )
-    """)
-
-    cursor.execute("""
-    CREATE TABLE IF NOT EXISTS theory_lesson_checkpoints (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        lesson_id INTEGER,
-        slide_number INTEGER,
-        question_text TEXT,
-        option_a TEXT,
-        option_b TEXT,
-        option_c TEXT,
-        option_d TEXT,
-        correct_option TEXT,
-        explanation TEXT,
-        sort_order INTEGER DEFAULT 0,
-        FOREIGN KEY (lesson_id) REFERENCES theory_lessons (id)
-    )
-    """)
-
-    cursor.execute("""
-    CREATE TABLE IF NOT EXISTS theory_lesson_progress (
-        lesson_id INTEGER,
-        username TEXT,
-        current_slide INTEGER DEFAULT 1,
-        completed_at TEXT,
-        PRIMARY KEY (lesson_id, username),
-        FOREIGN KEY (lesson_id) REFERENCES theory_lessons (id)
-    )
-    """)
-
-    cursor.execute("""
-    CREATE TABLE IF NOT EXISTS theory_lesson_checkpoint_answers (
-        lesson_id INTEGER,
-        checkpoint_id INTEGER,
-        username TEXT,
-        selected_option TEXT,
-        is_correct INTEGER DEFAULT 0,
-        answered_at TEXT,
-        PRIMARY KEY (checkpoint_id, username),
-        FOREIGN KEY (lesson_id) REFERENCES theory_lessons (id),
-        FOREIGN KEY (checkpoint_id) REFERENCES theory_lesson_checkpoints (id)
-    )
-    """)
-
-    cursor.execute("""
     CREATE TABLE IF NOT EXISTS term_dates (
         term INTEGER PRIMARY KEY,  -- 1, 2, 3, or 4
         start_date TEXT,
@@ -628,17 +749,15 @@ def init_db():
 
     # Seed initial subjects if empty
     cursor.execute("SELECT COUNT(*) FROM subjects")
-    subjects_count = cursor.fetchone()[0]
-    is_new_db = subjects_count == 0
-    if is_new_db:
+    if cursor.fetchone()[0] == 0:
         initial_subjects = ["Word", "Excel", "Access", "HTML"]
         for subj in initial_subjects:
             cursor.execute("INSERT INTO subjects (name, created_by, created_at) VALUES (?, ?, ?)",
                            (subj, "system", datetime.now().isoformat()))
 
-    # Seed initial tasks only for a fresh database
+    # Seed initial tasks if empty
     cursor.execute("SELECT COUNT(*) FROM tasks")
-    if cursor.fetchone()[0] == 0 and is_new_db:
+    if cursor.fetchone()[0] == 0:
         cursor.execute("SELECT id, name FROM subjects")
         subjects = cursor.fetchall()
         today = datetime.now().date().isoformat()
@@ -681,6 +800,19 @@ def log_login(username):
 
     conn.commit()
     conn.close()
+
+def should_record_attendance_login():
+    if request.args.get("attendance", "").strip().lower() != "lab":
+        return False
+    allowed_lab_computers = {
+        item.strip().upper()
+        for item in os.getenv("LAB_ATTENDANCE_COMPUTERS", "").split(",")
+        if item.strip()
+    }
+    if not allowed_lab_computers:
+        return True
+    client_pc = request.args.get("pc", "").strip().upper()
+    return client_pc in allowed_lab_computers
 
 def log_activity(username, action):
     conn = get_db()
@@ -784,6 +916,84 @@ def mark_file(filepath, marking_script):
 app = Flask(__name__)
 app.secret_key = os.getenv('SECRET_KEY', 'dev-key-change-in-prod')
 
+@app.after_request
+def inject_global_mobile_css(response):
+    if response.content_type and response.content_type.startswith("text/html"):
+        html = response.get_data(as_text=True)
+        changed = False
+        viewport_meta = '<meta name="viewport" content="width=device-width, initial-scale=1.0">'
+        mobile_css = '<link rel="stylesheet" href="/static/css/mobile_global.css">'
+        mobile_nav_script = '''<script>
+(function () {
+    function closeMenu() {
+        document.body.classList.remove('mobile-nav-open');
+        document.querySelectorAll('.mobile-menu-toggle').forEach(function (button) {
+            button.setAttribute('aria-expanded', 'false');
+        });
+    }
+
+    document.addEventListener('DOMContentLoaded', function () {
+        document.querySelectorAll('.topbar').forEach(function (topbar) {
+            var links = topbar.querySelector('.topbar-links');
+            if (!links) {
+                var title = topbar.querySelector('h1, strong');
+                var movable = Array.prototype.filter.call(topbar.children, function (child) {
+                    return child !== title && !child.classList.contains('mobile-menu-toggle');
+                });
+                if (!movable.length) return;
+                links = document.createElement('div');
+                links.className = 'topbar-links';
+                movable.forEach(function (child) {
+                    links.appendChild(child);
+                });
+                topbar.appendChild(links);
+            }
+            if (!links || topbar.querySelector('.mobile-menu-toggle')) return;
+
+            var button = document.createElement('button');
+            button.type = 'button';
+            button.className = 'mobile-menu-toggle';
+            button.setAttribute('aria-label', 'Open menu');
+            button.setAttribute('aria-expanded', 'false');
+            button.innerHTML = '&#9776;';
+            button.addEventListener('click', function (event) {
+                event.stopPropagation();
+                var isOpen = document.body.classList.toggle('mobile-nav-open');
+                button.setAttribute('aria-expanded', isOpen ? 'true' : 'false');
+            });
+            topbar.insertBefore(button, topbar.firstChild);
+        });
+
+        document.addEventListener('click', function (event) {
+            if (!document.body.classList.contains('mobile-nav-open')) return;
+            if (event.target.closest('.topbar-links') || event.target.closest('.mobile-menu-toggle')) return;
+            closeMenu();
+        });
+
+        document.addEventListener('keydown', function (event) {
+            if (event.key === 'Escape') closeMenu();
+        });
+
+        document.querySelectorAll('.topbar-links a').forEach(function (link) {
+            link.addEventListener('click', closeMenu);
+        });
+    });
+})();
+</script>'''
+        if 'name="viewport"' not in html and "</head>" in html:
+            html = html.replace("</head>", f"    {viewport_meta}\n</head>", 1)
+            changed = True
+        if mobile_css not in html and "</head>" in html:
+            html = html.replace("</head>", f"    {mobile_css}\n</head>", 1)
+            changed = True
+        if "mobile-menu-toggle" not in html and "</body>" in html:
+            html = html.replace("</body>", f"    {mobile_nav_script}\n</body>", 1)
+            changed = True
+        if changed:
+            response.set_data(html)
+            response.headers["Content-Length"] = str(len(response.get_data()))
+    return response
+
 @app.context_processor
 def inject_session_user():
     from flask import session as _s
@@ -873,64 +1083,35 @@ def get_overall_average(username):
     return round(result[0], 1) if result[0] else 0
 
 def get_low_attendance_learners(limit=10, groups=None, teacher_username=None):
-    """
-    Lowest attendance (days absent) for the teacher dashboard.
-
-    Must match learner_record attendance window/logic:
-    - Business days: get_last_21_days()
-    - Excluded dates:
-        * global exclusions (excluded_dates.group_name IS NULL)
-        * group-specific exclusions (excluded_dates.group_name = learner group)
-    """
-    days_all = get_last_21_days()
+    days = get_last_21_days()
     conn = get_db()
     cursor = conn.cursor()
 
-    # Excluded days: global + per-group
+    # Get excluded dates (global only for cross-group summary)
     cursor.execute("SELECT date FROM excluded_dates WHERE group_name IS NULL")
-    excluded_global = {row[0] for row in cursor.fetchall()}
+    excluded = {row[0] for row in cursor.fetchall()}
+    days = [d for d in days if d not in excluded]
 
-    cursor.execute("SELECT date, group_name FROM excluded_dates WHERE group_name IS NOT NULL")
-    excluded_by_group = {}
-    for date_str, group_name in cursor.fetchall():
-        excluded_by_group.setdefault(group_name, set()).add(date_str)
-
-    # Learners (include group_name so we can apply group-specific exclusions)
     if teacher_username:
         cursor.execute(
-            "SELECT username, full_name, group_name FROM users WHERE role = 'student' AND teacher_username = ?",
-            (teacher_username,),
-        )
+            "SELECT username, full_name FROM users WHERE role = 'student' AND teacher_username = ?",
+            (teacher_username,))
     elif groups:
         placeholders = ",".join("?" for _ in groups)
-        cursor.execute(
-            f"SELECT username, full_name, group_name FROM users WHERE role = 'student' AND group_name IN ({placeholders})",
-            groups,
-        )
+        cursor.execute(f"SELECT username, full_name FROM users WHERE role = 'student' AND group_name IN ({placeholders})", groups)
     else:
-        cursor.execute("SELECT username, full_name, group_name FROM users WHERE role = 'student'")
+        cursor.execute("SELECT username, full_name FROM users WHERE role = 'student'")
     learners = cursor.fetchall()
 
     results = []
-    for username, full_name, learner_group in learners:
-        excluded_for_learner = excluded_by_group.get(learner_group, set())
-
-        days = [d for d in days_all if d not in excluded_global and d not in excluded_for_learner]
-
+    for username, full_name in learners:
         present = 0
         for day in days:
-            cursor.execute(
-                "SELECT 1 FROM login_history WHERE username = ? AND date = ?",
-                (username, day),
-            )
+            cursor.execute("SELECT 1 FROM login_history WHERE username = ? AND date = ?", (username, day))
             if cursor.fetchone():
                 present += 1
                 continue
-
-            cursor.execute(
-                "SELECT status FROM attendance_override WHERE username = ? AND date = ?",
-                (username, day),
-            )
+            cursor.execute("SELECT status FROM attendance_override WHERE username = ? AND date = ?", (username, day))
             override = cursor.fetchone()
             if override and override[0] == "present":
                 present += 1
@@ -1234,7 +1415,6 @@ def login():
 
             create_user_if_not_exists(username)
             update_last_active(username)
-            log_login(username)
             log_activity(username, "logged in")
 
             with lock:
@@ -1302,7 +1482,6 @@ def student_dashboard():
         FROM (SELECT subject, task, MAX(score) as best_score FROM results WHERE username = ? GROUP BY subject, task)
         GROUP BY subject
     """, (username,))
-    
     subject_avgs = cursor.fetchall()
 
     cursor.execute("""
@@ -1530,7 +1709,8 @@ def auto_login():
 
         create_user_if_not_exists(username)
         update_last_active(username)
-        log_login(username)
+        if should_record_attendance_login():
+            log_login(username)
         log_activity(username, "logged in")
 
         with lock:
@@ -2868,117 +3048,26 @@ def attendance():
         start_date = (datetime.now() - timedelta(days=7)).strftime("%Y-%m-%d")
         end_date = today
 
-    groups = get_groups(username) if role == "teacher" else get_groups()
+    groups = get_groups(username) if role == 'teacher' else get_groups()
 
-    if role == "teacher" and selected_group and selected_group not in groups:
+    if role == 'teacher' and selected_group and selected_group not in groups:
         selected_group = None
-
-    # ─────────────────────────────────────────────────────────────
-    # Auto-exclude: on every attendance load, find past business
-    # days where (total present across group) == 0 and add to
-    # excluded_dates with reason='auto_excluded'.
-    # Scope: past 90 days, but not before the active term start.
-    # ─────────────────────────────────────────────────────────────
-    conn = get_db()
-    cursor = conn.cursor()
-
-    # Active term start boundary (if any)
-    active_term = get_active_term_range()
-    active_term_start = None
-    if active_term:
-        active_term_start = active_term[0]
-
-    today_date = datetime.now().date()
-    start_boundary = today_date - timedelta(days=90)
-    if active_term_start:
-        try:
-            active_start_date = datetime.strptime(active_term_start, "%Y-%m-%d").date()
-            if active_start_date > start_boundary:
-                start_boundary = active_start_date
-        except Exception:
-            pass
-
-    # Eligible days: business days only, strictly day < today
-    yesterday = today_date - timedelta(days=1)
-    cur_day = start_boundary
-    eligible_days = []
-    while cur_day <= yesterday:
-        if cur_day.weekday() < 5:
-            eligible_days.append(cur_day.strftime("%Y-%m-%d"))
-        cur_day += timedelta(days=1)
-
-    # Load existing excluded dates for quick duplicate prevention
-    cursor.execute("SELECT date, group_name FROM excluded_dates")
-    existing_excluded = {(r[0], r[1]) for r in cursor.fetchall()}
-
-    groups_to_check = groups if selected_group is None else ([selected_group] if selected_group in groups else [])
-    for group in groups_to_check:
-        # Get students in the group (and teacher constraint if needed)
-        if role == "teacher":
-            cursor.execute(
-                "SELECT username FROM users WHERE group_name = ? AND role = 'student' AND teacher_username = ?",
-                (group, username),
-            )
-        else:
-            cursor.execute(
-                "SELECT username FROM users WHERE group_name = ? AND role = 'student'",
-                (group,),
-            )
-        student_usernames = [r[0] for r in cursor.fetchall()]
-        if not student_usernames:
-            continue
-
-        # Pre-check: count of distinct present per day
-        for day in eligible_days:
-            # total present == login_history present OR manual override present
-            placeholders = ",".join("?" * len(student_usernames))
-
-            cursor.execute(f"""
-                SELECT COUNT(DISTINCT username)
-                FROM (
-                    SELECT username
-                    FROM login_history
-                    WHERE date = ? AND username IN ({placeholders})
-                    UNION
-                    SELECT a.username
-                    FROM attendance_override a
-                    WHERE a.date = ? AND a.status = 'present'
-                      AND a.username IN ({placeholders})
-                      AND NOT EXISTS (
-                          SELECT 1 FROM login_history lh
-                          WHERE lh.date = ? AND lh.username = a.username
-                      )
-                ) p
-            """, (*([day] + student_usernames), day, *student_usernames, day))
-            present_count = cursor.fetchone()[0] or 0
-
-            if present_count == 0 and (day, group) not in existing_excluded:
-                cursor.execute("""
-                    INSERT INTO excluded_dates (date, group_name, reason, created_by, created_at)
-                    VALUES (?, ?, ?, ?, ?)
-                    ON CONFLICT(date, group_name) DO NOTHING
-                """, (day, group, "auto_excluded", username, datetime.now().isoformat()))
-                existing_excluded.add((day, group))
-
-    conn.commit()
-    conn.close()
-    # ─────────────────────────────────────────────────────────────
 
     days = []
     data = []
-
     daily_present_counts = {}
     daily_absent_counts = {}
 
     if selected_group:
         days, data = get_attendance_data(selected_group, start_date, end_date, teacher_username=username if role == 'teacher' else None)
-
-        # Daily totals across all learners in the selected group
-        for day in days:
-            present = sum(1 for row in data if row.get("days", {}).get(day))
-            total = len(data)
-            daily_present_counts[day] = present
-            daily_absent_counts[day] = total - present
+        daily_present_counts = {
+            day: sum(1 for row in data if row["days"].get(day))
+            for day in days
+        }
+        daily_absent_counts = {
+            day: len(data) - daily_present_counts[day]
+            for day in days
+        }
 
     # Get excluded dates
     conn = get_db()
@@ -3323,63 +3412,66 @@ def learner_record(username):
         if not row or row[0] != admin_user:
             conn.close()
             return "Access denied", 403
+
     # ── Attendance ────────────────────────────────────────────────────
-    # Must match teacher_dashboard “Lowest Attendance (Last 21 Days)”
-    days = get_last_21_days()
+    attendance_year = datetime.now().year
+    days = get_current_year_attendance_days()
     history = []
     cursor.execute("SELECT group_name FROM users WHERE username = ?", (username,))
     group_row = cursor.fetchone()
     user_group = group_row[0] if group_row else None
-
-    def is_date_excluded_for_group(date_str, group_name):
-        # Exclude if it's globally excluded (group_name IS NULL)
-        cursor.execute(
-            "SELECT 1 FROM excluded_dates WHERE date = ? AND group_name IS NULL",
-            (date_str,),
-        )
-        if cursor.fetchone():
-            return True
-
-        # Or if it's excluded for the learner's specific group
-        if group_name is not None:
-            cursor.execute(
-                "SELECT 1 FROM excluded_dates WHERE date = ? AND group_name = ?",
-                (date_str, group_name),
-            )
-            if cursor.fetchone():
-                return True
-
-        return False
+    cursor.execute("""
+        SELECT date FROM excluded_dates
+        WHERE group_name IS NULL OR group_name = ?
+    """, (user_group,))
+    excluded_dates = {row[0] for row in cursor.fetchall()}
+    cursor.execute("""
+        SELECT DISTINCT lh.date
+        FROM login_history lh
+        JOIN users u ON u.username = lh.username
+        WHERE u.group_name = ? AND lh.username != ?
+    """, (user_group, username))
+    class_checked_dates = {row[0] for row in cursor.fetchall()}
 
     for day in days:
+        weekday = datetime.strptime(day, "%Y-%m-%d").weekday()
         cursor.execute("SELECT MIN(login_time) FROM login_history WHERE username = ? AND date = ?", (username, day))
         login_time = cursor.fetchone()[0]
         cutoff = get_group_late_threshold(user_group, day) if user_group else None
-        if login_time:
+        if day in excluded_dates:
+            history.append({"date": day, "status": "Normal", "time": "", "late": False, "note": "", "weekday": weekday})
+        elif login_time:
             time_str = login_time.split(" ")[1][:5]
             late = cutoff is not None and time_str > cutoff
-
-            if not is_date_excluded_for_group(day, user_group):
-                history.append({"date": day, "status": "Present", "time": time_str, "late": late, "note": "Auto"})
+            history.append({"date": day, "status": "Present", "time": time_str, "late": late, "note": "Auto", "weekday": weekday})
         else:
             cursor.execute("SELECT status FROM attendance_override WHERE username = ? AND date = ?", (username, day))
             override = cursor.fetchone()
             if override and override[0] == "present":
-                if not is_date_excluded_for_group(day, user_group):
-                    history.append({"date": day, "status": "Present", "time": "12:00", "late": False, "note": "Manual"})
+                history.append({"date": day, "status": "Present", "time": "12:00", "late": False, "note": "Manual", "weekday": weekday})
+            elif day in class_checked_dates:
+                history.append({"date": day, "status": "Absent", "time": "", "late": False, "note": "Class checked in", "weekday": weekday})
             else:
-                # Only record absent for non-excluded days
-                if not is_date_excluded_for_group(day, user_group):
-                    history.append({"date": day, "status": "Absent", "time": "", "late": False, "note": "Manual" if override else "Auto"})
+                history.append({"date": day, "status": "Normal", "time": "", "late": False, "note": "", "weekday": weekday})
 
-    # totals must respect excluded days for the learner's group:
-    # - history only includes non-excluded days
-    total_days = len(history)
+    counted_history = [h for h in history if h["status"] in ("Present", "Absent")]
+    total_days = len(counted_history)
     present_days = sum(1 for h in history if h["status"] == "Present")
-    absent_days = total_days - present_days
+    absent_days = sum(1 for h in history if h["status"] == "Absent")
     late_days = sum(1 for h in history if h["late"])
     attendance_pct = round((present_days / total_days) * 100) if total_days else 0
     recent_history = history[-10:]  # last 10 days
+    attendance_months = []
+    for item in history:
+        month_key = item["date"][:7]
+        if not attendance_months or attendance_months[-1]["key"] != month_key:
+            month_date = datetime.strptime(item["date"], "%Y-%m-%d")
+            attendance_months.append({
+                "key": month_key,
+                "name": month_date.strftime("%B"),
+                "days": []
+            })
+        attendance_months[-1]["days"].append(item)
 
     # ── Academic results ──────────────────────────────────────────────
     cursor.execute("""
@@ -3445,9 +3537,18 @@ def learner_record(username):
     
     # Get theory tests assigned to this user's group
     cursor.execute("""
-        SELECT DISTINCT tt.id, tt.title
+        SELECT DISTINCT tt.id, tt.title, COALESCE(tt.subject, ''),
+               COALESCE(q_stats.total_items, 0),
+               COALESCE(q_stats.test_questions, 0)
         FROM theory_tests tt
         LEFT JOIN theory_test_groups ttg ON tt.id = ttg.test_id
+        LEFT JOIN (
+            SELECT test_id,
+                   COUNT(*) as total_items,
+                   SUM(CASE WHEN question_type IN ('content_slide', 'title_slide', 'heading_slide') THEN 0 ELSE 1 END) as test_questions
+            FROM theory_questions
+            GROUP BY test_id
+        ) q_stats ON q_stats.test_id = tt.id
         WHERE (ttg.group_name = ? OR ttg.group_name IS NULL)
         ORDER BY tt.title
     """, (user_group,))
@@ -3469,19 +3570,26 @@ def learner_record(username):
     
     # Get theory test submissions
     theory_submissions_map = {}
-    for test_id, title in assigned_theory_tests:
+    for test_id, title, subject, total_items, test_questions in assigned_theory_tests:
         cursor.execute("""
-            SELECT MAX(percentage), MAX(submitted_at)
+            SELECT MAX(percentage), MAX(submitted_at), COUNT(*), COALESCE(SUM(time_spent_seconds), 0),
+                   COALESCE(MAX(submission_type), 'test')
             FROM theory_submissions
             WHERE username = ? AND test_id = ?
         """, (username, test_id))
         result = cursor.fetchone()
         if result and result[0] is not None:
-            theory_submissions_map[title] = {"score": result[0], "timestamp": result[1]}
+            theory_submissions_map[test_id] = {
+                "score": result[0],
+                "timestamp": result[1],
+                "attempts": result[2] or 0,
+                "time_spent": result[3] or 0,
+                "submission_type": result[4] or "test"
+            }
     
     # Add theory tests to task rows
-    for test_id, title in assigned_theory_tests:
-        row = theory_submissions_map.get(title)
+    for test_id, title, subject, total_items, test_questions in assigned_theory_tests:
+        row = theory_submissions_map.get(test_id)
         task_rows.append({
             "subject": "Theory", "task": title,
             "score": row["score"] if row else None,
@@ -3497,12 +3605,102 @@ def learner_record(username):
 
     # ── Theory test results ───────────────────────────────────────────
     cursor.execute("""
-        SELECT tt.title, ts.score, ts.total, MAX(ts.percentage) as best_pct, MAX(ts.submitted_at) as latest
+        SELECT tt.title, ts.score, ts.total, ts.percentage, ts.submitted_at,
+               COALESCE(ts.time_spent_seconds, 0), COALESCE(ts.submission_type, 'test')
         FROM theory_submissions ts
         JOIN theory_tests tt ON ts.test_id = tt.id
-        WHERE ts.username = ? GROUP BY ts.test_id ORDER BY latest DESC LIMIT 10
-    """, (username,))
+        JOIN (
+            SELECT test_id, MAX(submitted_at) as latest
+            FROM theory_submissions
+            WHERE username = ?
+            GROUP BY test_id
+        ) latest ON latest.test_id = ts.test_id AND latest.latest = ts.submitted_at
+        WHERE ts.username = ?
+        ORDER BY ts.submitted_at DESC LIMIT 10
+    """, (username, username))
     theory_results = cursor.fetchall()
+
+    cursor.execute("""
+        SELECT test_id, current_slide, max_slide, COALESCE(time_spent_seconds, 0),
+               COALESCE(completed, 0), updated_at
+        FROM theory_progress
+        WHERE username = ?
+    """, (username,))
+    theory_progress_map = {
+        row[0]: {
+            "current_slide": row[1] or 0,
+            "max_slide": row[2] or 0,
+            "time_spent": row[3] or 0,
+            "completed": bool(row[4]),
+            "updated_at": row[5]
+        }
+        for row in cursor.fetchall()
+    }
+
+    practical_total = len(assigned_practical_tasks)
+    practical_done = sum(1 for row in task_rows if row["type"] == "practical" and row["score"] is not None)
+    theory_total = len(assigned_theory_tests)
+    theory_done = 0
+    theory_in_progress = 0
+    missing_items = []
+    learning_progress = []
+    theory_time_seconds = 0
+
+    for test_id, title, subject, total_items, test_questions in assigned_theory_tests:
+        total_items = total_items or 0
+        test_questions = test_questions or 0
+        is_lesson = total_items > 0 and test_questions == 0
+        submission = theory_submissions_map.get(test_id)
+        progress = theory_progress_map.get(test_id, {})
+        completed = bool(submission) or bool(progress.get("completed"))
+        has_progress = test_id in theory_progress_map
+        viewed = min(total_items, (progress.get("max_slide", 0) + 1) if has_progress and total_items else 0)
+        progress_pct = 100 if completed else (round((viewed / total_items) * 100) if total_items else 0)
+        time_spent = submission["time_spent"] if submission else progress.get("time_spent", 0)
+        theory_time_seconds += time_spent or 0
+
+        if completed:
+            theory_done += 1
+            status = "Completed"
+        elif progress_pct > 0:
+            theory_in_progress += 1
+            status = "In progress"
+        else:
+            status = "Not started"
+            missing_items.append({"type": "Lesson" if is_lesson else "Test", "title": title})
+
+        learning_progress.append({
+            "id": test_id,
+            "title": title,
+            "subject": subject or "Theory",
+            "kind": "Lesson" if is_lesson else "Test",
+            "status": status,
+            "progress_pct": progress_pct,
+            "viewed": viewed,
+            "has_progress": has_progress,
+            "total": total_items,
+            "score": submission["score"] if submission else None,
+            "attempts": submission["attempts"] if submission else 0,
+            "time_spent": time_spent or 0,
+            "updated_at": (submission["timestamp"] if submission else progress.get("updated_at"))
+        })
+
+    practical_missing = [
+        {"type": "Practical", "title": f"{row['subject']} - {row['task']}"}
+        for row in task_rows
+        if row["type"] == "practical" and row["score"] is None
+    ]
+    missing_items = practical_missing + missing_items
+    learning_summary = {
+        "practical_total": practical_total,
+        "practical_done": practical_done,
+        "theory_total": theory_total,
+        "theory_done": theory_done,
+        "theory_in_progress": theory_in_progress,
+        "missing_total": len(missing_items),
+        "theory_time_seconds": theory_time_seconds,
+        "overall_completion": round(((practical_done + theory_done) / max(1, practical_total + theory_total)) * 100, 1)
+    }
 
     # ── Weaknesses ────────────────────────────────────────────────────
     cursor.execute("""
@@ -3527,6 +3725,9 @@ def learner_record(username):
         "learner_record.html",
         user=user,
         history=recent_history,
+        attendance_calendar=history,
+        attendance_months=attendance_months,
+        attendance_year=attendance_year,
         attendance_pct=attendance_pct,
         present_days=present_days,
         absent_days=absent_days,
@@ -3540,6 +3741,9 @@ def learner_record(username):
         subject_avgs=subject_avgs,
         recent_results=recent_results,
         theory_results=theory_results,
+        learning_summary=learning_summary,
+        learning_progress=learning_progress,
+        missing_items=missing_items[:12],
         trend=trend,
         weaknesses=weaknesses,
         recent_activity=recent_activity,
@@ -3873,18 +4077,6 @@ def risk_learners():
     today = datetime.now().strftime("%Y-%m-%d")
     risk_students = []
 
-    # Apply excluded-day filtering exactly like learner_record:
-    # - exclude globally where excluded_dates.group_name IS NULL
-    # - exclude where excluded_dates.group_name == selected_group
-    cursor.execute("""
-        SELECT date
-        FROM excluded_dates
-        WHERE group_name IS NULL OR group_name = ?
-    """, (selected_group,))
-    excluded_days = {r[0] for r in cursor.fetchall()}
-
-    filtered_days_21 = [d for d in days_21 if d not in excluded_days]
-
     for student_username, full_name in students_raw:
         cursor.execute("""
             SELECT ROUND(AVG(best_score), 1)
@@ -3895,23 +4087,10 @@ def risk_learners():
                 GROUP BY subject, task
             )
         """, (student_username,))
-        avg_task = cursor.fetchone()[0] or 0
-
-        cursor.execute("""
-            SELECT ROUND(AVG(best_theory), 1)
-            FROM (
-                SELECT test_id, MAX(percentage) as best_theory
-                FROM theory_submissions
-                WHERE username = ?
-                GROUP BY test_id
-            )
-        """, (student_username,))
-        avg_thoery = cursor.fetchone()[0] or 0
-
-        avg_score = round((avg_task + avg_thoery) / 2, 1) if avg_task and avg_thoery else (avg_task or avg_thoery)
+        avg_score = cursor.fetchone()[0] or 0
 
         present_days = 0
-        for day in filtered_days_21:
+        for day in days_21:
             cursor.execute("SELECT 1 FROM login_history WHERE username = ? AND date = ?", (student_username, day))
             if cursor.fetchone():
                 present_days += 1
@@ -3921,7 +4100,7 @@ def risk_learners():
             if override and override[0] == 'present':
                 present_days += 1
 
-        attendance_pct = round((present_days / len(filtered_days_21)) * 100) if filtered_days_21 else 0
+        attendance_pct = round((present_days / len(days_21)) * 100) if days_21 else 0
 
         cursor.execute("""
             SELECT COUNT(DISTINCT t.id)
@@ -3973,13 +4152,8 @@ def risk_learners():
 
         total_tasks = total_assigned + total_theory
         missing_pct = round((missing_practical + missing_theory) / total_tasks * 100) if total_tasks else 0
-        # Adjust the calculation of risk score if assignment is missing but attendance and scores are good, to avoid labeling as high risk just for missing a recently assigned task
-        adjusted_missing_pct = missing_pct
-        adjusted_score_penalty = 100 - avg_score
-        if missing_pct > 70 and attendance_pct >= 60 and (avg_score >= 50 or avg_score == 0):
-            adjusted_missing_pct = 70
-            adjusted_score_penalty = 60
-        risk_score = round((100 - attendance_pct) * 0.55 + adjusted_score_penalty * 0.35 + adjusted_missing_pct * 0.1)
+
+        risk_score = round((100 - attendance_pct) * 0.4 + (100 - avg_score) * 0.4 + missing_pct * 0.2)
         if risk_score <= 40:
             status = 'Safe'
         elif risk_score <= 70:
@@ -3990,7 +4164,7 @@ def risk_learners():
         reasons = []
         if attendance_pct < 60:
             reasons.append(f"A {attendance_pct}%")
-        if avg_score < 50 and avg_score > 0:
+        if avg_score < 40:
             reasons.append(f"AVG{avg_score}%")
         if missing_pct > 70:
             reasons.append(f"Missing {missing_pct}%")
@@ -4010,12 +4184,8 @@ def risk_learners():
         })
 
     conn.close()
-    return render_template(
-        "Riks_learners.html",
-        groups=groups,
-        selected_group=selected_group,
-        risk_students=risk_students
-    )
+    return render_template("Riks_learners.html", groups=groups, selected_group=selected_group,
+                           risk_students=risk_students)
 
 
 @app.route("/group_results")
@@ -4934,8 +5104,6 @@ def download_sample_file(task_id):
     )
 
 
-# ── Interactive Theory Lesson Routes ────────────────────────────────────────
-
 @app.route("/interactive_learning_files/<path:relative_path>")
 def download_interactive_learning_file(relative_path):
     username = session.get("username")
@@ -5405,6 +5573,7 @@ def manage_tests():
             <td>{'✔ Yes' if show_answers else '✘ No'}</td>
             <td>{status_badge}</td>
             <td style="white-space:nowrap; vertical-align:middle;">
+                <div class="action-cell">
                 <a href="/manage_tests/{test_id}/questions" class="btn btn-primary" title="Edit questions">✏️</a>
                 <a href="/manage_tests/{test_id}/edit" class="btn btn-warning" title="Edit settings">⚙️</a>
                 <button type="button" class="btn btn-success" title="Reuse: copy questions into a new test"
@@ -5423,6 +5592,7 @@ def manage_tests():
                       onsubmit="return confirm('⚠️ WARNING: Delete this test, all questions, AND ALL STUDENT SUBMISSIONS?\n\nThis will permanently remove:\n- All test questions\n- All student attempts and scores\n- Test from Group Results\n\nThis action CANNOT be undone!')">
                     <button type="submit" class="btn btn-danger" title="Delete test">🗑</button>
                 </form>
+                </div>
             </td>
         </tr>
         """
@@ -5443,10 +5613,10 @@ def create_test():
     subject = request.form.get("subject", "").strip()
     groups = request.form.getlist("groups")
     teachers = request.form.getlist("teachers")
-    time_limit = request.form.get("time_limit", 0)
+    time_limit = safe_int(request.form.get("time_limit"), 0)
     assign_date = request.form.get("assign_date")  # YYYY-MM-DD
     allow_multiple = 1 if request.form.get("allow_multiple") else 0
-    max_attempts = int(request.form.get("max_attempts", 1))
+    max_attempts = safe_int(request.form.get("max_attempts"), 1)
     show_answers = 1 if request.form.get("show_answers") else 0
 
     if not title:
@@ -5491,7 +5661,7 @@ def edit_test(test_id):
 
     if request.method == "POST":
         allow_multiple = 1 if request.form.get("allow_multiple") else 0
-        max_attempts = int(request.form.get("max_attempts", 1))
+        max_attempts = safe_int(request.form.get("max_attempts"), 1)
         show_answers = 1 if request.form.get("show_answers") else 0
         groups = request.form.getlist("groups")
         teachers = request.form.getlist("teachers")
@@ -5595,7 +5765,7 @@ def manage_test_questions(test_id):
     conn = get_db()
     cursor = conn.cursor()
 
-    cursor.execute("SELECT id, title, subject FROM theory_tests WHERE id = ?", (test_id,))
+    cursor.execute("SELECT id, title, subject, background_image, COALESCE(background_fit, 'cover') FROM theory_tests WHERE id = ?", (test_id,))
     test = cursor.fetchone()
     if not test:
         conn.close()
@@ -5603,11 +5773,21 @@ def manage_test_questions(test_id):
 
     if request.method == "POST":
         action = request.form.get("action")
+        if "background_image" in request.form:
+            background_fit = request.form.get("background_fit", "cover")
+            if background_fit not in ("cover", "contain"):
+                background_fit = "cover"
+            cursor.execute(
+                "UPDATE theory_tests SET background_image = ?, background_fit = ? WHERE id = ?",
+                (externalize_data_uri_images(request.form.get("background_image", "").strip()), background_fit, test_id)
+            )
 
         if action == "add_question":
-            q_text = request.form.get("question_text", "").strip()
+            q_text = externalize_data_uri_images(request.form.get("question_text", "").strip())
             q_type = request.form.get("question_type", "")
             marks = int(request.form.get("marks", 1))
+            if q_type in LESSON_SLIDE_TYPES:
+                marks = 0
 
             cursor.execute("SELECT COUNT(*) FROM theory_questions WHERE test_id = ?", (test_id,))
             order_index = cursor.fetchone()[0]
@@ -5655,9 +5835,20 @@ def manage_test_questions(test_id):
                             INSERT INTO theory_options (question_id, option_text, is_correct, match_pair)
                             VALUES (?, ?, 1, ?)
                         """, (q_id, a.strip(), b.strip()))
+            elif q_type in LESSON_SLIDE_TYPES:
+                pass
 
             conn.commit()
             log_activity(username, f"added question to test {test_id}")
+
+        elif action == "save_lesson_background":
+            background_image = externalize_data_uri_images(request.form.get("background_image", "").strip())
+            background_fit = request.form.get("background_fit", "cover")
+            if background_fit not in ("cover", "contain"):
+                background_fit = "cover"
+            cursor.execute("UPDATE theory_tests SET background_image = ?, background_fit = ? WHERE id = ?", (background_image, background_fit, test_id))
+            conn.commit()
+            log_activity(username, f"updated lesson background for test {test_id}")
 
         elif action == "delete_question":
             q_id = request.form.get("question_id")
@@ -5665,11 +5856,57 @@ def manage_test_questions(test_id):
             cursor.execute("DELETE FROM theory_questions WHERE id = ?", (q_id,))
             conn.commit()
 
+        elif action == "duplicate_question":
+            q_id = request.form.get("question_id")
+            cursor.execute("""
+                SELECT question_text, question_type, marks, order_index
+                FROM theory_questions
+                WHERE id = ? AND test_id = ?
+            """, (q_id, test_id))
+            source = cursor.fetchone()
+            if source:
+                q_text, q_type, marks, order_index = source
+                cursor.execute(
+                    "UPDATE theory_questions SET order_index = order_index + 1 WHERE test_id = ? AND order_index > ?",
+                    (test_id, order_index)
+                )
+                cursor.execute("""
+                    INSERT INTO theory_questions (test_id, question_text, question_type, marks, order_index)
+                    VALUES (?, ?, ?, ?, ?)
+                """, (test_id, q_text, q_type, marks, order_index + 1))
+                new_q_id = cursor.lastrowid
+                cursor.execute("""
+                    SELECT option_text, is_correct, match_pair
+                    FROM theory_options
+                    WHERE question_id = ?
+                    ORDER BY id
+                """, (q_id,))
+                for option_text, is_correct, match_pair in cursor.fetchall():
+                    cursor.execute("""
+                        INSERT INTO theory_options (question_id, option_text, is_correct, match_pair)
+                        VALUES (?, ?, ?, ?)
+                    """, (new_q_id, option_text, is_correct, match_pair))
+                conn.commit()
+                log_activity(username, f"duplicated slide {q_id} in test {test_id}")
+
+        elif action == "reorder_questions":
+            ordered_ids = request.form.get("ordered_ids", "")
+            ids = [int(item) for item in ordered_ids.split(",") if item.strip().isdigit()]
+            for index, q_id in enumerate(ids):
+                cursor.execute(
+                    "UPDATE theory_questions SET order_index = ? WHERE id = ? AND test_id = ?",
+                    (index, q_id, test_id)
+                )
+            conn.commit()
+            log_activity(username, f"reordered slides in test {test_id}")
+
         elif action == "edit_question":
             q_id = request.form.get("question_id")
-            q_text = request.form.get("question_text", "").strip()
+            q_text = externalize_data_uri_images(request.form.get("question_text", "").strip())
             marks = int(request.form.get("marks", 1))
             q_type = request.form.get("question_type", "")
+            if q_type in LESSON_SLIDE_TYPES:
+                marks = 0
 
             cursor.execute("UPDATE theory_questions SET question_text = ?, marks = ? WHERE id = ?",
                            (q_text, marks, q_id))
@@ -5709,9 +5946,132 @@ def manage_test_questions(test_id):
                     if a.strip() and b.strip():
                         cursor.execute("INSERT INTO theory_options (question_id, option_text, is_correct, match_pair) VALUES (?, ?, 1, ?)",
                                        (q_id, a.strip(), b.strip()))
+            elif q_type in LESSON_SLIDE_TYPES:
+                pass
 
             conn.commit()
             log_activity(username, f"edited question {q_id} in test {test_id}")
+
+        elif action == "autosave_question":
+            q_id = request.form.get("question_id")
+            q_text = externalize_data_uri_images(request.form.get("question_text", "").strip())
+            marks = safe_int(request.form.get("marks"), 0)
+            q_type = request.form.get("question_type", "")
+            if q_type in LESSON_SLIDE_TYPES:
+                marks = 0
+
+            cursor.execute("""
+                SELECT 1 FROM theory_questions
+                WHERE id = ? AND test_id = ?
+            """, (q_id, test_id))
+            if not cursor.fetchone():
+                conn.close()
+                return {"ok": False, "error": "not_found"}, 404
+
+            cursor.execute("UPDATE theory_questions SET question_text = ?, marks = ? WHERE id = ?",
+                           (q_text, marks, q_id))
+            cursor.execute("DELETE FROM theory_options WHERE question_id = ?", (q_id,))
+
+            if q_type in ["mcq_single", "mcq_multi"]:
+                options = request.form.getlist("option_text")
+                correct = request.form.getlist("is_correct")
+                for i, opt in enumerate(options):
+                    if opt.strip():
+                        cursor.execute(
+                            "INSERT INTO theory_options (question_id, option_text, is_correct) VALUES (?, ?, ?)",
+                            (q_id, opt.strip(), 1 if str(i) in correct else 0)
+                        )
+            elif q_type == "true_false":
+                correct_answer = request.form.get("tf_correct", "True")
+                correction_term = request.form.get("correction_term", "").strip()
+                cursor.execute("INSERT INTO theory_options (question_id, option_text, is_correct) VALUES (?, 'True', ?)",
+                               (q_id, 1 if correct_answer == "True" else 0))
+                cursor.execute("INSERT INTO theory_options (question_id, option_text, is_correct) VALUES (?, 'False', ?)",
+                               (q_id, 1 if correct_answer == "False" else 0))
+                if correction_term:
+                    cursor.execute("INSERT INTO theory_options (question_id, option_text, is_correct, match_pair) VALUES (?, ?, 0, 'correction')",
+                                   (q_id, correction_term))
+            elif q_type == "fill_in":
+                answer = request.form.get("fill_answer", "").strip()
+                cursor.execute("INSERT INTO theory_options (question_id, option_text, is_correct) VALUES (?, ?, 1)",
+                               (q_id, answer))
+            elif q_type == "match":
+                col_a = request.form.getlist("match_a")
+                col_b = request.form.getlist("match_b")
+                for a, b in zip(col_a, col_b):
+                    if a.strip() and b.strip():
+                        cursor.execute("INSERT INTO theory_options (question_id, option_text, is_correct, match_pair) VALUES (?, ?, 1, ?)",
+                                       (q_id, a.strip(), b.strip()))
+
+            conn.commit()
+            conn.close()
+            return {"ok": True, "saved_at": datetime.now().strftime("%H:%M:%S")}
+
+        elif action == "import_pptx":
+            import_success = None
+            import_error = None
+            pptx_file = request.files.get("pptx_file")
+            append = request.form.get("append") is not None
+
+            try:
+                if not pptx_file or not pptx_file.filename:
+                    raise ValueError("Please choose a PowerPoint .pptx file.")
+                if not pptx_file.filename.lower().endswith(".pptx"):
+                    raise ValueError("Only .pptx files can be imported.")
+
+                if not append:
+                    cursor.execute("""
+                        DELETE FROM theory_options
+                        WHERE question_id IN (SELECT id FROM theory_questions WHERE test_id = ?)
+                    """, (test_id,))
+                    cursor.execute("DELETE FROM theory_questions WHERE test_id = ?", (test_id,))
+                    order_index = 0
+                else:
+                    cursor.execute("""
+                        SELECT COALESCE(MAX(order_index), -1) + 1
+                        FROM theory_questions
+                        WHERE test_id = ?
+                    """, (test_id,))
+                    order_index = cursor.fetchone()[0]
+
+                slide_html = pptx_to_content_slide_html(pptx_file)
+                if not slide_html:
+                    raise ValueError("No text or pictures were found in that PowerPoint file.")
+
+                for html in slide_html:
+                    cursor.execute("""
+                        INSERT INTO theory_questions (test_id, question_text, question_type, marks, order_index)
+                        VALUES (?, ?, 'content_slide', 0, ?)
+                    """, (test_id, externalize_data_uri_images(html), order_index))
+                    order_index += 1
+
+                conn.commit()
+                import_success = f"Imported {len(slide_html)} PowerPoint slide(s)."
+                log_activity(username, f"imported PPTX slides into test {test_id}")
+            except Exception as e:
+                conn.rollback()
+                import_error = str(e)
+
+            cursor.execute("""
+                SELECT id, question_text, question_type, marks, order_index
+                FROM theory_questions WHERE test_id = ? ORDER BY order_index
+            """, (test_id,))
+            questions = cursor.fetchall()
+
+            questions_with_options = []
+            for q in questions:
+                cursor.execute("SELECT id, option_text, is_correct, match_pair FROM theory_options WHERE question_id = ?", (q[0],))
+                options = cursor.fetchall()
+                questions_with_options.append({"q": q, "options": options})
+
+            conn.close()
+            return render_template(
+                "manage_test_questions.html",
+                test=test,
+                questions=questions_with_options,
+                import_success=import_success,
+                import_error=import_error
+            )
 
         elif action == "import_questions_json":
             import_success = None
@@ -5819,7 +6179,13 @@ def learner_tests():
                best.best_percentage,
                sub.id as latest_submission_id,
                t.allow_multiple, t.max_attempts,
-               COALESCE(cnt.attempt_count, 0) as attempt_count
+               COALESCE(cnt.attempt_count, 0) as attempt_count,
+               COALESCE(qstats.content_count, 0) as content_count,
+               COALESCE(qstats.question_count, 0) as question_count,
+               COALESCE(prog.current_slide, 0) as current_slide,
+               COALESCE(prog.completed, 0) as progress_completed,
+               COALESCE(prog.max_slide, 0) as max_slide,
+               COALESCE(prog.time_spent_seconds, 0) as progress_seconds
         FROM theory_tests t
         LEFT JOIN (
             SELECT test_id, MAX(percentage) as best_percentage
@@ -5836,6 +6202,14 @@ def learner_tests():
             FROM theory_submissions WHERE username = ?
             GROUP BY test_id
         ) cnt ON t.id = cnt.test_id
+        LEFT JOIN (
+            SELECT test_id,
+                   SUM(CASE WHEN question_type IN ('content_slide', 'title_slide', 'heading_slide') THEN 1 ELSE 0 END) as content_count,
+                   COUNT(*) as question_count
+            FROM theory_questions
+            GROUP BY test_id
+        ) qstats ON t.id = qstats.test_id
+        LEFT JOIN theory_progress prog ON prog.test_id = t.id AND prog.username = ?
         WHERE t.is_active = 1
           AND (
               NOT EXISTS (SELECT 1 FROM theory_test_groups WHERE test_id = t.id)
@@ -5843,7 +6217,7 @@ def learner_tests():
           )
         GROUP BY t.id
         ORDER BY t.created_at DESC
-    """, (username, username, username, user_group))
+    """, (username, username, username, username, user_group))
     tests = cursor.fetchall()
     conn.close()
     return render_template("learner_tests.html", tests=tests)
@@ -5911,6 +6285,132 @@ def learner_tasks():
     return render_template("learner_tasks.html", tasks=tasks, username=username)
 
 
+def pptx_to_content_slide_html(uploaded_file):
+    from pptx import Presentation
+
+    prs = Presentation(uploaded_file)
+    slide_w = float(prs.slide_width)
+    slide_h = float(prs.slide_height)
+    html_slides = []
+
+    for slide in prs.slides:
+        boxes = []
+        for shape in slide.shapes:
+            left = max(0, (float(shape.left) / slide_w) * 100)
+            top = max(0, (float(shape.top) / slide_h) * 100)
+            width = max(5, (float(shape.width) / slide_w) * 100)
+            height = max(5, (float(shape.height) / slide_h) * 100)
+            style = f"left:{left:.2f}%;top:{top:.2f}%;width:{width:.2f}%;height:{height:.2f}%;"
+
+            if getattr(shape, "has_text_frame", False):
+                text = shape.text.strip()
+                if not text:
+                    continue
+                paragraphs = "".join(
+                    f"<p>{escape(line)}</p>"
+                    for line in text.splitlines()
+                    if line.strip()
+                )
+                boxes.append(f'<div class="slide-box text-box" style="{style}">{paragraphs}</div>')
+                continue
+
+            if hasattr(shape, "image"):
+                image = shape.image
+                ext = (image.ext or "png").lower()
+                mime = mimetypes.types_map.get(f".{ext}", "image/png")
+                encoded = base64.b64encode(image.blob).decode("ascii")
+                src = f"data:{mime};base64,{encoded}"
+                boxes.append(f'<div class="slide-box image-box" style="{style}"><img src="{src}" alt=""></div>')
+
+        if boxes:
+            html_slides.append("".join(boxes))
+
+    return html_slides
+
+
+@app.route("/preview_test/<int:test_id>")
+def preview_test(test_id):
+    username = session.get("username")
+    if not username:
+        return redirect(url_for("login"))
+    if get_user_role(username) not in ["teacher", "admin"]:
+        return "Access denied", 403
+
+    conn = get_db()
+    cursor = conn.cursor()
+
+    cursor.execute("SELECT id, title, subject, time_limit, allow_multiple, max_attempts, show_answers, background_image, COALESCE(background_fit, 'cover') FROM theory_tests WHERE id = ?", (test_id,))
+    test = cursor.fetchone()
+    if not test:
+        conn.close()
+        return "Test not found", 404
+
+    cursor.execute("""
+        SELECT id, question_text, question_type, marks
+        FROM theory_questions WHERE test_id = ? ORDER BY order_index
+    """, (test_id,))
+    questions = cursor.fetchall()
+
+    questions_with_options = []
+    for q in questions:
+        cursor.execute("SELECT id, option_text, is_correct, match_pair FROM theory_options WHERE question_id = ?", (q[0],))
+        options = list(cursor.fetchall())
+        if q[2] == "match":
+            options = sorted(options, key=lambda o: o[0])
+        questions_with_options.append({"q": q, "options": options})
+    content_slide_count = sum(1 for q in questions if q[2] in LESSON_SLIDE_TYPES)
+
+    conn.close()
+    return render_template(
+        "take_test.html",
+        test=test,
+        questions=questions_with_options,
+        attempt_number=0,
+        is_preview=True,
+        initial_slide=0,
+        has_content_slides=content_slide_count > 0,
+        content_slide_count=content_slide_count,
+        question_count=len(questions) - content_slide_count,
+        is_lesson_only=content_slide_count > 0 and len(questions) == content_slide_count,
+        max_slide=0,
+        lesson_completed=False
+    )
+
+
+@app.route("/tests/<int:test_id>/progress", methods=["POST"])
+def save_theory_progress(test_id):
+    username = session.get("username")
+    if not username:
+        return {"ok": False, "error": "not_logged_in"}, 401
+
+    payload = request.get_json(silent=True) or {}
+    current_slide = int(payload.get("current_slide", 0) or 0)
+    max_slide = int(payload.get("max_slide", current_slide) or 0)
+    time_delta = max(0, int(payload.get("time_delta", 0) or 0))
+    completed = 1 if payload.get("completed") else 0
+
+    conn = get_db()
+    cursor = conn.cursor()
+    cursor.execute("SELECT 1 FROM theory_tests WHERE id = ?", (test_id,))
+    if not cursor.fetchone():
+        conn.close()
+        return {"ok": False, "error": "not_found"}, 404
+
+    cursor.execute("""
+        INSERT INTO theory_progress (test_id, username, current_slide, max_slide, time_spent_seconds, completed, updated_at)
+        VALUES (?, ?, ?, ?, ?, ?, ?)
+        ON CONFLICT(test_id, username) DO UPDATE SET
+            current_slide = excluded.current_slide,
+            max_slide = MAX(theory_progress.max_slide, excluded.max_slide),
+            time_spent_seconds = theory_progress.time_spent_seconds + excluded.time_spent_seconds,
+            completed = CASE WHEN excluded.completed = 1 THEN 1 ELSE theory_progress.completed END,
+            updated_at = excluded.updated_at
+    """, (test_id, username, current_slide, max_slide, time_delta, completed, datetime.now().isoformat()))
+    conn.commit()
+    conn.close()
+    return {"ok": True}
+
+
 @app.route("/take_test/<int:test_id>", methods=["GET", "POST"])
 def take_test(test_id):
     username = session.get("username")
@@ -5920,33 +6420,42 @@ def take_test(test_id):
     conn = get_db()
     cursor = conn.cursor()
 
-    cursor.execute("SELECT id, title, subject, time_limit, allow_multiple, max_attempts, show_answers FROM theory_tests WHERE id = ? AND is_active = 1", (test_id,))
+    cursor.execute("SELECT id, title, subject, time_limit, allow_multiple, max_attempts, show_answers, background_image, COALESCE(background_fit, 'cover') FROM theory_tests WHERE id = ? AND is_active = 1", (test_id,))
     test = cursor.fetchone()
     if not test:
         conn.close()
         return "Test not found or not available", 404
-
-    # Check attempt count
-    cursor.execute("SELECT COUNT(*) FROM theory_submissions WHERE test_id = ? AND username = ?", (test_id, username))
-    attempt_count = cursor.fetchone()[0]
-    allow_multiple = test[4]
-    max_attempts = test[5]
-
-    if not allow_multiple and attempt_count > 0:
-        conn.close()
-        return redirect(url_for("learner_tests"))
-
-    if allow_multiple and attempt_count >= max_attempts:
-        conn.close()
-        return redirect(url_for("learner_tests"))
 
     cursor.execute("""
         SELECT id, question_text, question_type, marks
         FROM theory_questions WHERE test_id = ? ORDER BY order_index
     """, (test_id,))
     questions = cursor.fetchall()
+    content_slide_count = sum(1 for q in questions if q[2] in LESSON_SLIDE_TYPES)
+    question_count = len(questions) - content_slide_count
+    has_content_slides = content_slide_count > 0
+    is_lesson_only = content_slide_count > 0 and question_count == 0
+
+    # Check attempt count. Lesson-only items can be reviewed after completion;
+    # tests keep the original single/multiple-attempt rules.
+    cursor.execute("SELECT COUNT(*) FROM theory_submissions WHERE test_id = ? AND username = ?", (test_id, username))
+    attempt_count = cursor.fetchone()[0]
+    allow_multiple = test[4]
+    max_attempts = test[5]
+
+    if not is_lesson_only and not allow_multiple and attempt_count > 0:
+        conn.close()
+        return redirect(url_for("learner_tests"))
+
+    if not is_lesson_only and allow_multiple and attempt_count >= max_attempts:
+        conn.close()
+        return redirect(url_for("learner_tests"))
 
     if request.method == "GET":
+        cursor.execute("SELECT current_slide, max_slide, completed FROM theory_progress WHERE test_id = ? AND username = ?", (test_id, username))
+        progress_row = cursor.fetchone()
+        initial_slide = progress_row[0] if progress_row and is_lesson_only and not progress_row[2] else 0
+        max_slide = (len(questions) - 1) if progress_row and is_lesson_only and progress_row[2] else (progress_row[1] if progress_row and is_lesson_only else 0)
         # Shuffle options and store the order in session so POST uses same order
         questions_with_options = []
         session_order = {}
@@ -5975,7 +6484,19 @@ def take_test(test_id):
             questions_with_options.append({"q": q, "options": options})
         session[f"test_order_{test_id}"] = session_order
         conn.close()
-        return render_template("take_test.html", test=test, questions=questions_with_options, attempt_number=attempt_count + 1)
+        return render_template(
+            "take_test.html",
+            test=test,
+            questions=questions_with_options,
+            attempt_number=attempt_count + 1,
+            initial_slide=initial_slide,
+            has_content_slides=has_content_slides,
+            content_slide_count=content_slide_count,
+            question_count=question_count,
+            is_lesson_only=is_lesson_only,
+            max_slide=max_slide,
+            lesson_completed=is_lesson_only and attempt_count > 0
+        )
 
     # POST — restore shuffled order from session
     session_order = session.get(f"test_order_{test_id}", {})
@@ -5991,6 +6512,41 @@ def take_test(test_id):
             options = list(all_options.values())
         questions_with_options.append({"q": q, "options": options})
 
+    if is_lesson_only:
+        time_spent = max(0, int(request.form.get("time_spent_seconds", 0) or 0))
+        cursor.execute("""
+            SELECT COALESCE(time_spent_seconds, 0)
+            FROM theory_progress
+            WHERE test_id = ? AND username = ?
+        """, (test_id, username))
+        saved_time_row = cursor.fetchone()
+        saved_time = saved_time_row[0] if saved_time_row else 0
+        total_time = saved_time + time_spent
+        cursor.execute("""
+            INSERT INTO theory_submissions (test_id, username, score, total, percentage, submitted_at, time_spent_seconds, submission_type)
+            VALUES (?, ?, 1, 1, 100, ?, ?, 'lesson')
+        """, (test_id, username, datetime.now().isoformat(), total_time))
+        submission_id = cursor.lastrowid
+        for item in questions_with_options:
+            cursor.execute("""
+                INSERT INTO theory_answers (submission_id, question_id, answer_text, is_correct, marks_awarded)
+                VALUES (?, ?, 'Viewed', 1, 0)
+            """, (submission_id, item["q"][0]))
+        cursor.execute("""
+            INSERT INTO theory_progress (test_id, username, current_slide, max_slide, time_spent_seconds, completed, updated_at)
+            VALUES (?, ?, ?, ?, 0, 1, ?)
+            ON CONFLICT(test_id, username) DO UPDATE SET
+                current_slide = excluded.current_slide,
+                max_slide = excluded.max_slide,
+                completed = 1,
+                updated_at = excluded.updated_at
+        """, (test_id, username, len(questions_with_options) - 1, len(questions_with_options) - 1, datetime.now().isoformat()))
+        conn.commit()
+        conn.close()
+        session.pop(f"test_order_{test_id}", None)
+        log_activity(username, f"completed lesson {test_id} — 100%")
+        return redirect(url_for("learner_tests"))
+
     # Now mark all questions
     score = 0
     total = 0
@@ -6000,6 +6556,9 @@ def take_test(test_id):
         q = item["q"]
         q_id, q_text, q_type, marks = q
         options = item["options"]
+        if q_type in ["content_slide", "title_slide", "heading_slide"]:
+            answers_to_save.append((q_id, "Viewed", 1, 0))
+            continue
         effective_marks = len([o for o in options if o[3] and o[3] != 'correction']) if q_type == "match" else marks
         total += effective_marks
         awarded = 0
@@ -6065,11 +6624,12 @@ def take_test(test_id):
         answers_to_save.append((q_id, answer_text, 1 if awarded == effective_marks else 0, awarded))
 
     percentage = round((score / total) * 100) if total else 0
+    time_spent = max(0, int(request.form.get("time_spent_seconds", 0) or 0))
 
     cursor.execute("""
-        INSERT INTO theory_submissions (test_id, username, score, total, percentage, submitted_at)
-        VALUES (?, ?, ?, ?, ?, ?)
-    """, (test_id, username, score, total, percentage, datetime.now().isoformat()))
+        INSERT INTO theory_submissions (test_id, username, score, total, percentage, submitted_at, time_spent_seconds, submission_type)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+    """, (test_id, username, score, total, percentage, datetime.now().isoformat(), time_spent, "test"))
     submission_id = cursor.lastrowid
 
     for q_id, answer_text, is_correct, awarded in answers_to_save:
@@ -6078,6 +6638,11 @@ def take_test(test_id):
             VALUES (?, ?, ?, ?, ?)
         """, (submission_id, q_id, answer_text, is_correct, awarded))
 
+    conn.commit()
+    cursor.execute(
+        "UPDATE theory_progress SET completed = 1, current_slide = ?, updated_at = ? WHERE test_id = ? AND username = ?",
+        (len(questions_with_options) - 1, datetime.now().isoformat(), test_id, username)
+    )
     conn.commit()
     conn.close()
     session.pop(f"test_order_{test_id}", None)
@@ -6171,9 +6736,9 @@ def reuse_test(test_id):
     title = request.form.get("title", "").strip()
     subject = request.form.get("subject", "").strip()
     assign_date = request.form.get("assign_date")
-    time_limit = int(request.form.get("time_limit") or 0)
+    time_limit = safe_int(request.form.get("time_limit"), 0)
     allow_multiple = 1 if request.form.get("allow_multiple") else 0
-    max_attempts = int(request.form.get("max_attempts") or 1)
+    max_attempts = safe_int(request.form.get("max_attempts"), 1)
     show_answers = 1 if request.form.get("show_answers") else 0
     groups = request.form.getlist("groups")
 
@@ -6182,15 +6747,19 @@ def reuse_test(test_id):
 
     conn = get_db()
     c = conn.cursor()
+    c.execute("SELECT background_image, COALESCE(background_fit, 'cover') FROM theory_tests WHERE id = ?", (test_id,))
+    source_bg_row = c.fetchone()
+    background_image = source_bg_row[0] if source_bg_row else None
+    background_fit = source_bg_row[1] if source_bg_row else "cover"
 
     # Create the new test
     c.execute("""
         INSERT INTO theory_tests
             (title, subject, assign_date, time_limit, allow_multiple, max_attempts,
-             show_answers, created_by, created_at)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+             show_answers, background_image, background_fit, created_by, created_at)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     """, (title, subject, assign_date, time_limit, allow_multiple, max_attempts,
-           show_answers, username, datetime.now().isoformat()))
+           show_answers, background_image, background_fit, username, datetime.now().isoformat()))
     new_test_id = c.lastrowid
 
     for g in groups:
@@ -6247,5 +6816,5 @@ if __name__ == "__main__":
     cleanup = threading.Thread(target=cleanup_thread, daemon=True)
     cleanup.start()
     
-    app.run(host="0.0.0.0", port=5000, debug=True)
+    app.run(host=os.getenv("COMPUTERNAME", "127.0.0.1"), port=5000, debug=True)
 

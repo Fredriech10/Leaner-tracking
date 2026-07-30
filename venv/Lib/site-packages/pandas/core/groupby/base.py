@@ -1,10 +1,14 @@
 """
 Provide basic components for groupby.
 """
+
 from __future__ import annotations
 
 import dataclasses
-from typing import Hashable
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from collections.abc import Hashable
 
 
 @dataclasses.dataclass(order=True, frozen=True)
@@ -46,6 +50,7 @@ reduction_kernels = frozenset(
         "sem",
         "size",
         "skew",
+        "kurt",
         "std",
         "sum",
         "var",
@@ -67,7 +72,6 @@ transformation_kernels = frozenset(
         "cumsum",
         "diff",
         "ffill",
-        "fillna",
         "ngroup",
         "pct_change",
         "rank",
@@ -88,7 +92,6 @@ groupby_other_methods = frozenset(
         "corr",
         "cov",
         "describe",
-        "dtypes",
         "expanding",
         "ewm",
         "filter",

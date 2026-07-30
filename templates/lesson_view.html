@@ -1,0 +1,123 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>{{ lesson[1] }}</title>
+    <style>
+        * { box-sizing: border-box; }
+        body { font-family: Arial, sans-serif; margin: 0; padding: 0; background: #f0f2f5; color: #222; }
+        .topbar { background: #0078D4; color: white; padding: 12px 24px; display: flex; justify-content: space-between; align-items: center; gap: 10px; position: sticky; top: 0; z-index: 999; }
+        .topbar a { color: white; text-decoration: none; font-size: 0.82em; margin-right: 10px; }
+        .page { padding: 20px 24px; max-width: 1100px; margin: 0 auto; }
+        .layout { display: grid; grid-template-columns: 2fr 1fr; gap: 16px; }
+        .card { background: white; border: 1px solid #ddd; border-radius: 8px; padding: 18px; }
+        .slide-meta { color: #666; font-size: 0.9em; margin-bottom: 10px; }
+        .slide-lines { margin-top: 14px; }
+        .slide-line { background: #f9fbff; border-left: 4px solid #0078D4; padding: 10px 12px; margin-bottom: 8px; border-radius: 4px; }
+        .nav-row { display: flex; justify-content: space-between; align-items: center; margin-top: 16px; }
+        .btn { padding: 8px 16px; border: none; border-radius: 4px; text-decoration: none; font-size: 0.9em; display: inline-block; cursor: pointer; }
+        .btn-primary { background: #0078D4; color: white; }
+        .btn-secondary { background: #eee; color: #333; }
+        .btn-success { background: #107C10; color: white; }
+        .checkpoint { border: 1px solid #e5eefc; border-radius: 6px; padding: 12px; margin-bottom: 12px; background: #fbfdff; }
+        .checkpoint label { display: block; margin-bottom: 7px; }
+        .feedback-ok { color: #107C10; font-weight: bold; }
+        .feedback-bad { color: #A4262C; font-weight: bold; }
+        .small { color: #666; font-size: 0.88em; }
+    </style>
+</head>
+<body>
+<div class="topbar">
+    <div>
+        <a href="/student_dashboard">🏠 Dashboard</a>
+        <a href="/lessons">📘 Lessons</a>
+        <a href="/tests">📝 Tests</a>
+    </div>
+    <div>
+        <span>👤 {{ session_username }}</span>
+        <a href="/logout">Logout</a>
+    </div>
+</div>
+
+<div class="page">
+    <h2>{{ lesson[1] }}</h2>
+    <p class="small">
+        {% if lesson[2] %}Subject: {{ lesson[2] }} | {% endif %}
+        Slide {{ slide_num }} of {{ total_slides }}
+        {% if progress[1] %} | Completed on {{ progress[1][:10] }}{% endif %}
+    </p>
+
+    <div class="layout">
+        <div class="card">
+            <div class="slide-meta">PowerPoint lesson: {{ lesson[4] }}</div>
+            <h3>{{ slide.title }}</h3>
+            <div class="slide-lines">
+                {% for line in slide.body %}
+                <div class="slide-line">{{ line }}</div>
+                {% endfor %}
+                {% if not slide.body %}
+                <div class="slide-line">No additional text was found on this slide.</div>
+                {% endif %}
+            </div>
+
+            <div class="nav-row">
+                <div>
+                    {% if slide_num > 1 %}
+                    <a class="btn btn-secondary" href="/lesson/{{ lesson[0] }}?slide={{ slide_num - 1 }}">← Previous</a>
+                    {% endif %}
+                </div>
+                <div>
+                    {% if slide_num < total_slides %}
+                    <a class="btn btn-primary" href="/lesson/{{ lesson[0] }}?slide={{ slide_num + 1 }}">Next →</a>
+                    {% else %}
+                    <form method="post" style="display:inline;">
+                        <input type="hidden" name="action" value="mark_complete">
+                        <button type="submit" class="btn btn-success">Mark Lesson Complete</button>
+                    </form>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+
+        <div class="card">
+            <h3>Checkpoint Questions</h3>
+            {% if checkpoints %}
+                {% for checkpoint in checkpoints %}
+                <div class="checkpoint">
+                    <strong>{{ checkpoint[2] }}</strong>
+                    <form method="post" style="margin-top:10px;">
+                        <input type="hidden" name="action" value="answer_checkpoint">
+                        <input type="hidden" name="checkpoint_id" value="{{ checkpoint[0] }}">
+                        {% if checkpoint[3] %}<label><input type="radio" name="selected_option" value="A" {% if answer_map.get(checkpoint[0], {}).get('selected_option') == 'A' %}checked{% endif %}> A. {{ checkpoint[3] }}</label>{% endif %}
+                        {% if checkpoint[4] %}<label><input type="radio" name="selected_option" value="B" {% if answer_map.get(checkpoint[0], {}).get('selected_option') == 'B' %}checked{% endif %}> B. {{ checkpoint[4] }}</label>{% endif %}
+                        {% if checkpoint[5] %}<label><input type="radio" name="selected_option" value="C" {% if answer_map.get(checkpoint[0], {}).get('selected_option') == 'C' %}checked{% endif %}> C. {{ checkpoint[5] }}</label>{% endif %}
+                        {% if checkpoint[6] %}<label><input type="radio" name="selected_option" value="D" {% if answer_map.get(checkpoint[0], {}).get('selected_option') == 'D' %}checked{% endif %}> D. {{ checkpoint[6] }}</label>{% endif %}
+                        <button type="submit" class="btn btn-primary">Check Answer</button>
+                    </form>
+                    {% if feedback and feedback.checkpoint_id == checkpoint[0] %}
+                        <p class="{{ 'feedback-ok' if feedback.is_correct else 'feedback-bad' }}">
+                            {% if feedback.is_correct %}Correct{% else %}Incorrect{% endif %}
+                        </p>
+                        <p class="small">Correct option: {{ feedback.correct_option }}</p>
+                        {% if feedback.explanation %}
+                        <p class="small">{{ feedback.explanation }}</p>
+                        {% endif %}
+                    {% elif answer_map.get(checkpoint[0]) %}
+                        <p class="small">Saved answer: {{ answer_map.get(checkpoint[0]).selected_option }}</p>
+                    {% endif %}
+                </div>
+                {% endfor %}
+            {% else %}
+            <p>No checkpoint on this slide.</p>
+            {% endif %}
+
+            <hr style="margin:16px 0;">
+            <a class="btn btn-secondary" href="/interactive_learning_files/{{ lesson[4] }}">Download PowerPoint</a>
+            {% if lesson[5] %}
+            <a class="btn btn-success" href="/take_test/{{ lesson[5] }}" style="margin-top:8px;">Take Linked Test</a>
+            {% endif %}
+        </div>
+    </div>
+</div>
+</body>
+</html>

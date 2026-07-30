@@ -1,0 +1,160 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Manage Theory Lessons</title>
+    <style>
+        * { box-sizing: border-box; }
+        body { font-family: Arial, sans-serif; margin: 0; padding: 0; background: #f0f2f5; color: #222; }
+        .topbar { background: #005a9e; color: white; padding: 12px 24px; display: flex; justify-content: space-between; align-items: center; gap: 10px; position: sticky; top: 0; z-index: 999; }
+        .topbar h1 { margin: 0; font-size: 1.05em; white-space: nowrap; }
+        .topbar-links { display: flex; gap: 10px; align-items: center; flex-wrap: nowrap; }
+        .topbar-links a { color: white; text-decoration: none; font-size: 0.82em; opacity: 0.9; white-space: nowrap; }
+        .topbar-links a:hover { opacity: 1; text-decoration: underline; }
+        .topbar-user { color: white; font-size: 0.82em; white-space: nowrap; border-left: 1px solid rgba(255,255,255,0.35); padding-left: 10px; }
+        .topbar-user a { color: white; text-decoration: none; font-weight: bold; }
+        .page { padding: 20px 24px; max-width: 1400px; margin: 0 auto; }
+        .create-form { background: #f9f9f9; border: 1px solid #ddd; padding: 20px; border-radius: 6px; margin-bottom: 24px; }
+        .form-row { display: flex; gap: 15px; flex-wrap: wrap; align-items: flex-end; margin-bottom: 12px; }
+        .form-group { display: flex; flex-direction: column; gap: 4px; min-width: 180px; }
+        label { font-weight: bold; font-size: 0.9em; }
+        input, select { padding: 7px; border: 1px solid #ccc; border-radius: 4px; }
+        table { border-collapse: collapse; width: 100%; margin-top: 20px; }
+        th, td { border: 1px solid #ddd; padding: 10px; text-align: left; vertical-align: top; }
+        th { background: #f0f0f0; }
+        .btn { padding: 7px 12px; border: none; border-radius: 4px; cursor: pointer; text-decoration: none; font-size: 0.85em; font-weight: bold; display: inline-block; }
+        .btn-primary { background: #0078D4; color: white; }
+        .btn-warning { background: #ff8c00; color: white; }
+        .btn-danger { background: #A4262C; color: white; }
+        .btn-success { background: #107C10; color: white; }
+        .badge-active { background: #c8f7c5; color: #107C10; padding: 3px 8px; border-radius: 10px; font-size: 0.85em; }
+        .badge-inactive { background: #f7c5c5; color: #A4262C; padding: 3px 8px; border-radius: 10px; font-size: 0.85em; }
+        .chip-list { display: flex; flex-wrap: wrap; gap: 8px; }
+        .chip-list label { font-weight: normal; display: inline-flex; align-items: center; gap: 5px; font-size: 0.85em; }
+        .small { font-size: 0.82em; color: #666; }
+    </style>
+</head>
+<body>
+<div class="topbar">
+    <h1>📘 Theory Lessons</h1>
+    <div class="topbar-links">
+        <a href="/teacher_dashboard">🏠 Dashboard</a>
+        <a href="/manage_subjects">📁 Practical</a>
+        <a href="/manage_tests">📝 Theory Tests</a>
+        <a href="/admin">👥 Admin</a>
+        <span class="topbar-user">👤 <a href="/edit_user/{{ session_username }}">{{ session_username }}</a></span>
+        <a href="/logout">Logout</a>
+    </div>
+</div>
+
+<div class="page">
+    <div class="create-form">
+        <h3>Create New Lesson</h3>
+        <form method="post" action="/manage_lessons/create">
+            <div class="form-row">
+                <div class="form-group">
+                    <label>Lesson Title</label>
+                    <input type="text" name="title" placeholder="e.g. Module 1.1 Introduction to Computers" required>
+                </div>
+                <div class="form-group">
+                    <label>Subject</label>
+                    <input type="text" name="subject" placeholder="e.g. CAT Grade 10">
+                </div>
+                <div class="form-group">
+                    <label>Assign Start Date</label>
+                    <input type="date" name="assign_date" required>
+                </div>
+                <div class="form-group" style="min-width:280px;">
+                    <label>Linked Theory Test</label>
+                    <select name="linked_test_id">
+                        <option value="">None</option>
+                        {% for test_id, title in theory_tests %}
+                        <option value="{{ test_id }}">{{ title }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+            </div>
+            <div class="form-row">
+                <div class="form-group" style="min-width:460px; flex:1;">
+                    <label>PowerPoint File</label>
+                    <select name="ppt_relative_path" required>
+                        <option value="">Select a PowerPoint from INTERACTIVE LEARNING</option>
+                        {% for file in lesson_files %}
+                        <option value="{{ file.relative_path }}">{{ file.folder }} / {{ file.display_name }}</option>
+                        {% endfor %}
+                    </select>
+                    <span class="small">Files are read directly from the `INTERACTIVE LEARNING` folder.</span>
+                </div>
+            </div>
+            <div class="form-row">
+                <div class="form-group" style="min-width:420px;">
+                    <label>Assign to Groups</label>
+                    <div class="chip-list">
+                        {% for g in groups %}
+                        <label><input type="checkbox" name="groups" value="{{ g }}"> {{ g }}</label>
+                        {% endfor %}
+                    </div>
+                    <span class="small">Leave empty to make the lesson available to all groups.</span>
+                </div>
+                <div class="form-group" style="min-width:420px;">
+                    <label>Assign to Teachers</label>
+                    <div class="chip-list">
+                        {% for username, full_name in teachers %}
+                        <label><input type="checkbox" name="teachers" value="{{ username }}"> {{ full_name or username }}</label>
+                        {% endfor %}
+                    </div>
+                    <span class="small">Leave empty to make the lesson visible to all teachers.</span>
+                </div>
+            </div>
+            <button type="submit" class="btn btn-primary">Create Lesson</button>
+        </form>
+    </div>
+
+    <h3>Existing Lessons</h3>
+    {% if lessons %}
+    <table>
+        <tr>
+            <th>Title</th>
+            <th>Subject</th>
+            <th>PowerPoint</th>
+            <th>Groups</th>
+            <th>Teachers</th>
+            <th>Checkpoints</th>
+            <th>Assign Date</th>
+            <th>Status</th>
+            <th>Actions</th>
+        </tr>
+        {% for lesson in lessons %}
+        <tr>
+            <td>{{ lesson[1] }}</td>
+            <td>{{ lesson[2] or '—' }}</td>
+            <td>{{ lesson[4] }}</td>
+            <td>{{ lesson[7] or 'All Groups' }}</td>
+            <td>{{ lesson[8] or 'All Teachers' }}</td>
+            <td>{{ lesson[9] or 0 }}</td>
+            <td>{{ lesson[3] }}</td>
+            <td>
+                {% if lesson[6] %}
+                <span class="badge-active">Active</span>
+                {% else %}
+                <span class="badge-inactive">Inactive</span>
+                {% endif %}
+            </td>
+            <td style="white-space:nowrap;">
+                <a href="/manage_lessons/{{ lesson[0] }}/checkpoints" class="btn btn-primary">✏️ Checkpoints</a>
+                <form method="post" action="/manage_lessons/{{ lesson[0] }}/toggle" style="display:inline;">
+                    <button type="submit" class="btn btn-warning">{% if lesson[6] %}Pause{% else %}Activate{% endif %}</button>
+                </form>
+                <form method="post" action="/manage_lessons/{{ lesson[0] }}/delete" style="display:inline;" onsubmit="return confirm('Delete this lesson and all learner progress?');">
+                    <button type="submit" class="btn btn-danger">🗑 Delete</button>
+                </form>
+            </td>
+        </tr>
+        {% endfor %}
+    </table>
+    {% else %}
+    <p>No lessons created yet.</p>
+    {% endif %}
+</div>
+</body>
+</html>

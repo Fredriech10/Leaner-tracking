@@ -40,6 +40,8 @@
     <div class="topbar-links">
         <a href="/teacher_dashboard">🏠 Dashboard</a>
         <a href="/manage_subjects">📁 Practical</a>
+        <a href="/manage_lessons#theory-lessons">📘 Lessons</a>
+        <a href="/manage_lessons#lesson-and-test">🧩 Lesson + Test</a>
         <a href="/manage_tests">📝 Theory Tests</a>
         <a href="/admin">👥 Admin</a>
         <span class="topbar-user">👤 <a href="/edit_user/{{ session_username }}">{{ session_username }}</a></span>
@@ -49,7 +51,10 @@
 
 <div class="page">
     <div class="create-form">
-        <h3>Create New Lesson</h3>
+        <h3>Create New Theory Lesson</h3>
+        <p class="small" style="margin-top:0; margin-bottom:14px;">
+            Create a slideshow-only <strong>Lesson</strong>, or attach a theory test to create a <strong>Lesson and test</strong>.
+        </p>
         <form method="post" action="/manage_lessons/create">
             <div class="form-row">
                 <div class="form-group">
@@ -67,7 +72,7 @@
                 <div class="form-group" style="min-width:280px;">
                     <label>Linked Theory Test</label>
                     <select name="linked_test_id">
-                        <option value="">None</option>
+                        <option value="">None (Lesson only)</option>
                         {% for test_id, title in theory_tests %}
                         <option value="{{ test_id }}">{{ title }}</option>
                         {% endfor %}
@@ -110,11 +115,13 @@
         </form>
     </div>
 
-    <h3>Existing Lessons</h3>
-    {% if lessons %}
+    <h3 id="theory-lessons">Lessons</h3>
+    <p class="small">Slideshow lessons with no linked test.</p>
+    {% if lesson_only_rows %}
     <table>
         <tr>
             <th>Title</th>
+            <th>Category</th>
             <th>Subject</th>
             <th>PowerPoint</th>
             <th>Groups</th>
@@ -124,9 +131,10 @@
             <th>Status</th>
             <th>Actions</th>
         </tr>
-        {% for lesson in lessons %}
+        {% for lesson in lesson_only_rows %}
         <tr>
             <td>{{ lesson[1] }}</td>
+            <td><span class="badge-active" style="background:#e0f2fe;color:#075985;">Lesson</span></td>
             <td>{{ lesson[2] or '—' }}</td>
             <td>{{ lesson[4] }}</td>
             <td>{{ lesson[7] or 'All Groups' }}</td>
@@ -153,7 +161,58 @@
         {% endfor %}
     </table>
     {% else %}
-    <p>No lessons created yet.</p>
+    <p>No slideshow-only lessons created yet.</p>
+    {% endif %}
+
+    <h3 id="lesson-and-test" style="margin-top:28px;">Lesson and test</h3>
+    <p class="small">Slideshow lessons that continue into a linked theory test.</p>
+    {% if lesson_and_test_rows %}
+    <table>
+        <tr>
+            <th>Title</th>
+            <th>Category</th>
+            <th>Subject</th>
+            <th>PowerPoint</th>
+            <th>Linked Test</th>
+            <th>Groups</th>
+            <th>Teachers</th>
+            <th>Checkpoints</th>
+            <th>Assign Date</th>
+            <th>Status</th>
+            <th>Actions</th>
+        </tr>
+        {% for lesson in lesson_and_test_rows %}
+        <tr>
+            <td>{{ lesson[1] }}</td>
+            <td><span class="badge-active" style="background:#ede9fe;color:#6d28d9;">Lesson + Test</span></td>
+            <td>{{ lesson[2] or '—' }}</td>
+            <td>{{ lesson[4] }}</td>
+            <td>{{ lesson[10] or ('Test #' ~ lesson[5]) }}</td>
+            <td>{{ lesson[7] or 'All Groups' }}</td>
+            <td>{{ lesson[8] or 'All Teachers' }}</td>
+            <td>{{ lesson[9] or 0 }}</td>
+            <td>{{ lesson[3] }}</td>
+            <td>
+                {% if lesson[6] %}
+                <span class="badge-active">Active</span>
+                {% else %}
+                <span class="badge-inactive">Inactive</span>
+                {% endif %}
+            </td>
+            <td style="white-space:nowrap;">
+                <a href="/manage_lessons/{{ lesson[0] }}/checkpoints" class="btn btn-primary">✏️ Checkpoints</a>
+                <form method="post" action="/manage_lessons/{{ lesson[0] }}/toggle" style="display:inline;">
+                    <button type="submit" class="btn btn-warning">{% if lesson[6] %}Pause{% else %}Activate{% endif %}</button>
+                </form>
+                <form method="post" action="/manage_lessons/{{ lesson[0] }}/delete" style="display:inline;" onsubmit="return confirm('Delete this lesson and all learner progress?');">
+                    <button type="submit" class="btn btn-danger">🗑 Delete</button>
+                </form>
+            </td>
+        </tr>
+        {% endfor %}
+    </table>
+    {% else %}
+    <p>No lesson-and-test items created yet.</p>
     {% endif %}
 </div>
 </body>

@@ -134,6 +134,12 @@
                         </select>
                     </div>
                     <div>
+                        <div class="section-title">Marking Setup</div>
+                        <select name="marking_setup_id">
+                            {{ marking_setup_options | safe }}
+                        </select>
+                    </div>
+                    <div>
                         <div class="section-title">Sample File (optional)</div>
                         <input type="file" name="sample_file" accept=".xlsx,.xls,.xlsm,.accdb,.mdb,.html,.htm,.ppt,.pptx,.doc,.docx,.docm">
                         <div class="readonly-note" style="margin-top:4px;">Allowed: Excel, Access, HTML, PowerPoint, Word</div>
@@ -273,6 +279,12 @@
                 </select>
             </div>
             <div class="mform-group">
+                <label>Marking Setup</label>
+                <select name="marking_setup_id" id="reuse_marking_setup_id" style="width:100%;">
+                    {{ marking_setup_options | safe }}
+                </select>
+            </div>
+            <div class="mform-group">
                 <label style="display:inline-flex;align-items:center;gap:8px;font-weight:normal;">
                     <input type="checkbox" name="allow_multiple" id="reuse_task_allow_multiple" onchange="toggleReuseTaskAttempts(this)">
                     <strong>Allow Multiple Submissions</strong>
@@ -304,7 +316,7 @@
 </div>
 
 <script>
-function openReuseTaskModal(taskId, taskName, markingScript, allowMultiple, maxAttempts) {
+function openReuseTaskModal(taskId, taskName, markingScript, allowMultiple, maxAttempts, markingSetupId) {
     document.getElementById('reuseTaskForm').action = window.location.pathname;
     document.getElementById('reuse_source_id').value = taskId;
     document.getElementById('reuse_task_name').value = taskName + ' (Copy)';
@@ -313,6 +325,10 @@ function openReuseTaskModal(taskId, taskName, markingScript, allowMultiple, maxA
     const sel = document.getElementById('reuse_marking_script');
     if (sel) {
         for (let opt of sel.options) { opt.selected = opt.value === markingScript; }
+    }
+    const setupSel = document.getElementById('reuse_marking_setup_id');
+    if (setupSel) {
+        for (let opt of setupSel.options) { opt.selected = opt.value === String(markingSetupId || ''); }
     }
     const allowCb = document.getElementById('reuse_task_allow_multiple');
     allowCb.checked = !!allowMultiple;

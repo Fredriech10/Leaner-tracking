@@ -37,14 +37,19 @@
 </div>
 
 <div class="page">
-    <h2>📘 My Theory Lessons</h2>
-    {% if not lessons %}
-    <p>No lessons available at the moment.</p>
+    <h2>📘 Theory Lessons</h2>
+    <p style="margin-top:-4px; color:#666; font-size:0.9em;">
+        Theory is split into three categories: <strong>Lesson</strong>, <strong>Lesson and test</strong>, and <strong>Test</strong>.
+    </p>
+
+    <h3 id="theory-lessons">Lessons</h3>
+    {% if not lesson_only %}
+    <p>No slideshow-only lessons available at the moment.</p>
     {% else %}
-    {% for lesson in lessons %}
+    {% for lesson in lesson_only %}
     <div class="lesson-card">
         <div class="lesson-info">
-            <h3>{{ lesson.title }}</h3>
+            <h3>{{ lesson.title }} <span class="badge badge-progress" style="background:#e0f2fe;color:#075985;">Lesson</span></h3>
             <p>
                 {% if lesson.subject %}Subject: {{ lesson.subject }} &nbsp;|&nbsp; {% endif %}
                 Assigned: {{ lesson.assign_date }} &nbsp;|&nbsp;
@@ -59,8 +64,36 @@
             <span class="badge badge-progress">Slide {{ lesson.current_slide }} / {{ lesson.slide_count }}</span>
             {% endif %}
             <a href="/lesson/{{ lesson.id }}?slide={{ lesson.current_slide }}" class="btn btn-primary">{% if lesson.completed_at %}Review Lesson{% else %}Open Lesson{% endif %}</a>
+        </div>
+    </div>
+    {% endfor %}
+    {% endif %}
+
+    <h3 id="lesson-and-test" style="margin-top:26px;">Lesson and test</h3>
+    {% if not lesson_and_test %}
+    <p>No lesson-and-test items available at the moment.</p>
+    {% else %}
+    {% for lesson in lesson_and_test %}
+    <div class="lesson-card">
+        <div class="lesson-info">
+            <h3>{{ lesson.title }} <span class="badge badge-progress" style="background:#ede9fe;color:#6d28d9;">Lesson + Test</span></h3>
+            <p>
+                {% if lesson.subject %}Subject: {{ lesson.subject }} &nbsp;|&nbsp; {% endif %}
+                Assigned: {{ lesson.assign_date }} &nbsp;|&nbsp;
+                Slides: {{ lesson.slide_count }} &nbsp;|&nbsp;
+                Checkpoints: {{ lesson.answered_count }}/{{ lesson.checkpoint_count }}
+                {% if lesson.linked_test_title %} &nbsp;|&nbsp; Test: {{ lesson.linked_test_title }}{% endif %}
+            </p>
+        </div>
+        <div class="lesson-actions">
+            {% if lesson.completed_at %}
+            <span class="badge badge-complete">Lesson completed</span>
+            {% else %}
+            <span class="badge badge-progress">Slide {{ lesson.current_slide }} / {{ lesson.slide_count }}</span>
+            {% endif %}
+            <a href="/lesson/{{ lesson.id }}?slide={{ lesson.current_slide }}" class="btn btn-primary">{% if lesson.completed_at %}Review Lesson{% else %}Open Lesson{% endif %}</a>
             {% if lesson.linked_test_id %}
-            <a href="/take_test/{{ lesson.linked_test_id }}" class="btn btn-success">Take Linked Test</a>
+            <a href="/take_test/{{ lesson.linked_test_id }}" class="btn btn-success">Open Linked Test</a>
             {% endif %}
         </div>
     </div>

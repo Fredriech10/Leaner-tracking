@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>Manage Theory Tests</title>
+    <title>{{ page_title or 'Manage Theory Tests' }}</title>
     <style>
         * { box-sizing: border-box; }
         body { font-family: Arial, sans-serif; margin: 0; padding: 0; background: #f0f2f5; color: #222; }
@@ -63,10 +63,11 @@
 <body>
 
 <div class="topbar">
-    <h1>📝 Theory Tests</h1>
+    <h1>{{ '📘 Lessons' if (page_title == 'Lessons') else ('🧩 Lesson and Test' if (page_title == 'Lesson and Test') else '📝 Theory Tests') }}</h1>
     <div class="topbar-links">
         <a href="/teacher_dashboard">🏠 Dashboard</a>
         <a href="/manage_subjects">📁 Practical</a>
+        <a href="/manage_lessons#theory-lessons">📘 Lessons</a>
         <a href="/manage_lessons">📘 Lessons</a>
         <a href="/admin">👥 Admin</a>
         <a href="/attendance">📅 Attendance</a>
@@ -78,7 +79,10 @@
 <div class="page">
 
 <div class="create-form">
-    <h3>Create New Test</h3>
+    <h3>Create New {{ 'Lesson' if (page_title == 'Lessons') else ('Lesson and Test' if (page_title == 'Lesson and Test') else 'Test') }}</h3>
+    <p style="margin-top:0; color:#666; font-size:0.88em;">
+        {{ page_intro or 'This page manages the simple question-only part of Theory.' }}
+    </p>
     <form method="post" action="/manage_tests/create">
         <div class="form-row">
             <div class="form-group">
@@ -143,12 +147,17 @@
 </div>
 
 <h3>Existing Tests</h3>
+<p style="margin-top:-6px; color:#666; font-size:0.88em;">
+    Standalone tests: <strong>{{ standalone_test_count or 0 }}</strong> |
+    Used in Lesson + Test: <strong>{{ linked_test_count or 0 }}</strong>
+</p>
 {% if test_list %}
 <div class="table-wrap">
 <table>
     <tr>
         <th>Title</th>
         <th>Subject</th>
+        <th>Category</th>
         <th>Groups</th>
         <th>Teachers</th>
         <th>Questions</th>

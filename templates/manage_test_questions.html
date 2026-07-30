@@ -384,7 +384,7 @@
 
     <section class="panel">
         <h2>Lesson Slide Background</h2>
-        <form method="post" id="backgroundForm">
+        <form method="post" enctype="multipart/form-data" id="backgroundForm">
             <input type="hidden" name="action" value="save_lesson_background">
             <input type="hidden" name="background_image" id="lessonBackgroundImage" value="{{ test[3] or '' }}">
             <input type="hidden" name="background_fit" id="lessonBackgroundFit" value="{{ test[4] or 'cover' }}">
@@ -392,7 +392,7 @@
                 <button type="button" class="btn btn-primary" onclick="setGlobalBackgroundUrl()">Background URL</button>
                 <label class="btn btn-primary">
                     Upload Background
-                    <input type="file" accept="image/*" style="display:none;" onchange="setGlobalBackgroundFile(this)">
+                    <input type="file" name="background_file" id="lessonBackgroundFile" accept="image/*" style="display:none;" onchange="setGlobalBackgroundFile(this)">
                 </label>
                 <button type="button" class="btn btn-muted" onclick="clearGlobalBackground()">Clear Background</button>
                 <button type="button" class="btn btn-muted" id="fitCoverBtn" onclick="setBackgroundFit('cover')">Fill Area</button>
@@ -671,17 +671,21 @@ function setGlobalBackgroundUrl() {
 function setGlobalBackgroundFile(input) {
     const file = input.files && input.files[0];
     if (!file) return;
-    const reader = new FileReader();
-    reader.onload = () => setGlobalBackground(reader.result);
-    reader.readAsDataURL(file);
-    input.value = '';
+    const previewUrl = URL.createObjectURL(file);
+    setGlobalBackground(previewUrl, { preserveFileSelection: true });
 }
-function setGlobalBackground(src) {
+function setGlobalBackground(src, options = {}) {
     document.getElementById('lessonBackgroundImage').value = src;
+    if (!options.preserveFileSelection) {
+        const fileInput = document.getElementById('lessonBackgroundFile');
+        if (fileInput) fileInput.value = '';
+    }
     applyGlobalBackground();
 }
 function clearGlobalBackground() {
     document.getElementById('lessonBackgroundImage').value = '';
+    const fileInput = document.getElementById('lessonBackgroundFile');
+    if (fileInput) fileInput.value = '';
     applyGlobalBackground();
 }
 function setBackgroundFit(fit) {
@@ -947,6 +951,7 @@ function rememberBuilderPosition() {
 function attachBackgroundToForm(form) {
     const bgValue = document.getElementById('lessonBackgroundImage')?.value || '';
     const fitValue = document.getElementById('lessonBackgroundFit')?.value || 'cover';
+    const fileInput = document.getElementById('lessonBackgroundFile');
     let field = form.querySelector('input[name="background_image"]');
     if (!field) {
         field = document.createElement('input');
@@ -954,7 +959,7 @@ function attachBackgroundToForm(form) {
         field.name = 'background_image';
         form.appendChild(field);
     }
-    field.value = bgValue;
+    field.value = fileInput && fileInput.files && fileInput.files.length ? '' : bgValue;
     let fitField = form.querySelector('input[name="background_fit"]');
     if (!fitField) {
         fitField = document.createElement('input');

@@ -6,16 +6,20 @@ import time
 import os
 import sqlite3
 import random
+import json
+import tempfile
 import zipfile
 import base64
 import mimetypes
 import re
 import uuid
+from pathlib import Path
 from flask import send_file
 import pandas as pd
 import io
 from io import BytesIO
 from xml.etree import ElementTree as ET
+from werkzeug.utils import secure_filename
 
 TIMEOUT = 60
 LESSON_SLIDE_TYPES = ("content_slide", "title_slide", "heading_slide")
@@ -23,12 +27,7 @@ DATA_URI_IMAGE_RE = re.compile(r"data:(image/[a-zA-Z0-9.+-]+);base64,([A-Za-z0-9
 LESSON_ASSET_DIR = os.path.join("static", "uploads", "lesson_assets")
 MAX_LESSON_IMAGE_DIMENSION = 1600
 
-def save_data_uri_image(data_uri):
-    match = DATA_URI_IMAGE_RE.fullmatch(data_uri.strip())
-    if not match:
-        return data_uri
-    mime_type, encoded = match.groups()
-    raw_image = base64.b64decode(encoded)
+def save_lesson_asset(raw_image, mime_type=None):
     os.makedirs(LESSON_ASSET_DIR, exist_ok=True)
     try:
         from PIL import Image
@@ -44,7 +43,7 @@ def save_data_uri_image(data_uri):
             save_kwargs["lossless"] = False
         image.save(filepath, **save_kwargs)
     except Exception:
-        ext = mimetypes.guess_extension(mime_type) or ".png"
+        ext = mimetypes.guess_extension(mime_type or "") or ".png"
         if ext == ".jpe":
             ext = ".jpg"
         filename = f"{uuid.uuid4().hex}{ext}"
@@ -52,6 +51,14 @@ def save_data_uri_image(data_uri):
         with open(filepath, "wb") as asset_file:
             asset_file.write(raw_image)
     return f"/static/uploads/lesson_assets/{filename}"
+
+def save_data_uri_image(data_uri):
+    match = DATA_URI_IMAGE_RE.fullmatch(data_uri.strip())
+    if not match:
+        return data_uri
+    mime_type, encoded = match.groups()
+    raw_image = base64.b64decode(encoded)
+    return save_lesson_asset(raw_image, mime_type)
 
 def externalize_data_uri_images(html_or_uri):
     if not html_or_uri:
@@ -114,10 +121,55 @@ def get_current_year_attendance_days():
     return days
 
 DB_NAME = "school.db"
+MARKING_DB_NAME = "marking_experiment.db"
 INTERACTIVE_LEARNING_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "INTERACTIVE LEARNING")
 
 def get_db():
     return sqlite3.connect(DB_NAME)
+
+
+def get_marking_db():
+    return sqlite3.connect(MARKING_DB_NAME)
+
+
+def init_marking_db():
+    conn = get_marking_db()
+    cursor = conn.cursor()
+    cursor.execute("""
+    CREATE TABLE IF NOT EXISTS marking_setups (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        title TEXT,
+        created_by TEXT,
+        created_at TEXT,
+        updated_at TEXT,
+        question_paper_filename TEXT,
+        question_paper_blob BLOB,
+        memo_filename TEXT,
+        memo_blob BLOB,
+        json_script_filename TEXT,
+        json_script_blob BLOB,
+        llm_model TEXT,
+        generation_warnings TEXT,
+        generation_error TEXT,
+        notes TEXT
+    )
+    """)
+    try:
+        cursor.execute("PRAGMA table_info(marking_setups)")
+        columns = [col[1] for col in cursor.fetchall()]
+        for column_name, definition in [
+            ("memo_filename", "TEXT"),
+            ("memo_blob", "BLOB"),
+            ("llm_model", "TEXT"),
+            ("generation_warnings", "TEXT"),
+            ("generation_error", "TEXT"),
+        ]:
+            if column_name not in columns:
+                cursor.execute(f"ALTER TABLE marking_setups ADD COLUMN {column_name} {definition}")
+    except Exception as exc:
+        print(f"Note: marking_setups migration: {exc}")
+    conn.commit()
+    conn.close()
 
 
 def get_days_in_active_term():
@@ -645,6 +697,7 @@ def init_db():
         allow_multiple INTEGER DEFAULT 0,
         max_attempts INTEGER DEFAULT 1,
         is_active INTEGER DEFAULT 1,
+        marking_setup_id INTEGER,
         created_by TEXT,
         created_at TEXT,
         FOREIGN KEY (subject_id) REFERENCES subjects (id)
@@ -672,6 +725,9 @@ def init_db():
             print("Migration: added max_attempts column to tasks")
         if "is_active" not in columns:
             cursor.execute("ALTER TABLE tasks ADD COLUMN is_active INTEGER DEFAULT 1")
+        if "marking_setup_id" not in columns:
+            cursor.execute("ALTER TABLE tasks ADD COLUMN marking_setup_id INTEGER")
+            print("Migration: added marking_setup_id column to tasks")
         
         if "question_text" not in columns:
             cursor.execute("ALTER TABLE tasks ADD COLUMN question_text TEXT")
@@ -802,17 +858,7 @@ def log_login(username):
     conn.close()
 
 def should_record_attendance_login():
-    if request.args.get("attendance", "").strip().lower() != "lab":
-        return False
-    allowed_lab_computers = {
-        item.strip().upper()
-        for item in os.getenv("LAB_ATTENDANCE_COMPUTERS", "").split(",")
-        if item.strip()
-    }
-    if not allowed_lab_computers:
-        return True
-    client_pc = request.args.get("pc", "").strip().upper()
-    return client_pc in allowed_lab_computers
+    return True
 
 def log_activity(username, action):
     conn = get_db()
@@ -885,7 +931,7 @@ def save_result(username, subject, task, score, feedback):
     conn.commit()
     conn.close()
 
-def mark_file(filepath, marking_script):
+def mark_file(filepath, marking_script, marking_setup_id=None):
     """
     Route a submitted file to the correct task marker using the
     marking_script name stored on the task in the database.
@@ -902,6 +948,8 @@ def mark_file(filepath, marking_script):
         }
     try:
         module = importlib.import_module(f"marking.tasks.{marking_script}")
+        if marking_setup_id is not None and hasattr(module, "mark_with_setup"):
+            return module.mark_with_setup(filepath, int(marking_setup_id))
         return module.mark(filepath)
     except ModuleNotFoundError:
         return {
@@ -1131,6 +1179,234 @@ def get_teachers():
     teachers = cursor.fetchall()
     conn.close()
     return teachers
+
+
+@app.route("/marking_setup", methods=["GET", "POST"])
+def marking_setup():
+    username = session.get("username")
+    if not username:
+        return redirect(url_for("login"))
+    if get_user_role(username) not in ["teacher", "admin"]:
+        return "Access denied", 403
+
+    error = None
+    message = None
+    generated_json_preview = ""
+    llm_output_preview = ""
+    llm_normalized_output_preview = ""
+    generation_warnings_preview = []
+    llm_status = ""
+
+    conn = get_marking_db()
+    cursor = conn.cursor()
+
+    if request.method == "POST":
+        action = request.form.get("action")
+        if action == "delete_one":
+            setup_id = request.form.get("setup_id")
+            cursor.execute("DELETE FROM marking_setups WHERE id = ?", (setup_id,))
+            conn.commit()
+            message = "Marking setup deleted."
+        elif action == "delete_selected":
+            setup_ids = [sid for sid in request.form.getlist("setup_ids") if sid.strip()]
+            if setup_ids:
+                placeholders = ",".join("?" for _ in setup_ids)
+                cursor.execute(f"DELETE FROM marking_setups WHERE id IN ({placeholders})", setup_ids)
+                conn.commit()
+                message = f"Deleted {len(setup_ids)} marking setup(s)."
+            else:
+                error = "Select at least one marking setup to delete."
+        else:
+            title = (request.form.get("title") or "").strip()
+            notes = (request.form.get("notes") or "").strip()
+            llm_model = (request.form.get("llm_model") or "").strip() or None
+            question_paper_file = request.files.get("question_paper_file")
+            memo_file = request.files.get("memo_file")
+
+            if not title or not question_paper_file or not question_paper_file.filename or not memo_file or not memo_file.filename:
+                error = "Title, question paper, and memo are required."
+            else:
+                from Marking_Experiment.generation_service import generate_marking_task_json
+
+                qp_suffix = Path(question_paper_file.filename).suffix or ".docx"
+                memo_suffix = Path(memo_file.filename).suffix or ".docx"
+                qp_temp = None
+                memo_temp = None
+                try:
+                    with tempfile.NamedTemporaryFile(delete=False, suffix=qp_suffix) as qp_handle:
+                        question_paper_blob = question_paper_file.read()
+                        qp_handle.write(question_paper_blob)
+                        qp_temp = Path(qp_handle.name)
+                    with tempfile.NamedTemporaryFile(delete=False, suffix=memo_suffix) as memo_handle:
+                        memo_blob = memo_file.read()
+                        memo_handle.write(memo_blob)
+                        memo_temp = Path(memo_handle.name)
+
+                    generated = generate_marking_task_json(qp_temp, memo_temp, title, model=llm_model)
+                    task_definition = generated["task_definition"]
+                    generated_json_text = json.dumps(task_definition, indent=2, ensure_ascii=False)
+                    generated_json_preview = generated_json_text
+                    llm_output_preview = generated.get("llm_output") or ""
+                    llm_normalized_output_preview = generated.get("llm_normalized_output") or ""
+                    generation_warnings_preview = generated.get("warnings") or []
+                    llm_status = generated.get("llm_status") or ""
+
+                    now = datetime.now().isoformat()
+                    cursor.execute(
+                        """
+                        INSERT INTO marking_setups (
+                            title, created_by, created_at, updated_at,
+                            question_paper_filename, question_paper_blob,
+                            memo_filename, memo_blob,
+                            json_script_filename, json_script_blob,
+                            llm_model, generation_warnings, generation_error, notes
+                        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                        """,
+                        (
+                            title, username, now, now,
+                            secure_filename(question_paper_file.filename), question_paper_blob,
+                            secure_filename(memo_file.filename), memo_blob,
+                            f"{secure_filename(title) or 'marking_setup'}.json", generated_json_text.encode("utf-8"),
+                            llm_model, json.dumps(generation_warnings_preview, ensure_ascii=False), None, notes,
+                        ),
+                    )
+                    conn.commit()
+                    message = "Marking setup generated and saved."
+                except Exception as exc:
+                    error = f"Failed to generate marking setup: {exc}"
+                finally:
+                    for temp_path in (qp_temp, memo_temp):
+                        if temp_path and temp_path.exists():
+                            temp_path.unlink()
+
+    cursor.execute("""
+        SELECT id, title, created_by, created_at,
+               question_paper_filename, memo_filename, json_script_filename, notes
+        FROM marking_setups
+        ORDER BY created_at DESC, id DESC
+    """)
+    setups = cursor.fetchall()
+    conn.close()
+
+    return render_template(
+        "marking_setup.html",
+        setups=setups,
+        error=error,
+        message=message,
+        generated_json_preview=generated_json_preview,
+        llm_output_preview=llm_output_preview,
+        llm_normalized_output_preview=llm_normalized_output_preview,
+        generation_warnings_preview=generation_warnings_preview,
+        llm_status=llm_status,
+    )
+
+
+@app.route("/marking_setup/<int:setup_id>/download/<field>")
+def download_marking_blob(setup_id, field):
+    username = session.get("username")
+    if not username:
+        return redirect(url_for("login"))
+    if get_user_role(username) not in ["teacher", "admin"]:
+        return "Access denied", 403
+
+    field_map = {
+        "question_paper": ("question_paper_filename", "question_paper_blob"),
+        "memo": ("memo_filename", "memo_blob"),
+        "json_script": ("json_script_filename", "json_script_blob"),
+    }
+    if field not in field_map:
+        return "File type not found", 404
+
+    filename_field, blob_field = field_map[field]
+    conn = get_marking_db()
+    cursor = conn.cursor()
+    cursor.execute(f"SELECT {filename_field}, {blob_field} FROM marking_setups WHERE id = ?", (setup_id,))
+    row = cursor.fetchone()
+    conn.close()
+    if not row or not row[1]:
+        return "File not found", 404
+
+    return send_file(
+        io.BytesIO(row[1]),
+        as_attachment=True,
+        download_name=row[0] or f"{field}_{setup_id}",
+        mimetype="application/octet-stream",
+    )
+
+
+@app.route("/marking_setup/<int:setup_id>/edit", methods=["GET", "POST"])
+def edit_marking_setup(setup_id):
+    username = session.get("username")
+    if not username:
+        return redirect(url_for("login"))
+    if get_user_role(username) not in ["teacher", "admin"]:
+        return "Access denied", 403
+
+    conn = get_marking_db()
+    cursor = conn.cursor()
+    cursor.execute("SELECT title, notes, json_script_blob FROM marking_setups WHERE id = ?", (setup_id,))
+    row = cursor.fetchone()
+    if not row:
+        conn.close()
+        return "Marking setup not found", 404
+
+    title, notes, json_blob = row
+    error = None
+    message = None
+    try:
+        task_definition = json.loads((json_blob or b"{}").decode("utf-8") if isinstance(json_blob, bytes) else (json_blob or "{}"))
+    except Exception:
+        task_definition = {}
+    questions = task_definition.get("questions", []) if isinstance(task_definition, dict) else []
+
+    if request.method == "POST":
+        try:
+            row_count = safe_int(request.form.get("row_count"), len(questions))
+            updated_questions = []
+            for idx in range(row_count):
+                if not request.form.get(f"enabled_{idx}"):
+                    continue
+                target_json = request.form.get(f"target_{idx}", "{}").strip() or "{}"
+                expected_json = request.form.get(f"expected_{idx}", "true").strip() or "true"
+                updated_questions.append({
+                    "question_number": request.form.get(f"question_number_{idx}", "").strip(),
+                    "description": request.form.get(f"description_{idx}", "").strip(),
+                    "domain": request.form.get(f"domain_{idx}", "").strip(),
+                    "type": request.form.get(f"type_{idx}", "").strip(),
+                    "target": json.loads(target_json),
+                    "expected": json.loads(expected_json),
+                    "marks": safe_int(request.form.get(f"marks_{idx}"), 1),
+                })
+
+            task_definition["task_name"] = (request.form.get("task_name") or title).strip()
+            task_definition["program"] = (request.form.get("program") or task_definition.get("program") or "word").strip()
+            task_definition["file"] = (request.form.get("file") or task_definition.get("file") or "student_file.docx").strip()
+            task_definition["questions"] = updated_questions
+            task_definition["total_marks"] = sum(int(question.get("marks", 1)) for question in updated_questions)
+
+            encoded = json.dumps(task_definition, indent=2, ensure_ascii=False).encode("utf-8")
+            notes = request.form.get("notes", "")
+            cursor.execute(
+                "UPDATE marking_setups SET title = ?, notes = ?, json_script_blob = ?, updated_at = ? WHERE id = ?",
+                (task_definition["task_name"], notes, encoded, datetime.now().isoformat(), setup_id),
+            )
+            conn.commit()
+            title = task_definition["task_name"]
+            questions = updated_questions
+            message = "Marking setup saved."
+        except Exception as exc:
+            error = f"Could not save marking setup: {exc}"
+
+    conn.close()
+    return render_template(
+        "edit_marking_setup.html",
+        title=title,
+        notes=notes,
+        task_definition=task_definition,
+        questions=questions,
+        error=error,
+        message=message,
+    )
 
 
 def get_marking_scripts():
@@ -1415,6 +1691,8 @@ def login():
 
             create_user_if_not_exists(username)
             update_last_active(username)
+            if get_user_role(username) == "student" and should_record_attendance_login():
+                log_login(username)
             log_activity(username, "logged in")
 
             with lock:
@@ -1709,7 +1987,7 @@ def auto_login():
 
         create_user_if_not_exists(username)
         update_last_active(username)
-        if should_record_attendance_login():
+        if get_user_role(username) == "student" and should_record_attendance_login():
             log_login(username)
         log_activity(username, "logged in")
 
@@ -1999,13 +2277,17 @@ def upload(username, subject_id, task_id):
         return "Subject not found", 404
     subject_name = subject_row[0]
 
-    # Get task with assign_date, marking_script, submission rules, and is_active
-    cursor.execute("SELECT name, assign_date, marking_script, question_text, allow_multiple, max_attempts, is_active FROM tasks WHERE id = ?", (task_id,))
+    # Get task with assign_date, marking script/setup, submission rules, and is_active
+    cursor.execute(
+        "SELECT name, assign_date, marking_script, question_text, allow_multiple, max_attempts, "
+        "is_active, marking_setup_id FROM tasks WHERE id = ?",
+        (task_id,),
+    )
     task_row = cursor.fetchone()
     if not task_row:
         conn.close()
         return "Task not found", 404
-    task_name, assign_date, marking_script, question_text, allow_multiple, max_attempts, task_is_active = task_row
+    task_name, assign_date, marking_script, question_text, allow_multiple, max_attempts, task_is_active, marking_setup_id = task_row
 
     # Block upload if task is deactivated (students only)
     user_role = get_user_role(username)
@@ -2055,11 +2337,12 @@ def upload(username, subject_id, task_id):
             conn.close()
             return "No file uploaded", 400
 
-        temp_path = f"temp_{username}.xlsx"
+        original_ext = os.path.splitext(file.filename or "")[1] or ".tmp"
+        temp_path = f"temp_{username}{original_ext}"
         file.save(temp_path)
 
         try:
-            result = mark_file(temp_path, marking_script)
+            result = mark_file(temp_path, marking_script, marking_setup_id)
         finally:
             if os.path.exists(temp_path):
                 os.remove(temp_path)
@@ -4826,14 +5109,20 @@ def manage_tasks(subject_id):
             task_name = request.form.get("task_name")
             assign_date = request.form.get("assign_date")
             marking_script = request.form.get("marking_script")
+            marking_setup_id = request.form.get("marking_setup_id") or None
             allow_multiple = 1 if request.form.get("allow_multiple") else 0
             max_attempts = int(request.form.get("max_attempts", 1)) if allow_multiple else 1
             groups = request.form.getlist("groups")
             teachers = request.form.getlist("teachers")
             if task_name and assign_date:
                 question_text = request.form.get("question_text", "").strip()
-                cursor.execute("INSERT INTO tasks (subject_id, name, assign_date, marking_script, question_text, task_type, allow_multiple, max_attempts, created_by, created_at) VALUES (?, ?, ?, ?, ?, 'practical', ?, ?, ?, ?)",
-                               (subject_id, task_name, assign_date, marking_script, question_text, allow_multiple, max_attempts, username, datetime.now().isoformat()))
+                cursor.execute(
+                    "INSERT INTO tasks (subject_id, name, assign_date, marking_script, marking_setup_id, "
+                    "question_text, task_type, allow_multiple, max_attempts, created_by, created_at) "
+                    "VALUES (?, ?, ?, ?, ?, ?, 'practical', ?, ?, ?, ?)",
+                    (subject_id, task_name, assign_date, marking_script, marking_setup_id, question_text,
+                     allow_multiple, max_attempts, username, datetime.now().isoformat()),
+                )
                 task_id = cursor.lastrowid
                 # Handle sample file upload
                 if 'sample_file' in request.files:
@@ -4854,6 +5143,7 @@ def manage_tasks(subject_id):
             new_task_name = request.form.get("task_name", "").strip()
             new_assign_date = request.form.get("assign_date")
             new_marking_script = request.form.get("marking_script") or None
+            new_marking_setup_id = request.form.get("marking_setup_id") or None
             new_allow_multiple = 1 if request.form.get("allow_multiple") else 0
             new_max_attempts = int(request.form.get("max_attempts", 1)) if new_allow_multiple else 1
             new_groups = request.form.getlist("groups")
@@ -4868,10 +5158,10 @@ def manage_tasks(subject_id):
                 src_file = src[1] if src else None
                 src_file_name = src[2] if src else None
                 cursor.execute(
-                    "INSERT INTO tasks (subject_id, name, assign_date, marking_script, question_text, "
-                    "task_type, allow_multiple, max_attempts, sample_file, sample_file_name, created_by, created_at) "
-                    "VALUES (?, ?, ?, ?, ?, 'practical', ?, ?, ?, ?, ?, ?)",
-                    (subject_id, new_task_name, new_assign_date, new_marking_script, src_question,
+                    "INSERT INTO tasks (subject_id, name, assign_date, marking_script, marking_setup_id, "
+                    "question_text, task_type, allow_multiple, max_attempts, sample_file, sample_file_name, "
+                    "created_by, created_at) VALUES (?, ?, ?, ?, ?, ?, 'practical', ?, ?, ?, ?, ?, ?)",
+                    (subject_id, new_task_name, new_assign_date, new_marking_script, new_marking_setup_id, src_question,
                      new_allow_multiple, new_max_attempts, src_file, src_file_name,
                      username, datetime.now().isoformat())
                 )
@@ -4934,6 +5224,11 @@ def manage_tasks(subject_id):
 
     # Get available marking scripts
     available_scripts = get_marking_scripts()
+    marking_conn = get_marking_db()
+    marking_cursor = marking_conn.cursor()
+    marking_cursor.execute("SELECT id, title FROM marking_setups ORDER BY title, id")
+    available_marking_setups = marking_cursor.fetchall()
+    marking_conn.close()
 
     # Get available theory tests
     cursor.execute("SELECT id, title, subject FROM theory_tests ORDER BY title")
@@ -4950,6 +5245,7 @@ def manage_tasks(subject_id):
     cursor.execute("""
     SELECT t.id, t.name, t.assign_date, t.marking_script, t.task_type, t.theory_test_id,
            t.allow_multiple, t.max_attempts, t.is_active, t.question_text, t.sample_file_name,
+           t.marking_setup_id,
            GROUP_CONCAT(DISTINCT tg.group_name),
            GROUP_CONCAT(DISTINCT tt.teacher_username)
     FROM tasks t
@@ -4963,13 +5259,17 @@ def manage_tasks(subject_id):
     conn.close()
 
     task_list = ""
-    for task_id, task_name, assign_date, marking_script, task_type, theory_test_id, allow_multiple, max_attempts, is_active, question_text, sample_file_name, group_list, teacher_list in tasks:
+    for task_id, task_name, assign_date, marking_script, task_type, theory_test_id, allow_multiple, max_attempts, is_active, question_text, sample_file_name, marking_setup_id, group_list, teacher_list in tasks:
         if task_type == "theory":
             type_label = '<span style="background:#0078D4;color:white;padding:2px 6px;border-radius:10px;font-size:0.8em;">📝 Theory</span>'
             script_label = f'Test ID: {theory_test_id}'
         else:
             type_label = '<span style="background:#107C10;color:white;padding:2px 6px;border-radius:10px;font-size:0.8em;">📁 Practical</span>'
             script_label = marking_script if marking_script else '<span style="color:red;">None assigned</span>'
+            if marking_setup_id:
+                setup_name = next((title for setup_id, title in available_marking_setups if setup_id == marking_setup_id), None)
+                setup_label = escape(setup_name or f"Setup {marking_setup_id}")
+                script_label += f'<br><span style="color:#005a9e;">Setup: {setup_label}</span>'
 
         status_badge = '<span style="background:#c8f7c5;color:#107C10;padding:2px 8px;border-radius:10px;font-size:0.8em;">Active</span>' if is_active else '<span style="background:#f7c5c5;color:#A4262C;padding:2px 8px;border-radius:10px;font-size:0.8em;">Inactive</span>'
         toggle_label = '⏸ Deactivate' if is_active else '▶ Activate'
@@ -4993,7 +5293,7 @@ def manage_tasks(subject_id):
             <td style="white-space:nowrap; vertical-align:middle;">
                 {'<a href="/tasks/' + str(task_id) + '/edit" title="Edit task" class="btn btn-primary">✏️</a>' if task_type == 'practical' else ''}
                 <a href="/tasks/{task_id}/preview" class="icon-btn" title="Preview learner view">👁</a>
-                {'<button type="button" class="btn btn-success" title="Reuse: copy into a new task" onclick="openReuseTaskModal(' + str(task_id) + ', ' + repr(task_name) + ', ' + repr(marking_script or '') + ', ' + str(allow_multiple) + ', ' + str(max_attempts) + ')">📋</button>' if task_type == 'practical' else ''}
+                {'<button type="button" class="btn btn-success" title="Reuse: copy into a new task" onclick="openReuseTaskModal(' + str(task_id) + ', ' + repr(task_name) + ', ' + repr(marking_script or '') + ', ' + str(allow_multiple) + ', ' + str(max_attempts) + ', ' + repr(marking_setup_id or '') + ')">📋</button>' if task_type == 'practical' else ''}
                 <form method="post" action="/tasks/{task_id}/toggle" style="display:inline-flex; margin:0;">
                     <input type="hidden" name="subject_id" value="{subject_id}">
                     <button type="submit" title="{toggle_label}" class="btn" style="{toggle_style}">{'⏸' if is_active else '▶'}</button>
@@ -5020,6 +5320,10 @@ def manage_tasks(subject_id):
     for script in available_scripts:
         script_options += f'<option value="{escape(script)}">{escape(script)}</option>'
 
+    marking_setup_options = '<option value="">-- No marking setup --</option>'
+    for setup_id, setup_title in available_marking_setups:
+        marking_setup_options += f'<option value="{setup_id}">{escape(setup_title)}</option>'
+
     theory_test_options = '<option value="">-- Select Theory Test --</option>'
     for tt_id, tt_title, tt_subject in available_theory_tests:
         label = f"{tt_title}" + (f" ({tt_subject})" if tt_subject else "")
@@ -5029,6 +5333,7 @@ def manage_tasks(subject_id):
         "manage_tasks.html",
         subject_name=subject_name,
         script_options=script_options,
+        marking_setup_options=marking_setup_options,
         group_checkboxes=group_checkboxes,
         teacher_checkboxes=teacher_checkboxes,
         task_list=task_list,
@@ -5119,46 +5424,7 @@ def download_interactive_learning_file(relative_path):
 
 @app.route("/manage_lessons")
 def manage_lessons():
-    username = session.get("username")
-    if not username:
-        return redirect(url_for("login"))
-    role = get_user_role(username)
-    if role not in ["teacher", "admin"]:
-        return "Access denied", 403
-
-    conn = get_db()
-    cursor = conn.cursor()
-    groups = get_groups(username) if role == "teacher" else get_groups()
-    teachers = get_teachers()
-    lesson_files = get_interactive_learning_files()
-
-    cursor.execute("SELECT id, title FROM theory_tests ORDER BY title")
-    theory_tests = cursor.fetchall()
-
-    cursor.execute("""
-        SELECT
-            l.id, l.title, l.subject, l.assign_date, l.ppt_relative_path, l.linked_test_id, l.is_active,
-            GROUP_CONCAT(DISTINCT lg.group_name),
-            GROUP_CONCAT(DISTINCT lt.teacher_username),
-            COUNT(DISTINCT c.id)
-        FROM theory_lessons l
-        LEFT JOIN theory_lesson_groups lg ON lg.lesson_id = l.id
-        LEFT JOIN theory_lesson_teachers lt ON lt.lesson_id = l.id
-        LEFT JOIN theory_lesson_checkpoints c ON c.lesson_id = l.id
-        GROUP BY l.id
-        ORDER BY l.created_at DESC, l.title
-    """)
-    lessons = cursor.fetchall()
-    conn.close()
-
-    return render_template(
-        "manage_lessons.html",
-        groups=groups,
-        teachers=teachers,
-        lesson_files=lesson_files,
-        theory_tests=theory_tests,
-        lessons=lessons,
-    )
+    return redirect(url_for("manage_lesson_tests"))
 
 
 @app.route("/manage_lessons/create", methods=["POST"])
@@ -5323,59 +5589,7 @@ def manage_lesson_checkpoints(lesson_id):
 
 @app.route("/lessons")
 def learner_lessons():
-    username = session.get("username")
-    if not username:
-        return redirect(url_for("login"))
-
-    conn = get_db()
-    cursor = conn.cursor()
-    cursor.execute("SELECT group_name FROM users WHERE username = ?", (username,))
-    row = cursor.fetchone()
-    user_group = row[0] if row else None
-    today = datetime.now().date().isoformat()
-
-    cursor.execute("""
-        SELECT
-            l.id, l.title, l.subject, l.assign_date, l.ppt_relative_path, l.linked_test_id,
-            COALESCE(p.current_slide, 1), p.completed_at,
-            COUNT(DISTINCT c.id), SUM(CASE WHEN a.username IS NOT NULL THEN 1 ELSE 0 END),
-            t.title
-        FROM theory_lessons l
-        LEFT JOIN theory_lesson_progress p ON p.lesson_id = l.id AND p.username = ?
-        LEFT JOIN theory_lesson_checkpoints c ON c.lesson_id = l.id
-        LEFT JOIN theory_lesson_checkpoint_answers a ON a.checkpoint_id = c.id AND a.username = ?
-        LEFT JOIN theory_tests t ON t.id = l.linked_test_id
-        WHERE l.is_active = 1
-          AND l.assign_date <= ?
-          AND (
-              NOT EXISTS (SELECT 1 FROM theory_lesson_groups WHERE lesson_id = l.id)
-              OR EXISTS (SELECT 1 FROM theory_lesson_groups WHERE lesson_id = l.id AND group_name = ?)
-          )
-        GROUP BY l.id
-        ORDER BY l.assign_date DESC, l.title
-    """, (username, username, today, user_group))
-    rows = cursor.fetchall()
-    conn.close()
-
-    lessons = []
-    for row in rows:
-        ppt_path = resolve_interactive_learning_path(row[4])
-        slide_count = len(extract_pptx_slides(ppt_path)) if ppt_path else 0
-        lessons.append({
-            "id": row[0],
-            "title": row[1],
-            "subject": row[2],
-            "assign_date": row[3],
-            "linked_test_id": row[5],
-            "current_slide": row[6] or 1,
-            "completed_at": row[7],
-            "checkpoint_count": row[8] or 0,
-            "answered_count": row[9] or 0,
-            "linked_test_title": row[10],
-            "slide_count": slide_count,
-        })
-
-    return render_template("learner_lessons.html", lessons=lessons)
+    return redirect(url_for("lesson_tests"))
 
 
 @app.route("/lesson/<int:lesson_id>", methods=["GET", "POST"])
@@ -5523,12 +5737,16 @@ def manage_tests():
             GROUP_CONCAT(DISTINCT tg.group_name),
             COUNT(DISTINCT q.id),
             t.allow_multiple, t.max_attempts, t.show_answers,
-            GROUP_CONCAT(DISTINCT tt.teacher_username)
+            GROUP_CONCAT(DISTINCT tt.teacher_username),
+            COUNT(DISTINCT l.id),
+            SUM(CASE WHEN q.question_type IN ('content_slide', 'title_slide', 'heading_slide') THEN 1 ELSE 0 END) as content_count
         FROM theory_tests t
         LEFT JOIN theory_questions q ON t.id = q.test_id
         LEFT JOIN theory_test_groups tg ON t.id = tg.test_id
         LEFT JOIN theory_test_teachers tt ON t.id = tt.test_id
+        LEFT JOIN theory_lessons l ON l.linked_test_id = t.id
         GROUP BY t.id
+        HAVING COALESCE(content_count, 0) = 0
         ORDER BY t.created_at DESC
     """)
     tests = cursor.fetchall()
@@ -5554,6 +5772,12 @@ def manage_tests():
         max_attempts = test[9] or 1
         show_answers = bool(test[10])
         teachers_text = escape(test[11] or 'All Teachers')
+        linked_lesson_count = test[12] or 0
+        category_badge = (
+            '<span class="badge-active">Lesson and test</span>'
+            if linked_lesson_count
+            else '<span class="badge-inactive" style="background:#e3f2fd;color:#0078D4;">Test</span>'
+        )
 
         status_badge = '<span class="badge-active">Active</span>' if is_active else '<span class="badge-inactive">Inactive</span>'
         attempt_text = f'{max_attempts} max' if allow_multiple else '1 (single)'
@@ -5564,6 +5788,7 @@ def manage_tests():
         <tr>
             <td>{test_title}</td>
             <td>{test_subject or '—'}</td>
+            <td>{category_badge}</td>
             <td>{groups_text}</td>
             <td>{teachers_text}</td>
             <td>{question_count}</td>
@@ -5597,8 +5822,127 @@ def manage_tests():
         </tr>
         """
 
+    linked_test_count = sum(1 for test in tests if (test[12] or 0))
+    standalone_test_count = len(tests) - linked_test_count
     conn.close()
-    return render_template("manage_tests.html", tests=tests, groups=groups, teacher_checkboxes=teacher_checkboxes, test_list=test_list)
+    return render_template(
+        "manage_tests.html",
+        tests=tests,
+        groups=groups,
+        teacher_checkboxes=teacher_checkboxes,
+        test_list=test_list,
+        linked_test_count=linked_test_count,
+        standalone_test_count=standalone_test_count,
+        page_title="Theory Tests",
+        page_intro="This page manages the simple question-only part of Theory.",
+    )
+
+
+@app.route("/manage_lesson_tests")
+def manage_lesson_tests():
+    username = session.get("username")
+    if not username:
+        return redirect(url_for("login"))
+    role = get_user_role(username)
+    if role not in ["teacher", "admin"]:
+        return "Access denied", 403
+
+    conn = get_db()
+    cursor = conn.cursor()
+    cursor.execute("""
+        SELECT
+            t.id, t.title, t.subject, t.assign_date, t.time_limit, t.is_active,
+            GROUP_CONCAT(DISTINCT tg.group_name),
+            COUNT(DISTINCT q.id),
+            t.allow_multiple, t.max_attempts, t.show_answers,
+            GROUP_CONCAT(DISTINCT tt.teacher_username),
+            COUNT(DISTINCT l.id),
+            SUM(CASE WHEN q.question_type IN ('content_slide', 'title_slide', 'heading_slide') THEN 1 ELSE 0 END) as content_count
+        FROM theory_tests t
+        LEFT JOIN theory_questions q ON t.id = q.test_id
+        LEFT JOIN theory_test_groups tg ON t.id = tg.test_id
+        LEFT JOIN theory_test_teachers tt ON t.id = tt.test_id
+        LEFT JOIN theory_lessons l ON l.linked_test_id = t.id
+        GROUP BY t.id
+        HAVING COALESCE(content_count, 0) > 0
+        ORDER BY t.created_at DESC
+    """)
+    tests = cursor.fetchall()
+    groups = get_groups(username) if role == 'teacher' else get_groups()
+    teachers = get_teachers()
+    teacher_checkboxes = ''.join(
+        f'<label style="font-weight:normal;display:inline-flex;align-items:center;gap:5px;">'
+        f'<input type="checkbox" name="teachers" value="{escape(t[0])}"> {escape(t[1] or t[0])}</label>'
+        for t in teachers
+    )
+
+    test_list = ""
+    for test in tests:
+        test_id = test[0]
+        test_title = escape(test[1] or "")
+        test_subject = escape(test[2] or "")
+        assign_date = test[3] or '—'
+        time_limit_val = test[4] or 0
+        is_active = bool(test[5])
+        groups_text = escape(test[6] or 'All Groups')
+        question_count = test[7] or 0
+        allow_multiple = bool(test[8])
+        max_attempts = test[9] or 1
+        show_answers = bool(test[10])
+        teachers_text = escape(test[11] or 'All Teachers')
+        status_badge = '<span class="badge-active">Active</span>' if is_active else '<span class="badge-inactive">Inactive</span>'
+        attempt_text = f'{max_attempts} max' if allow_multiple else '1 (single)'
+        toggle_label = 'Deactivate' if is_active else 'Activate'
+        toggle_class = 'btn-warning' if is_active else 'btn-success'
+        test_list += f"""
+        <tr>
+            <td>{test_title}</td>
+            <td>{test_subject or '—'}</td>
+            <td><span class="badge-active" style="background:#ede9fe;color:#6d28d9;">Lesson + Test</span></td>
+            <td>{groups_text}</td>
+            <td>{teachers_text}</td>
+            <td>{question_count}</td>
+            <td>{assign_date}</td>
+            <td>{time_limit_val if time_limit_val else 'No limit'}</td>
+            <td>{attempt_text}</td>
+            <td>{'✔ Yes' if show_answers else '✘ No'}</td>
+            <td>{status_badge}</td>
+            <td style="white-space:nowrap; vertical-align:middle;">
+                <div class="action-cell">
+                <a href="/manage_tests/{test_id}/questions" class="btn btn-primary" title="Edit lesson and test">✏️</a>
+                <a href="/manage_tests/{test_id}/edit" class="btn btn-warning" title="Edit settings">⚙️</a>
+                <button type="button" class="btn btn-success" title="Reuse"
+                    onclick="openReuseModal(this)"
+                    data-test-id="{test_id}"
+                    data-title="{test_title}"
+                    data-subject="{test_subject}"
+                    data-time-limit="{time_limit_val}"
+                    data-allow-multiple="{1 if allow_multiple else 0}"
+                    data-max-attempts="{max_attempts}"
+                    data-show-answers="{1 if show_answers else 0}">📋</button>
+                <form method="post" action="/manage_tests/{test_id}/toggle" style="display:inline-flex; margin:0;">
+                    <button type="submit" class="btn {toggle_class}" title="{toggle_label}">{'⏸' if is_active else '▶'}</button>
+                </form>
+                <form method="post" action="/manage_tests/{test_id}/delete" style="display:inline-flex; margin:0;"
+                      onsubmit="return confirm('Delete this lesson and test and all submissions?')">
+                    <button type="submit" class="btn btn-danger" title="Delete">🗑</button>
+                </form>
+                </div>
+            </td>
+        </tr>
+        """
+    conn.close()
+    return render_template(
+        "manage_tests.html",
+        tests=tests,
+        groups=groups,
+        teacher_checkboxes=teacher_checkboxes,
+        test_list=test_list,
+        linked_test_count=len(tests),
+        standalone_test_count=0,
+        page_title="Lessons",
+        page_intro="This page manages the slide-based lesson flow from the Drive D version.",
+    )
 
 
 @app.route("/manage_tests/create", methods=["POST"])
@@ -5773,15 +6117,6 @@ def manage_test_questions(test_id):
 
     if request.method == "POST":
         action = request.form.get("action")
-        if "background_image" in request.form:
-            background_fit = request.form.get("background_fit", "cover")
-            if background_fit not in ("cover", "contain"):
-                background_fit = "cover"
-            cursor.execute(
-                "UPDATE theory_tests SET background_image = ?, background_fit = ? WHERE id = ?",
-                (externalize_data_uri_images(request.form.get("background_image", "").strip()), background_fit, test_id)
-            )
-
         if action == "add_question":
             q_text = externalize_data_uri_images(request.form.get("question_text", "").strip())
             q_type = request.form.get("question_type", "")
@@ -5843,6 +6178,11 @@ def manage_test_questions(test_id):
 
         elif action == "save_lesson_background":
             background_image = externalize_data_uri_images(request.form.get("background_image", "").strip())
+            background_file = request.files.get("background_file")
+            if background_file and background_file.filename:
+                raw_image = background_file.read()
+                if raw_image:
+                    background_image = save_lesson_asset(raw_image, background_file.mimetype)
             background_fit = request.form.get("background_fit", "cover")
             if background_fit not in ("cover", "contain"):
                 background_fit = "cover"
@@ -5903,8 +6243,8 @@ def manage_test_questions(test_id):
         elif action == "edit_question":
             q_id = request.form.get("question_id")
             q_text = externalize_data_uri_images(request.form.get("question_text", "").strip())
-            marks = int(request.form.get("marks", 1))
             q_type = request.form.get("question_type", "")
+            marks = int(request.form.get("marks", 1))
             if q_type in LESSON_SLIDE_TYPES:
                 marks = 0
 
@@ -5955,8 +6295,8 @@ def manage_test_questions(test_id):
         elif action == "autosave_question":
             q_id = request.form.get("question_id")
             q_text = externalize_data_uri_images(request.form.get("question_text", "").strip())
-            marks = safe_int(request.form.get("marks"), 0)
             q_type = request.form.get("question_type", "")
+            marks = safe_int(request.form.get("marks"), 0)
             if q_type in LESSON_SLIDE_TYPES:
                 marks = 0
 
@@ -6187,6 +6527,7 @@ def learner_tests():
                COALESCE(prog.max_slide, 0) as max_slide,
                COALESCE(prog.time_spent_seconds, 0) as progress_seconds
         FROM theory_tests t
+        LEFT JOIN theory_lessons linked_lesson ON linked_lesson.linked_test_id = t.id
         LEFT JOIN (
             SELECT test_id, MAX(percentage) as best_percentage
             FROM theory_submissions WHERE username = ?
@@ -6211,6 +6552,7 @@ def learner_tests():
         ) qstats ON t.id = qstats.test_id
         LEFT JOIN theory_progress prog ON prog.test_id = t.id AND prog.username = ?
         WHERE t.is_active = 1
+          AND linked_lesson.id IS NULL
           AND (
               NOT EXISTS (SELECT 1 FROM theory_test_groups WHERE test_id = t.id)
               OR EXISTS (SELECT 1 FROM theory_test_groups WHERE test_id = t.id AND group_name = ?)
@@ -6221,6 +6563,67 @@ def learner_tests():
     tests = cursor.fetchall()
     conn.close()
     return render_template("learner_tests.html", tests=tests)
+
+
+@app.route("/lesson_tests")
+def lesson_tests():
+    username = session.get("username")
+    if not username:
+        return redirect(url_for("login"))
+
+    conn = get_db()
+    cursor = conn.cursor()
+    cursor.execute("SELECT group_name FROM users WHERE username = ?", (username,))
+    row = cursor.fetchone()
+    user_group = row[0] if row else None
+
+    cursor.execute("""
+        SELECT t.id, t.title, t.subject, t.time_limit,
+               best.best_percentage,
+               sub.id as latest_submission_id,
+               t.allow_multiple, t.max_attempts,
+               COALESCE(cnt.attempt_count, 0) as attempt_count,
+               COALESCE(qstats.content_count, 0) as content_count,
+               COALESCE(qstats.total_questions, 0) as total_questions,
+               COALESCE(prog.current_slide, 0) as current_slide,
+               COALESCE(prog.max_slide, 0) as max_slide,
+               COALESCE(prog.time_spent_seconds, 0) as progress_seconds
+        FROM theory_tests t
+        LEFT JOIN (
+            SELECT test_id, MAX(percentage) as best_percentage
+            FROM theory_submissions WHERE username = ?
+            GROUP BY test_id
+        ) best ON t.id = best.test_id
+        LEFT JOIN (
+            SELECT test_id, id, percentage,
+                   ROW_NUMBER() OVER (PARTITION BY test_id ORDER BY submitted_at DESC) as rn
+            FROM theory_submissions WHERE username = ?
+        ) sub ON t.id = sub.test_id AND sub.rn = 1
+        LEFT JOIN (
+            SELECT test_id, COUNT(*) as attempt_count
+            FROM theory_submissions WHERE username = ?
+            GROUP BY test_id
+        ) cnt ON t.id = cnt.test_id
+        LEFT JOIN (
+            SELECT test_id,
+                   SUM(CASE WHEN question_type IN ('content_slide', 'title_slide', 'heading_slide') THEN 1 ELSE 0 END) as content_count,
+                   COUNT(*) as total_questions
+            FROM theory_questions
+            GROUP BY test_id
+        ) qstats ON t.id = qstats.test_id
+        LEFT JOIN theory_progress prog ON prog.test_id = t.id AND prog.username = ?
+        WHERE t.is_active = 1
+          AND COALESCE(qstats.content_count, 0) > 0
+          AND (
+              NOT EXISTS (SELECT 1 FROM theory_test_groups WHERE test_id = t.id)
+              OR EXISTS (SELECT 1 FROM theory_test_groups WHERE test_id = t.id AND group_name = ?)
+          )
+        GROUP BY t.id
+        ORDER BY t.created_at DESC
+    """, (username, username, username, username, user_group))
+    tests = cursor.fetchall()
+    conn.close()
+    return render_template("learner_lesson_tests.html", tests=tests)
 
 
 @app.route("/my_tasks")
@@ -6359,7 +6762,6 @@ def preview_test(test_id):
             options = sorted(options, key=lambda o: o[0])
         questions_with_options.append({"q": q, "options": options})
     content_slide_count = sum(1 for q in questions if q[2] in LESSON_SLIDE_TYPES)
-
     conn.close()
     return render_template(
         "take_test.html",
@@ -6436,27 +6838,26 @@ def take_test(test_id):
     has_content_slides = content_slide_count > 0
     is_lesson_only = content_slide_count > 0 and question_count == 0
 
-    # Check attempt count. Lesson-only items can be reviewed after completion;
-    # tests keep the original single/multiple-attempt rules.
     cursor.execute("SELECT COUNT(*) FROM theory_submissions WHERE test_id = ? AND username = ?", (test_id, username))
     attempt_count = cursor.fetchone()[0]
     allow_multiple = test[4]
     max_attempts = test[5]
 
+    redirect_endpoint = "lesson_tests" if has_content_slides else "learner_tests"
+
     if not is_lesson_only and not allow_multiple and attempt_count > 0:
         conn.close()
-        return redirect(url_for("learner_tests"))
+        return redirect(url_for(redirect_endpoint))
 
     if not is_lesson_only and allow_multiple and attempt_count >= max_attempts:
         conn.close()
-        return redirect(url_for("learner_tests"))
+        return redirect(url_for(redirect_endpoint))
 
     if request.method == "GET":
         cursor.execute("SELECT current_slide, max_slide, completed FROM theory_progress WHERE test_id = ? AND username = ?", (test_id, username))
         progress_row = cursor.fetchone()
         initial_slide = progress_row[0] if progress_row and is_lesson_only and not progress_row[2] else 0
         max_slide = (len(questions) - 1) if progress_row and is_lesson_only and progress_row[2] else (progress_row[1] if progress_row and is_lesson_only else 0)
-        # Shuffle options and store the order in session so POST uses same order
         questions_with_options = []
         session_order = {}
         for q in questions:
@@ -6545,9 +6946,8 @@ def take_test(test_id):
         conn.close()
         session.pop(f"test_order_{test_id}", None)
         log_activity(username, f"completed lesson {test_id} — 100%")
-        return redirect(url_for("learner_tests"))
+        return redirect(url_for("lesson_tests"))
 
-    # Now mark all questions
     score = 0
     total = 0
     answers_to_save = []
@@ -6813,6 +7213,7 @@ def reuse_test(test_id):
 
 if __name__ == "__main__":
     init_db()
+    init_marking_db()
     cleanup = threading.Thread(target=cleanup_thread, daemon=True)
     cleanup.start()
     

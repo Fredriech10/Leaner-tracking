@@ -15,6 +15,7 @@
         .topbar-user a { color: white; text-decoration: none; font-weight: bold; }
         .topbar-user a:hover { text-decoration: underline; }
         .page { padding: 20px 24px; width: 90%; max-width: 90%; margin: 0 auto; }
+        .table-wrap { width: 100%; overflow-x: auto; -webkit-overflow-scrolling: touch; }
         table { border-collapse: collapse; width: 100%; margin-top: 20px; }
         th, td { border: 1px solid #ddd; padding: 10px; text-align: left; }
         th { background: #f0f0f0; }
@@ -36,6 +37,7 @@
         td:last-child form,
         td:last-child button { vertical-align: middle; }
         td:last-child form { display: inline-flex; margin: 0; }
+        .action-cell { display: flex; gap: 6px; align-items: center; flex-wrap: wrap; min-width: 210px; }
 
         /* Reuse modal */
         .modal-overlay { display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.5); z-index:9999; align-items:center; justify-content:center; }
@@ -141,6 +143,7 @@
 
 <h3>Existing Tests</h3>
 {% if test_list %}
+<div class="table-wrap">
 <table>
     <tr>
         <th>Title</th>
@@ -157,6 +160,7 @@
     </tr>
     {{ test_list | safe }}
 </table>
+</div>
 {% else %}
 <p>No tests created yet.</p>
 {% endif %}

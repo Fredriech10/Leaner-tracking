@@ -153,6 +153,10 @@
         .actions { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 12px; }
         .edit-panel { display: none; margin-top: 14px; padding: 14px; background: #fff7ed; border: 1px solid #fed7aa; border-radius: 8px; }
         .edit-panel.open { display: block; }
+        .autosave-status { color: #64748b; font-size: 0.85em; align-self: center; }
+        .autosave-status.saving { color: #b45309; }
+        .autosave-status.saved { color: #15803d; }
+        .autosave-status.error { color: #dc2626; }
         .rte-toolbar { display: flex; gap: 5px; margin-bottom: 5px; flex-wrap: wrap; }
         .rte-btn { border: 1px solid #cbd5e1; background: white; border-radius: 6px; padding: 5px 10px; cursor: pointer; }
         .rte-editor {
@@ -549,6 +553,11 @@
 
                     <div class="actions">
                         <button type="button" class="btn btn-warning" onclick="toggleEdit({{ q_id }})">Edit</button>
+                        <form method="post" style="margin:0;">
+                            <input type="hidden" name="action" value="duplicate_question">
+                            <input type="hidden" name="question_id" value="{{ q_id }}">
+                            <button type="submit" class="btn btn-muted">Duplicate</button>
+                        </form>
                         <form method="post" onsubmit="return confirm('Delete this slide?')" style="margin:0;">
                             <input type="hidden" name="action" value="delete_question">
                             <input type="hidden" name="question_id" value="{{ q_id }}">
@@ -557,7 +566,7 @@
                     </div>
 
                     <div class="edit-panel" id="edit_{{ q_id }}">
-                    <form method="post">
+                    <form method="post" class="autosave-form" data-question-id="{{ q_id }}">
                         <input type="hidden" name="action" value="edit_question">
                         <input type="hidden" name="question_id" value="{{ q_id }}">
                         <input type="hidden" name="question_type" value="{{ q_type }}">
@@ -610,6 +619,7 @@
                         <div class="actions">
                             <button type="submit" class="btn btn-primary" onclick="syncAllRTEs()">Save Changes</button>
                             <button type="button" class="btn btn-muted" onclick="toggleEdit({{ q_id }})">Cancel</button>
+                            <span class="autosave-status" id="autosave_{{ q_id }}">Auto-save ready</span>
                         </div>
                     </form>
                     </div>
@@ -646,7 +656,10 @@ function buildRTE(editorId, hiddenId, initialHtml) {
     editor.innerHTML = initialHtml || '';
     cleanLegacyBackgrounds(editor);
     prepareSlideBoxes(editor);
-    editor.addEventListener('input', () => syncRTE(editorId, hiddenId));
+    editor.addEventListener('input', () => {
+        syncRTE(editorId, hiddenId);
+        scheduleAutosaveForEditor(editorId);
+    });
     editor.addEventListener('mousedown', startSlideBoxDrag);
     syncRTE(editorId, hiddenId);
 }
@@ -778,6 +791,7 @@ function deleteSlideBox(box) {
     box.remove();
     if (editor) {
         syncRTE(editor.id, 'hidden_' + editor.id);
+        scheduleAutosaveForEditor(editor.id);
         editor.focus();
     }
 }
@@ -847,8 +861,14 @@ document.addEventListener('mousemove', event => {
     dragBox.style.top = top + 'px';
 });
 document.addEventListener('mouseup', () => {
-    if (dragBox && dragEditor) syncRTE(dragEditor.id, 'hidden_' + dragEditor.id);
-    if (resizeBox && resizeEditor) syncRTE(resizeEditor.id, 'hidden_' + resizeEditor.id);
+    if (dragBox && dragEditor) {
+        syncRTE(dragEditor.id, 'hidden_' + dragEditor.id);
+        scheduleAutosaveForEditor(dragEditor.id);
+    }
+    if (resizeBox && resizeEditor) {
+        syncRTE(resizeEditor.id, 'hidden_' + resizeEditor.id);
+        scheduleAutosaveForEditor(resizeEditor.id);
+    }
     dragBox = null;
     dragEditor = null;
     resizeBox = null;
@@ -1059,6 +1079,58 @@ function addMatchTo(listId) {
 }
 function addEditOption(listId, inputType) { addOptionTo(listId, inputType); }
 function addEditMatchRow(listId) { addMatchTo(listId); }
+const autosaveTimers = {};
+function getAutosaveFormFromEditor(editorId) {
+    const editor = document.getElementById(editorId);
+    return editor ? editor.closest('form.autosave-form') : null;
+}
+function getAutosaveStatus(form) {
+    return form ? document.getElementById('autosave_' + form.dataset.questionId) : null;
+}
+function setAutosaveStatus(form, text, state) {
+    const status = getAutosaveStatus(form);
+    if (!status) return;
+    status.textContent = text;
+    status.className = 'autosave-status' + (state ? ' ' + state : '');
+}
+function scheduleAutosaveForEditor(editorId) {
+    const form = getAutosaveFormFromEditor(editorId);
+    if (form) scheduleAutosave(form);
+}
+function scheduleAutosave(form) {
+    if (!form || !form.classList.contains('autosave-form')) return;
+    const key = form.dataset.questionId;
+    clearTimeout(autosaveTimers[key]);
+    setAutosaveStatus(form, 'Unsaved changes...', 'saving');
+    autosaveTimers[key] = setTimeout(() => autosaveForm(form), 1200);
+}
+function autosaveForm(form) {
+    if (!form || form.dataset.autosaving === '1') return;
+    syncAllRTEs();
+    attachBackgroundToForm(form);
+    const data = new FormData(form);
+    data.set('action', 'autosave_question');
+    form.dataset.autosaving = '1';
+    setAutosaveStatus(form, 'Saving...', 'saving');
+    fetch(window.location.href, {
+        method: 'POST',
+        body: data,
+        headers: { 'X-Requested-With': 'fetch' }
+    })
+    .then(response => {
+        if (!response.ok) throw new Error('Save failed');
+        return response.json();
+    })
+    .then(result => {
+        setAutosaveStatus(form, result.saved_at ? 'Auto-saved ' + result.saved_at : 'Auto-saved', 'saved');
+    })
+    .catch(() => {
+        setAutosaveStatus(form, 'Auto-save failed. Use Save Changes.', 'error');
+    })
+    .finally(() => {
+        form.dataset.autosaving = '0';
+    });
+}
 document.addEventListener('DOMContentLoaded', () => {
     buildRTE('rte_add', 'hidden_rte_add', '');
     document.querySelectorAll('[id^="rte_edit_"][id$="_wrapper"]').forEach(wrapper => {
@@ -1076,6 +1148,13 @@ document.addEventListener('DOMContentLoaded', () => {
             attachBackgroundToForm(form);
             rememberBuilderPosition();
         });
+    });
+    document.querySelectorAll('form.autosave-form').forEach(form => {
+        form.addEventListener('input', event => {
+            if (event.target.closest('.rte-editor')) return;
+            scheduleAutosave(form);
+        });
+        form.addEventListener('change', () => scheduleAutosave(form));
     });
     requestAnimationFrame(() => {
         scaleSlideThumbnails();

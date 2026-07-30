@@ -1,0 +1,103 @@
+2026-05-16 21:44:00,113 [INFO] marking_experiment_ui: Generate Task JSON clicked. backend=ollama question_paper=E:\Sripts\Leaner tracking\Paragraph formatting Questions.docx marksheet=E:\Sripts\Leaner tracking\Paragraph formatting Memo.docx
+2026-05-16 21:54:35,937 [INFO] marking_experiment_ui: Generate Task JSON clicked. backend=ollama question_paper=E:\Sripts\Leaner tracking\Paragraph formatting Questions.docx marksheet=E:\Sripts\Leaner tracking\Paragraph formatting Memo.docx
+2026-05-16 22:25:26,374 [INFO] marking_experiment_ui: Generate Task JSON clicked. backend=ollama question_paper=E:\Sripts\Leaner tracking\Paragraph formatting Questions.docx marksheet=E:\Sripts\Leaner tracking\Paragraph formatting Memo.docx
+2026-05-16 23:13:17,719 [INFO] marking_experiment_ui: Generate Task JSON clicked. backend=ollama question_paper=E:\Sripts\Leaner tracking\Paragraph formatting Questions.docx marksheet=E:\Sripts\Leaner tracking\Paragraph formatting Memo.docx
+2026-05-16 23:20:28,905 [INFO] marking_experiment_ui: Generate Task JSON clicked. backend=ollama question_paper=E:\Sripts\Leaner tracking\Paragraph formatting Questions.docx marksheet=E:\Sripts\Leaner tracking\Paragraph formatting Memo.docx
+2026-05-31 17:07:30,917 [INFO] marking_experiment_ui: Generate Task JSON clicked. backend=ollama question_paper=E:\Sripts\Leaner tracking\COMPUTER APPLICATIONS TECHNOLOGY test 1 memo.docx marksheet=E:\Sripts\Leaner tracking\COMPUTER APPLICATIONS TECHNOLOGY test 1 qp.docx
+2026-05-31 21:21:17,933 [INFO] marking_experiment_ui: Generate Task JSON clicked. backend=ollama question_paper=E:\Sripts\Leaner tracking\COMPUTER APPLICATIONS TECHNOLOGY test 1 memo.docx marksheet=E:\Sripts\Leaner tracking\COMPUTER APPLICATIONS TECHNOLOGY test 1 qp.docx
+2026-05-31 22:03:28,149 [INFO] marking_experiment_ui: Generate Task JSON clicked. backend=ollama question_paper=E:\Sripts\Leaner tracking\COMPUTER APPLICATIONS TECHNOLOGY test 1 qp.docx marksheet=E:\Sripts\Leaner tracking\COMPUTER APPLICATIONS TECHNOLOGY test 1 memo.docx
+2026-05-31 22:14:28,704 [WARNING] marking_experiment_ui: Generate Task JSON produced warnings. backend=ollama program=word warnings=["LLM failed (Ollama HTTP API failed and CLI fallback also failed. HTTP error: HTTPConnectionPool(host='127.0.0.1', port=11434): Read timed out. (read timeout=120). CLI error: Ollama CLI timed out: Command '['ollama', 'run', 'qwen2.5-coder:7b-instruct-q4_K_M', '--format', 'json']' timed out after 180 seconds.); parsed heuristically from memo tables."]
+2026-06-02 08:28:37,180 [INFO] marking_experiment_ui: Generate Task JSON clicked. backend=ollama question_paper=E:\Sripts\Leaner tracking\COMPUTER APPLICATIONS TECHNOLOGY test 1 qp.docx marksheet=E:\Sripts\Leaner tracking\COMPUTER APPLICATIONS TECHNOLOGY test 1 memo.docx
+2026-06-02 08:42:04,083 [INFO] marking_experiment_ui: Generate Task JSON clicked. backend=ollama question_paper=E:\Sripts\Leaner tracking\COMPUTER APPLICATIONS TECHNOLOGY test 1 qp.docx marksheet=E:\Sripts\Leaner tracking\COMPUTER APPLICATIONS TECHNOLOGY test 1 memo.docx
+2026-06-02 08:51:03,445 [INFO] marking_experiment_ui: Generate Task JSON clicked. backend=ollama question_paper=E:\Sripts\Leaner tracking\Paragraph formatting Questions.docx marksheet=E:\Sripts\Leaner tracking\Paragraph formatting Memo.docx
+2026-06-02 08:57:02,916 [INFO] marking_experiment_ui: Generate Task JSON clicked. backend=ollama question_paper=E:\Sripts\Leaner tracking\Paragraph formatting Questions.docx marksheet=E:\Sripts\Leaner tracking\Paragraph formatting Memo.docx
+2026-06-02 09:55:53,658 [INFO] marking_experiment_ui: Generate Task JSON clicked. backend=ollama question_paper=E:\Sripts\Leaner tracking\COMPUTER APPLICATIONS TECHNOLOGY test 1 qp.docx marksheet=E:\Sripts\Leaner tracking\COMPUTER APPLICATIONS TECHNOLOGY test 1 memo.docx
+2026-06-02 10:01:09,263 [WARNING] marking_experiment_ui: Generate Task JSON produced warnings. backend=ollama program=word warnings=['LLM failed (Unable to extract valid JSON from LLM response.); parsed heuristically from memo tables.']
+2026-06-02 10:08:40,786 [INFO] marking_experiment_ui: Generate Task JSON clicked. backend=ollama question_paper=E:\Sripts\Leaner tracking\COMPUTER APPLICATIONS TECHNOLOGY test 1 qp.docx marksheet=E:\Sripts\Leaner tracking\COMPUTER APPLICATIONS TECHNOLOGY test 1 memo.docx
+2026-06-02 10:19:43,342 [WARNING] marking_experiment_ui: Generate Task JSON produced warnings. backend=ollama program=word warnings=["LLM failed (Ollama HTTP API failed and CLI fallback also failed. HTTP error: HTTPConnectionPool(host='127.0.0.1', port=11434): Read timed out. (read timeout=120). CLI error: Ollama CLI timed out: Command '['ollama', 'run', 'qwen2.5-coder:7b-instruct-q4_K_M', '--format', 'json']' timed out after 180 seconds.); parsed heuristically from memo tables."]
+2026-06-02 13:04:50,892 [INFO] marking_experiment_ui: Generate Task JSON clicked. backend=ollama question_paper=E:\Sripts\Leaner tracking\COMPUTER APPLICATIONS TECHNOLOGY test 1 memo.docx marksheet=E:\Sripts\Leaner tracking\COMPUTER APPLICATIONS TECHNOLOGY test 1 qp.docx
+2026-06-02 13:05:21,273 [ERROR] marking_experiment_ui: Generate task JSON failed (exception). backend=ollama program=word question_paper=E:\Sripts\Leaner tracking\COMPUTER APPLICATIONS TECHNOLOGY test 1 memo.docx marksheet=E:\Sripts\Leaner tracking\COMPUTER APPLICATIONS TECHNOLOGY test 1 qp.docx
+Traceback (most recent call last):
+  File "E:\Sripts\Leaner tracking\Marking_Experiment\ui.py", line 337, in _generate_task_json
+    raise RuntimeError("Unable to start Ollama at http://127.0.0.1:11434. Check that Ollama is installed and not blocked by another process.")
+RuntimeError: Unable to start Ollama at http://127.0.0.1:11434. Check that Ollama is installed and not blocked by another process.
+2026-06-02 13:06:45,510 [INFO] marking_experiment_ui: Generate Task JSON clicked. backend=ollama question_paper=E:\Sripts\Leaner tracking\COMPUTER APPLICATIONS TECHNOLOGY test 1 memo.docx marksheet=E:\Sripts\Leaner tracking\COMPUTER APPLICATIONS TECHNOLOGY test 1 qp.docx
+2026-06-02 13:07:15,926 [ERROR] marking_experiment_ui: Generate task JSON failed (exception). backend=ollama program=word question_paper=E:\Sripts\Leaner tracking\COMPUTER APPLICATIONS TECHNOLOGY test 1 memo.docx marksheet=E:\Sripts\Leaner tracking\COMPUTER APPLICATIONS TECHNOLOGY test 1 qp.docx
+Traceback (most recent call last):
+  File "E:\Sripts\Leaner tracking\Marking_Experiment\ui.py", line 337, in _generate_task_json
+    raise RuntimeError("Unable to start Ollama at http://127.0.0.1:11434. Check that Ollama is installed and not blocked by another process.")
+RuntimeError: Unable to start Ollama at http://127.0.0.1:11434. Check that Ollama is installed and not blocked by another process.
+2026-06-02 13:13:29,416 [INFO] marking_experiment_ui: Generate Task JSON clicked. backend=ollama question_paper=E:\Sripts\Leaner tracking\COMPUTER APPLICATIONS TECHNOLOGY test 1 qp.docx marksheet=E:\Sripts\Leaner tracking\COMPUTER APPLICATIONS TECHNOLOGY test 1 memo.docx
+2026-06-02 13:13:59,819 [ERROR] marking_experiment_ui: Generate task JSON failed (exception). backend=ollama program=word question_paper=E:\Sripts\Leaner tracking\COMPUTER APPLICATIONS TECHNOLOGY test 1 qp.docx marksheet=E:\Sripts\Leaner tracking\COMPUTER APPLICATIONS TECHNOLOGY test 1 memo.docx
+Traceback (most recent call last):
+  File "E:\Sripts\Leaner tracking\Marking_Experiment\ui.py", line 337, in _generate_task_json
+    raise RuntimeError("Unable to start Ollama at http://127.0.0.1:11434. Check that Ollama is installed and not blocked by another process.")
+RuntimeError: Unable to start Ollama at http://127.0.0.1:11434. Check that Ollama is installed and not blocked by another process.
+2026-06-02 13:23:02,125 [INFO] marking_experiment_ui: Generate Task JSON clicked. backend=ollama question_paper=E:\Sripts\Leaner tracking\Bulletpont questions.docx marksheet=E:\Sripts\Leaner tracking\Bulletpont Memo.docx
+2026-06-02 13:23:32,501 [ERROR] marking_experiment_ui: Generate task JSON failed (exception). backend=ollama program=word question_paper=E:\Sripts\Leaner tracking\Bulletpont questions.docx marksheet=E:\Sripts\Leaner tracking\Bulletpont Memo.docx
+Traceback (most recent call last):
+  File "E:\Sripts\Leaner tracking\Marking_Experiment\ui.py", line 337, in _generate_task_json
+    raise RuntimeError("Unable to start Ollama at http://127.0.0.1:11434. Check that Ollama is installed and not blocked by another process.")
+RuntimeError: Unable to start Ollama at http://127.0.0.1:11434. Check that Ollama is installed and not blocked by another process.
+2026-06-02 13:30:36,884 [INFO] marking_experiment_ui: Generate Task JSON clicked. backend=ollama question_paper=E:\Sripts\Leaner tracking\Bulletpont questions.docx marksheet=E:\Sripts\Leaner tracking\Bulletpont Memo.docx
+2026-06-02 13:31:07,123 [ERROR] marking_experiment_ui: Generate task JSON failed (exception). backend=ollama program=word question_paper=E:\Sripts\Leaner tracking\Bulletpont questions.docx marksheet=E:\Sripts\Leaner tracking\Bulletpont Memo.docx
+Traceback (most recent call last):
+  File "E:\Sripts\Leaner tracking\Marking_Experiment\ui.py", line 337, in _generate_task_json
+    question_paper_text = self._read_text_file(self.question_paper_path)
+            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+RuntimeError: Unable to start Ollama at http://127.0.0.1:11434. Check that Ollama is installed and not blocked by another process.
+2026-06-02 14:01:05,374 [INFO] marking_experiment_ui: Generate Task JSON clicked. question_paper=E:\Sripts\Leaner tracking\COMPUTER APPLICATIONS TECHNOLOGY test 1 qp.docx marksheet=E:\Sripts\Leaner tracking\COMPUTER APPLICATIONS TECHNOLOGY test 1 memo.docx
+2026-06-02 14:04:05,465 [WARNING] marking_experiment_ui: Generate Task JSON produced warnings. program=word warnings=["LLM failed (Ollama CLI timed out: Command '['ollama', 'run', 'qwen2.5-coder:7b-instruct-q4_K_M', '--format', 'json']' timed out after 180 seconds.); parsed heuristically from memo tables."]
+2026-06-02 14:13:57,634 [INFO] marking_experiment_ui: Generate Task JSON clicked. question_paper=E:\Sripts\Leaner tracking\COMPUTER APPLICATIONS TECHNOLOGY test 1 memo.docx marksheet=E:\Sripts\Leaner tracking\COMPUTER APPLICATIONS TECHNOLOGY test 1 qp.docx
+2026-06-02 14:16:57,701 [ERROR] marking_experiment_ui: Generate task JSON failed (exception). program=word question_paper=E:\Sripts\Leaner tracking\COMPUTER APPLICATIONS TECHNOLOGY test 1 memo.docx marksheet=E:\Sripts\Leaner tracking\COMPUTER APPLICATIONS TECHNOLOGY test 1 qp.docx
+Traceback (most recent call last):
+  File "E:\Sripts\Leaner tracking\Marking_Experiment\marksheet_parser.py", line 761, in _call_ollama_cli
+    result = subprocess.run(
+        command,
+    ...<6 lines>...
+        timeout=180,
+    )
+  File "C:\Users\FPSGB6088\AppData\Local\Python\pythoncore-3.14-64\Lib\subprocess.py", line 556, in run
+    stdout, stderr = process.communicate(input, timeout=timeout)
+                     ~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\FPSGB6088\AppData\Local\Python\pythoncore-3.14-64\Lib\subprocess.py", line 1220, in communicate
+    stdout, stderr = self._communicate(input, endtime, timeout)
+                     ~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\FPSGB6088\AppData\Local\Python\pythoncore-3.14-64\Lib\subprocess.py", line 1663, in _communicate
+    raise TimeoutExpired(self.args, orig_timeout)
+subprocess.TimeoutExpired: Command '['ollama', 'run', 'qwen2.5-coder:7b-instruct-q4_K_M', '--format', 'json']' timed out after 180 seconds
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "E:\Sripts\Leaner tracking\Marking_Experiment\marksheet_parser.py", line 47, in parse
+    response_text = self._call_ollama(prompt)
+  File "E:\Sripts\Leaner tracking\Marking_Experiment\marksheet_parser.py", line 754, in _call_ollama
+    return self._call_ollama_cli(prompt)
+           ~~~~~~~~~~~~~~~~~~~~~^^^^^^^^
+  File "E:\Sripts\Leaner tracking\Marking_Experiment\marksheet_parser.py", line 772, in _call_ollama_cli
+    raise RuntimeError(f"Ollama CLI timed out: {exc}.")
+RuntimeError: Ollama CLI timed out: Command '['ollama', 'run', 'qwen2.5-coder:7b-instruct-q4_K_M', '--format', 'json']' timed out after 180 seconds.
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "E:\Sripts\Leaner tracking\Marking_Experiment\ui.py", line 368, in _generate_task_json
+    parsed = parser.parse(
+        question_paper_text,
+    ...<2 lines>...
+        filename=str(self.marksheet_path),
+    )
+  File "E:\Sripts\Leaner tracking\Marking_Experiment\marksheet_parser.py", line 59, in parse
+    raise RuntimeError(
+        f"LLM parsing failed and heuristic fallback found no questions. LLM error: {llm_error}"
+    )
+RuntimeError: LLM parsing failed and heuristic fallback found no questions. LLM error: Ollama CLI timed out: Command '['ollama', 'run', 'qwen2.5-coder:7b-instruct-q4_K_M', '--format', 'json']' timed out after 180 seconds.
+2026-06-02 14:17:25,688 [INFO] marking_experiment_ui: Generate Task JSON clicked. question_paper=E:\Sripts\Leaner tracking\COMPUTER APPLICATIONS TECHNOLOGY test 1 qp.docx marksheet=E:\Sripts\Leaner tracking\COMPUTER APPLICATIONS TECHNOLOGY test 1 memo.docx
+2026-06-02 14:20:25,726 [WARNING] marking_experiment_ui: Generate Task JSON produced warnings. program=word warnings=["LLM failed (Ollama CLI timed out: Command '['ollama', 'run', 'qwen2.5-coder:7b-instruct-q4_K_M', '--format', 'json']' timed out after 180 seconds.); parsed heuristically from memo tables."]
+2026-06-02 14:57:18,188 [INFO] marking_experiment_ui: Generate Task JSON clicked. question_paper=E:\Sripts\Leaner tracking\Paragraph formatting Questions.docx marksheet=E:\Sripts\Leaner tracking\Paragraph formatting Memo.docx
+2026-06-02 15:00:28,302 [WARNING] marking_experiment_ui: Generate Task JSON produced warnings. program=word warnings=["LLM failed (Ollama CLI timed out: Command '['ollama', 'run', 'qwen2.5-coder:7b-instruct-q4_K_M', '--format', 'json']' timed out after 180 seconds.); parsed heuristically from memo tables."]
+2026-06-02 15:33:27,803 [INFO] marking_experiment_ui: Generate Task JSON clicked. question_paper=E:\Sripts\Leaner tracking\COMPUTER APPLICATIONS TECHNOLOGY test 1 qp.docx marksheet=E:\Sripts\Leaner tracking\COMPUTER APPLICATIONS TECHNOLOGY test 1 memo.docx
+2026-06-02 15:36:37,922 [WARNING] marking_experiment_ui: Generate Task JSON produced warnings. program=word warnings=["LLM failed (Ollama CLI timed out: Command '['ollama', 'run', 'qwen2.5-coder:7b-instruct-q4_K_M', '--format', 'json']' timed out after 180 seconds.); parsed heuristically from memo tables."]
+2026-06-02 15:40:30,994 [INFO] marking_experiment_ui: Generate Task JSON clicked. question_paper=E:\Sripts\Leaner tracking\COMPUTER APPLICATIONS TECHNOLOGY test 1 qp.docx marksheet=E:\Sripts\Leaner tracking\COMPUTER APPLICATIONS TECHNOLOGY test 1 memo.docx
+2026-06-02 15:43:31,327 [WARNING] marking_experiment_ui: Generate Task JSON produced warnings. program=word warnings=["LLM failed (Ollama CLI timed out: Command '['ollama', 'run', 'qwen2.5-coder:7b-instruct-q4_K_M', '--format', 'json']' timed out after 180 seconds.); parsed heuristically from memo tables."]

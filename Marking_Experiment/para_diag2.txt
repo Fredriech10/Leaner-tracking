@@ -1,0 +1,28 @@
+=== SECTION ===
+  page_width=7560310  page_height=10692130
+  top_margin=457200  bottom=457200  left=457200  right=457200
+
+=== PARAGRAPHS (with raw line_spacing) ===
+  [P0] al=None ls_raw=None ls_rule=None fi=None fi_cm=None | The Growing Crisis of Electronic Waste
+  [P1] al=None ls_raw=None ls_rule=None fi=None fi_cm=None | Introduction
+  [P2] al=justify ls_raw=None ls_rule=None fi=None fi_cm=None | E-waste, refers to discarded electrical or electronic device
+  [P3] al=None ls_raw=None ls_rule=None fi=None fi_cm=None | Electronic waste is particularly dangerous because it contai
+  [P4] al=None ls_raw=None ls_rule=None fi=None fi_cm=None | Global Trends
+  [P5] al=None ls_raw=None ls_rule=None fi=180340 fi_cm=0.501 | According to recent reports, the world produces over 50 mill
+  [P6] al=None ls_raw=None ls_rule=None fi=None fi_cm=None | Environmental Impact
+  [P7] al=None ls_raw=None ls_rule=None fi=None fi_cm=None | The extraction of precious metals from e-waste, such as gold
+  [P8] al=None ls_raw=None ls_rule=None fi=None fi_cm=None | Health Risks
+  [P9] al=None ls_raw=190500 ls_rule=EXACTLY (4) fi=None fi_cm=None | Exposure to the hazardous materials found in e-waste can lea
+  [P10] al=None ls_raw=None ls_rule=None fi=None fi_cm=None | Disposal
+  [P11] al=None ls_raw=551815 ls_rule=EXACTLY (4) fi=None fi_cm=None | V
+  [P12] al=None ls_raw=None ls_rule=None fi=None fi_cm=None | ideo provides a powerful way to help you prove your point. W
+  [P13] al=None ls_raw=None ls_rule=None fi=None fi_cm=None | Conclusion
+  [P14] al=None ls_raw=None ls_rule=None fi=None fi_cm=None | Addressing the e-waste crisis requires a multi-faceted appro
+
+=== SETTINGS (hyphenation, margins) ===
+  autoHyphenation: []
+
+=== HEADER/FOOTER/WATERMARK ===
+
+=== PAGE BORDER ===
+  pgBorders found: 0

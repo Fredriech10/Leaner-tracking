@@ -1,0 +1,109 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Edit Marking Setup</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; color: #222; }
+        .topbar { margin-bottom: 18px; }
+        .topbar a, .topbar span { margin-right: 14px; text-decoration: none; color: #005a9e; }
+        .card { border: 1px solid #ccc; border-radius: 8px; padding: 18px; background: white; margin-bottom: 18px; }
+        label { display: block; font-weight: 600; margin-bottom: 6px; }
+        input[type="text"], input[type="number"], textarea, select { width: 100%; padding: 8px; border: 1px solid #bbb; border-radius: 4px; }
+        textarea { min-height: 70px; font-family: Consolas, monospace; font-size: 0.9em; }
+        button { padding: 10px 16px; border: none; border-radius: 4px; background: #005a9e; color: white; cursor: pointer; }
+        button:hover { background: #00457a; }
+        table { width: 100%; border-collapse: collapse; margin-top: 12px; font-size: 0.88em; }
+        th, td { border-bottom: 1px solid #ddd; padding: 8px; vertical-align: top; }
+        th { background: #f5f5f5; text-align: left; position: sticky; top: 0; }
+        .grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; }
+        .notice { color: #006400; margin-bottom: 12px; }
+        .error { color: #a4262c; margin-bottom: 12px; }
+        .wide { min-width: 230px; }
+        .json-field { min-width: 260px; }
+        .small { width: 80px; }
+        .table-wrap { overflow-x: auto; max-height: 70vh; border: 1px solid #ddd; }
+    </style>
+</head>
+<body>
+    <div class="topbar">
+        <a href="/marking_setup">← Marking Setup</a>
+        <a href="/teacher_dashboard">Dashboard</a>
+        <span>👤 {{ session_username }}</span>
+        <a href="/logout">Logout</a>
+    </div>
+
+    <div class="card">
+        <h1>Edit Marking Setup</h1>
+        {% if error %}<div class="error">{{ error }}</div>{% endif %}
+        {% if message %}<div class="notice">{{ message }}</div>{% endif %}
+
+        <form method="post" onsubmit="return syncDisabledRows()">
+            <div class="grid">
+                <div>
+                    <label>Task Name</label>
+                    <input type="text" name="task_name" value="{{ task_definition.get('task_name', title) }}" required>
+                </div>
+                <div>
+                    <label>Program</label>
+                    <input type="text" name="program" value="{{ task_definition.get('program', 'word') }}" required>
+                </div>
+                <div>
+                    <label>Submission File Hint</label>
+                    <input type="text" name="file" value="{{ task_definition.get('file', 'student_file.docx') }}">
+                </div>
+                <div>
+                    <label>Total Marks</label>
+                    <input type="text" value="{{ task_definition.get('total_marks', 0) }}" readonly>
+                </div>
+            </div>
+
+            <label style="margin-top:12px;">Notes</label>
+            <textarea name="notes" style="font-family:Arial,sans-serif;">{{ notes }}</textarea>
+
+            <input type="hidden" name="row_count" value="{{ questions|length }}">
+
+            <div class="table-wrap">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Check</th>
+                            <th>No.</th>
+                            <th>Description</th>
+                            <th>Domain</th>
+                            <th>Type</th>
+                            <th>Target JSON</th>
+                            <th>Expected JSON</th>
+                            <th>Marks</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for q in questions %}
+                        <tr>
+                            <td><input type="checkbox" name="enabled_{{ loop.index0 }}" checked></td>
+                            <td><input class="small" type="text" name="question_number_{{ loop.index0 }}" value="{{ q.get('question_number', '') }}"></td>
+                            <td><textarea class="wide" name="description_{{ loop.index0 }}">{{ q.get('description', '') }}</textarea></td>
+                            <td><input type="text" name="domain_{{ loop.index0 }}" value="{{ q.get('domain', '') }}"></td>
+                            <td><input type="text" name="type_{{ loop.index0 }}" value="{{ q.get('type', '') }}"></td>
+                            <td><textarea class="json-field" name="target_{{ loop.index0 }}">{{ q.get('target', {}) | tojson }}</textarea></td>
+                            <td><textarea class="json-field" name="expected_{{ loop.index0 }}">{{ q.get('expected', true) | tojson }}</textarea></td>
+                            <td><input class="small" type="number" min="1" name="marks_{{ loop.index0 }}" value="{{ q.get('marks', 1) }}"></td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+
+            <p style="margin-top:14px;">
+                <button type="submit">Save Marking Setup</button>
+            </p>
+        </form>
+    </div>
+
+    <script>
+        function syncDisabledRows() {
+            return confirm('Save these marking checks? Disabled rows will be removed from the generated JSON.');
+        }
+    </script>
+</body>
+</html>

@@ -1,0 +1,190 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Response Review</title>
+    <style>
+        * { box-sizing: border-box; }
+        body { font-family: Arial, sans-serif; margin: 0; padding: 0; background: #f0f2f5; color: #222; }
+        .topbar { background: #005a9e; color: white; padding: 12px 24px; display: flex; justify-content: space-between; align-items: center; gap: 10px; position: sticky; top: 0; z-index: 999; }
+        .topbar h1 { margin: 0; font-size: 1.05em; white-space: nowrap; }
+        .page { padding: 20px 24px; max-width: 1500px; margin: 0 auto; }
+        .card { background: white; border-radius: 8px; padding: 18px; border: 1px solid #ddd; margin-bottom: 16px; }
+        .card h3 { margin: 0 0 14px 0; font-size: 0.98em; color: #005a9e; border-bottom: 2px solid #f0f0f0; padding-bottom: 6px; }
+        .filter-row { display: flex; gap: 12px; flex-wrap: wrap; align-items: flex-end; }
+        .form-group { display: flex; flex-direction: column; gap: 4px; min-width: 180px; }
+        .form-group label { font-weight: bold; font-size: 0.88em; }
+        select { padding: 8px 10px; border: 1px solid #ccc; border-radius: 6px; }
+        .btn { display: inline-block; padding: 8px 16px; border-radius: 6px; border: 0; background: #005a9e; color: white; text-decoration: none; font-weight: bold; cursor: pointer; }
+        .btn-danger { background: #c62828; }
+        .summary-grid { display: grid; grid-template-columns: 1fr; gap: 16px; }
+        .question-card { border: 1px solid #e5e7eb; border-radius: 8px; padding: 14px; margin-bottom: 12px; background: #fbfdff; }
+        .question-meta { color: #64748b; font-size: 0.82em; margin-bottom: 10px; }
+        .option-row { display: grid; grid-template-columns: minmax(180px, 1fr) 80px 80px 88px; gap: 10px; padding: 6px 0; border-bottom: 1px solid #eef2f7; align-items: center; }
+        .option-row:last-child { border-bottom: none; }
+        .option-action { display: flex; justify-content: flex-end; min-height: 38px; align-items: center; }
+        .option-action form { margin: 0; }
+        .question-head { display: flex; justify-content: space-between; gap: 10px; align-items: flex-start; }
+        .match-table { width: 100%; margin-top: 10px; border-collapse: collapse; font-size: 0.9em; }
+        .match-table th { background: #f8fafc; }
+        .match-table td, .match-table th { padding: 8px 10px; border-bottom: 1px solid rgba(0,0,0,0.08); vertical-align: top; }
+        .correct-option { color: #107C10; font-weight: bold; }
+        .accepted-box { margin: 12px 0 4px; padding: 10px 12px; border-radius: 8px; background: #eefaf0; border: 1px solid #b7e4c0; }
+        .accepted-title { font-size: 0.82em; font-weight: bold; color: #166534; text-transform: uppercase; letter-spacing: 0.04em; margin-bottom: 6px; }
+        .accepted-value { color: #107C10; font-weight: bold; }
+        .edit-link { display: inline-flex; align-items: center; padding: 6px 10px; border-radius: 6px; background: #eef6ff; color: #005a9e; text-decoration: none; font-size: 0.82em; font-weight: bold; }
+        .flash { padding: 12px 14px; border-radius: 8px; margin-bottom: 14px; font-weight: bold; }
+        .flash.success { background: #dcfce7; color: #166534; border: 1px solid #86efac; }
+        .flash.error { background: #fee2e2; color: #991b1b; border: 1px solid #fca5a5; }
+        .review-form { margin-top: 12px; display: flex; gap: 10px; flex-wrap: wrap; align-items: flex-end; }
+        .review-form label { display: flex; flex-direction: column; gap: 4px; font-weight: bold; font-size: 0.88em; min-width: 280px; }
+        .review-form input { padding: 8px 10px; border: 1px solid #ccc; border-radius: 6px; }
+        .badge { padding: 3px 8px; border-radius: 999px; font-size: 0.78em; font-weight: bold; }
+        .badge-good { background: #c8f7c5; color: #107C10; }
+        .badge-warn { background: #ffe0b2; color: #b36b00; }
+        .badge-bad { background: #f7c5c5; color: #A4262C; }
+        table { width: 100%; border-collapse: collapse; font-size: 0.88em; }
+        th { background: #f5f5f5; padding: 8px 10px; text-align: left; color: #555; }
+        td { padding: 8px 10px; border-bottom: 1px solid #f0f0f0; vertical-align: top; }
+        .score-high { color: #107C10; font-weight: bold; }
+        .score-mid { color: #ff8c00; font-weight: bold; }
+        .score-low { color: #A4262C; font-weight: bold; }
+        .muted { color: #64748b; }
+        @media (max-width: 1000px) { .summary-grid { grid-template-columns: 1fr; } }
+    </style>
+</head>
+<body>
+<div class="topbar">
+    <h1>🧾 Response Review</h1>
+    <div class="topbar-links"></div>
+    <span class="topbar-user">👤 <a href="/edit_user/{{ session_username }}">{{ session_username }}</a></span>
+    <a href="/logout">Logout</a>
+</div>
+
+<div class="page">
+    {% with messages = get_flashed_messages(with_categories=true) %}
+    {% if messages %}
+        {% for category, message in messages %}
+        <div class="flash {{ category }}">{{ message }}</div>
+        {% endfor %}
+    {% endif %}
+    {% endwith %}
+
+    <div class="card">
+        <form method="get" class="filter-row">
+            <div class="form-group">
+                <label>Review Type</label>
+                <select name="type" onchange="this.form.submit()">
+                    <option value="theory" {% if review_type == 'theory' %}selected{% endif %}>Theory</option>
+                    <option value="practical" {% if review_type == 'practical' %}selected{% endif %}>Practical</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label>Group</label>
+                <select name="group" onchange="this.form.submit()">
+                    <option value="">All groups</option>
+                    {% for group in groups %}
+                    <option value="{{ group }}" {% if group == selected_group %}selected{% endif %}>{{ group }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="form-group" style="min-width:320px;">
+                <label>{{ 'Theory Test' if review_type == 'theory' else 'Practical Task' }}</label>
+                <select name="item" onchange="this.form.submit()">
+                    {% if not available_items %}
+                    <option value="">No review data available</option>
+                    {% else %}
+                        {% for item_value, item_name in available_items %}
+                        <option value="{{ item_value }}" {% if item_value|string == selected_item|string %}selected{% endif %}>{{ item_name }}</option>
+                        {% endfor %}
+                    {% endif %}
+                </select>
+            </div>
+        </form>
+    </div>
+
+    {% if item_label %}
+    <div class="summary-grid">
+        <div class="card">
+            <h3>Question Summary: {{ item_label }}</h3>
+            {% if question_summaries %}
+                {% for question in question_summaries %}
+                <div class="question-card">
+                    <div class="question-head">
+                        <div><strong>{{ loop.index }}. {{ question.question|safe }}</strong></div>
+                        {% if selected_test_id %}
+                        <a href="/manage_tests/{{ selected_test_id }}/questions?mode=test" class="edit-link">Edit Question</a>
+                        {% endif %}
+                    </div>
+                    <div class="question-meta">
+                        {{ question.type|replace('_', ' ')|title }}
+                        {% if question.marks != '' %} | {{ question.marks }} mark{{ 's' if question.marks != 1 }}{% endif %}
+                        | {{ question.responses }} responses
+                        | {{ question.correct_pct }}% correct
+                    </div>
+                    {% if question.accepted_answers and question.type in ['true_false', 'fill_in'] %}
+                    <div class="accepted-box">
+                        <div class="accepted-title">Accepted Answer{% if question.accepted_answers|length != 1 %}s{% endif %}</div>
+                        <div class="accepted-value">{{ question.accepted_answers | join(', ') }}</div>
+                    </div>
+                    {% endif %}
+                    {% if question.type == 'match' %}
+                    <table class="match-table">
+                        <tr><th>Column A</th><th>Accepted Match</th><th>Learner Responses</th></tr>
+                        {% for option in question.options %}
+                        <tr>
+                            <td>{{ option.left }}</td>
+                            <td class="correct-option">{{ option.accepted }}</td>
+                            <td>{{ option.responses | join(', ') if option.responses else 'No responses' }}</td>
+                        </tr>
+                        {% endfor %}
+                    </table>
+                    {% else %}
+                        {% for option in question.options %}
+                        <div class="option-row">
+                            <div class="{{ 'correct-option' if option.is_correct else '' }}">{{ option.label }}</div>
+                            <div>{{ option.count }}</div>
+                            <div>{{ option.pct }}%</div>
+                            <div class="option-action">
+                                {% if can_manage_reviews and review_type == 'theory' and question.type in ['true_false', 'fill_in'] and option.acceptable_answer %}
+                                <form method="post" action="/response_review/true_false_accept" style="margin:0;">
+                                    <input type="hidden" name="source" value="group">
+                                    <input type="hidden" name="test_id" value="{{ selected_item }}">
+                                    <input type="hidden" name="question_id" value="{{ question.question_id }}">
+                                    <input type="hidden" name="selected_group" value="{{ selected_group }}">
+                                    <input type="hidden" name="acceptable_answer" value="{{ option.acceptable_answer }}">
+                                    <button type="submit" class="btn">Add</button>
+                                </form>
+                                {% elif can_manage_reviews and review_type == 'theory' and question.type in ['true_false', 'fill_in'] and option.remove_answer %}
+                                <form method="post" action="/response_review/accepted_answer_remove" style="margin:0;">
+                                    <input type="hidden" name="source" value="group">
+                                    <input type="hidden" name="test_id" value="{{ selected_item }}">
+                                    <input type="hidden" name="question_id" value="{{ question.question_id }}">
+                                    <input type="hidden" name="selected_group" value="{{ selected_group }}">
+                                    <input type="hidden" name="remove_answer" value="{{ option.remove_answer }}">
+                                    <button type="submit" class="btn btn-danger">Remove</button>
+                                </form>
+                                {% endif %}
+                            </div>
+                        </div>
+                        {% endfor %}
+                    {% endif %}
+                </div>
+                {% endfor %}
+            {% else %}
+            <p class="muted">No question-level data available yet for this selection.</p>
+            {% endif %}
+        </div>
+
+    </div>
+    {% else %}
+    <div class="card">
+        <p class="muted">Select a review type and assessment to inspect learner answers and grouped response patterns.</p>
+        {% if review_type == 'practical' %}
+        <p class="muted">Practical question-level review is available for new submissions that include structured marking detail.</p>
+        {% endif %}
+    </div>
+    {% endif %}
+</div>
+</body>
+</html>

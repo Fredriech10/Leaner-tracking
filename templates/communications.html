@@ -1,0 +1,235 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Communications</title>
+    <style>
+        * { box-sizing: border-box; }
+        body { font-family: Arial, sans-serif; margin: 0; padding: 0; background: #f0f2f5; color: #222; }
+        .topbar { background: #005a9e; color: white; padding: 12px 24px; display: flex; justify-content: space-between; align-items: center; gap: 10px; position: sticky; top: 0; z-index: 999; }
+        .topbar h1 { margin: 0; font-size: 1.05em; white-space: nowrap; }
+        .page { padding: 20px 24px; max-width: 1400px; margin: 0 auto; }
+        .card { background: white; border-radius: 8px; padding: 18px; border: 1px solid #ddd; margin-bottom: 16px; }
+        .card h3 { margin: 0 0 14px 0; font-size: 0.98em; color: #005a9e; border-bottom: 2px solid #f0f0f0; padding-bottom: 6px; }
+        .filters { display: flex; gap: 12px; flex-wrap: wrap; align-items: flex-end; }
+        .form-group { display: flex; flex-direction: column; gap: 4px; min-width: 180px; }
+        .form-group label { font-weight: bold; font-size: 0.88em; }
+        select, input[type="date"], textarea { padding: 8px 10px; border: 1px solid #ccc; border-radius: 6px; font-size: 0.9em; }
+        textarea { width: 100%; min-height: 86px; resize: vertical; }
+        .btn { display: inline-block; padding: 8px 14px; border-radius: 6px; border: 0; background: #005a9e; color: white; text-decoration: none; font-weight: bold; cursor: pointer; }
+        .btn-success { background: #107c10; }
+        .btn-warning { background: #ff8c00; }
+        .btn-danger { background: #a4262c; }
+        .thread-list { display: grid; gap: 16px; }
+        .thread-card { border: 1px solid #dbe5ef; border-radius: 10px; background: #fbfdff; overflow: hidden; }
+        .thread-card.unread { border-color: #f59e0b; background: #fffaf0; }
+        .thread-card.read { border-color: #dbe5ef; background: #fbfdff; }
+        .thread-toggle { width: 100%; border: 0; background: transparent; padding: 14px 16px; text-align: left; cursor: pointer; display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+        .thread-card.unread .thread-toggle { background: rgba(245, 158, 11, 0.08); }
+        .thread-card.read .thread-toggle { background: rgba(0, 120, 212, 0.03); }
+        .thread-toggle-left { display: flex; flex-direction: column; gap: 6px; min-width: 0; }
+        .thread-toggle-right { display: flex; align-items: center; gap: 10px; flex-shrink: 0; }
+        .thread-preview { color: #64748b; font-size: 0.8em; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 640px; }
+        .thread-title { font-weight: bold; color: #1e3a5f; }
+        .meta-line { display: flex; gap: 8px; flex-wrap: wrap; color: #64748b; font-size: 0.8em; }
+        .tag { display: inline-flex; align-items: center; padding: 3px 8px; border-radius: 999px; background: #eef6ff; color: #005a9e; font-size: 0.78em; font-weight: bold; }
+        .tag-unread { background: #fff3cd; color: #9a3412; }
+        .tag-read { background: #eef6ff; color: #005a9e; }
+        .thread-chevron { font-size: 0.95rem; color: #64748b; transition: transform 160ms ease; }
+        .thread-card.open .thread-chevron { transform: rotate(180deg); }
+        .thread-body { display: none; padding: 0 16px 16px; border-top: 1px solid rgba(0,0,0,0.06); }
+        .thread-card.open .thread-body { display: block; }
+        .message { padding: 10px 12px; border-radius: 10px; margin-bottom: 8px; background: #eef6ff; }
+        .message.teacher { background: #f2fdf4; }
+        .message-meta { font-size: 0.75em; color: #64748b; margin-top: 4px; }
+        .action-row { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 10px; }
+        .reply-box { margin-top: 12px; display: grid; gap: 8px; }
+        .flash { padding: 12px 14px; border-radius: 8px; margin-bottom: 14px; font-weight: bold; }
+        .flash.success { background: #dcfce7; color: #166534; border: 1px solid #86efac; }
+        .flash.error { background: #fee2e2; color: #991b1b; border: 1px solid #fca5a5; }
+        .muted { color: #64748b; }
+    </style>
+</head>
+<body>
+<div class="topbar">
+    <h1>💬 Communications</h1>
+    <div class="topbar-links"></div>
+    <span class="topbar-user">👤 <a href="/edit_user/{{ session_username }}">{{ session_username }}</a></span>
+    <a href="/logout">Logout</a>
+</div>
+
+<div class="page">
+    {% with messages = get_flashed_messages(with_categories=true) %}
+    {% if messages %}
+        {% for category, message in messages %}
+        <div class="flash {{ category }}">{{ message }}</div>
+        {% endfor %}
+    {% endif %}
+    {% endwith %}
+
+    <div class="card">
+        <form method="get" class="filters">
+            <div class="form-group">
+                <label>Group</label>
+                <select name="group" onchange="this.form.submit()">
+                    <option value="">All groups</option>
+                    {% for group in groups %}
+                    <option value="{{ group }}" {% if group == selected_group %}selected{% endif %}>{{ group }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="form-group">
+                <label>Topic</label>
+                <select name="topic" onchange="this.form.submit()">
+                    <option value="">All topics</option>
+                    {% for topic in ['chat', 'marks_query', 'general', 'attendance_review'] %}
+                    <option value="{{ topic }}" {% if topic == selected_topic %}selected{% endif %}>{{ topic|replace('_', ' ')|title }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="form-group">
+                <label>Date</label>
+                <input type="date" name="date" value="{{ selected_date }}">
+            </div>
+            <button type="submit" class="btn">Filter</button>
+        </form>
+    </div>
+
+    <div class="thread-list">
+        {% if threads %}
+            {% for thread in threads %}
+            {% set latest_message = thread.messages[-1] if thread.messages else none %}
+            {% set student_msgs = thread.messages | selectattr('sender_role', 'equalto', 'student') | list %}
+            {% set last_student_msg = student_msgs[-1] if student_msgs else none %}
+            {% set is_unread = last_student_msg and (not thread.teacher_read_at or thread.teacher_read_at < last_student_msg.created_at) %}
+            <div class="thread-card {{ 'unread' if is_unread else 'read' }}">
+                <button type="button" class="thread-toggle" data-thread-id="{{ thread.id }}" data-unread="{{ 'true' if is_unread else 'false' }}">
+                    <div class="thread-toggle-left">
+                        <div class="thread-title">{{ thread.student_name }} ({{ thread.student_username }})</div>
+                        <div class="meta-line">
+                            {% if thread.group_name %}<span>{{ thread.group_name }}</span>{% endif %}
+                            {% if thread.subject_line %}<span>{{ thread.subject_line }}</span>{% endif %}
+                            {% if thread.attendance_date %}<span>{{ thread.attendance_date }}</span>{% endif %}
+                            <span>{{ (thread.updated_at or thread.created_at)[:16] }}</span>
+                        </div>
+                        {% if latest_message %}
+                        <div class="thread-preview">{{ latest_message.sender_username }}: {{ latest_message.message }}</div>
+                        {% endif %}
+                    </div>
+                    <div class="thread-toggle-right">
+                        <div class="tag {{ 'tag-unread' if is_unread else 'tag-read' }}">{{ 'Unread' if is_unread else 'Read' }}</div>
+                        <div class="tag">{{ thread.topic|replace('_', ' ')|title }}</div>
+                        <span class="thread-chevron">▼</span>
+                    </div>
+                </button>
+                <div class="thread-body">
+                    <div class="meta-line" style="margin:12px 0 10px;">
+                        <span>{{ thread.status|title }}</span>
+                        {% if thread.teacher_username %}<span>Teacher: {{ thread.teacher_username }}</span>{% endif %}
+                    </div>
+
+                    {% for message in thread.messages %}
+                    <div class="message {{ 'teacher' if message.sender_role in ['teacher', 'admin'] else 'student' }}">
+                        {{ message.message }}
+                        <div class="message-meta">{{ message.sender_username }} • {{ message.created_at[:16] if message.created_at else '' }}</div>
+                    </div>
+                    {% endfor %}
+
+                    {% if thread.topic == 'attendance_review' and thread.attendance_date %}
+                    <div class="action-row">
+                    <form method="post" action="/communications/attendance_action">
+                        <input type="hidden" name="thread_id" value="{{ thread.id }}">
+                        <input type="hidden" name="student_username" value="{{ thread.student_username }}">
+                        <input type="hidden" name="attendance_date" value="{{ thread.attendance_date }}">
+                        <input type="hidden" name="group" value="{{ selected_group }}">
+                        <input type="hidden" name="topic" value="{{ selected_topic }}">
+                        <input type="hidden" name="date" value="{{ selected_date }}">
+                        <input type="hidden" name="action" value="mark_present">
+                        <button type="submit" class="btn btn-success">Mark Present</button>
+                    </form>
+                    <form method="post" action="/communications/attendance_action">
+                        <input type="hidden" name="thread_id" value="{{ thread.id }}">
+                        <input type="hidden" name="student_username" value="{{ thread.student_username }}">
+                        <input type="hidden" name="attendance_date" value="{{ thread.attendance_date }}">
+                        <input type="hidden" name="group" value="{{ selected_group }}">
+                        <input type="hidden" name="topic" value="{{ selected_topic }}">
+                        <input type="hidden" name="date" value="{{ selected_date }}">
+                        <input type="hidden" name="action" value="mark_late">
+                        <button type="submit" class="btn btn-warning">Mark Late</button>
+                    </form>
+                    <form method="post" action="/communications/attendance_action">
+                        <input type="hidden" name="thread_id" value="{{ thread.id }}">
+                        <input type="hidden" name="student_username" value="{{ thread.student_username }}">
+                        <input type="hidden" name="attendance_date" value="{{ thread.attendance_date }}">
+                        <input type="hidden" name="group" value="{{ selected_group }}">
+                        <input type="hidden" name="topic" value="{{ selected_topic }}">
+                        <input type="hidden" name="date" value="{{ selected_date }}">
+                        <input type="hidden" name="action" value="mark_absent">
+                        <button type="submit" class="btn btn-danger">Mark Absent</button>
+                    </form>
+                    </div>
+                    {% endif %}
+
+                    <form method="post" action="/communications/reply" class="reply-box">
+                        <input type="hidden" name="thread_id" value="{{ thread.id }}">
+                        <input type="hidden" name="group" value="{{ selected_group }}">
+                        <input type="hidden" name="topic" value="{{ selected_topic }}">
+                        <input type="hidden" name="date" value="{{ selected_date }}">
+                        <textarea name="message" placeholder="Reply to this learner..." required></textarea>
+                        <button type="submit" class="btn">Send Reply</button>
+                    </form>
+                </div>
+            </div>
+            {% endfor %}
+        {% else %}
+        <div class="card">
+            <p class="muted">No communication threads found for the current filters.</p>
+        </div>
+        {% endif %}
+    </div>
+</div>
+<script>
+document.querySelectorAll('.thread-toggle').forEach(function (button, index) {
+    const card = button.closest('.thread-card');
+    if (!card) return;
+    if (index === 0) {
+        card.classList.add('open');
+    }
+    async function markRead() {
+        if (button.dataset.unread !== 'true') return;
+        try {
+            const formData = new FormData();
+            formData.append('thread_id', button.dataset.threadId);
+            const response = await fetch('/communications/mark_read', {
+                method: 'POST',
+                body: formData
+            });
+            if (!response.ok) return;
+            button.dataset.unread = 'false';
+            card.classList.remove('unread');
+            card.classList.add('read');
+            const stateTag = card.querySelector('.tag-unread, .tag-read');
+            if (stateTag) {
+                stateTag.classList.remove('tag-unread');
+                stateTag.classList.add('tag-read');
+                stateTag.textContent = 'Read';
+            }
+        } catch (_error) {
+        }
+    }
+    button.addEventListener('click', function () {
+        const willOpen = !card.classList.contains('open');
+        document.querySelectorAll('.thread-card.open').forEach(function (openCard) {
+            if (openCard !== card) {
+                openCard.classList.remove('open');
+            }
+        });
+        card.classList.toggle('open');
+        if (willOpen) {
+            markRead();
+        }
+    });
+});
+</script>
+</body>
+</html>

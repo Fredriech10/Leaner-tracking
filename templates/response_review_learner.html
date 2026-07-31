@@ -1,0 +1,126 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Learner Response Review</title>
+    <style>
+        * { box-sizing: border-box; }
+        body { font-family: Arial, sans-serif; margin: 0; padding: 0; background: #f0f2f5; color: #222; }
+        .topbar { background: #005a9e; color: white; padding: 12px 24px; display: flex; justify-content: space-between; align-items: center; gap: 10px; position: sticky; top: 0; z-index: 999; }
+        .topbar h1 { margin: 0; font-size: 1.05em; white-space: nowrap; }
+        .page { padding: 20px 24px; max-width: 1200px; margin: 0 auto; }
+        .card { background: white; border-radius: 8px; padding: 18px; border: 1px solid #ddd; margin-bottom: 16px; }
+        .card h3 { margin: 0 0 14px 0; font-size: 0.98em; color: #005a9e; border-bottom: 2px solid #f0f0f0; padding-bottom: 6px; }
+        .summary { display: flex; gap: 12px; flex-wrap: wrap; }
+        .pill { display: inline-flex; align-items: center; min-height: 38px; padding: 8px 12px; border-radius: 999px; background: #eef6ff; color: #1e3a5f; font-weight: bold; }
+        table { width: 100%; border-collapse: collapse; font-size: 0.88em; }
+        th { background: #f5f5f5; padding: 8px 10px; text-align: left; color: #555; }
+        td { padding: 8px 10px; border-bottom: 1px solid #f0f0f0; vertical-align: top; }
+        .score-high { color: #107C10; font-weight: bold; }
+        .score-low { color: #A4262C; font-weight: bold; }
+        .muted { color: #64748b; }
+        .question-card { border: 1px solid #e5e7eb; border-radius: 8px; padding: 14px; margin-bottom: 14px; background: #fff; }
+        .question-head { display: flex; justify-content: space-between; gap: 10px; align-items: flex-start; margin-bottom: 10px; }
+        .accepted-box { margin-top: 10px; padding: 10px 12px; border-radius: 8px; background: #eefaf0; border: 1px solid #b7e4c0; }
+        .accepted-title { font-size: 0.82em; font-weight: bold; color: #166534; text-transform: uppercase; letter-spacing: 0.04em; margin-bottom: 6px; }
+        .accepted-value { color: #107C10; font-weight: bold; }
+        .match-table { width: 100%; margin-top: 10px; border-collapse: collapse; font-size: 0.9em; }
+        .match-table th { background: #f8fafc; }
+        .match-table td, .match-table th { padding: 8px 10px; border-bottom: 1px solid rgba(0,0,0,0.08); }
+        .match-good { color: #107C10; font-weight: bold; }
+        .match-bad { color: #A4262C; font-weight: bold; }
+        .flash { padding: 12px 14px; border-radius: 8px; margin-bottom: 14px; font-weight: bold; }
+        .flash.success { background: #dcfce7; color: #166534; border: 1px solid #86efac; }
+        .flash.error { background: #fee2e2; color: #991b1b; border: 1px solid #fca5a5; }
+        .review-form { margin-top: 12px; display: flex; gap: 10px; flex-wrap: wrap; align-items: flex-end; }
+        .review-form label { display: flex; flex-direction: column; gap: 4px; font-weight: bold; font-size: 0.88em; min-width: 280px; }
+        .review-form input { padding: 8px 10px; border: 1px solid #ccc; border-radius: 6px; }
+        .btn { display: inline-block; padding: 8px 16px; border-radius: 6px; border: 0; background: #005a9e; color: white; text-decoration: none; font-weight: bold; cursor: pointer; }
+    </style>
+</head>
+<body>
+<div class="topbar">
+    <h1>🧾 Learner Response Review</h1>
+    <div class="topbar-links"></div>
+    <span class="topbar-user">👤 <a href="/edit_user/{{ session_username }}">{{ session_username }}</a></span>
+    <a href="/logout">Logout</a>
+</div>
+
+<div class="page">
+    {% with messages = get_flashed_messages(with_categories=true) %}
+    {% if messages %}
+        {% for category, message in messages %}
+        <div class="flash {{ category }}">{{ message }}</div>
+        {% endfor %}
+    {% endif %}
+    {% endwith %}
+
+    <div class="card">
+        <h3>{{ item_label or 'Selected Assessment' }}</h3>
+        <div class="summary">
+            <span class="pill">{{ learner_name }}</span>
+            <span class="pill">{{ learner_username }}</span>
+            <span class="pill">{{ learner_group }}</span>
+            {% if score_summary %}
+            <span class="pill">{{ score_summary.percentage }}% ({{ score_summary.score }}/{{ score_summary.total }})</span>
+            <span class="pill">{{ score_summary.submitted_at }}</span>
+            {% endif %}
+        </div>
+    </div>
+
+    <div class="card">
+        <h3>Responses</h3>
+        {% if review_rows %}
+            {% for row in review_rows %}
+            <div class="question-card">
+                <div class="question-head">
+                    <div><strong>Q{{ loop.index }}. {{ row.question|safe }}</strong></div>
+                    <div><span class="{{ 'score-high' if row.correct else 'score-low' }}">{{ row.marks_awarded }}/{{ row.marks }}</span></div>
+                </div>
+                {% if row.type == 'match' %}
+                <table class="match-table">
+                    <tr><th>Column A</th><th>Learner Match</th><th>Accepted Match</th></tr>
+                    {% for pair in row.match_rows %}
+                    <tr>
+                        <td>{{ pair.left }}</td>
+                        <td><span class="{{ 'match-good' if pair.is_correct else 'match-bad' }}">{{ pair.learner_match }}</span></td>
+                        <td><span class="match-good">{{ pair.correct_match }}</span></td>
+                    </tr>
+                    {% endfor %}
+                </table>
+                {% else %}
+                <table>
+                    <tr><th>Answer</th><th>Marks</th></tr>
+                    <tr>
+                        <td>{{ row.answer }}</td>
+                        <td><span class="{{ 'score-high' if row.correct else 'score-low' }}">{{ row.marks_awarded }}/{{ row.marks }}</span></td>
+                    </tr>
+                </table>
+                {% endif %}
+                {% if row.correct_answers %}
+                <div class="accepted-box">
+                    <div class="accepted-title">Accepted Answer{% if row.correct_answers|length != 1 %}s{% endif %}</div>
+                    <div class="accepted-value">{{ row.correct_answers | join(', ') }}</div>
+                </div>
+                {% endif %}
+                {% if can_manage_reviews and row.type in ['true_false', 'fill_in'] %}
+                <form method="post" action="/response_review/true_false_accept" class="review-form">
+                    <input type="hidden" name="learner_username" value="{{ learner_username }}">
+                    <input type="hidden" name="test_id" value="{{ request.args.get('item') }}">
+                    <input type="hidden" name="question_id" value="{{ row.question_id }}">
+                    <label>
+                        Add another accepted answer
+                        <input type="text" name="acceptable_answer" placeholder="Type an accepted answer..." required>
+                    </label>
+                    <button type="submit" class="btn">Add and Regrade</button>
+                </form>
+                {% endif %}
+            </div>
+            {% endfor %}
+        {% else %}
+        <p class="muted">No saved learner response was found for this selection.</p>
+        {% endif %}
+    </div>
+</div>
+</body>
+</html>

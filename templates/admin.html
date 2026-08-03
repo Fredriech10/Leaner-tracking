@@ -49,6 +49,8 @@
         .action-links { display: flex; gap: 8px; flex-wrap: wrap; }
         .action-links a { color: #005a9e; text-decoration: none; font-size: 0.85em; }
         .action-links a:hover { text-decoration: underline; }
+        .table-row-link { color: inherit; text-decoration: none; font-weight: bold; }
+        .clickable-row { cursor: pointer; }
 
         .stats { display: flex; gap: 16px; margin-bottom: 16px; flex-wrap: wrap; }
         .stat-box { background: white; border-radius: 8px; padding: 14px 18px; border: 1px solid #ddd; text-align: center; flex: 1; min-width: 150px; }
@@ -71,7 +73,6 @@
         <a href="/manage_tests">📝 Theory</a>
         <a href="/response_review">🧾 Review</a>
         <a href="/communications">💬 Messages</a>
-        <a href="/recent_activity">🕐 Activity</a>
         <span class="topbar-user">👤 <a href="/edit_user/{{ session_username }}">{{ session_username }}</a></span>
         <a href="/logout">Logout</a>
     </div>
@@ -163,8 +164,8 @@
         </thead>
         <tbody>
         {% for user in users %}
-        <tr>
-            <td><a href="/learner_record/{{ user[0] }}" style="color:#005a9e; font-weight:bold;">{{ user[0] }}</a></td>
+        <tr class="clickable-row" onclick="window.location.href='/learner_record/{{ user[0] }}'">
+            <td><a href="/learner_record/{{ user[0] }}" class="table-row-link">{{ user[0] }}</a></td>
             <td>{{ user[1] or "—" }}</td>
             <td>{{ user[2] or "—" }}</td>
             <td>{{ user[3] or '—' }}</td>
@@ -180,14 +181,15 @@
             <td style="color:#888; font-size:0.85em;">{{ user[5][:16] if user[5] else '—' }}</td>
             <td>
                 <div class="action-links">
-                    <a href="/edit_user/{{ user[0] }}">✏️ Edit</a>
-                    <a href="/learner_record/{{ user[0] }}">📊 Record</a>
+                    <a href="/edit_user/{{ user[0] }}" onclick="event.stopPropagation()">✏️ Edit</a>
+                    <a href="/learner_record/{{ user[0] }}" onclick="event.stopPropagation()">📊 Record</a>
                     {% if user[3] != "teacher" and user[3] != "admin" %}
-                        <a href="/promote/{{ user[0] }}" style="color:#107C10;">⬆️ Promote</a>
+                        <a href="/promote/{{ user[0] }}" style="color:#107C10;" onclick="event.stopPropagation()">⬆️ Promote</a>
                     {% else %}
-                        <a href="/demote/{{ user[0] }}" style="color:#A4262C;">⬇️ Demote</a>
+                        <a href="/demote/{{ user[0] }}" style="color:#A4262C;" onclick="event.stopPropagation()">⬇️ Demote</a>
                     {% endif %}
                     <form method="post" action="/delete_user/{{ user[0] }}" style="display:inline;"
+                          onclick="event.stopPropagation()"
                           onsubmit="return confirm('Delete {{ user[0] }}? This will permanently remove their profile, results, and attendance records.')">
                         <button type="submit" style="background:none; border:none; cursor:pointer; color:#A4262C; font-size:0.85em; padding:0;">🗑️ Delete</button>
                     </form>

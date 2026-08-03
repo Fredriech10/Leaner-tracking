@@ -360,6 +360,8 @@
     </script>
 </head>
 <body style="{% if test[3] %}--lesson-bg-image: linear-gradient(rgba(255,255,255,0.02), rgba(255,255,255,0.02)), url('{{ test[3] }}');{% endif %} --lesson-bg-fit: {{ test[4] or 'cover' }};">
+{% set current_page = 'manage_lessons' %}
+{% include '_slide_nav.html' %}
 <div class="restore-overlay" id="restoreOverlay">
     <div class="restore-box">
         <span class="restore-spinner"></span>
@@ -367,7 +369,11 @@
 </div>
 <div class="topbar">
     <strong>Lesson Builder</strong>
-    <a href="/manage_lessons">Back to Lesson Setup</a>
+    <div style="display:flex; align-items:center; gap:10px;">
+        <span style="font-size:0.85em;">👤 <a href="/edit_user/{{ session_username }}" style="color:white; font-weight:bold; text-decoration:none;">{{ session_username }}</a></span>
+        <a href="/manage_lessons">Back to Lesson Setup</a>
+        <a href="/logout">Logout</a>
+    </div>
 </div>
 
 <main class="page">

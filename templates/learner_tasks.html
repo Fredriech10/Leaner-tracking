@@ -12,6 +12,8 @@
         .topbar-links a { color: white; text-decoration: none; font-size: 0.82em; opacity: 0.9; white-space: nowrap; }
         .topbar-links a:hover { opacity: 1; text-decoration: underline; }
         .topbar-user { color: white; font-size: 0.82em; white-space: nowrap; border-left: 1px solid rgba(255,255,255,0.35); padding-left: 10px; }
+        .topbar-user a { color: white; text-decoration: none; font-weight: bold; }
+        .topbar-user a:hover { text-decoration: underline; }
         .page { padding: 20px 24px; width: 90%; max-width: 90%; margin: 0 auto; }
         .test-card { border: 1px solid #ddd; border-radius: 8px; padding: 18px; margin-bottom: 15px; background: #fafafa; display: flex; justify-content: space-between; align-items: center; gap: 15px; }
         .test-info h3 { margin: 0 0 6px 0; }
@@ -40,7 +42,7 @@
         <a href="/my_tasks">📁 Tasks</a>
         <a href="/lessons">📘 Lessons</a>
         <a href="/tests">📝 Tests</a>
-        <span class="topbar-user">👤 {{ session_username }}</span>
+        <span class="topbar-user">👤 <a href="/edit_user/{{ session_username }}">{{ session_username }}</a></span>
         <a href="/logout">Logout</a>
     </div>
 </div>

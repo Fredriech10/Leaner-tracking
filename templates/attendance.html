@@ -364,7 +364,7 @@
     <th>Username</th>
     <th>Name</th>
     <th>Group</th>
-    <th>Attendance %</th>
+    <th>Total Absent</th>
 
     {% for day in days %}
         <th>{{ day[5:] }}</th>
@@ -377,7 +377,7 @@
     <td>{{ row.username }}</td>
     <td>{{ row.name or row.username }}</td>
     <td>{{ row.group or "-" }}</td>
-    <td>{{ row.attendance_pct }}%</td>
+    <td>{{ row.absent_days }}</td>
 
     {% for day in days %}
         {% set value = row.days.get(day) %}

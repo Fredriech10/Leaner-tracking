@@ -7,7 +7,12 @@
         * { box-sizing: border-box; }
         body { font-family: Arial, sans-serif; margin: 0; padding: 0; background: #f0f2f5; color: #222; }
         .topbar { background: #0078D4; color: white; padding: 12px 24px; display: flex; justify-content: space-between; align-items: center; gap: 10px; position: sticky; top: 0; z-index: 999; }
-        .topbar a { color: white; text-decoration: none; font-size: 0.82em; margin-right: 10px; }
+        .topbar-links { display: flex; gap: 10px; align-items: center; flex-wrap: nowrap; }
+        .topbar-links a { color: white; text-decoration: none; font-size: 0.82em; white-space: nowrap; }
+        .topbar-links a:hover { text-decoration: underline; }
+        .topbar-user { color: white; font-size: 0.82em; white-space: nowrap; border-left: 1px solid rgba(255,255,255,0.35); padding-left: 10px; }
+        .topbar-user a { color: white; text-decoration: none; font-weight: bold; }
+        .topbar-user a:hover { text-decoration: underline; }
         .page { padding: 20px 24px; max-width: 1100px; margin: 0 auto; }
         .layout { display: grid; grid-template-columns: 2fr 1fr; gap: 16px; }
         .card { background: white; border: 1px solid #ddd; border-radius: 8px; padding: 18px; }
@@ -30,13 +35,13 @@
 {% set current_page = 'lessons' %}
 {% include '_slide_nav.html' %}
 <div class="topbar">
-    <div>
+    <div class="topbar-links">
         <a href="/student_dashboard">🏠 Dashboard</a>
         <a href="/lessons">📘 Lessons</a>
         <a href="/tests">📝 Tests</a>
     </div>
-    <div>
-        <span>👤 {{ session_username }}</span>
+    <div class="topbar-links">
+        <span class="topbar-user">👤 <a href="/edit_user/{{ session_username }}">{{ session_username }}</a></span>
         <a href="/logout">Logout</a>
     </div>
 </div>

@@ -2283,6 +2283,16 @@ def get_attendance_data(group, start_date=None, end_date=None, teacher_username=
     excluded_dates = {row[0] for row in cursor.fetchall()}
     days = [day for day in days if day not in excluded_dates]
 
+    year_days = [day for day in get_current_year_attendance_days() if day <= today_str and day not in excluded_dates]
+    auto_exclude_empty_attendance_days(cursor, [group], created_by=teacher_username or "system", days=year_days)
+    cursor.execute("""
+    SELECT date FROM excluded_dates 
+    WHERE group_name IS NULL OR group_name = ?
+    """, (group,))
+    excluded_dates = {row[0] for row in cursor.fetchall()}
+    days = [day for day in days if day not in excluded_dates]
+    year_days = [day for day in get_current_year_attendance_days() if day <= today_str and day not in excluded_dates]
+
     query = """
     SELECT username, full_name, group_name
     FROM users
@@ -2298,9 +2308,12 @@ def get_attendance_data(group, start_date=None, end_date=None, teacher_username=
 
     attendance = []
     late_cutoffs = fetch_group_late_thresholds(cursor, group, days)
+    year_late_cutoffs = fetch_group_late_thresholds(cursor, group, year_days)
     usernames = [user for user, _, _ in learners]
     login_map = fetch_first_login_times(cursor, usernames, days)
     override_map = fetch_attendance_override_statuses(cursor, usernames, days)
+    year_login_map = fetch_first_login_times(cursor, usernames, year_days)
+    year_override_map = fetch_attendance_override_statuses(cursor, usernames, year_days)
     cursor.execute("""
         SELECT DISTINCT lh.date
         FROM login_history lh
@@ -2320,7 +2333,18 @@ def get_attendance_data(group, start_date=None, end_date=None, teacher_username=
             late_cutoffs=late_cutoffs,
             class_checked_dates=class_checked_dates,
         )
+        year_history = build_attendance_history(
+            cursor,
+            user,
+            group,
+            year_days,
+            login_map=year_login_map,
+            override_map=year_override_map,
+            late_cutoffs=year_late_cutoffs,
+            class_checked_dates=class_checked_dates,
+        )
         summary = summarize_attendance_history(history)
+        year_summary = summarize_attendance_history(year_history)
         row = {
             "username": user,
             "name": name,
@@ -2328,7 +2352,10 @@ def get_attendance_data(group, start_date=None, end_date=None, teacher_username=
             "days": {},
             "attendance_pct": summary["attendance_pct"],
             "present_days": summary["present_days"],
-            "absent_days": summary["absent_days"],
+            "absent_days": year_summary["absent_days"],
+            "year_present_days": year_summary["present_days"],
+            "year_attendance_pct": year_summary["attendance_pct"],
+            "year_total_days": year_summary["total_days"],
             "late_days": summary["late_days"],
         }
         for item in history:
@@ -3203,14 +3230,12 @@ def view_as_student(group_name):
     subject_avgs = cursor.fetchall()
 
     # Overall group average
-    cursor.execute("""
-        SELECT ROUND(AVG(r.score), 1)
-        FROM results r
-        JOIN users u ON r.username = u.username
-        WHERE u.group_name = ?
-    """, (group_name,))
-    overall_row = cursor.fetchone()
-    overall_avg = overall_row[0] if overall_row and overall_row[0] else 0
+    practical_group_avg = fetch_group_practical_averages(cursor, [group_name]).get(group_name)
+    theory_group_avg = fetch_group_theory_averages(cursor, [group_name]).get(group_name)
+    if practical_group_avg is not None and theory_group_avg is not None:
+        overall_avg = round((practical_group_avg + theory_group_avg) / 2, 1)
+    else:
+        overall_avg = practical_group_avg if practical_group_avg is not None else (theory_group_avg or 0)
 
     # Recent submissions for the group
     cursor.execute("""
@@ -3224,21 +3249,32 @@ def view_as_student(group_name):
 
     # Attendance last 7 days for the group
     days = get_last_7_days()
-    cursor.execute("SELECT date FROM excluded_dates WHERE group_name IS NULL OR group_name = ?", (group_name,))
-    excluded = {r[0] for r in cursor.fetchall()}
+    excluded = fetch_group_excluded_dates(cursor, [group_name]).get(group_name, set())
     days = [d for d in days if d not in excluded]
+    student_usernames = [student_username for student_username, _full_name in students]
+    login_times = fetch_first_login_times(cursor, student_usernames, days)
+    overrides = fetch_attendance_override_statuses(cursor, student_usernames, days)
 
     att_summary = []
     for day in days:
-        cursor.execute("""
-            SELECT COUNT(DISTINCT username) FROM login_history
-            WHERE date = ? AND username IN (
-                SELECT username FROM users WHERE group_name = ? AND role = 'student'
+        present = 0
+        absent = 0
+        for student_username in student_usernames:
+            history = build_attendance_history(
+                cursor,
+                student_username,
+                group_name,
+                [day],
+                login_map=login_times,
+                override_map=overrides,
+                excluded_dates=excluded,
             )
-        """, (day, group_name))
-        present = cursor.fetchone()[0]
-        pct = round((present / student_count) * 100) if student_count else 0
-        att_summary.append({"date": day, "present": present, "total": student_count, "pct": pct})
+            summary = summarize_attendance_history(history)
+            present += summary["present_days"]
+            absent += summary["absent_days"]
+        total_counted = present + absent
+        pct = round((present / total_counted) * 100) if total_counted else 0
+        att_summary.append({"date": day, "present": present, "total": total_counted, "pct": pct})
 
     # Missing tasks for the group
     today = datetime.now().date().isoformat()
@@ -3361,17 +3397,28 @@ def teacher_dashboard():
     for group_name in groups:
         members = group_members.get(group_name, [])
         group_days = [day for day in filtered_days if day not in excluded_days.get(group_name, set())]
-        present_count = 0
-        total_slots = len(members) * len(group_days)
-        group_present_map = fetch_present_day_map(cursor, [u for u, _ in members], group_days) if members and group_days else {}
-        for day in group_days:
-            present_count += len(group_present_map.get(day, set()))
-        total_present_all += present_count
-        total_slots_all += total_slots
+        total_present = 0
+        total_absent = 0
+        for student_username, _student_name in members:
+            history = build_attendance_history(
+                cursor,
+                student_username,
+                group_name,
+                group_days,
+                login_map=login_times,
+                override_map=overrides,
+                excluded_dates=excluded_days.get(group_name, set()),
+            )
+            summary = summarize_attendance_history(history)
+            total_present += summary["present_days"]
+            total_absent += summary["absent_days"]
+        total_counted = total_present + total_absent
+        total_present_all += total_present
+        total_slots_all += total_counted
         group_att.append({
             "group": group_name,
             "students": len(members),
-            "att_pct": round((present_count / total_slots) * 100) if total_slots else 0
+            "att_pct": round((total_present / total_counted) * 100) if total_counted else 0
         })
     avg_att_pct = round((total_present_all / total_slots_all) * 100) if total_slots_all else 0
 
@@ -3424,11 +3471,16 @@ def teacher_dashboard():
     combined_students = []
     for uname, full_name, group_name in student_rows:
         group_days = [day for day in filtered_days if day not in excluded_days.get(group_name, set())]
-        present_days = 0
-        for day in group_days:
-            if uname in login_times.get(day, {}) or attendance_status_counts_as_present(overrides.get((uname, day))):
-                present_days += 1
-        attendance_pct = round((present_days / len(group_days)) * 100) if group_days else 100
+        attendance_history = build_attendance_history(
+            cursor,
+            uname,
+            group_name,
+            group_days,
+            login_map=login_times,
+            override_map=overrides,
+            excluded_dates=excluded_days.get(group_name, set()),
+        )
+        attendance_pct = summarize_attendance_history(attendance_history)["attendance_pct"]
 
         practical_avg = practical_avg_map.get(uname)
         theory_avg = theory_avg_map.get(uname)
@@ -3683,58 +3735,6 @@ def teacher_dashboard():
             ORDER BY MAX(ts.submitted_at) DESC LIMIT 15
         """)
     recent_theory_submissions = cursor.fetchall()
-
-    # ─ Top/bottom performers (best score per task)
-    if role == 'teacher':
-        cursor.execute(f"""
-            SELECT u.full_name, u.group_name, ROUND(AVG(b.best_score),1) as avg
-            FROM (
-                SELECT username, subject, task, MAX(score) as best_score
-                FROM results GROUP BY username, subject, task
-            ) b
-            JOIN users u ON u.username = b.username
-            WHERE u.role = 'student' {group_filter_clause}
-            GROUP BY b.username HAVING COUNT(*) >= 1
-            ORDER BY avg DESC LIMIT 5
-        """, group_filter_params)
-        top_performers = cursor.fetchall()
-        cursor.execute(f"""
-            SELECT u.full_name, u.group_name, ROUND(AVG(b.best_score),1) as avg
-            FROM (
-                SELECT username, subject, task, MAX(score) as best_score
-                FROM results GROUP BY username, subject, task
-            ) b
-            JOIN users u ON u.username = b.username
-            WHERE u.role = 'student' {group_filter_clause}
-            GROUP BY b.username HAVING COUNT(*) >= 1
-            ORDER BY avg ASC LIMIT 5
-        """, group_filter_params)
-        bottom_performers = cursor.fetchall()
-    else:
-        cursor.execute("""
-            SELECT u.full_name, u.group_name, ROUND(AVG(b.best_score),1) as avg
-            FROM (
-                SELECT username, subject, task, MAX(score) as best_score
-                FROM results GROUP BY username, subject, task
-            ) b
-            JOIN users u ON u.username = b.username
-            WHERE u.role = 'student'
-            GROUP BY b.username HAVING COUNT(*) >= 1
-            ORDER BY avg DESC LIMIT 5
-        """)
-        top_performers = cursor.fetchall()
-        cursor.execute("""
-            SELECT u.full_name, u.group_name, ROUND(AVG(b.best_score),1) as avg
-            FROM (
-                SELECT username, subject, task, MAX(score) as best_score
-                FROM results GROUP BY username, subject, task
-            ) b
-            JOIN users u ON u.username = b.username
-            WHERE u.role = 'student'
-            GROUP BY b.username HAVING COUNT(*) >= 1
-            ORDER BY avg ASC LIMIT 5
-        """)
-        bottom_performers = cursor.fetchall()
 
     # ─ Students without assigned classes or teachers
     cursor.execute("""
@@ -5746,7 +5746,8 @@ def risk_learners():
     excluded_days = fetch_group_excluded_dates(cursor, [selected_group]).get(selected_group, set())
     filtered_days = [day for day in days_21 if day not in excluded_days]
     student_usernames = [student_username for student_username, _ in students_raw]
-    present_day_map = fetch_present_day_map(cursor, student_usernames, filtered_days)
+    login_times = fetch_first_login_times(cursor, student_usernames, filtered_days)
+    overrides = fetch_attendance_override_statuses(cursor, student_usernames, filtered_days)
     practical_avg_map = fetch_student_practical_averages(cursor, username if role == "teacher" else None)
     theory_avg_map = fetch_student_theory_averages(cursor, username if role == "teacher" else None)
     today = datetime.now().strftime("%Y-%m-%d")
@@ -5761,8 +5762,16 @@ def risk_learners():
             avg_score = practical_avg if practical_avg is not None else theory_avg
         avg_score = avg_score if avg_score is not None else 0
 
-        present_days = len(present_day_map.get(student_username, set()))
-        attendance_pct = round((present_days / len(filtered_days)) * 100) if filtered_days else 100
+        history = build_attendance_history(
+            cursor,
+            student_username,
+            selected_group,
+            filtered_days,
+            login_map=login_times,
+            override_map=overrides,
+            excluded_dates=excluded_days,
+        )
+        attendance_pct = summarize_attendance_history(history)["attendance_pct"]
 
         cursor.execute("""
             SELECT COUNT(DISTINCT t.id)

@@ -50,6 +50,7 @@
         .summary-card.info .value { color: #005a9e; }
         .risk-row-link { display: block; color: inherit; text-decoration: none; margin: -8px; padding: 8px; border-radius: 6px; }
         .risk-row-link:hover { background: #f8fafc; }
+        .clickable-row { cursor: pointer; }
     </style>
 </head>
 <body>
@@ -60,7 +61,11 @@
     <h1>🚨 Risk Learners</h1>
     <div class="topbar-links">
         <a href="/teacher_dashboard">← Dashboard</a>
+        <a href="/manage_subjects">Practical</a>
+        <a href="/manage_lessons">Lessons</a>
+        <a href="/manage_tests">Theory Tests</a>
         <a href="/group_results">Group Results</a>
+        <a href="/communications">Messages</a>
         <a href="/attendance">Attendance</a>
         <span class="topbar-user">👤 <a href="/edit_user/{{ session_username }}">{{ session_username }}</a></span>
         <a href="/logout">Logout</a>
@@ -115,7 +120,7 @@
             </thead>
             <tbody>
                 {% for student in risk_students %}
-                <tr>
+                <tr class="clickable-row" onclick="window.location.href='/learner_record/{{ student.username }}'">
                     <td><a href="/learner_record/{{ student.username }}" class="risk-row-link">{{ student.name }}</a></td>
                     <td><span class="{{ 'score-ok' if student.score <= 40 else ('score-medium' if student.score <= 70 else 'score-low') }}">{{ student.score }}%</span></td>
                     <td><span class="badge {{ 'badge-ok' if student.status == 'Safe' else ('badge-mid' if student.status == 'At Risk' else 'badge-risk') }}">{{ student.status }}</span></td>

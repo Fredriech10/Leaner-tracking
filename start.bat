@@ -50,8 +50,6 @@ if exist "%PORTABLE_PYTHON%" (
 
 start /B "" "%PYTHON_EXE%" "%APP_DIR%app.py"
 timeout /t 3 /nobreak >nul
-echo Opening Chrome minimized with auto-login for %USERNAME%...
-powershell -NoProfile -WindowStyle Hidden -Command "Start-Process 'chrome' -ArgumentList '--new-window','--start-minimized','http://MELHS-CGM04VM5G:5000/auto_login?username=%USERNAME%'"
-timeout /t 2 /nobreak >nul
-powershell -NoProfile -WindowStyle Hidden -Command "(New-Object -ComObject Shell.Application).MinimizeAll()"
+echo Opening Chrome with auto-login for %USERNAME%...
+powershell -NoProfile -WindowStyle Hidden -Command "Start-Process 'chrome' -ArgumentList '--new-window','http://MELHS-CGM04VM5G:5000/auto_login?username=%USERNAME%'"
 endlocal

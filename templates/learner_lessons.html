@@ -2,105 +2,10 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>My Lessons</title>
-    <style>
-        * { box-sizing: border-box; }
-        body { font-family: Arial, sans-serif; margin: 0; padding: 0; background: #f0f2f5; color: #222; }
-        .topbar { background: #0078D4; color: white; padding: 12px 24px; display: flex; justify-content: space-between; align-items: center; gap: 10px; position: sticky; top: 0; z-index: 999; }
-        .topbar h1 { margin: 0; font-size: 1.05em; }
-        .topbar-links { display: flex; gap: 10px; align-items: center; }
-        .topbar-links a { color: white; text-decoration: none; font-size: 0.82em; }
-        .page { padding: 20px 24px; max-width: 1000px; margin: 0 auto; }
-        .lesson-card { border: 1px solid #ddd; border-radius: 8px; padding: 18px; margin-bottom: 15px; background: #fafafa; display: flex; justify-content: space-between; gap: 15px; }
-        .lesson-info h3 { margin: 0 0 6px 0; }
-        .lesson-info p { margin: 0; color: #555; font-size: 0.9em; }
-        .lesson-actions { display: flex; flex-direction: column; align-items: flex-end; gap: 6px; white-space: nowrap; }
-        .btn { padding: 8px 16px; border: none; border-radius: 4px; text-decoration: none; font-size: 0.9em; display: inline-block; }
-        .btn-primary { background: #0078D4; color: white; }
-        .btn-success { background: #107C10; color: white; }
-        .badge { padding: 3px 10px; border-radius: 10px; font-size: 0.82em; font-weight: bold; }
-        .badge-progress { background: #f0f0f0; color: #555; }
-        .badge-complete { background: #c8f7c5; color: #107C10; }
-    </style>
+    <meta http-equiv="refresh" content="0; url=/lesson_tests">
+    <title>Redirecting</title>
 </head>
 <body>
-{% set current_page = 'lessons' %}
-{% include '_slide_nav.html' %}
-<div class="topbar">
-    <h1>📚 Student Portal</h1>
-    <div class="topbar-links">
-        <a href="/student_dashboard">🏠 Dashboard</a>
-        <a href="/my_tasks">📁 Tasks</a>
-        <a href="/lessons">📘 Lessons</a>
-        <a href="/tests">📝 Tests</a>
-        <span>👤 {{ session_username }}</span>
-        <a href="/logout">Logout</a>
-    </div>
-</div>
-
-<div class="page">
-    <h2>📘 Theory Lessons</h2>
-    <p style="margin-top:-4px; color:#666; font-size:0.9em;">
-        Theory is split into three categories: <strong>Lesson</strong>, <strong>Lesson and test</strong>, and <strong>Test</strong>.
-    </p>
-
-    <h3 id="theory-lessons">Lessons</h3>
-    {% if not lesson_only %}
-    <p>No slideshow-only lessons available at the moment.</p>
-    {% else %}
-    {% for lesson in lesson_only %}
-    <div class="lesson-card">
-        <div class="lesson-info">
-            <h3>{{ lesson.title }} <span class="badge badge-progress" style="background:#e0f2fe;color:#075985;">Lesson</span></h3>
-            <p>
-                {% if lesson.subject %}Subject: {{ lesson.subject }} &nbsp;|&nbsp; {% endif %}
-                Assigned: {{ lesson.assign_date }} &nbsp;|&nbsp;
-                Slides: {{ lesson.slide_count }} &nbsp;|&nbsp;
-                Checkpoints: {{ lesson.answered_count }}/{{ lesson.checkpoint_count }}
-            </p>
-        </div>
-        <div class="lesson-actions">
-            {% if lesson.completed_at %}
-            <span class="badge badge-complete">Completed</span>
-            {% else %}
-            <span class="badge badge-progress">Slide {{ lesson.current_slide }} / {{ lesson.slide_count }}</span>
-            {% endif %}
-            <a href="/lesson/{{ lesson.id }}?slide={{ lesson.current_slide }}" class="btn btn-primary">{% if lesson.completed_at %}Review Lesson{% else %}Open Lesson{% endif %}</a>
-        </div>
-    </div>
-    {% endfor %}
-    {% endif %}
-
-    <h3 id="lesson-and-test" style="margin-top:26px;">Lesson and test</h3>
-    {% if not lesson_and_test %}
-    <p>No lesson-and-test items available at the moment.</p>
-    {% else %}
-    {% for lesson in lesson_and_test %}
-    <div class="lesson-card">
-        <div class="lesson-info">
-            <h3>{{ lesson.title }} <span class="badge badge-progress" style="background:#ede9fe;color:#6d28d9;">Lesson + Test</span></h3>
-            <p>
-                {% if lesson.subject %}Subject: {{ lesson.subject }} &nbsp;|&nbsp; {% endif %}
-                Assigned: {{ lesson.assign_date }} &nbsp;|&nbsp;
-                Slides: {{ lesson.slide_count }} &nbsp;|&nbsp;
-                Checkpoints: {{ lesson.answered_count }}/{{ lesson.checkpoint_count }}
-                {% if lesson.linked_test_title %} &nbsp;|&nbsp; Test: {{ lesson.linked_test_title }}{% endif %}
-            </p>
-        </div>
-        <div class="lesson-actions">
-            {% if lesson.completed_at %}
-            <span class="badge badge-complete">Lesson completed</span>
-            {% else %}
-            <span class="badge badge-progress">Slide {{ lesson.current_slide }} / {{ lesson.slide_count }}</span>
-            {% endif %}
-            <a href="/lesson/{{ lesson.id }}?slide={{ lesson.current_slide }}" class="btn btn-primary">{% if lesson.completed_at %}Review Lesson{% else %}Open Lesson{% endif %}</a>
-            {% if lesson.linked_test_id %}
-            <a href="/take_test/{{ lesson.linked_test_id }}" class="btn btn-success">Open Linked Test</a>
-            {% endif %}
-        </div>
-    </div>
-    {% endfor %}
-    {% endif %}
-</div>
+    <p>Redirecting to <a href="/lesson_tests">Lessons</a>...</p>
 </body>
 </html>

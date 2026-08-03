@@ -216,8 +216,8 @@
             <table>
                 <tr><th>Group</th><th>Students</th><th>Attendance %</th><th>Practical %</th><th>Theory %</th><th>Combined %</th></tr>
                 {% for g in group_att %}
-                <tr class="clickable-row" onclick="window.location.href='/attendance?group={{ g.group }}'">
-                    <td><a href="/attendance?group={{ g.group }}" class="table-row-link">{{ g.group }}</a></td>
+                <tr class="clickable-row" onclick="window.location.href='/view_as_student/{{ g.group }}'">
+                    <td><a href="/view_as_student/{{ g.group }}" class="table-row-link">{{ g.group }}</a></td>
                     <td>{{ g.students }}</td>
                     <td>
                         <span class="{{ 'score-high' if g.att_pct >= 80 else ('score-mid' if g.att_pct >= 60 else 'score-low') }}">
@@ -363,7 +363,7 @@
     </div>
 
     <!-- ── At-Risk Learners ─────────────────────────────────────────── -->
-    <div class="grid-3 mb section-gap">
+    <div class="grid-2 mb section-gap">
 
         <div class="card">
             <h3>🚨 At-Risk Learners <a href="/risk_learners" style="font-size:0.85em; float:right; color:#005a9e; text-decoration:none;">View full list →</a></h3>

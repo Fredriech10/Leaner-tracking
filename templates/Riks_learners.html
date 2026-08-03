@@ -51,6 +51,10 @@
         .risk-row-link { display: block; color: inherit; text-decoration: none; margin: -8px; padding: 8px; border-radius: 6px; }
         .risk-row-link:hover { background: #f8fafc; }
         .clickable-row { cursor: pointer; }
+        .summary-layout { display:grid; grid-template-columns: 1.2fr 1fr; gap:16px; }
+        .bar-row { display:grid; grid-template-columns: 120px 1fr 56px; gap:10px; align-items:center; font-size:0.88em; margin-bottom:10px; }
+        .bar-track { height: 12px; background:#e5e7eb; border-radius:999px; overflow:hidden; }
+        .bar-fill { height:100%; background:linear-gradient(90deg, #f59e0b, #dc2626); border-radius:999px; }
     </style>
 </head>
 <body>
@@ -61,12 +65,12 @@
     <h1>🚨 Risk Learners</h1>
     <div class="topbar-links">
         <a href="/teacher_dashboard">← Dashboard</a>
-        <a href="/manage_subjects">Practical</a>
-        <a href="/manage_lessons">Lessons</a>
+        <a href="/manage_subjects">📁 Practical</a>
+        <a href="/manage_lessons">🧩 Lesson Setup</a>
         <a href="/manage_tests">Theory Tests</a>
-        <a href="/group_results">Group Results</a>
-        <a href="/communications">Messages</a>
-        <a href="/attendance">Attendance</a>
+        <a href="/group_results">📊 Results</a>
+        <a href="/communications">💬 Messages</a>
+        <a href="/attendance">📅 Attendance</a>
         <span class="topbar-user">👤 <a href="/edit_user/{{ session_username }}">{{ session_username }}</a></span>
         <a href="/logout">Logout</a>
     </div>
@@ -89,8 +93,36 @@
     </div>
 
     {% if not selected_group %}
-    <div class="card">
-        <p style="color:#666;">Select a group to view risk scores by student, including attendance, total average, and missing assessments.</p>
+    <div class="summary-layout">
+        <div class="card">
+            <h3>Group Risk Summary</h3>
+            {% if group_summaries %}
+            <table>
+                <tr><th>Group</th><th>Students</th><th>Attendance</th><th>Combined</th><th>Risk</th></tr>
+                {% for item in group_summaries %}
+                <tr>
+                    <td><a href="/risk_learners?group={{ item.group }}" class="risk-row-link" style="margin:0; padding:0;">{{ item.group }}</a></td>
+                    <td>{{ item.students }}</td>
+                    <td>{{ item.attendance_pct }}%</td>
+                    <td>{{ item.avg_combined }}%</td>
+                    <td><span class="{{ 'score-ok' if item.risk_score <= 40 else ('score-medium' if item.risk_score <= 70 else 'score-low') }}">{{ item.risk_score }}%</span></td>
+                </tr>
+                {% endfor %}
+            </table>
+            {% else %}
+            <p style="color:#666;">No group summary available.</p>
+            {% endif %}
+        </div>
+        <div class="card">
+            <h3>Risk Charts</h3>
+            {% for item in group_summaries %}
+            <div class="bar-row">
+                <span>{{ item.group }}</span>
+                <div class="bar-track"><div class="bar-fill" style="width: {{ item.risk_score }}%;"></div></div>
+                <span>{{ item.risk_score }}%</span>
+            </div>
+            {% endfor %}
+        </div>
     </div>
     {% else %}
     {% if summary_cards %}

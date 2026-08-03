@@ -60,8 +60,10 @@
         flex-direction: column;
         gap: 6px;
         padding: 12px 8px;
-        overflow-y: auto;
+        overflow-y: hidden;
+        overflow-x: hidden;
     }
+    body.slide-nav-expanded .slide-nav-list { overflow-y: auto; }
     .slide-nav-link {
         position: relative;
         display: flex;
@@ -112,6 +114,7 @@
         body.with-slide-nav.slide-nav-expanded { margin-left: 0; }
         .slide-nav-shell { transform: translateX(-100%); width: var(--slide-nav-expanded); box-shadow: 0 18px 40px rgba(15, 23, 42, 0.18); }
         body.slide-nav-expanded .slide-nav-shell { transform: translateX(0); }
+        body.slide-nav-expanded .slide-nav-list { overflow-y: auto; }
         .slide-nav-brand, .slide-nav-label { display: inline; }
         .slide-nav-header { justify-content: space-between; padding: 8px 10px; }
     }
@@ -135,7 +138,7 @@
     {% set nav_items = [
         ('student_dashboard', '/student_dashboard', '🏠', 'Dashboard'),
         ('my_tasks', '/my_tasks', '📁', 'Practical Tasks'),
-        ('lessons', '/lessons', '📘', 'Theory Lessons'),
+        ('lessons', '/lessons', '📘', 'Lessons'),
         ('tests', '/tests', '📝', 'Theory Tests')
     ] %}
 {% endif %}

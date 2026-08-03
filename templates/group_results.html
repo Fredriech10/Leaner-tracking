@@ -98,6 +98,10 @@
         .filter-bar { display: flex; gap: 12px; align-items: center; margin-bottom: 16px; flex-wrap: wrap; }
         .table-row-link { color: inherit; text-decoration: none; font-weight: inherit; }
         .clickable-row { cursor: pointer; }
+        .summary-layout { display:grid; grid-template-columns: 1.2fr 1fr; gap:16px; }
+        .bar-row { display:grid; grid-template-columns: 120px 1fr 56px; gap:10px; align-items:center; font-size:0.88em; margin-bottom:10px; }
+        .bar-track { height: 12px; background:#e5e7eb; border-radius:999px; overflow:hidden; }
+        .bar-fill { height:100%; background:linear-gradient(90deg, #0078D4, #16a34a); border-radius:999px; }
 
         /* Modal */
         .modal-overlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 9999; align-items: center; justify-content: center; }
@@ -248,8 +252,40 @@
                             <div class="tooltip">
                                 <strong>All Attempts:</strong><br>
                                 {% for score in result.all_scores %}{{ loop.index }}. {{ score }}%<br>{% endfor %}
-                            </div>
-                            {% endif %}
+</div>
+{% else %}
+<div class="summary-layout">
+    <div class="card">
+        <h3>Group Results Summary</h3>
+        {% if result_summaries %}
+        <table>
+            <tr><th>Group</th><th>Students</th><th>Practical</th><th>Theory</th><th>Combined</th></tr>
+            {% for item in result_summaries %}
+            <tr>
+                <td><a href="/group_results?group={{ item.group }}" class="table-row-link">{{ item.group }}</a></td>
+                <td>{{ item.students }}</td>
+                <td>{{ item.practical_avg if item.practical_avg is not none else '—' }}{% if item.practical_avg is not none %}%{% endif %}</td>
+                <td>{{ item.theory_avg if item.theory_avg is not none else '—' }}{% if item.theory_avg is not none %}%{% endif %}</td>
+                <td>{{ item.combined_avg }}%</td>
+            </tr>
+            {% endfor %}
+        </table>
+        {% else %}
+        <p style="color:#888;">No result summary available.</p>
+        {% endif %}
+    </div>
+    <div class="card">
+        <h3>Combined Average Charts</h3>
+        {% for item in result_summaries %}
+        <div class="bar-row">
+            <span>{{ item.group }}</span>
+            <div class="bar-track"><div class="bar-fill" style="width: {{ item.combined_avg }}%;"></div></div>
+            <span>{{ item.combined_avg }}%</span>
+        </div>
+        {% endfor %}
+    </div>
+</div>
+{% endif %}
                             <br>
                             <button class="btn-danger" style="margin-top:3px;" onclick="openRemoveModal('practical','{{ task.subject }}','{{ task.name }}','','{{ student.username }}','{{ selected_group }}')">✕ Remove</button>
                         {% else %}

@@ -6,6 +6,7 @@ import time
 import os
 import sqlite3
 import random
+import csv
 import json
 import tempfile
 import zipfile
@@ -635,6 +636,30 @@ def init_db():
         marks_awarded INTEGER DEFAULT 0,
         FOREIGN KEY (submission_id) REFERENCES theory_submissions (id),
         FOREIGN KEY (question_id) REFERENCES theory_questions (id)
+    )
+    """)
+
+    cursor.execute("""
+    CREATE TABLE IF NOT EXISTS question_bank_questions (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        question_text TEXT,
+        question_type TEXT,
+        marks INTEGER DEFAULT 1,
+        subject TEXT,
+        modules TEXT,
+        created_by TEXT,
+        created_at TEXT
+    )
+    """)
+
+    cursor.execute("""
+    CREATE TABLE IF NOT EXISTS question_bank_options (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        bank_question_id INTEGER,
+        option_text TEXT,
+        is_correct INTEGER DEFAULT 0,
+        match_pair TEXT,
+        FOREIGN KEY (bank_question_id) REFERENCES question_bank_questions (id)
     )
     """)
 
@@ -1813,6 +1838,161 @@ def compute_theory_answer_award(question_type, marks, options, answer_text):
                 awarded += 1
         return awarded
     return 0
+
+QUESTION_BANK_SUPPORTED_TYPES = ["mcq_single", "fill_in", "true_false", "match"]
+
+def parse_module_names(raw_value):
+    raw_value = (raw_value or "").replace("\r", "\n")
+    parts = []
+    for chunk in raw_value.replace(";", ",").split(","):
+        for line in chunk.split("\n"):
+            cleaned = line.strip()
+            if cleaned:
+                parts.append(cleaned)
+    seen = set()
+    ordered = []
+    for item in parts:
+        key = item.lower()
+        if key in seen:
+            continue
+        seen.add(key)
+        ordered.append(item)
+    return ordered
+
+def build_bank_option_signature(question_type, options):
+    normalized = []
+    for option_text, is_correct, match_pair in options:
+        normalized.append((
+            (option_text or "").strip().lower(),
+            safe_int(is_correct, 0),
+            (match_pair or "").strip().lower(),
+        ))
+    if question_type == "match":
+        normalized.sort()
+    return tuple(normalized)
+
+def bank_question_exists(cursor, question_text, question_type, subject, modules, options):
+    normalized_text = (question_text or "").strip().lower()
+    normalized_subject = (subject or "").strip().lower()
+    normalized_modules = (modules or "").strip().lower()
+    target_signature = build_bank_option_signature(question_type, options)
+
+    cursor.execute("""
+        SELECT id
+        FROM question_bank_questions
+        WHERE LOWER(TRIM(question_text)) = ?
+          AND question_type = ?
+          AND LOWER(TRIM(COALESCE(subject, ''))) = ?
+          AND LOWER(TRIM(COALESCE(modules, ''))) = ?
+    """, (normalized_text, question_type, normalized_subject, normalized_modules))
+    candidate_ids = [row[0] for row in cursor.fetchall()]
+    for candidate_id in candidate_ids:
+        cursor.execute("""
+            SELECT option_text, is_correct, match_pair
+            FROM question_bank_options
+            WHERE bank_question_id = ?
+            ORDER BY id
+        """, (candidate_id,))
+        candidate_signature = build_bank_option_signature(question_type, cursor.fetchall())
+        if candidate_signature == target_signature:
+            return True
+    return False
+
+def get_question_bank_counts(cursor, modules=None, subjects=None):
+    modules = parse_module_names(",".join(modules or []))
+    subjects = [item.strip() for item in (subjects or []) if item and item.strip()]
+    counts = {}
+    for q_type in QUESTION_BANK_SUPPORTED_TYPES:
+        where_parts = ["question_type = ?"]
+        params = [q_type]
+        if modules:
+            module_filters = " OR ".join(["LOWER(COALESCE(modules, '')) LIKE ?" for _ in modules])
+            where_parts.append(f"({module_filters})")
+            params.extend(f"%{module.lower()}%" for module in modules)
+        if subjects:
+            subject_filters = " OR ".join(["LOWER(COALESCE(subject, '')) = ?" for _ in subjects])
+            where_parts.append(f"({subject_filters})")
+            params.extend(subject.lower() for subject in subjects)
+        cursor.execute(f"""
+            SELECT COUNT(*)
+            FROM question_bank_questions
+            WHERE {' AND '.join(where_parts)}
+        """, params)
+        counts[q_type] = cursor.fetchone()[0] or 0
+    return counts
+
+def clone_bank_question_to_test(cursor, bank_question_id, test_id, order_index):
+    cursor.execute("""
+        SELECT question_text, question_type, marks
+        FROM question_bank_questions
+        WHERE id = ?
+    """, (bank_question_id,))
+    row = cursor.fetchone()
+    if not row:
+        return None
+    question_text, question_type, marks = row
+    cursor.execute("""
+        INSERT INTO theory_questions (test_id, question_text, question_type, marks, order_index)
+        VALUES (?, ?, ?, ?, ?)
+    """, (test_id, question_text, question_type, marks, order_index))
+    new_question_id = cursor.lastrowid
+    cursor.execute("""
+        SELECT option_text, is_correct, match_pair
+        FROM question_bank_options
+        WHERE bank_question_id = ?
+        ORDER BY id
+    """, (bank_question_id,))
+    for option_text, is_correct, match_pair in cursor.fetchall():
+        cursor.execute("""
+            INSERT INTO theory_options (question_id, option_text, is_correct, match_pair)
+            VALUES (?, ?, ?, ?)
+        """, (new_question_id, option_text, is_correct, match_pair))
+    return new_question_id
+
+def create_generated_match_question(cursor, bank_question_ids, test_id, order_index):
+    if not bank_question_ids:
+        return None
+
+    placeholders = ",".join("?" for _ in bank_question_ids)
+    cursor.execute(f"""
+        SELECT id, question_text, marks
+        FROM question_bank_questions
+        WHERE id IN ({placeholders})
+    """, bank_question_ids)
+    question_rows = cursor.fetchall()
+    if not question_rows:
+        return None
+
+    question_map = {row[0]: row for row in question_rows}
+    ordered_rows = [question_map[q_id] for q_id in bank_question_ids if q_id in question_map]
+    if not ordered_rows:
+        return None
+
+    question_text = ordered_rows[0][1] or "Match Column A to B"
+    total_marks = sum(max(1, safe_int(row[2], 1)) for row in ordered_rows)
+    cursor.execute("""
+        INSERT INTO theory_questions (test_id, question_text, question_type, marks, order_index)
+        VALUES (?, ?, 'match', ?, ?)
+    """, (test_id, question_text, total_marks, order_index))
+    new_question_id = cursor.lastrowid
+
+    for bank_question_id in bank_question_ids:
+        cursor.execute("""
+            SELECT option_text, is_correct, match_pair
+            FROM question_bank_options
+            WHERE bank_question_id = ? AND COALESCE(match_pair, '') != ''
+            ORDER BY id
+            LIMIT 1
+        """, (bank_question_id,))
+        option_row = cursor.fetchone()
+        if not option_row:
+            continue
+        option_text, is_correct, match_pair = option_row
+        cursor.execute("""
+            INSERT INTO theory_options (question_id, option_text, is_correct, match_pair)
+            VALUES (?, ?, ?, ?)
+        """, (new_question_id, option_text, is_correct, match_pair))
+    return new_question_id
 
 def regrade_theory_question_answers(test_id, question_id, selected_group=None, learner_username=None):
     conn = get_db()
@@ -7311,6 +7491,462 @@ def manage_tests():
         page_title="Theory Tests",
         page_intro="This page manages the simple question-only part of Theory.",
     )
+
+
+@app.route("/question_bank", methods=["GET", "POST"])
+def question_bank():
+    username = session.get("username")
+    if not username:
+        return redirect(url_for("login"))
+    if get_user_role(username) not in ["teacher", "admin"]:
+        return "Access denied", 403
+
+    conn = get_db()
+    cursor = conn.cursor()
+    message = ""
+    error = ""
+
+    if request.method == "POST":
+        action = request.form.get("action", "").strip()
+        if action == "delete_question":
+            question_id = request.form.get("question_id", type=int)
+            if question_id:
+                cursor.execute("DELETE FROM question_bank_options WHERE bank_question_id = ?", (question_id,))
+                cursor.execute("DELETE FROM question_bank_questions WHERE id = ?", (question_id,))
+                conn.commit()
+                message = "Question removed from bank."
+        elif action == "bulk_delete_questions":
+            question_ids = [safe_int(item, 0) for item in request.form.getlist("question_ids")]
+            question_ids = [item for item in question_ids if item > 0]
+            if question_ids:
+                placeholders = ",".join("?" for _ in question_ids)
+                cursor.execute(f"DELETE FROM question_bank_options WHERE bank_question_id IN ({placeholders})", question_ids)
+                cursor.execute(f"DELETE FROM question_bank_questions WHERE id IN ({placeholders})", question_ids)
+                conn.commit()
+                message = f"Removed {len(question_ids)} bank question(s)."
+        elif action == "import_bank_csv":
+            upload = request.files.get("questions_csv")
+            try:
+                if not upload or not upload.filename:
+                    raise ValueError("Please choose a CSV file.")
+                content = upload.stream.read().decode("utf-8-sig")
+                reader = csv.DictReader(io.StringIO(content))
+                imported = 0
+                skipped = 0
+                for item in reader:
+                    q_text = (item.get("question_text") or item.get("question") or "").strip()
+                    q_type = (item.get("question_type") or "").strip().lower()
+                    if not q_text or q_type not in QUESTION_BANK_SUPPORTED_TYPES:
+                        continue
+                    marks = safe_int(item.get("marks"), 1)
+                    if q_type == "mcq_single":
+                        marks = 1
+                    subject = (item.get("subject") or "").strip()
+                    modules = ", ".join(parse_module_names(item.get("modules") or item.get("module") or ""))
+                    option_payload = []
+                    if q_type == "mcq_single":
+                        option_texts = []
+                        for idx in range(1, 7):
+                            option_text = (item.get(f"option_{idx}") or "").strip()
+                            if option_text:
+                                option_texts.append(option_text)
+                        correct_raw = (item.get("correct_answer") or "").strip()
+                        correct_index = safe_int(correct_raw, 0) - 1 if correct_raw.isdigit() else -1
+                        normalized_correct = correct_raw.lower()
+                        for idx, option_text in enumerate(option_texts):
+                            option_payload.append((option_text, 1 if idx == correct_index or option_text.lower() == normalized_correct else 0, None))
+                    elif q_type == "true_false":
+                        correct_answer = (item.get("correct_answer") or "True").strip().title()
+                        option_payload.extend([
+                            ("True", 1 if correct_answer == "True" else 0, None),
+                            ("False", 1 if correct_answer == "False" else 0, None),
+                        ])
+                        correction = (item.get("correction") or "").strip()
+                        if correction:
+                            option_payload.append((correction, 0, "correction"))
+                    elif q_type == "fill_in":
+                        answer = (item.get("answer") or item.get("correct_answer") or "").strip()
+                        if answer:
+                            option_payload.append((answer, 1, None))
+                    elif q_type == "match":
+                        left = ""
+                        right = ""
+                        for idx in range(1, 7):
+                            candidate_left = (item.get(f"match_a_{idx}") or "").strip()
+                            candidate_right = (item.get(f"match_b_{idx}") or "").strip()
+                            if candidate_left and candidate_right:
+                                left = candidate_left
+                                right = candidate_right
+                                break
+                        if left and right:
+                            option_payload.append((left, 1, right))
+                    if bank_question_exists(cursor, q_text, q_type, subject, modules, option_payload):
+                        skipped += 1
+                        continue
+                    cursor.execute("""
+                        INSERT INTO question_bank_questions (question_text, question_type, marks, subject, modules, created_by, created_at)
+                        VALUES (?, ?, ?, ?, ?, ?, ?)
+                    """, (q_text, q_type, marks, subject, modules, username, datetime.now().isoformat()))
+                    bank_question_id = cursor.lastrowid
+                    for option_text, is_correct, match_pair in option_payload:
+                        cursor.execute("""
+                            INSERT INTO question_bank_options (bank_question_id, option_text, is_correct, match_pair)
+                            VALUES (?, ?, ?, ?)
+                        """, (bank_question_id, option_text, is_correct, match_pair))
+                    imported += 1
+                conn.commit()
+                message = f"Imported {imported} bank question(s)."
+                if skipped:
+                    message += f" Skipped {skipped} duplicate(s)."
+            except Exception as exc:
+                error = f"Import failed: {exc}"
+        elif action == "add_question":
+            q_text = (request.form.get("question_text") or "").strip()
+            q_type = (request.form.get("question_type") or "").strip()
+            marks = safe_int(request.form.get("marks"), 1)
+            if q_type == "mcq_single":
+                marks = 1
+            subject = (request.form.get("subject") or "").strip()
+            modules = ", ".join(parse_module_names(request.form.get("modules") or ""))
+            if not q_text or q_type not in QUESTION_BANK_SUPPORTED_TYPES:
+                error = "Question text and a supported type are required."
+            else:
+                option_payload = []
+                if q_type == "mcq_single":
+                    option_texts = request.form.getlist("option_text")
+                    correct_index = safe_int(request.form.get("is_correct"), -1)
+                    for idx, option_text in enumerate(option_texts):
+                        option_text = option_text.strip()
+                        if option_text:
+                            option_payload.append((option_text, 1 if idx == correct_index else 0, None))
+                elif q_type == "true_false":
+                    tf_correct = (request.form.get("tf_correct") or "True").strip()
+                    correction = (request.form.get("correction_term") or "").strip()
+                    option_payload.extend([
+                        ("True", 1 if tf_correct == "True" else 0, None),
+                        ("False", 1 if tf_correct == "False" else 0, None),
+                    ])
+                    if correction:
+                        option_payload.append((correction, 0, "correction"))
+                elif q_type == "fill_in":
+                    answer = (request.form.get("fill_answer") or "").strip()
+                    if answer:
+                        option_payload.append((answer, 1, None))
+                elif q_type == "match":
+                    match_a = request.form.getlist("match_a")
+                    match_b = request.form.getlist("match_b")
+                    for left, right in zip(match_a, match_b):
+                        left = left.strip()
+                        right = right.strip()
+                        if left and right:
+                            option_payload.append((left, 1, right))
+                            break
+                if bank_question_exists(cursor, q_text, q_type, subject, modules, option_payload):
+                    error = "That question already exists in the bank."
+                else:
+                    cursor.execute("""
+                        INSERT INTO question_bank_questions (question_text, question_type, marks, subject, modules, created_by, created_at)
+                        VALUES (?, ?, ?, ?, ?, ?, ?)
+                    """, (q_text, q_type, marks, subject, modules, username, datetime.now().isoformat()))
+                    bank_question_id = cursor.lastrowid
+                    for option_text, is_correct, match_pair in option_payload:
+                        cursor.execute("""
+                            INSERT INTO question_bank_options (bank_question_id, option_text, is_correct, match_pair)
+                            VALUES (?, ?, ?, ?)
+                        """, (bank_question_id, option_text, is_correct, match_pair))
+                    conn.commit()
+                    message = "Question added to bank."
+
+    selected_subject = (request.args.get("subject") or "").strip()
+    selected_module = (request.args.get("module") or "").strip()
+    selected_question_type = (request.args.get("question_type") or "").strip()
+    where_parts = []
+    params = []
+    if selected_subject:
+        where_parts.append("LOWER(COALESCE(subject, '')) = ?")
+        params.append(selected_subject.lower())
+    if selected_module:
+        where_parts.append("LOWER(COALESCE(modules, '')) LIKE ?")
+        params.append(f"%{selected_module.lower()}%")
+    if selected_question_type and selected_question_type in QUESTION_BANK_SUPPORTED_TYPES:
+        where_parts.append("question_type = ?")
+        params.append(selected_question_type)
+    where_clause = f"WHERE {' AND '.join(where_parts)}" if where_parts else ""
+    cursor.execute(f"""
+        SELECT id, question_text, question_type, marks, subject, modules, created_by, created_at
+        FROM question_bank_questions
+        {where_clause}
+        ORDER BY id DESC
+    """, params)
+    question_rows = cursor.fetchall()
+    questions = []
+    for row in question_rows:
+        cursor.execute("""
+            SELECT id, option_text, is_correct, match_pair
+            FROM question_bank_options
+            WHERE bank_question_id = ?
+            ORDER BY id
+        """, (row[0],))
+        questions.append({"q": row, "options": cursor.fetchall()})
+
+    cursor.execute("SELECT modules FROM question_bank_questions WHERE COALESCE(modules, '') != ''")
+    module_names = []
+    for (modules_text,) in cursor.fetchall():
+        module_names.extend(parse_module_names(modules_text))
+    module_names = sorted({item for item in module_names}, key=str.lower)
+    cursor.execute("SELECT DISTINCT TRIM(subject) FROM question_bank_questions WHERE COALESCE(TRIM(subject), '') != '' ORDER BY LOWER(TRIM(subject))")
+    subject_names = [row[0] for row in cursor.fetchall() if row[0]]
+    conn.close()
+    return render_template(
+        "question_bank.html",
+        questions=questions,
+        module_names=module_names,
+        subject_names=subject_names,
+        selected_subject=selected_subject,
+        selected_module=selected_module,
+        selected_question_type=selected_question_type,
+        question_types=QUESTION_BANK_SUPPORTED_TYPES,
+        message=message,
+        error=error,
+    )
+
+
+@app.route("/question_bank_template.csv")
+def question_bank_template():
+    username = session.get("username")
+    if not username:
+        return redirect(url_for("login"))
+    if get_user_role(username) not in ["teacher", "admin"]:
+        return "Access denied", 403
+
+    output = io.StringIO()
+    fieldnames = [
+        "question_text",
+        "question_type",
+        "marks",
+        "subject",
+        "modules",
+        "option_1",
+        "option_2",
+        "option_3",
+        "option_4",
+        "correct_answer",
+        "correction",
+        "match_a_1",
+        "match_b_1",
+        "match_a_2",
+        "match_b_2",
+        "match_a_3",
+        "match_b_3",
+        "match_a_4",
+        "match_b_4",
+    ]
+    writer = csv.DictWriter(output, fieldnames=fieldnames)
+    writer.writeheader()
+    writer.writerows([
+        {
+            "question_text": "What does CPU stand for?",
+            "question_type": "mcq_single",
+            "marks": "1",
+            "subject": "Computer Basics",
+            "modules": "Hardware, Fundamentals",
+            "option_1": "Central Process Unit",
+            "option_2": "Central Processing Unit",
+            "option_3": "Computer Personal Unit",
+            "option_4": "Central Processor Utility",
+            "correct_answer": "2",
+        },
+        {
+            "question_text": "The desktop is the main screen area you see after logging in.",
+            "question_type": "true_false",
+            "marks": "1",
+            "subject": "Computer Basics",
+            "modules": "Desktop",
+            "correct_answer": "True",
+            "correction": "",
+        },
+        {
+            "question_text": "The shortcut key for copy is ____.",
+            "question_type": "fill_in",
+            "marks": "1",
+            "subject": "Keyboard",
+            "modules": "Shortcuts",
+            "correct_answer": "Ctrl+C",
+        },
+        {
+            "question_text": "Match the shortcut to the action.",
+            "question_type": "match",
+            "marks": "1",
+            "subject": "Keyboard",
+            "modules": "Shortcuts",
+            "match_a_1": "Ctrl+C",
+            "match_b_1": "Copy",
+        },
+        {
+            "question_text": "Match the shortcut to the action.",
+            "question_type": "match",
+            "marks": "1",
+            "subject": "Keyboard",
+            "modules": "Shortcuts",
+            "match_a_1": "Ctrl+V",
+            "match_b_1": "Paste",
+        },
+    ])
+
+    response = app.response_class(output.getvalue(), mimetype="text/csv")
+    response.headers["Content-Disposition"] = "attachment; filename=question_bank_template.csv"
+    return response
+
+
+@app.route("/generate_theory_test", methods=["GET", "POST"])
+def generate_theory_test():
+    username = session.get("username")
+    if not username:
+        return redirect(url_for("login"))
+    if get_user_role(username) not in ["teacher", "admin"]:
+        return "Access denied", 403
+
+    conn = get_db()
+    cursor = conn.cursor()
+    groups = get_groups(username) if get_user_role(username) == "teacher" else get_groups()
+    teachers = get_teachers()
+    teacher_checkboxes = ''.join(
+        f'<label style="font-weight:normal;display:inline-flex;align-items:center;gap:5px;">'
+        f'<input type="checkbox" name="teachers" value="{escape(t[0])}"> {escape(t[1] or t[0])}</label>'
+        for t in teachers
+    )
+
+    cursor.execute("SELECT modules FROM question_bank_questions WHERE COALESCE(modules, '') != ''")
+    module_names = []
+    for (modules_text,) in cursor.fetchall():
+        module_names.extend(parse_module_names(modules_text))
+    module_names = sorted({item for item in module_names}, key=str.lower)
+
+    cursor.execute("SELECT DISTINCT TRIM(subject) FROM question_bank_questions WHERE COALESCE(TRIM(subject), '') != '' ORDER BY LOWER(TRIM(subject))")
+    subject_names = [row[0] for row in cursor.fetchall() if row[0]]
+    cursor.execute("SELECT COALESCE(TRIM(subject), ''), COALESCE(modules, '') FROM question_bank_questions")
+    subject_module_map = {}
+    for subject_name, modules_text in cursor.fetchall():
+        normalized_subject = (subject_name or "").strip()
+        if not normalized_subject:
+            continue
+        subject_module_map.setdefault(normalized_subject, [])
+        subject_module_map[normalized_subject].extend(parse_module_names(modules_text))
+    subject_module_map = {
+        subject_name: sorted({module for module in modules if module}, key=str.lower)
+        for subject_name, modules in subject_module_map.items()
+    }
+    counts = get_question_bank_counts(cursor, module_names, [])
+
+    error = ""
+    message = ""
+    if request.method == "POST":
+        title = (request.form.get("title") or "").strip()
+        subject = (request.form.get("subject") or "").strip()
+        assign_date = (request.form.get("assign_date") or "").strip()
+        time_limit = safe_int(request.form.get("time_limit"), 0)
+        allow_multiple = 1 if request.form.get("allow_multiple") else 0
+        max_attempts = safe_int(request.form.get("max_attempts"), 1)
+        show_answers = 1 if request.form.get("show_answers") else 0
+        selected_groups = request.form.getlist("groups")
+        selected_teachers = request.form.getlist("teachers")
+        selected_modules = parse_module_names(",".join(request.form.getlist("modules")))
+        selected_subjects = [item.strip() for item in request.form.getlist("bank_subjects") if item.strip()]
+        request_counts = {q_type: max(0, safe_int(request.form.get(f"count_{q_type}"), 0)) for q_type in QUESTION_BANK_SUPPORTED_TYPES}
+
+        if not title or not assign_date:
+            error = "Title and assign date are required."
+        elif not selected_modules:
+            error = "Select at least one module."
+        elif not any(request_counts.values()):
+            error = "Choose at least one question count."
+        else:
+            selected_questions = []
+            selected_match_pairs = []
+            for q_type, needed in request_counts.items():
+                if needed <= 0:
+                    continue
+                where_parts = ["question_type = ?"]
+                params = [q_type]
+                module_filters = " OR ".join(["LOWER(COALESCE(modules, '')) LIKE ?" for _ in selected_modules])
+                where_parts.append(f"({module_filters})")
+                params.extend(f"%{module.lower()}%" for module in selected_modules)
+                if selected_subjects:
+                    subject_filters = " OR ".join(["LOWER(COALESCE(subject, '')) = ?" for _ in selected_subjects])
+                    where_parts.append(f"({subject_filters})")
+                    params.extend(subject.lower() for subject in selected_subjects)
+                cursor.execute(f"""
+                    SELECT id
+                    FROM question_bank_questions
+                    WHERE {' AND '.join(where_parts)}
+                    ORDER BY RANDOM()
+                    LIMIT ?
+                """, (*params, needed))
+                picked = [row[0] for row in cursor.fetchall()]
+                if len(picked) < needed:
+                    scope_text = "selected modules"
+                    if selected_subjects:
+                        scope_text += " and subjects"
+                    error = f"Not enough {q_type.replace('_', ' ')} questions in the {scope_text}."
+                    break
+                if q_type == "match":
+                    selected_match_pairs = picked
+                else:
+                    selected_questions.extend(picked)
+
+            if not error:
+                cursor.execute("""
+                    INSERT INTO theory_tests
+                        (title, subject, assign_date, time_limit, allow_multiple, max_attempts, show_answers, created_by, created_at)
+                    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+                """, (title, subject, assign_date, time_limit, allow_multiple, max_attempts, show_answers, username, datetime.now().isoformat()))
+                test_id = cursor.lastrowid
+                for group_name in selected_groups:
+                    if group_name.strip():
+                        cursor.execute("INSERT INTO theory_test_groups (test_id, group_name) VALUES (?, ?)", (test_id, group_name))
+                for teacher_username in selected_teachers:
+                    if teacher_username.strip():
+                        cursor.execute("INSERT INTO theory_test_teachers (test_id, teacher_username) VALUES (?, ?)", (test_id, teacher_username))
+                order_index = 0
+                for bank_question_id in selected_questions:
+                    clone_bank_question_to_test(cursor, bank_question_id, test_id, order_index)
+                    order_index += 1
+                if selected_match_pairs:
+                    create_generated_match_question(cursor, selected_match_pairs, test_id, order_index)
+                conn.commit()
+                conn.close()
+                log_activity(username, f"generated theory test '{title}' from question bank")
+                return redirect(url_for("manage_test_questions", test_id=test_id))
+
+    conn.close()
+    return render_template(
+        "generate_theory_test.html",
+        groups=groups,
+        teachers=teachers,
+        module_names=module_names,
+        subject_names=subject_names,
+        subject_module_map=subject_module_map,
+        counts=counts,
+        error=error,
+        message=message,
+    )
+
+
+@app.route("/question_bank_counts")
+def question_bank_counts():
+    username = session.get("username")
+    if not username:
+        return jsonify({"error": "unauthorized"}), 401
+    if get_user_role(username) not in ["teacher", "admin"]:
+        return jsonify({"error": "forbidden"}), 403
+
+    modules = request.args.getlist("modules")
+    subjects = request.args.getlist("subjects")
+    conn = get_db()
+    cursor = conn.cursor()
+    counts = get_question_bank_counts(cursor, modules, subjects)
+    conn.close()
+    return jsonify({"counts": counts})
 
 
 @app.route("/manage_tests/create", methods=["POST"])

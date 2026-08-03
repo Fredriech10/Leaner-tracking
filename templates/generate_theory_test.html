@@ -1,0 +1,380 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Generate Theory Test</title>
+    <style>
+        * { box-sizing: border-box; }
+        body { font-family: Arial, sans-serif; margin: 0; padding: 0; background: linear-gradient(180deg, #eef5fb 0%, #f7f9fc 100%); color: #1f2937; }
+        .topbar { background: #005a9e; color: white; padding: 12px 24px; display:flex; justify-content:space-between; align-items:center; gap:10px; position:sticky; top:0; z-index:999; }
+        .topbar h1 { margin: 0; font-size: 1.05em; }
+        .topbar-links { display:flex; gap:10px; align-items:center; flex-wrap:nowrap; }
+        .topbar-links a, .topbar-user a { color:white; text-decoration:none; font-size:0.82em; }
+        .topbar-user { border-left:1px solid rgba(255,255,255,0.35); padding-left:10px; }
+        .page { padding: 24px; width: min(1320px, calc(100% - 48px)); margin: 0 auto; }
+        .hero { display:grid; grid-template-columns: 1.45fr 0.95fr; gap:18px; align-items:start; margin-bottom:18px; }
+        .card { background: rgba(255,255,255,0.96); border:1px solid #d9e4f0; border-radius:18px; box-shadow: 0 18px 42px rgba(0, 57, 107, 0.08); }
+        .card-body { padding: 20px; }
+        .hero-panel { overflow:hidden; }
+        .hero-head { padding: 22px 24px 18px; background: linear-gradient(135deg, #005a9e 0%, #0078d4 58%, #4aa3ff 100%); color: white; }
+        .hero-head h2 { margin: 0; font-size: 1.35em; }
+        .hero-head p { margin: 8px 0 0; color: rgba(255,255,255,0.9); line-height: 1.5; font-size: 0.95em; max-width: 760px; }
+        .summary-grid { display:grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap:14px; }
+        .summary-card { padding:16px; border-radius:16px; border:1px solid #d9e4f0; background: linear-gradient(180deg, #ffffff 0%, #f8fbff 100%); }
+        .summary-label { font-size:0.78em; text-transform:uppercase; letter-spacing:0.08em; color:#5b7087; margin-bottom:8px; }
+        .summary-value { font-size:1.5em; font-weight:bold; color:#0f3d66; margin-bottom:6px; }
+        .summary-note { font-size:0.88em; color:#5b7087; line-height:1.45; }
+        .flash-err { background:#fff1f2; color:#991b1b; border:1px solid #fecdd3; padding:12px 14px; border-radius:12px; margin-bottom:18px; }
+        .form-shell { display:grid; grid-template-columns: 1.3fr 0.9fr; gap:18px; align-items:start; }
+        .panel-title { margin:0 0 6px; font-size:1.05em; color:#12395d; }
+        .panel-subtitle { margin:0 0 16px; color:#5b7087; font-size:0.9em; line-height:1.5; }
+        .form-section { padding: 20px; border-bottom:1px solid #e8eef5; }
+        .form-section:last-child { border-bottom:none; }
+        .section-heading { margin:0 0 14px; font-size:0.98em; color:#12395d; }
+        .form-row { display:grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap:14px; }
+        .form-row.compact { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+        .form-group { display:flex; flex-direction:column; gap:6px; min-width:0; }
+        label { font-weight:bold; font-size:0.9em; color:#294766; }
+        input, select, textarea { width:100%; padding:10px 12px; border:1px solid #c9d7e6; border-radius:10px; background:#fff; font-size:0.95em; color:#1f2937; }
+        input:focus, select:focus, textarea:focus { outline:none; border-color:#4aa3ff; box-shadow:0 0 0 3px rgba(74, 163, 255, 0.18); }
+        .toggle-list { display:flex; flex-direction:column; gap:10px; }
+        .toggle-item { display:flex; align-items:center; gap:10px; padding:12px 14px; border:1px solid #d9e4f0; border-radius:12px; background:#f9fbfe; }
+        .toggle-item label { font-weight:normal; margin:0; color:#1f2937; }
+        .selector-grid { display:grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap:10px; }
+        .selector-chip { display:flex; align-items:center; gap:8px; padding:10px 12px; border:1px solid #d9e4f0; border-radius:12px; background:white; min-height:50px; }
+        .selector-chip input { width:auto; margin:0; }
+        .helper-text { margin-top:8px; color:#6b7f94; font-size:0.82em; }
+        .count-grid { display:grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap:12px; }
+        .count-card { border:1px solid #d9e4f0; border-radius:14px; padding:14px; background:linear-gradient(180deg, #ffffff 0%, #f8fbff 100%); }
+        .count-top { display:flex; justify-content:space-between; align-items:flex-start; gap:8px; margin-bottom:10px; }
+        .count-name { font-weight:bold; color:#12395d; }
+        .count-badge { font-size:0.8em; color:#005a9e; background:#e8f4ff; border-radius:999px; padding:4px 8px; white-space:nowrap; }
+        .count-card input { max-width:120px; }
+        .count-status { margin-top: 10px; color:#6b7f94; font-size:0.82em; min-height:1.2em; }
+        .actions { display:flex; justify-content:flex-end; padding:20px; }
+        .btn { padding:10px 18px; border:none; border-radius:10px; cursor:pointer; text-decoration:none; display:inline-flex; align-items:center; justify-content:center; font-weight:bold; }
+        .btn-primary { background:#005a9e; color:white; box-shadow:0 8px 18px rgba(0, 90, 158, 0.22); }
+        .btn-primary:hover { background:#00497f; }
+        .info-list { display:flex; flex-direction:column; gap:12px; }
+        .info-item { padding:14px 16px; border:1px solid #d9e4f0; border-radius:14px; background:#f9fbfe; }
+        .info-item strong { display:block; color:#12395d; margin-bottom:6px; }
+        .info-item span { color:#5b7087; font-size:0.9em; line-height:1.55; }
+        @media (max-width: 1100px) {
+            .hero, .form-shell { grid-template-columns: 1fr; }
+        }
+        @media (max-width: 760px) {
+            .page { width: calc(100% - 24px); padding: 16px 0 24px; }
+            .form-row, .form-row.compact, .count-grid, .summary-grid { grid-template-columns: 1fr; }
+            .topbar { padding: 12px 16px; }
+        }
+    </style>
+</head>
+<body>
+{% set current_page = 'manage_tests' %}
+{% include '_slide_nav.html' %}
+<div class="topbar">
+    <h1>🎲 Generate Theory Test</h1>
+    <div class="topbar-links">
+        <a href="/manage_tests">📝 Theory Tests</a>
+        <a href="/question_bank">📚 Question Bank</a>
+        <span class="topbar-user">👤 <a href="/edit_user/{{ session_username }}">{{ session_username }}</a></span>
+        <a href="/logout">Logout</a>
+    </div>
+</div>
+<div class="page">
+    {% if error %}<div class="flash-err">{{ error }}</div>{% endif %}
+
+    <div class="hero">
+        <div class="card hero-panel">
+            <div class="hero-head">
+                <h2>Build a Test From the Question Bank</h2>
+                <p>Select modules, choose how many questions to pull from each type, and generate a standard theory paper that fits into the current marking and reporting flow.</p>
+            </div>
+            <div class="card-body">
+                <div class="summary-grid">
+                    <div class="summary-card">
+                        <div class="summary-label">Modules Available</div>
+                        <div class="summary-value">{{ module_names|length }}</div>
+                        <div class="summary-note">Use one or more modules to control which banked questions can be selected.</div>
+                    </div>
+                    <div class="summary-card">
+                        <div class="summary-label">Question Types</div>
+                        <div class="summary-value">4</div>
+                        <div class="summary-note">Multiple choice, fill in, true / false, and pooled match pairs.</div>
+                    </div>
+                    <div class="summary-card">
+                        <div class="summary-label">Subjects Available</div>
+                        <div class="summary-value">{{ subject_names|length }}</div>
+                        <div class="summary-note">Optionally narrow generation to one or more question bank subjects.</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="card">
+            <div class="card-body">
+                <h3 class="panel-title">Generation Notes</h3>
+                <p class="panel-subtitle">This page creates a normal theory test. After generation you can still review and fine-tune it in the standard theory test editor.</p>
+                <div class="info-list">
+                    <div class="info-item">
+                        <strong>Module Filtering</strong>
+                        <span>Only questions tagged with the selected modules are considered during generation.</span>
+                    </div>
+                    <div class="info-item">
+                        <strong>Match Questions</strong>
+                        <span>The match count is the number of random pairs to pull from the bank. They are merged into one generated match question.</span>
+                    </div>
+                    <div class="info-item">
+                        <strong>Assignments</strong>
+                        <span>You can assign the generated test to specific groups and teachers during creation.</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <form method="post" class="form-shell">
+        <div class="card">
+            <div class="form-section">
+                <h3 class="panel-title">Test Details</h3>
+                <p class="panel-subtitle">Define the generated paper and its attempt settings.</p>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>Test Title</label>
+                        <input type="text" name="title" required placeholder="e.g. Excel Theory Test 1">
+                    </div>
+                    <div class="form-group">
+                        <label>Subject</label>
+                        <input type="text" name="subject" placeholder="e.g. Excel">
+                    </div>
+                    <div class="form-group">
+                        <label>Assign Start Date</label>
+                        <input type="date" name="assign_date" required>
+                    </div>
+                </div>
+                <div class="form-row compact" style="margin-top:14px;">
+                    <div class="form-group">
+                        <label>Time Limit (min)</label>
+                        <input type="number" name="time_limit" value="0" min="0">
+                    </div>
+                    <div class="form-group">
+                        <label>Max Attempts</label>
+                        <input type="number" name="max_attempts" value="1" min="1" max="10">
+                    </div>
+                </div>
+                <div class="toggle-list" style="margin-top:14px;">
+                    <div class="toggle-item">
+                        <input type="checkbox" name="allow_multiple" id="allow_multiple_generate">
+                        <label for="allow_multiple_generate">Allow multiple attempts</label>
+                    </div>
+                    <div class="toggle-item">
+                        <input type="checkbox" name="show_answers" id="show_answers_generate" checked>
+                        <label for="show_answers_generate">Show answers after submission</label>
+                    </div>
+                </div>
+            </div>
+
+            <div class="form-section">
+                <h3 class="section-heading">Filter By Subject</h3>
+                <div class="selector-grid">
+                    {% for subject_name in subject_names %}
+                    <label class="selector-chip"><input type="checkbox" name="bank_subjects" value="{{ subject_name }}"> <span>{{ subject_name }}</span></label>
+                    {% endfor %}
+                </div>
+                <div class="helper-text">Optional. Leave all unchecked to use all subjects inside the selected modules.</div>
+            </div>
+
+            <div class="form-section">
+                <h3 class="section-heading">Select Modules</h3>
+                <div class="selector-grid" id="moduleSelectorGrid">
+                    {% for module_name in module_names %}
+                    <label class="selector-chip" data-module-chip="{{ module_name|lower }}"><input type="checkbox" name="modules" value="{{ module_name }}"> <span>{{ module_name }}</span></label>
+                    {% endfor %}
+                </div>
+                <div class="helper-text" id="moduleHelperText">At least one module must be selected.</div>
+            </div>
+
+            <div class="form-section">
+                <h3 class="section-heading">Assign To Groups</h3>
+                <div class="selector-grid">
+                    {% for g in groups %}
+                    <label class="selector-chip"><input type="checkbox" name="groups" value="{{ g }}"> <span>{{ g }}</span></label>
+                    {% endfor %}
+                </div>
+                <div class="helper-text">Leave all unchecked to keep the test available broadly.</div>
+            </div>
+
+            <div class="form-section">
+                <h3 class="section-heading">Assign To Teachers</h3>
+                <div class="selector-grid">
+                    {% for teacher in teachers %}
+                    <label class="selector-chip"><input type="checkbox" name="teachers" value="{{ teacher[0] }}"> <span>{{ teacher[1] or teacher[0] }}</span></label>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+
+        <div class="card">
+            <div class="form-section">
+                <h3 class="panel-title">Question Counts</h3>
+                <p class="panel-subtitle">Set how many questions to generate from each banked type.</p>
+                <div class="count-grid">
+                    <div class="count-card">
+                        <div class="count-top">
+                            <div class="count-name">Multiple Choice</div>
+                            <div class="count-badge" data-count-badge="mcq_single">{{ counts['mcq_single'] }} available</div>
+                        </div>
+                        <input type="number" name="count_mcq_single" value="0" min="0" max="{{ counts['mcq_single'] }}" data-count-input="mcq_single">
+                    </div>
+                    <div class="count-card">
+                        <div class="count-top">
+                            <div class="count-name">Fill In</div>
+                            <div class="count-badge" data-count-badge="fill_in">{{ counts['fill_in'] }} available</div>
+                        </div>
+                        <input type="number" name="count_fill_in" value="0" min="0" max="{{ counts['fill_in'] }}" data-count-input="fill_in">
+                    </div>
+                    <div class="count-card">
+                        <div class="count-top">
+                            <div class="count-name">True / False</div>
+                            <div class="count-badge" data-count-badge="true_false">{{ counts['true_false'] }} available</div>
+                        </div>
+                        <input type="number" name="count_true_false" value="0" min="0" max="{{ counts['true_false'] }}" data-count-input="true_false">
+                    </div>
+                    <div class="count-card">
+                        <div class="count-top">
+                            <div class="count-name">Match Pairs</div>
+                            <div class="count-badge" data-count-badge="match">{{ counts['match'] }} available</div>
+                        </div>
+                        <input type="number" name="count_match" value="0" min="0" max="{{ counts['match'] }}" data-count-input="match">
+                    </div>
+                </div>
+                <div class="count-status" id="countStatus">Counts shown for the current filters.</div>
+            </div>
+
+            <div class="form-section">
+                <h3 class="section-heading">Generation Rules</h3>
+                <div class="info-list">
+                    <div class="info-item">
+                        <strong>Random Selection</strong>
+                        <span>Questions are pulled randomly from the selected module pool.</span>
+                    </div>
+                    <div class="info-item">
+                        <strong>Match Merge</strong>
+                        <span>Requested match pairs are combined into one match question and marks are totaled automatically.</span>
+                    </div>
+                    <div class="info-item">
+                        <strong>After Generation</strong>
+                        <span>You will be taken to the normal theory question editor for the generated test.</span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="actions">
+                <button type="submit" class="btn btn-primary">Generate Test</button>
+            </div>
+        </div>
+    </form>
+</div>
+<script>
+const countTypes = ['mcq_single', 'fill_in', 'true_false', 'match'];
+let countRequestToken = 0;
+const subjectModuleMap = {{ subject_module_map|tojson }};
+const allModuleNames = {{ module_names|tojson }};
+
+function getCheckedValues(name) {
+    return Array.from(document.querySelectorAll(`input[name="${name}"]:checked`)).map((el) => el.value);
+}
+
+function updateVisibleModules() {
+    const selectedSubjects = getCheckedValues('bank_subjects');
+    const helper = document.getElementById('moduleHelperText');
+    let allowedModules = new Set(allModuleNames.map((item) => item.toLowerCase()));
+    if (selectedSubjects.length) {
+        allowedModules = new Set();
+        selectedSubjects.forEach((subject) => {
+            (subjectModuleMap[subject] || []).forEach((moduleName) => allowedModules.add(String(moduleName).toLowerCase()));
+        });
+    }
+
+    document.querySelectorAll('[data-module-chip]').forEach((chip) => {
+        const moduleKey = chip.getAttribute('data-module-chip');
+        const isVisible = allowedModules.has(moduleKey);
+        chip.style.display = isVisible ? '' : 'none';
+        const checkbox = chip.querySelector('input[name="modules"]');
+        if (checkbox && !isVisible) {
+            checkbox.checked = false;
+        }
+    });
+
+    if (helper) {
+        if (selectedSubjects.length) {
+            helper.textContent = 'Modules shown are limited to the selected subjects.';
+        } else {
+            helper.textContent = 'At least one module must be selected.';
+        }
+    }
+}
+
+function updateCountCards(counts) {
+    countTypes.forEach((type) => {
+        const badge = document.querySelector(`[data-count-badge="${type}"]`);
+        const input = document.querySelector(`[data-count-input="${type}"]`);
+        const available = Number(counts[type] || 0);
+        if (badge) {
+            badge.textContent = `${available} available`;
+        }
+        if (input) {
+            input.max = String(available);
+            if (Number(input.value || 0) > available) {
+                input.value = available;
+            }
+        }
+    });
+}
+
+async function refreshFilteredCounts() {
+    updateVisibleModules();
+    const modules = getCheckedValues('modules');
+    const subjects = getCheckedValues('bank_subjects');
+    const status = document.getElementById('countStatus');
+    const token = ++countRequestToken;
+    if (status) {
+        status.textContent = 'Updating counts...';
+    }
+    const params = new URLSearchParams();
+    modules.forEach((item) => params.append('modules', item));
+    subjects.forEach((item) => params.append('subjects', item));
+    try {
+        const response = await fetch(`/question_bank_counts?${params.toString()}`, {
+            headers: { 'X-Requested-With': 'XMLHttpRequest' }
+        });
+        if (!response.ok) {
+            throw new Error('Count request failed');
+        }
+        const payload = await response.json();
+        if (token !== countRequestToken) {
+            return;
+        }
+        updateCountCards(payload.counts || {});
+        if (status) {
+            const moduleText = modules.length ? `${modules.length} module${modules.length === 1 ? '' : 's'}` : 'all modules';
+            const subjectText = subjects.length ? `, ${subjects.length} subject${subjects.length === 1 ? '' : 's'}` : '';
+            status.textContent = `Counts shown for ${moduleText}${subjectText}.`;
+        }
+    } catch (error) {
+        if (token !== countRequestToken) {
+            return;
+        }
+        if (status) {
+            status.textContent = 'Unable to refresh filtered counts right now.';
+        }
+    }
+}
+
+document.querySelectorAll('input[name="modules"], input[name="bank_subjects"]').forEach((checkbox) => {
+    checkbox.addEventListener('change', refreshFilteredCounts);
+});
+updateVisibleModules();
+</script>
+</body>
+</html>

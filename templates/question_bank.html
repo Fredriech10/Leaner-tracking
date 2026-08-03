@@ -1,0 +1,247 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Question Bank</title>
+    <style>
+        * { box-sizing: border-box; }
+        body { font-family: Arial, sans-serif; margin: 0; padding: 0; background: #f0f2f5; color: #222; }
+        .topbar { background: #005a9e; color: white; padding: 12px 24px; display:flex; justify-content:space-between; align-items:center; gap:10px; position:sticky; top:0; z-index:999; }
+        .topbar-links { display:flex; gap:10px; align-items:center; flex-wrap:nowrap; }
+        .topbar-links a, .topbar-user a { color:white; text-decoration:none; font-size:0.82em; }
+        .topbar-user { border-left:1px solid rgba(255,255,255,0.35); padding-left:10px; }
+        .page { padding:20px 24px; max-width:1400px; margin:0 auto; }
+        .card { background:white; border:1px solid #ddd; border-radius:8px; padding:18px; margin-bottom:16px; }
+        .grid { display:grid; grid-template-columns: 1fr 1fr; gap:16px; }
+        .form-row { display:flex; gap:12px; flex-wrap:wrap; }
+        .form-group { display:flex; flex-direction:column; gap:4px; margin-bottom:10px; flex:1; min-width:180px; }
+        label { font-weight:bold; font-size:0.9em; }
+        input, select, textarea { padding:8px; border:1px solid #ccc; border-radius:6px; width:100%; }
+        textarea { min-height:80px; resize:vertical; }
+        table { width:100%; border-collapse:collapse; font-size:0.87em; }
+        th { background:#f5f5f5; padding:8px 10px; text-align:left; }
+        td { padding:8px 10px; border-bottom:1px solid #f0f0f0; vertical-align:top; }
+        .btn { padding:8px 14px; border:none; border-radius:6px; cursor:pointer; text-decoration:none; display:inline-block; font-weight:bold; }
+        .btn-primary { background:#005a9e; color:white; }
+        .btn-danger { background:#A4262C; color:white; }
+        .btn-secondary { background:#5b7087; color:white; }
+        .flash-ok { background:#dcfce7; color:#166534; border:1px solid #86efac; padding:10px 12px; border-radius:8px; margin-bottom:12px; }
+        .flash-err { background:#fee2e2; color:#991b1b; border:1px solid #fca5a5; padding:10px 12px; border-radius:8px; margin-bottom:12px; }
+        .module-badges { display:flex; gap:6px; flex-wrap:wrap; }
+        .module-badge { background:#e8f4ff; color:#005a9e; border-radius:999px; padding:2px 8px; font-size:0.78em; }
+        .filter-bar { display:grid; grid-template-columns: 1fr 1fr 1fr auto auto; gap:12px; align-items:end; margin-bottom:16px; }
+    </style>
+</head>
+<body>
+{% set current_page = 'manage_tests' %}
+{% include '_slide_nav.html' %}
+<div class="topbar">
+    <h1>📚 Question Bank</h1>
+    <div class="topbar-links">
+        <a href="/manage_tests">📝 Theory Tests</a>
+        <a href="/generate_theory_test">🎲 Generate Test</a>
+        <span class="topbar-user">👤 <a href="/edit_user/{{ session_username }}">{{ session_username }}</a></span>
+        <a href="/logout">Logout</a>
+    </div>
+</div>
+<div class="page">
+    {% if message %}<div class="flash-ok">{{ message }}</div>{% endif %}
+    {% if error %}<div class="flash-err">{{ error }}</div>{% endif %}
+    <div class="grid">
+        <div class="card">
+            <h3>Add Bank Question</h3>
+            <form method="post">
+                <input type="hidden" name="action" value="add_question">
+                <div class="form-group">
+                    <label>Question Text</label>
+                    <textarea name="question_text" required></textarea>
+                </div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>Question Type</label>
+                        <select name="question_type" id="bankQuestionType" onchange="toggleBankFields(this.value)" required>
+                            <option value="">-- Select Type --</option>
+                            <option value="mcq_single">Multiple Choice</option>
+                            <option value="fill_in">Fill In</option>
+                            <option value="true_false">True / False</option>
+                            <option value="match">Match Column A to B</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label>Marks</label>
+                        <input type="number" name="marks" value="1" min="1" max="10">
+                    </div>
+                    <div class="form-group">
+                        <label>Subject</label>
+                        <input type="text" name="subject" placeholder="e.g. Excel">
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label>Modules</label>
+                    <textarea name="modules" placeholder="Type one or more modules separated by commas or new lines"></textarea>
+                </div>
+                <div id="bankDynamicFields"></div>
+                <button type="submit" class="btn btn-primary">Add To Bank</button>
+            </form>
+        </div>
+        <div class="card">
+            <h3>Import Bank Questions</h3>
+            <p style="color:#666; font-size:0.88em;">Upload a CSV with your question bank. You can assign modules to each question and reuse the stored answers when generating theory tests.</p>
+            <div style="display:flex; gap:10px; align-items:center; margin-bottom:12px; flex-wrap:wrap;">
+                <a href="/question_bank_template.csv" class="btn btn-primary">Download CSV Template</a>
+                <span style="color:#666; font-size:0.83em;">Supported types: `mcq_single`, `fill_in`, `true_false`, `match`</span>
+            </div>
+            <form method="post" enctype="multipart/form-data">
+                <input type="hidden" name="action" value="import_bank_csv">
+                <div class="form-group">
+                    <label>Questions CSV</label>
+                    <input type="file" name="questions_csv" accept=".csv" required>
+                </div>
+                <div style="padding:12px; background:#f7fbff; border:1px solid #d6e7f7; border-radius:8px; color:#36536b; font-size:0.85em; line-height:1.5;">
+                    <strong>CSV notes:</strong><br>
+                    Use `correct_answer` as the option number or option text for multiple choice.<br>
+                    Use `correct_answer` as `True` or `False` for true/false.<br>
+                    Use `correct_answer` for fill-in answers.<br>
+                    For `match`, each CSV row should contain one pair only using `match_a_1` and `match_b_1`.<br>
+                    When you generate a test, the requested match count is merged into one match question.
+                </div>
+                <button type="submit" class="btn btn-primary">Import To Bank</button>
+            </form>
+        </div>
+    </div>
+    <div class="card">
+        <h3>Stored Bank Questions</h3>
+        <form method="get" class="filter-bar">
+            <div class="form-group" style="margin-bottom:0;">
+                <label>Filter By Subject</label>
+                <select name="subject">
+                    <option value="">All Subjects</option>
+                    {% for subject_name in subject_names %}
+                    <option value="{{ subject_name }}" {% if selected_subject == subject_name %}selected{% endif %}>{{ subject_name }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="form-group" style="margin-bottom:0;">
+                <label>Filter By Module</label>
+                <select name="module">
+                    <option value="">All Modules</option>
+                    {% for module_name in module_names %}
+                    <option value="{{ module_name }}" {% if selected_module == module_name %}selected{% endif %}>{{ module_name }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="form-group" style="margin-bottom:0;">
+                <label>Filter By Question Type</label>
+                <select name="question_type">
+                    <option value="">All Types</option>
+                    {% for question_type in question_types %}
+                    <option value="{{ question_type }}" {% if selected_question_type == question_type %}selected{% endif %}>{{ question_type | replace('_', ' ') | title }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <button type="submit" class="btn btn-primary">Apply Filters</button>
+            <a href="/question_bank" class="btn btn-secondary">Clear</a>
+        </form>
+        {% if module_names %}
+        <div class="module-badges" style="margin-bottom:12px;">
+            {% for module_name in module_names %}
+            <span class="module-badge">{{ module_name }}</span>
+            {% endfor %}
+        </div>
+        {% endif %}
+        <form method="post" onsubmit="return confirmBulkDelete()">
+            <input type="hidden" name="action" value="bulk_delete_questions">
+            <div style="display:flex; gap:10px; align-items:center; margin-bottom:12px; flex-wrap:wrap;">
+                <button type="button" class="btn btn-secondary" onclick="toggleAllQuestions(true)">Select All</button>
+                <button type="button" class="btn btn-secondary" onclick="toggleAllQuestions(false)">Clear Selection</button>
+                <button type="submit" class="btn btn-danger">Delete Selected</button>
+            </div>
+            <table>
+            <tr><th style="width:40px;"><input type="checkbox" id="selectAllQuestions" onclick="toggleAllQuestions(this.checked)"></th><th>Question</th><th>Type</th><th>Modules</th><th>Subject</th><th>Marks</th><th></th></tr>
+            {% for item in questions %}
+            {% set q = item.q %}
+            <tr>
+                <td><input type="checkbox" name="question_ids" value="{{ q[0] }}" class="question-select"></td>
+                <td>{{ q[1] }}</td>
+                <td>{{ q[2] | replace('_', ' ') | title }}</td>
+                <td>{{ q[5] or '—' }}</td>
+                <td>{{ q[4] or '—' }}</td>
+                <td>{{ q[3] }}</td>
+                <td>
+                    <form method="post" onsubmit="return confirm('Remove this bank question?')">
+                        <input type="hidden" name="action" value="delete_question">
+                        <input type="hidden" name="question_id" value="{{ q[0] }}">
+                        <button type="submit" class="btn btn-danger">Delete</button>
+                    </form>
+                </td>
+            </tr>
+            {% if item.options %}
+            <tr>
+                <td colspan="7" style="background:#fafcff;">
+                    {% for option in item.options %}
+                        <div>
+                            {{ option[1] }}
+                            {% if option[2] %}<strong style="color:#107C10;">✔</strong>{% endif %}
+                            {% if option[3] and option[3] != 'correction' %} → {{ option[3] }}{% elif option[3] == 'correction' %} | accepted: {{ option[1] }}{% endif %}
+                        </div>
+                    {% endfor %}
+                </td>
+            </tr>
+            {% endif %}
+            {% endfor %}
+            </table>
+        </form>
+    </div>
+</div>
+<script>
+function toggleBankFields(type) {
+    const root = document.getElementById('bankDynamicFields');
+    if (!root) return;
+    let html = '';
+    if (type === 'mcq_single') {
+        html = `
+            <div class="form-group"><label>Options</label>
+                <div><label><input type="radio" name="is_correct" value="0" checked> <input type="text" name="option_text" placeholder="Option 1"></label></div>
+                <div><label><input type="radio" name="is_correct" value="1"> <input type="text" name="option_text" placeholder="Option 2"></label></div>
+                <div><label><input type="radio" name="is_correct" value="2"> <input type="text" name="option_text" placeholder="Option 3"></label></div>
+                <div><label><input type="radio" name="is_correct" value="3"> <input type="text" name="option_text" placeholder="Option 4"></label></div>
+            </div>`;
+    } else if (type === 'fill_in') {
+        html = `<div class="form-group"><label>Accepted Answer</label><input type="text" name="fill_answer"></div>`;
+    } else if (type === 'true_false') {
+        html = `
+            <div class="form-row">
+                <div class="form-group"><label>Correct Answer</label><select name="tf_correct"><option value="True">True</option><option value="False">False</option></select></div>
+                <div class="form-group"><label>Correction / Acceptable Word</label><input type="text" name="correction_term"></div>
+            </div>`;
+    } else if (type === 'match') {
+        html = `
+            <div class="form-group"><label>Match Pairs</label>
+                <div class="form-row"><input type="text" name="match_a" placeholder="Column A"><input type="text" name="match_b" placeholder="Column B"></div>
+                <div style="margin-top:8px; color:#666; font-size:0.83em;">Store one pair per bank question. Generated tests combine multiple stored pairs into one match question.</div>
+            </div>`;
+    }
+    root.innerHTML = html;
+}
+
+function toggleAllQuestions(checked) {
+    document.querySelectorAll('.question-select').forEach((checkbox) => {
+        checkbox.checked = checked;
+    });
+    const master = document.getElementById('selectAllQuestions');
+    if (master) {
+        master.checked = checked;
+    }
+}
+
+function confirmBulkDelete() {
+    const selected = document.querySelectorAll('.question-select:checked').length;
+    if (!selected) {
+        alert('Select at least one question to delete.');
+        return false;
+    }
+    return confirm(`Remove ${selected} selected bank question(s)?`);
+}
+</script>
+</body>
+</html>

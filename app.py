@@ -1592,9 +1592,9 @@ def get_teacher_quick_action_catalog():
     ]
 
 def get_teacher_selected_quick_actions(username):
-    catalog = [item for item in get_teacher_quick_action_catalog() if item.get("kind") == "link"]
+    catalog = get_teacher_quick_action_catalog()
     catalog_map = {item["key"]: item for item in catalog}
-    default_keys = ["manage_subjects", "manage_tests", "attendance", "communications", "response_review"]
+    default_keys = ["manage_subjects", "manage_tests", "attendance", "communications", "response_review", "export", "view_group"]
     conn = get_db()
     cursor = conn.cursor()
     cursor.execute(

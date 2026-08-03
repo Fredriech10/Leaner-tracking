@@ -79,6 +79,7 @@
         .action-btn-wrap .go-row { display: flex; gap: 4px; align-items: center; width: 100%; }
         .action-btn-wrap .go-row select { flex: 1; }
         .quick-actions-config { margin-top: 12px; border-top: 1px solid #e6ecf5; padding-top: 12px; }
+        .quick-actions-config[hidden] { display: none; }
         .quick-actions-options { display: flex; gap: 10px; flex-wrap: wrap; }
         .quick-action-pill { display: inline-flex; align-items: center; gap: 6px; background: #f8fbff; border: 1px solid #d9e6f5; border-radius: 999px; padding: 6px 10px; font-size: 0.84em; }
         .quick-action-pill input { margin: 0; }
@@ -162,10 +163,9 @@
         <h3>⚡ Quick Actions</h3>
         <div class="actions">
             {% for action in quick_actions %}
-            <a href="{{ action.href }}" class="action-btn"><span class="icon">{{ action.icon }}</span>{{ action.label }}</a>
-            {% endfor %}
-
-            <!-- Export dropdown -->
+                {% if action.kind == 'link' %}
+                <a href="{{ action.href }}" class="action-btn"><span class="icon">{{ action.icon }}</span>{{ action.label }}</a>
+                {% elif action.kind == 'export' %}
             <div class="action-btn-wrap">
                 <span class="icon">📥</span>
                 <select onchange="handleExport(this)">
@@ -175,8 +175,7 @@
                     <option value="/recent_activity">Activity Log</option>
                 </select>
             </div>
-
-            <!-- View group dropdown -->
+                {% elif action.kind == 'view_group' %}
             <div class="action-btn-wrap">
                 <span class="icon">👁</span>
                 <div class="go-row">
@@ -188,20 +187,26 @@
                     </select>
                 </div>
             </div>
+                {% endif %}
+            {% endfor %}
         </div>
-        <form method="post" action="/teacher_dashboard/quick_actions" class="quick-actions-config">
+        <div style="margin-top:12px;">
+            <button type="button" class="btn btn-primary" id="quickActionsToggleBtn" onclick="toggleQuickActionsConfig()">Edit Quick Actions</button>
+        </div>
+        <form method="post" action="/teacher_dashboard/quick_actions" class="quick-actions-config" id="quickActionsConfig" hidden>
             <div style="font-weight:bold; color:#005a9e; margin-bottom:8px;">Choose Quick Actions</div>
             <div class="quick-actions-options">
                 {% for action in available_quick_actions %}
                 <label class="quick-action-pill">
-                    <input type="checkbox" name="quick_actions" value="{{ action.id }}" {% if action.selected %}checked{% endif %}>
+                    <input type="checkbox" name="quick_actions" value="{{ action.key }}" {% if action.selected %}checked{% endif %}>
                     <span>{{ action.icon }}</span>
                     <span>{{ action.label }}</span>
                 </label>
                 {% endfor %}
             </div>
-            <div style="margin-top:10px;">
+            <div style="margin-top:10px; display:flex; gap:8px; align-items:center;">
                 <button type="submit" class="btn btn-primary">Save Quick Actions</button>
+                <button type="button" class="btn" style="background:#e5e7eb; color:#334155;" onclick="hideQuickActionsConfig()">Cancel</button>
             </div>
         </form>
     </div>
@@ -478,6 +483,28 @@
 </div>
 
 <script>
+function toggleQuickActionsConfig() {
+    const form = document.getElementById('quickActionsConfig');
+    const button = document.getElementById('quickActionsToggleBtn');
+    if (!form || !button) return;
+    const isHidden = form.hasAttribute('hidden');
+    if (isHidden) {
+        form.removeAttribute('hidden');
+        button.textContent = 'Hide Quick Actions';
+    } else {
+        form.setAttribute('hidden', 'hidden');
+        button.textContent = 'Edit Quick Actions';
+    }
+}
+
+function hideQuickActionsConfig() {
+    const form = document.getElementById('quickActionsConfig');
+    const button = document.getElementById('quickActionsToggleBtn');
+    if (!form || !button) return;
+    form.setAttribute('hidden', 'hidden');
+    button.textContent = 'Edit Quick Actions';
+}
+
 function handleExport(sel) {
     const url = sel.value;
     if (url) { window.location.href = url; sel.value = ''; }

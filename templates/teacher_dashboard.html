@@ -78,6 +78,12 @@
         .action-btn-wrap:hover { background: #dce8ff; }
         .action-btn-wrap .go-row { display: flex; gap: 4px; align-items: center; width: 100%; }
         .action-btn-wrap .go-row select { flex: 1; }
+        .quick-actions-config { margin-top: 12px; border-top: 1px solid #e6ecf5; padding-top: 12px; }
+        .quick-actions-options { display: flex; gap: 10px; flex-wrap: wrap; }
+        .quick-action-pill { display: inline-flex; align-items: center; gap: 6px; background: #f8fbff; border: 1px solid #d9e6f5; border-radius: 999px; padding: 6px 10px; font-size: 0.84em; }
+        .quick-action-pill input { margin: 0; }
+        .assign-btn { background: #005a9e; color: white; border-radius: 6px; padding: 6px 12px; text-decoration: none; font-size: 0.84em; font-weight: bold; display: inline-block; }
+        .assign-btn:hover { background: #00457a; }
 
         /* Slideshow */
         .slideshow-wrap { position: relative; }
@@ -115,9 +121,9 @@
         <a href="/manage_subjects">📁 Practical</a>
         <a href="/manage_lessons">📘 Lessons</a>
         <a href="/manage_tests">📝 Theory Tests</a>
+        <a href="/response_review">🧾 Review</a>
         <a href="/admin">👥 Admin</a>
         <a href="/attendance">📅 Attendance</a>
-        <a href="/recent_activity">🕐 Activity</a>
         <span class="topbar-user">👤 <a href="/edit_user/{{ session_username }}">{{ session_username }}</a></span>
         <a href="/logout">Logout</a>
     </div>
@@ -149,14 +155,9 @@
     <div class="card mb section-gap">
         <h3>⚡ Quick Actions</h3>
         <div class="actions">
-            <a href="/group_results" class="action-btn"><span class="icon">📊</span>Group Results</a>
-            <a href="/attendance" class="action-btn"><span class="icon">📅</span>Attendance</a>
-            <a href="/risk_learners" class="action-btn"><span class="icon">🚨</span>Risk Learners</a>
-            <a href="/admin" class="action-btn"><span class="icon">👥</span>Admin Panel</a>
-            <a href="/manage_subjects" class="action-btn"><span class="icon">📁</span>Practical Tests</a>
-            <a href="/manage_lessons" class="action-btn"><span class="icon">📘</span>Lessons</a>
-            <a href="/manage_tests" class="action-btn"><span class="icon">📝</span>Theory Tests</a>
-            <a href="/marking_setup" class="action-btn"><span class="icon">🛠️</span>Marking Setup</a>
+            {% for action in quick_actions %}
+            <a href="{{ action.href }}" class="action-btn"><span class="icon">{{ action.icon }}</span>{{ action.label }}</a>
+            {% endfor %}
 
             <!-- Export dropdown -->
             <div class="action-btn-wrap">
@@ -173,27 +174,41 @@
             <div class="action-btn-wrap">
                 <span class="icon">👁</span>
                 <div class="go-row">
-                    <select id="viewGroupSelect">
+                    <select id="viewGroupSelect" onchange="goToGroup(this.value)">
                         <option value="">View Group</option>
                         {% for g in groups %}
                         <option value="/view_as_student/{{ g }}">{{ g }}</option>
                         {% endfor %}
                     </select>
-                    <button type="button" class="btn btn-primary btn-sm" onclick="goToGroup()">Go</button>
                 </div>
             </div>
         </div>
+        <form method="post" action="/teacher_dashboard/quick_actions" class="quick-actions-config">
+            <div style="font-weight:bold; color:#005a9e; margin-bottom:8px;">Choose Quick Actions</div>
+            <div class="quick-actions-options">
+                {% for action in available_quick_actions %}
+                <label class="quick-action-pill">
+                    <input type="checkbox" name="quick_actions" value="{{ action.id }}" {% if action.selected %}checked{% endif %}>
+                    <span>{{ action.icon }}</span>
+                    <span>{{ action.label }}</span>
+                </label>
+                {% endfor %}
+            </div>
+            <div style="margin-top:10px;">
+                <button type="submit" class="btn btn-primary">Save Quick Actions</button>
+            </div>
+        </form>
     </div>
 
     <!-- ── Attendance Insights ──────────────────────────────────────── -->
     <div class="grid-2 mb section-gap">
 
-        <!-- Group Attendance Summary -->
+        <!-- Group Summary -->
         <div class="card">
-            <h3>📊 Group Attendance Summary</h3>
+            <h3>📊 Group Summary</h3>
             {% if group_att %}
             <table>
-                <tr><th>Group</th><th>Students</th><th>Attendance %</th></tr>
+                <tr><th>Group</th><th>Students</th><th>Attendance %</th><th>Practical %</th><th>Theory %</th><th>Combined %</th></tr>
                 {% for g in group_att %}
                 <tr>
                     <td><a href="/attendance?group={{ g.group }}">{{ g.group }}</a></td>
@@ -202,6 +217,27 @@
                         <span class="{{ 'score-high' if g.att_pct >= 80 else ('score-mid' if g.att_pct >= 60 else 'score-low') }}">
                             {{ g.att_pct }}%
                         </span>
+                    </td>
+                    <td>
+                        {% if g.practical_pct is not none %}
+                        <span class="{{ 'score-high' if g.practical_pct >= 60 else ('score-mid' if g.practical_pct >= 40 else 'score-low') }}">{{ g.practical_pct }}%</span>
+                        {% else %}
+                        <span class="score-none">—</span>
+                        {% endif %}
+                    </td>
+                    <td>
+                        {% if g.theory_pct is not none %}
+                        <span class="{{ 'score-high' if g.theory_pct >= 60 else ('score-mid' if g.theory_pct >= 40 else 'score-low') }}">{{ g.theory_pct }}%</span>
+                        {% else %}
+                        <span class="score-none">—</span>
+                        {% endif %}
+                    </td>
+                    <td>
+                        {% if g.combined_pct is not none %}
+                        <span class="{{ 'score-high' if g.combined_pct >= 60 else ('score-mid' if g.combined_pct >= 40 else 'score-low') }}">{{ g.combined_pct }}%</span>
+                        {% else %}
+                        <span class="score-none">—</span>
+                        {% endif %}
                     </td>
                 </tr>
                 {% endfor %}
@@ -353,7 +389,7 @@
                     <td><a href="/learner_record/{{ uname }}">{{ name or uname }}</a></td>
                     <td style="color:#888; font-size:0.85em;">{{ uname }}</td>
                     <td><span class="badge badge-warn">Unassigned</span></td>
-                    <td><a href="/edit_user/{{ uname }}?next=/teacher_dashboard" class="btn btn-sm">✏️ Assign</a></td>
+                    <td><a href="/edit_user/{{ uname }}?next=/teacher_dashboard" class="assign-btn">Assign</a></td>
                 </tr>
                 {% endfor %}
             </table>
@@ -440,9 +476,9 @@ function handleExport(sel) {
     const url = sel.value;
     if (url) { window.location.href = url; sel.value = ''; }
 }
-function goToGroup() {
-    const sel = document.getElementById('viewGroupSelect');
-    if (sel.value) window.location.href = sel.value;
+function goToGroup(value) {
+    const target = value || document.getElementById('viewGroupSelect').value;
+    if (target) window.location.href = target;
 }
 
 // ── Slideshow ──────────────────────────────────────────────────────────

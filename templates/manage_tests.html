@@ -61,14 +61,17 @@
     </style>
 </head>
 <body>
+{% set current_page = 'manage_tests' %}
+{% include '_slide_nav.html' %}
 
 <div class="topbar">
-    <h1>{{ '📘 Lessons' if (page_title == 'Lessons') else ('🧩 Lesson and Test' if (page_title == 'Lesson and Test') else '📝 Theory Tests') }}</h1>
+    <h1>📝 {{ page_title or 'Theory Tests' }}</h1>
     <div class="topbar-links">
         <a href="/teacher_dashboard">🏠 Dashboard</a>
         <a href="/manage_subjects">📁 Practical</a>
-        <a href="/manage_lessons#theory-lessons">📘 Lessons</a>
-        <a href="/manage_lessons">📘 Lessons</a>
+        <a href="/manage_lessons">📘 Lesson Setup</a>
+        <a href="/response_review">🧾 Review</a>
+        <a href="/communications">💬 Messages</a>
         <a href="/admin">👥 Admin</a>
         <a href="/attendance">📅 Attendance</a>
         <span class="topbar-user">👤 <a href="/edit_user/{{ session_username }}">{{ session_username }}</a></span>
@@ -79,7 +82,7 @@
 <div class="page">
 
 <div class="create-form">
-    <h3>Create New {{ 'Lesson' if (page_title == 'Lessons') else ('Lesson and Test' if (page_title == 'Lesson and Test') else 'Test') }}</h3>
+    <h3>Create New Test</h3>
     <p style="margin-top:0; color:#666; font-size:0.88em;">
         {{ page_intro or 'This page manages the simple question-only part of Theory.' }}
     </p>

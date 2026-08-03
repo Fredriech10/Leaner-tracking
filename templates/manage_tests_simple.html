@@ -66,6 +66,8 @@
     </style>
 </head>
 <body>
+{% set current_page = 'manage_tests' %}
+{% include '_slide_nav.html' %}
 
 <div class="topbar">
     <h1>📝 Theory Tests</h1>
@@ -76,7 +78,6 @@
         <a href="/manage_tests">📝 Theory Tests</a>
         <a href="/admin">👥 Admin</a>
         <a href="/attendance">📅 Attendance</a>
-        <a href="/recent_activity">🕐 Activity</a>
         <span class="topbar-user">👤 <a href="/edit_user/{{ session_username }}">{{ session_username }}</a></span>
         <a href="/logout">Logout</a>
     </div>

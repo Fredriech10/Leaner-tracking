@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>Manage Theory Lessons</title>
+    <title>{{ page_title or 'Lesson Setup' }}</title>
     <style>
         * { box-sizing: border-box; }
         body { font-family: Arial, sans-serif; margin: 0; padding: 0; background: #f0f2f5; color: #222; }
@@ -13,36 +13,44 @@
         .topbar-links a:hover { opacity: 1; text-decoration: underline; }
         .topbar-user { color: white; font-size: 0.82em; white-space: nowrap; border-left: 1px solid rgba(255,255,255,0.35); padding-left: 10px; }
         .topbar-user a { color: white; text-decoration: none; font-weight: bold; }
-        .page { padding: 20px 24px; max-width: 1400px; margin: 0 auto; }
-        .create-form { background: #f9f9f9; border: 1px solid #ddd; padding: 20px; border-radius: 6px; margin-bottom: 24px; }
-        .form-row { display: flex; gap: 15px; flex-wrap: wrap; align-items: flex-end; margin-bottom: 12px; }
-        .form-group { display: flex; flex-direction: column; gap: 4px; min-width: 180px; }
+        .page { padding: 20px 24px; width: 90%; max-width: 90%; margin: 0 auto; }
+        .card { background: white; border-radius: 10px; border: 1px solid #d9e2ec; box-shadow: 0 10px 28px rgba(15, 23, 42, 0.06); padding: 22px; margin-bottom: 20px; }
+        .create-form { background: #f9f9f9; border: 1px solid #ddd; padding: 20px; border-radius: 6px; margin-bottom: 30px; }
+        .form-row { display: flex; gap: 15px; flex-wrap: wrap; align-items: flex-end; margin-bottom: 10px; }
+        .form-group { display: flex; flex-direction: column; gap: 4px; }
         label { font-weight: bold; font-size: 0.9em; }
         input, select { padding: 7px; border: 1px solid #ccc; border-radius: 4px; }
-        table { border-collapse: collapse; width: 100%; margin-top: 20px; }
+        .table-wrap { width: 100%; overflow-x: auto; -webkit-overflow-scrolling: touch; }
+        table { border-collapse: collapse; width: 100%; margin-top: 20px; background: white; }
         th, td { border: 1px solid #ddd; padding: 10px; text-align: left; vertical-align: top; }
         th { background: #f0f0f0; }
-        .btn { padding: 7px 12px; border: none; border-radius: 4px; cursor: pointer; text-decoration: none; font-size: 0.85em; font-weight: bold; display: inline-block; }
+        .btn { padding: 6px 10px; border: none; border-radius: 4px; cursor: pointer; text-decoration: none; font-size: 0.85em; font-weight: bold; display: inline-flex; align-items: center; justify-content: center; min-width: 34px; height: 32px; vertical-align: middle; }
         .btn-primary { background: #0078D4; color: white; }
         .btn-warning { background: #ff8c00; color: white; }
         .btn-danger { background: #A4262C; color: white; }
         .btn-success { background: #107C10; color: white; }
         .badge-active { background: #c8f7c5; color: #107C10; padding: 3px 8px; border-radius: 10px; font-size: 0.85em; }
         .badge-inactive { background: #f7c5c5; color: #A4262C; padding: 3px 8px; border-radius: 10px; font-size: 0.85em; }
+        .badge-linked { background: #ede9fe; color: #6d28d9; padding: 3px 8px; border-radius: 10px; font-size: 0.85em; }
+        .badge-plain { background: #e0f2fe; color: #075985; padding: 3px 8px; border-radius: 10px; font-size: 0.85em; }
         .chip-list { display: flex; flex-wrap: wrap; gap: 8px; }
         .chip-list label { font-weight: normal; display: inline-flex; align-items: center; gap: 5px; font-size: 0.85em; }
         .small { font-size: 0.82em; color: #666; }
+        .action-cell { display: flex; gap: 6px; align-items: center; flex-wrap: wrap; min-width: 210px; }
     </style>
 </head>
 <body>
+{% set current_page = 'manage_lessons' %}
+{% include '_slide_nav.html' %}
 <div class="topbar">
-    <h1>📘 Theory Lessons</h1>
+    <h1>🧩 {{ page_title or 'Lesson Setup' }}</h1>
     <div class="topbar-links">
         <a href="/teacher_dashboard">🏠 Dashboard</a>
         <a href="/manage_subjects">📁 Practical</a>
-        <a href="/manage_lessons#theory-lessons">📘 Lessons</a>
-        <a href="/manage_lessons#lesson-and-test">🧩 Lesson + Test</a>
+        <a href="/manage_lessons">🧩 Lesson Setup</a>
         <a href="/manage_tests">📝 Theory Tests</a>
+        <a href="/response_review">🧾 Review</a>
+        <a href="/communications">💬 Messages</a>
         <a href="/admin">👥 Admin</a>
         <span class="topbar-user">👤 <a href="/edit_user/{{ session_username }}">{{ session_username }}</a></span>
         <a href="/logout">Logout</a>
@@ -51,28 +59,28 @@
 
 <div class="page">
     <div class="create-form">
-        <h3>Create New Theory Lesson</h3>
+        <h3>Create New Lesson Setup</h3>
         <p class="small" style="margin-top:0; margin-bottom:14px;">
-            Create a slideshow-only <strong>Lesson</strong>, or attach a theory test to create a <strong>Lesson and test</strong>.
+            Create slideshow-based lesson setups here. Theory Tests remain explicit question-only tests with no slide shows.
         </p>
         <form method="post" action="/manage_lessons/create">
             <div class="form-row">
                 <div class="form-group">
-                    <label>Lesson Title</label>
-                    <input type="text" name="title" placeholder="e.g. Module 1.1 Introduction to Computers" required>
+                    <label>Setup Title</label>
+                    <input type="text" name="title" placeholder="e.g. Module 1.1 Introduction to Computers" required style="width:220px;">
                 </div>
                 <div class="form-group">
                     <label>Subject</label>
-                    <input type="text" name="subject" placeholder="e.g. CAT Grade 10">
+                    <input type="text" name="subject" placeholder="e.g. CAT Grade 10" style="width:150px;">
                 </div>
                 <div class="form-group">
                     <label>Assign Start Date</label>
-                    <input type="date" name="assign_date" required>
+                    <input type="date" name="assign_date" required style="width:180px;">
                 </div>
                 <div class="form-group" style="min-width:280px;">
                     <label>Linked Theory Test</label>
                     <select name="linked_test_id">
-                        <option value="">None (Lesson only)</option>
+                        <option value="">None</option>
                         {% for test_id, title in theory_tests %}
                         <option value="{{ test_id }}">{{ title }}</option>
                         {% endfor %}
@@ -111,62 +119,15 @@
                     <span class="small">Leave empty to make the lesson visible to all teachers.</span>
                 </div>
             </div>
-            <button type="submit" class="btn btn-primary">Create Lesson</button>
+            <button type="submit" class="btn btn-primary">Create Setup</button>
         </form>
     </div>
 
-    <h3 id="theory-lessons">Lessons</h3>
-    <p class="small">Slideshow lessons with no linked test.</p>
-    {% if lesson_only_rows %}
-    <table>
-        <tr>
-            <th>Title</th>
-            <th>Category</th>
-            <th>Subject</th>
-            <th>PowerPoint</th>
-            <th>Groups</th>
-            <th>Teachers</th>
-            <th>Checkpoints</th>
-            <th>Assign Date</th>
-            <th>Status</th>
-            <th>Actions</th>
-        </tr>
-        {% for lesson in lesson_only_rows %}
-        <tr>
-            <td>{{ lesson[1] }}</td>
-            <td><span class="badge-active" style="background:#e0f2fe;color:#075985;">Lesson</span></td>
-            <td>{{ lesson[2] or '—' }}</td>
-            <td>{{ lesson[4] }}</td>
-            <td>{{ lesson[7] or 'All Groups' }}</td>
-            <td>{{ lesson[8] or 'All Teachers' }}</td>
-            <td>{{ lesson[9] or 0 }}</td>
-            <td>{{ lesson[3] }}</td>
-            <td>
-                {% if lesson[6] %}
-                <span class="badge-active">Active</span>
-                {% else %}
-                <span class="badge-inactive">Inactive</span>
-                {% endif %}
-            </td>
-            <td style="white-space:nowrap;">
-                <a href="/manage_lessons/{{ lesson[0] }}/checkpoints" class="btn btn-primary">✏️ Checkpoints</a>
-                <form method="post" action="/manage_lessons/{{ lesson[0] }}/toggle" style="display:inline;">
-                    <button type="submit" class="btn btn-warning">{% if lesson[6] %}Pause{% else %}Activate{% endif %}</button>
-                </form>
-                <form method="post" action="/manage_lessons/{{ lesson[0] }}/delete" style="display:inline;" onsubmit="return confirm('Delete this lesson and all learner progress?');">
-                    <button type="submit" class="btn btn-danger">🗑 Delete</button>
-                </form>
-            </td>
-        </tr>
-        {% endfor %}
-    </table>
-    {% else %}
-    <p>No slideshow-only lessons created yet.</p>
-    {% endif %}
-
-    <h3 id="lesson-and-test" style="margin-top:28px;">Lesson and test</h3>
-    <p class="small">Slideshow lessons that continue into a linked theory test.</p>
-    {% if lesson_and_test_rows %}
+    <div class="card">
+    <h3 id="theory-lessons">Existing Lesson Setups</h3>
+    <p class="small" style="margin-top:-6px;">Slide-based lesson flows and their linked test configuration.</p>
+    {% if lesson_rows %}
+    <div class="table-wrap">
     <table>
         <tr>
             <th>Title</th>
@@ -181,13 +142,17 @@
             <th>Status</th>
             <th>Actions</th>
         </tr>
-        {% for lesson in lesson_and_test_rows %}
+        {% for lesson in lesson_rows %}
         <tr>
             <td>{{ lesson[1] }}</td>
-            <td><span class="badge-active" style="background:#ede9fe;color:#6d28d9;">Lesson + Test</span></td>
+            <td>
+                <span class="{{ 'badge-linked' if lesson[5] else 'badge-plain' }}">
+                    {{ 'Setup linked to test' if lesson[5] else 'Setup only' }}
+                </span>
+            </td>
             <td>{{ lesson[2] or '—' }}</td>
             <td>{{ lesson[4] }}</td>
-            <td>{{ lesson[10] or ('Test #' ~ lesson[5]) }}</td>
+            <td>{{ lesson[10] or '—' }}</td>
             <td>{{ lesson[7] or 'All Groups' }}</td>
             <td>{{ lesson[8] or 'All Teachers' }}</td>
             <td>{{ lesson[9] or 0 }}</td>
@@ -199,21 +164,25 @@
                 <span class="badge-inactive">Inactive</span>
                 {% endif %}
             </td>
-            <td style="white-space:nowrap;">
+            <td style="white-space:nowrap; vertical-align:middle;">
+                <div class="action-cell">
                 <a href="/manage_lessons/{{ lesson[0] }}/checkpoints" class="btn btn-primary">✏️ Checkpoints</a>
                 <form method="post" action="/manage_lessons/{{ lesson[0] }}/toggle" style="display:inline;">
-                    <button type="submit" class="btn btn-warning">{% if lesson[6] %}Pause{% else %}Activate{% endif %}</button>
+                    <button type="submit" class="btn btn-warning" title="{% if lesson[6] %}Deactivate{% else %}Activate{% endif %}">{% if lesson[6] %}⏸{% else %}▶{% endif %}</button>
                 </form>
                 <form method="post" action="/manage_lessons/{{ lesson[0] }}/delete" style="display:inline;" onsubmit="return confirm('Delete this lesson and all learner progress?');">
-                    <button type="submit" class="btn btn-danger">🗑 Delete</button>
+                    <button type="submit" class="btn btn-danger" title="Delete">🗑</button>
                 </form>
+                </div>
             </td>
         </tr>
         {% endfor %}
     </table>
+    </div>
     {% else %}
-    <p>No lesson-and-test items created yet.</p>
+    <p>No lesson setups created yet.</p>
     {% endif %}
+    </div>
 </div>
 </body>
 </html>

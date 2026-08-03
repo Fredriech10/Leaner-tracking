@@ -113,13 +113,18 @@
     </style>
 </head>
 <body>
+{% set current_page = 'group_results' %}
+{% include '_slide_nav.html' %}
 
 <div class="topbar">
     <h1>📊 Group Results</h1>
     <div class="topbar-links">
         <a href="/teacher_dashboard">← Dashboard</a>
         <a href="/manage_subjects">📁 Practical</a>
+        <a href="/manage_lessons">📘 Lessons</a>
         <a href="/manage_tests">📝 Theory</a>
+        <a href="/response_review">🧾 Review</a>
+        <a href="/communications">💬 Messages</a>
         <span class="topbar-user">👤 <a href="/edit_user/{{ session_username }}">{{ session_username }}</a></span>
         <a href="/logout">Logout</a>
     </div>
@@ -203,6 +208,7 @@
                     <th class="task-header theory-header">
                         {{ task.title }}
                         <br>
+                        <a href="/response_review?type=theory&group={{ selected_group }}&item={{ task.test_id }}" class="btn-primary" style="display:inline-block; margin-top:4px; margin-right:4px; text-decoration:none; padding:4px 8px; border-radius:4px;">Review</a>
                         <button class="btn-danger" onclick="openRemoveModal('theory','','{{ task.title }}','{{ task.test_id }}','all','{{ selected_group }}')">🗑 Remove All</button>
                     </th>
                     {% endfor %}
@@ -267,6 +273,7 @@
                             </div>
                             {% endif %}
                             <br>
+                            <a href="/response_review/learner?learner={{ student.username }}&item={{ task.test_id }}" class="btn-primary" style="display:inline-block; margin-top:3px; margin-right:4px; text-decoration:none; padding:4px 8px; border-radius:4px;">Review</a>
                             <button class="btn-danger" style="margin-top:3px;" onclick="openRemoveModal('theory','','{{ task.title }}','{{ task.test_id }}','{{ student.username }}','{{ selected_group }}')">✕ Remove</button>
                         {% else %}
                             <span class="score-none">Not submitted</span>

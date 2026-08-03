@@ -43,6 +43,8 @@
     </style>
 </head>
 <body>
+    {% set current_page = 'marking_setup' %}
+    {% include '_slide_nav.html' %}
     <div class="loading-overlay" id="loadingOverlay">
         <div class="loading-card">
             <h3>Generating marking JSON</h3>
@@ -59,7 +61,10 @@
     <div class="topbar">
         <a href="/teacher_dashboard">← Dashboard</a>
         <a href="/manage_subjects">📁 Practical</a>
+        <a href="/manage_lessons">📘 Lessons</a>
         <a href="/manage_tests">📝 Theory</a>
+        <a href="/response_review">🧾 Review</a>
+        <a href="/communications">💬 Messages</a>
         <span class="topbar-user">👤 <a href="/edit_user/{{ session_username }}">{{ session_username }}</a></span>
         <a href="/logout">Logout</a>
     </div>

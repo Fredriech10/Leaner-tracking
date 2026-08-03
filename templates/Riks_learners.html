@@ -40,9 +40,21 @@
 
         .filter-row { display: flex; gap: 14px; align-items: center; flex-wrap: wrap; margin-bottom: 16px; }
         .filter-row label { font-weight: bold; }
+        .summary-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 12px; margin-bottom: 16px; }
+        .summary-card { background: white; border: 1px solid #ddd; border-radius: 8px; padding: 16px; }
+        .summary-card .value { font-size: 1.5em; font-weight: bold; margin-bottom: 4px; }
+        .summary-card .label { font-size: 0.82em; color: #64748b; }
+        .summary-card.ok .value { color: #107C10; }
+        .summary-card.mid .value { color: #b36b00; }
+        .summary-card.risk .value { color: #A4262C; }
+        .summary-card.info .value { color: #005a9e; }
+        .risk-row-link { display: block; color: inherit; text-decoration: none; margin: -8px; padding: 8px; border-radius: 6px; }
+        .risk-row-link:hover { background: #f8fafc; }
     </style>
 </head>
 <body>
+{% set current_page = 'risk_learners' %}
+{% include '_slide_nav.html' %}
 
 <div class="topbar">
     <h1>🚨 Risk Learners</h1>
@@ -76,6 +88,16 @@
         <p style="color:#666;">Select a group to view risk scores by student, including attendance, total average, and missing assessments.</p>
     </div>
     {% else %}
+    {% if summary_cards %}
+    <div class="summary-grid">
+        {% for card in summary_cards %}
+        <div class="summary-card {{ card.tone }}">
+            <div class="value">{{ card.value }}</div>
+            <div class="label">{{ card.label }}</div>
+        </div>
+        {% endfor %}
+    </div>
+    {% endif %}
     <div class="card">
         <h3>{{ selected_group }} Risk Scores</h3>
         {% if risk_students %}
@@ -94,7 +116,7 @@
             <tbody>
                 {% for student in risk_students %}
                 <tr>
-                    <td><a href="/learner_record/{{ student.username }}" style="text-decoration:none;color:#005a9e;">{{ student.name }}</a></td>
+                    <td><a href="/learner_record/{{ student.username }}" class="risk-row-link">{{ student.name }}</a></td>
                     <td><span class="{{ 'score-ok' if student.score <= 40 else ('score-medium' if student.score <= 70 else 'score-low') }}">{{ student.score }}%</span></td>
                     <td><span class="badge {{ 'badge-ok' if student.status == 'Safe' else ('badge-mid' if student.status == 'At Risk' else 'badge-risk') }}">{{ student.status }}</span></td>
                     <td>{{ student.attendance_pct }}%</td>

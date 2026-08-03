@@ -114,6 +114,8 @@
     </style>
 </head>
 <body>
+{% set current_page = 'learner_record' %}
+{% include '_slide_nav.html' %}
 
 <div class="topbar">
     <h1>📊 Learner Record</h1>
@@ -121,6 +123,8 @@
         <a href="/admin">← Admin Panel</a>
         <a href="/teacher_dashboard">🏠 Dashboard</a>
         <a href="/attendance">📅 Attendance</a>
+        <a href="/response_review">🧾 Review</a>
+        <a href="/communications">💬 Messages</a>
         <span class="topbar-user">👤 <a href="/edit_user/{{ session_username }}">{{ session_username }}</a></span>
         <a href="/logout">Logout</a>
     </div>

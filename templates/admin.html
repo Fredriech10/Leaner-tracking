@@ -57,6 +57,8 @@
     </style>
 </head>
 <body>
+{% set current_page = 'admin' %}
+{% include '_slide_nav.html' %}
 
 <!-- Top bar -->
 <div class="topbar">
@@ -65,7 +67,10 @@
         <a href="/teacher_dashboard">← Dashboard</a>
         <a href="/attendance">📅 Attendance</a>
         <a href="/manage_subjects">📁 Practical</a>
+        <a href="/manage_lessons">📘 Lessons</a>
         <a href="/manage_tests">📝 Theory</a>
+        <a href="/response_review">🧾 Review</a>
+        <a href="/communications">💬 Messages</a>
         <a href="/recent_activity">🕐 Activity</a>
         <span class="topbar-user">👤 <a href="/edit_user/{{ session_username }}">{{ session_username }}</a></span>
         <a href="/logout">Logout</a>

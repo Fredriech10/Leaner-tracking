@@ -1,4 +1,4 @@
-from flask import Flask, request, redirect, url_for, render_template, session, flash
+from flask import Flask, request, redirect, url_for, render_template, session, flash, jsonify
 from markupsafe import escape
 from datetime import datetime, timedelta
 import threading
@@ -13,6 +13,7 @@ import base64
 import mimetypes
 import re
 import uuid
+from collections import defaultdict
 from pathlib import Path
 from flask import send_file
 import pandas as pd
@@ -388,8 +389,56 @@ def init_db():
     CREATE TABLE IF NOT EXISTS attendance_override (
         username TEXT,
         date TEXT,
-        status TEXT,  -- 'present' or 'absent'
+        status TEXT,  -- 'present', 'late' or 'absent'
         PRIMARY KEY (username, date)
+    )
+    """)
+
+    cursor.execute("""
+    CREATE TABLE IF NOT EXISTS communication_threads (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        student_username TEXT NOT NULL,
+        teacher_username TEXT,
+        group_name TEXT,
+        topic TEXT NOT NULL,
+        subject_line TEXT,
+        attendance_date TEXT,
+        status TEXT DEFAULT 'open',
+        chat_session_id TEXT,
+        created_at TEXT,
+        updated_at TEXT,
+        teacher_read_at TEXT,
+        student_read_at TEXT
+    )
+    """)
+
+    try:
+        cursor.execute("PRAGMA table_info(communication_threads)")
+        thread_cols = [c[1] for c in cursor.fetchall()]
+        if "teacher_read_at" not in thread_cols:
+            cursor.execute("ALTER TABLE communication_threads ADD COLUMN teacher_read_at TEXT")
+        if "student_read_at" not in thread_cols:
+            cursor.execute("ALTER TABLE communication_threads ADD COLUMN student_read_at TEXT")
+    except Exception as e:
+        print(f"Note: communication_threads migration check: {e}")
+
+    cursor.execute("""
+    CREATE TABLE IF NOT EXISTS communication_messages (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        thread_id INTEGER NOT NULL,
+        sender_username TEXT NOT NULL,
+        sender_role TEXT,
+        message TEXT NOT NULL,
+        created_at TEXT,
+        FOREIGN KEY(thread_id) REFERENCES communication_threads(id)
+    )
+    """)
+
+    cursor.execute("""
+    CREATE TABLE IF NOT EXISTS teacher_quick_actions (
+        username TEXT NOT NULL,
+        action_key TEXT NOT NULL,
+        PRIMARY KEY (username, action_key)
     )
     """)
 
@@ -803,6 +852,23 @@ def init_db():
     )
     """)
 
+    cursor.execute("CREATE INDEX IF NOT EXISTS idx_results_user_subject_task ON results (username, subject, task)")
+    cursor.execute("CREATE INDEX IF NOT EXISTS idx_results_user_timestamp ON results (username, timestamp)")
+    cursor.execute("CREATE INDEX IF NOT EXISTS idx_login_history_user_date ON login_history (username, date)")
+    cursor.execute("CREATE INDEX IF NOT EXISTS idx_login_history_date_user ON login_history (date, username)")
+    cursor.execute("CREATE INDEX IF NOT EXISTS idx_attendance_override_user_date ON attendance_override (username, date)")
+    cursor.execute("CREATE INDEX IF NOT EXISTS idx_users_role_teacher_group ON users (role, teacher_username, group_name)")
+    cursor.execute("CREATE INDEX IF NOT EXISTS idx_users_group_role ON users (group_name, role)")
+    cursor.execute("CREATE INDEX IF NOT EXISTS idx_theory_submissions_user_test ON theory_submissions (username, test_id)")
+    cursor.execute("CREATE INDEX IF NOT EXISTS idx_theory_submissions_test_user ON theory_submissions (test_id, username)")
+    cursor.execute("CREATE INDEX IF NOT EXISTS idx_task_groups_group_task ON task_groups (group_name, task_id)")
+    cursor.execute("CREATE INDEX IF NOT EXISTS idx_theory_test_groups_group_test ON theory_test_groups (group_name, test_id)")
+    cursor.execute("CREATE INDEX IF NOT EXISTS idx_tasks_assign_type ON tasks (assign_date, task_type)")
+    cursor.execute("CREATE INDEX IF NOT EXISTS idx_theory_tests_assign_date ON theory_tests (assign_date)")
+    cursor.execute("CREATE INDEX IF NOT EXISTS idx_excluded_dates_group_date ON excluded_dates (group_name, date)")
+    cursor.execute("CREATE INDEX IF NOT EXISTS idx_communication_threads_teacher_updated ON communication_threads (teacher_username, updated_at)")
+    cursor.execute("CREATE INDEX IF NOT EXISTS idx_communication_messages_thread_created ON communication_messages (thread_id, created_at)")
+
     # Seed initial subjects if empty
     cursor.execute("SELECT COUNT(*) FROM subjects")
     if cursor.fetchone()[0] == 0:
@@ -1047,12 +1113,23 @@ def inject_session_user():
     from flask import session as _s
     uname = _s.get('username', '')
     role = ''
+    teacher_unread_messages = 0
+    student_unread_messages = 0
     if uname:
         try:
             role = get_user_role(uname)
+            if role in ["teacher", "admin"]:
+                teacher_unread_messages = get_teacher_unread_message_count(uname)
+            elif role == "student":
+                student_unread_messages = get_student_unread_message_count(uname)
         except Exception:
             pass
-    return dict(session_username=uname, session_role=role)
+    return dict(
+        session_username=uname,
+        session_role=role,
+        teacher_unread_messages=teacher_unread_messages,
+        student_unread_messages=student_unread_messages,
+    )
 
 
 # Store active users in memory
@@ -1075,6 +1152,658 @@ def get_recent_results(username):
     conn.close()
 
     return results
+
+def attendance_status_counts_as_present(status):
+    return (status or "").strip().lower() in {"present", "late"}
+
+def fetch_first_login_times(cursor, usernames, days):
+    login_map = {}
+    if not usernames or not days:
+        return login_map
+    user_placeholders = ",".join("?" for _ in usernames)
+    day_placeholders = ",".join("?" for _ in days)
+    cursor.execute(
+        f"""
+        SELECT username, date, MIN(login_time)
+        FROM login_history
+        WHERE username IN ({user_placeholders}) AND date IN ({day_placeholders})
+        GROUP BY username, date
+        """,
+        list(usernames) + list(days),
+    )
+    for username, day, login_time in cursor.fetchall():
+        login_map[(username, day)] = login_time
+    return login_map
+
+def fetch_attendance_override_statuses(cursor, usernames, days):
+    override_map = {}
+    if not usernames or not days:
+        return override_map
+    user_placeholders = ",".join("?" for _ in usernames)
+    day_placeholders = ",".join("?" for _ in days)
+    cursor.execute(
+        f"""
+        SELECT username, date, status
+        FROM attendance_override
+        WHERE username IN ({user_placeholders}) AND date IN ({day_placeholders})
+        """,
+        list(usernames) + list(days),
+    )
+    for username, day, status in cursor.fetchall():
+        override_map[(username, day)] = status
+    return override_map
+
+def fetch_group_late_thresholds(cursor, group, days):
+    late_cutoffs = {day: None for day in days}
+    if not group or not days:
+        return late_cutoffs
+    day_placeholders = ",".join("?" for _ in days)
+    cursor.execute(
+        f"""
+        SELECT lh.date, MIN(lh.login_time)
+        FROM login_history lh
+        JOIN users u ON u.username = lh.username
+        WHERE u.group_name = ? AND lh.date IN ({day_placeholders})
+        GROUP BY lh.date
+        """,
+        [group, *days],
+    )
+    for day, min_login in cursor.fetchall():
+        if not min_login:
+            continue
+        try:
+            min_dt = datetime.fromisoformat(min_login)
+        except ValueError:
+            min_dt = datetime.strptime(min_login, "%Y-%m-%d %H:%M:%S")
+        late_cutoffs[day] = (min_dt + timedelta(minutes=4)).strftime("%H:%M")
+    return late_cutoffs
+
+def fetch_group_excluded_dates(cursor, groups):
+    excluded_by_group = {group: set() for group in groups if group}
+    if not excluded_by_group:
+        return excluded_by_group
+    placeholders = ",".join("?" for _ in excluded_by_group)
+    cursor.execute(
+        f"""
+        SELECT date, group_name
+        FROM excluded_dates
+        WHERE group_name IS NULL OR group_name IN ({placeholders})
+        """,
+        list(excluded_by_group.keys()),
+    )
+    rows = cursor.fetchall()
+    global_dates = {date_str for date_str, group_name in rows if group_name is None}
+    for group in excluded_by_group:
+        excluded_by_group[group] = set(global_dates)
+    for date_str, group_name in rows:
+        if group_name in excluded_by_group:
+            excluded_by_group[group_name].add(date_str)
+    return excluded_by_group
+
+def fetch_present_day_map(cursor, usernames, days):
+    present_map = {username: set() for username in usernames}
+    if not present_map or not days:
+        return present_map
+    user_placeholders = ",".join("?" for _ in present_map)
+    day_placeholders = ",".join("?" for _ in days)
+    cursor.execute(
+        f"""
+        SELECT DISTINCT username, date
+        FROM login_history
+        WHERE username IN ({user_placeholders}) AND date IN ({day_placeholders})
+        """,
+        list(present_map.keys()) + list(days),
+    )
+    for username, day in cursor.fetchall():
+        present_map.setdefault(username, set()).add(day)
+    cursor.execute(
+        f"""
+        SELECT username, date, status
+        FROM attendance_override
+        WHERE username IN ({user_placeholders}) AND date IN ({day_placeholders})
+        """,
+        list(present_map.keys()) + list(days),
+    )
+    for username, day, status in cursor.fetchall():
+        if attendance_status_counts_as_present(status):
+            present_map.setdefault(username, set()).add(day)
+        else:
+            present_map.setdefault(username, set()).discard(day)
+    return present_map
+
+def build_attendance_history(cursor, username, group_name, days, login_map=None, override_map=None, late_cutoffs=None, class_checked_dates=None, excluded_dates=None):
+    history = []
+    login_map = login_map or {}
+    override_map = override_map or {}
+    late_cutoffs = late_cutoffs or {}
+    class_checked_dates = class_checked_dates or set()
+    excluded_dates = excluded_dates or set()
+
+    for day in days:
+        weekday = datetime.strptime(day, "%Y-%m-%d").weekday()
+        login_time = login_map.get((username, day))
+        if day in excluded_dates:
+            history.append({"date": day, "status": "Normal", "time": "", "late": False, "note": "", "weekday": weekday})
+            continue
+
+        if login_time:
+            time_str = login_time.split(" ")[1][:5]
+            cutoff = late_cutoffs.get(day)
+            late = cutoff is not None and time_str > cutoff
+            history.append({"date": day, "status": "Present", "time": time_str, "late": late, "note": "Auto", "weekday": weekday})
+            continue
+
+        override_status = (override_map.get((username, day)) or "").strip().lower()
+        if attendance_status_counts_as_present(override_status):
+            manual_time = "12:00" if override_status == "present" else ""
+            history.append({"date": day, "status": "Present", "time": manual_time, "late": override_status == "late", "note": "Manual", "weekday": weekday})
+        elif override_status == "absent" or day in class_checked_dates:
+            note = "Manual" if override_status == "absent" else "Class checked in"
+            history.append({"date": day, "status": "Absent", "time": "", "late": False, "note": note, "weekday": weekday})
+        else:
+            history.append({"date": day, "status": "Normal", "time": "", "late": False, "note": "", "weekday": weekday})
+
+    return history
+
+def summarize_attendance_history(history):
+    counted_history = [item for item in history if item["status"] in ("Present", "Absent")]
+    total_days = len(counted_history)
+    present_days = sum(1 for item in history if item["status"] == "Present")
+    absent_days = sum(1 for item in history if item["status"] == "Absent")
+    late_days = sum(1 for item in history if item["late"])
+    attendance_pct = round((present_days / total_days) * 100) if total_days else 0
+    return {
+        "total_days": total_days,
+        "present_days": present_days,
+        "absent_days": absent_days,
+        "late_days": late_days,
+        "attendance_pct": attendance_pct,
+    }
+
+def build_attendance_months(history):
+    attendance_months = []
+    for item in history:
+        month_key = item["date"][:7]
+        if not attendance_months or attendance_months[-1]["key"] != month_key:
+            month_date = datetime.strptime(item["date"], "%Y-%m-%d")
+            attendance_months.append({
+                "key": month_key,
+                "name": month_date.strftime("%B"),
+                "days": []
+            })
+        attendance_months[-1]["days"].append(item)
+    return attendance_months
+
+def auto_exclude_empty_attendance_days(cursor, groups, created_by="system", days=None):
+    groups = [group for group in groups if group]
+    if not groups:
+        return 0
+
+    if days is None:
+        days = get_current_year_attendance_days()
+    if not days:
+        return 0
+
+    group_placeholders = ",".join("?" for _ in groups)
+    day_placeholders = ",".join("?" for _ in days)
+
+    cursor.execute(
+        f"""
+        SELECT u.group_name, lh.date, COUNT(DISTINCT lh.username)
+        FROM login_history lh
+        JOIN users u ON u.username = lh.username
+        WHERE u.group_name IN ({group_placeholders})
+          AND u.role = 'student'
+          AND lh.date IN ({day_placeholders})
+        GROUP BY u.group_name, lh.date
+        """,
+        [*groups, *days],
+    )
+    login_counts = {(group_name, day): count for group_name, day, count in cursor.fetchall()}
+
+    cursor.execute(
+        f"""
+        SELECT u.group_name, ao.date, COUNT(DISTINCT ao.username)
+        FROM attendance_override ao
+        JOIN users u ON u.username = ao.username
+        WHERE u.group_name IN ({group_placeholders})
+          AND u.role = 'student'
+          AND ao.date IN ({day_placeholders})
+          AND LOWER(COALESCE(ao.status, '')) IN ('present', 'late')
+        GROUP BY u.group_name, ao.date
+        """,
+        [*groups, *days],
+    )
+    override_counts = {(group_name, day): count for group_name, day, count in cursor.fetchall()}
+
+    cursor.execute(
+        f"""
+        SELECT date, group_name
+        FROM excluded_dates
+        WHERE group_name IN ({group_placeholders})
+          AND date IN ({day_placeholders})
+        """,
+        [*groups, *days],
+    )
+    existing = {(date_str, group_name) for date_str, group_name in cursor.fetchall()}
+
+    timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    inserted = 0
+    for group_name in groups:
+        for day in days:
+            if (day, group_name) in existing:
+                continue
+            if login_counts.get((group_name, day), 0) > 0:
+                continue
+            if override_counts.get((group_name, day), 0) > 0:
+                continue
+            cursor.execute(
+                """
+                INSERT OR IGNORE INTO excluded_dates (date, group_name, reason, created_by, created_at)
+                VALUES (?, ?, ?, ?, ?)
+                """,
+                (day, group_name, "Auto excluded: no class attendance recorded", created_by, timestamp),
+            )
+            if cursor.rowcount:
+                inserted += 1
+    return inserted
+
+def fetch_student_practical_averages(cursor, teacher_username=None):
+    params = []
+    teacher_filter = ""
+    if teacher_username:
+        teacher_filter = " AND u.teacher_username = ?"
+        params.append(teacher_username)
+    cursor.execute(
+        f"""
+        SELECT best_scores.username, ROUND(AVG(best_scores.best_score), 1)
+        FROM (
+            SELECT username, subject, task, MAX(score) AS best_score
+            FROM results
+            GROUP BY username, subject, task
+        ) best_scores
+        JOIN users u ON u.username = best_scores.username
+        WHERE u.role = 'student'{teacher_filter}
+        GROUP BY best_scores.username
+        """,
+        params,
+    )
+    return {username: average for username, average in cursor.fetchall()}
+
+def fetch_student_theory_averages(cursor, teacher_username=None):
+    params = []
+    teacher_filter = ""
+    if teacher_username:
+        teacher_filter = " AND u.teacher_username = ?"
+        params.append(teacher_username)
+    cursor.execute(
+        f"""
+        SELECT best_scores.username, ROUND(AVG(best_scores.best_pct), 1)
+        FROM (
+            SELECT username, test_id, MAX(percentage) AS best_pct
+            FROM theory_submissions
+            GROUP BY username, test_id
+        ) best_scores
+        JOIN users u ON u.username = best_scores.username
+        WHERE u.role = 'student'{teacher_filter}
+        GROUP BY best_scores.username
+        """,
+        params,
+    )
+    return {username: average for username, average in cursor.fetchall()}
+
+def fetch_group_practical_averages(cursor, groups):
+    if not groups:
+        return {}
+    placeholders = ",".join("?" for _ in groups)
+    cursor.execute(
+        f"""
+        SELECT u.group_name, ROUND(AVG(best_scores.best_score), 1)
+        FROM (
+            SELECT username, subject, task, MAX(score) AS best_score
+            FROM results
+            GROUP BY username, subject, task
+        ) best_scores
+        JOIN users u ON u.username = best_scores.username
+        WHERE u.role = 'student' AND u.group_name IN ({placeholders})
+        GROUP BY u.group_name
+        """,
+        groups,
+    )
+    return {group: average for group, average in cursor.fetchall()}
+
+def fetch_group_theory_averages(cursor, groups):
+    if not groups:
+        return {}
+    placeholders = ",".join("?" for _ in groups)
+    cursor.execute(
+        f"""
+        SELECT u.group_name, ROUND(AVG(best_scores.best_pct), 1)
+        FROM (
+            SELECT username, test_id, MAX(percentage) AS best_pct
+            FROM theory_submissions
+            GROUP BY username, test_id
+        ) best_scores
+        JOIN users u ON u.username = best_scores.username
+        WHERE u.role = 'student' AND u.group_name IN ({placeholders})
+        GROUP BY u.group_name
+        """,
+        groups,
+    )
+    return {group: average for group, average in cursor.fetchall()}
+
+def get_teacher_quick_action_catalog():
+    return [
+        {"key": "manage_subjects", "label": "Practical", "icon": "📁", "href": "/manage_subjects", "kind": "link"},
+        {"key": "manage_lessons", "label": "Lesson Setup", "icon": "📘", "href": "/manage_lessons", "kind": "link"},
+        {"key": "manage_tests", "label": "Theory Tests", "icon": "📝", "href": "/manage_tests", "kind": "link"},
+        {"key": "response_review", "label": "Review Responses", "icon": "🧾", "href": "/response_review", "kind": "link"},
+        {"key": "marking_setup", "label": "Marking Setup", "icon": "🛠️", "href": "/marking_setup", "kind": "link"},
+        {"key": "attendance", "label": "Attendance", "icon": "📅", "href": "/attendance", "kind": "link"},
+        {"key": "group_results", "label": "Results", "icon": "📊", "href": "/group_results", "kind": "link"},
+        {"key": "communications", "label": "Messages", "icon": "💬", "href": "/communications", "kind": "link"},
+        {"key": "export", "label": "Export", "icon": "⬇️", "kind": "export"},
+        {"key": "view_group", "label": "View Group", "icon": "👁", "kind": "view_group"},
+    ]
+
+def get_teacher_selected_quick_actions(username):
+    catalog = [item for item in get_teacher_quick_action_catalog() if item.get("kind") == "link"]
+    catalog_map = {item["key"]: item for item in catalog}
+    default_keys = ["manage_subjects", "manage_tests", "attendance", "communications", "response_review"]
+    conn = get_db()
+    cursor = conn.cursor()
+    cursor.execute(
+        """
+        SELECT action_key
+        FROM teacher_quick_actions
+        WHERE username = ?
+        ORDER BY rowid
+        """,
+        (username,),
+    )
+    stored_keys = [row[0] for row in cursor.fetchall()]
+    conn.close()
+    selected = [catalog_map[key] for key in stored_keys if key in catalog_map]
+    if not selected:
+        selected = [catalog_map[key] for key in default_keys if key in catalog_map]
+    selected_keys = {item["key"] for item in selected}
+    available = [dict(item, selected=item["key"] in selected_keys) for item in catalog]
+    return selected, available
+
+def get_teacher_unread_message_count(username):
+    conn = get_db()
+    cursor = conn.cursor()
+    cursor.execute(
+        """
+        SELECT COUNT(*)
+        FROM communication_threads t
+        WHERE t.teacher_username = ?
+          AND COALESCE(t.last_sender_role, '') = 'student'
+        """,
+        (username,),
+    ) if False else None
+    cursor.execute(
+        """
+        SELECT COUNT(*)
+        FROM communication_threads t
+        WHERE t.teacher_username = ?
+          AND EXISTS (
+              SELECT 1
+              FROM communication_messages m
+              WHERE m.thread_id = t.id
+                AND COALESCE(m.sender_role, '') = 'student'
+                AND (t.teacher_read_at IS NULL OR COALESCE(m.created_at, '') > t.teacher_read_at)
+          )
+        """,
+        (username,),
+    )
+    count = cursor.fetchone()[0] or 0
+    conn.close()
+    return count
+
+def get_student_unread_message_count(username):
+    conn = get_db()
+    cursor = conn.cursor()
+    cursor.execute(
+        """
+        SELECT COUNT(*)
+        FROM communication_threads t
+        WHERE t.student_username = ?
+          AND EXISTS (
+              SELECT 1
+              FROM communication_messages m
+              WHERE m.thread_id = t.id
+                AND COALESCE(m.sender_role, '') IN ('teacher', 'admin')
+                AND (t.student_read_at IS NULL OR COALESCE(m.created_at, '') > t.student_read_at)
+          )
+        """,
+        (username,),
+    )
+    count = cursor.fetchone()[0] or 0
+    conn.close()
+    return count
+
+def student_has_fresh_teacher_reply(username):
+    return get_student_unread_message_count(username) > 0
+
+def get_student_message_threads(username):
+    conn = get_db()
+    conn.row_factory = sqlite3.Row
+    cursor = conn.cursor()
+    cursor.execute("""
+        SELECT *
+        FROM communication_threads
+        WHERE student_username = ?
+        ORDER BY COALESCE(updated_at, created_at) DESC, id DESC
+    """, (username,))
+    threads = []
+    for row in cursor.fetchall():
+        thread = dict(row)
+        cursor.execute("""
+            SELECT *
+            FROM communication_messages
+            WHERE thread_id = ?
+            ORDER BY COALESCE(created_at, '') ASC, id ASC
+        """, (thread["id"],))
+        thread["messages"] = [dict(message_row) for message_row in cursor.fetchall()]
+        threads.append(thread)
+    conn.close()
+    return threads
+
+def mark_student_threads_read(username):
+    now_text = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    conn = get_db()
+    cursor = conn.cursor()
+    cursor.execute("""
+        UPDATE communication_threads
+        SET student_read_at = ?
+        WHERE student_username = ?
+    """, (now_text, username))
+    conn.commit()
+    conn.close()
+
+def create_communication_thread(cursor, student_username, topic, subject_line="", attendance_date="", initial_message="", chat_session_id=""):
+    created_at = datetime.now().isoformat()
+    cursor.execute("SELECT full_name, group_name, teacher_username FROM users WHERE username = ?", (student_username,))
+    user_row = cursor.fetchone()
+    group_name = user_row[1] if user_row else ""
+    teacher_username = user_row[2] if user_row else ""
+    cursor.execute(
+        """
+        INSERT INTO communication_threads (
+            student_username, teacher_username, group_name, topic, subject_line,
+            attendance_date, status, chat_session_id, created_at, updated_at
+        )
+        VALUES (?, ?, ?, ?, ?, ?, 'open', ?, ?, ?)
+        """,
+        (student_username, teacher_username, group_name, topic, subject_line, attendance_date, chat_session_id, created_at, created_at),
+    )
+    thread_id = cursor.lastrowid
+    if initial_message:
+        add_communication_message(cursor, thread_id, student_username, "student", initial_message)
+    return thread_id
+
+def add_communication_message(cursor, thread_id, sender_username, sender_role, message):
+    created_at = datetime.now().isoformat()
+    cursor.execute(
+        """
+        INSERT INTO communication_messages (thread_id, sender_username, sender_role, message, created_at)
+        VALUES (?, ?, ?, ?, ?)
+        """,
+        (thread_id, sender_username, sender_role, message, created_at),
+    )
+    cursor.execute(
+        """
+        UPDATE communication_threads
+        SET updated_at = ?,
+            teacher_read_at = CASE WHEN ? IN ('teacher', 'admin') THEN ? ELSE teacher_read_at END,
+            student_read_at = CASE WHEN ? = 'student' THEN ? ELSE student_read_at END
+        WHERE id = ?
+        """,
+        (created_at, sender_role, created_at, sender_role, created_at, thread_id),
+    )
+
+def normalize_review_text(value):
+    return " ".join((value or "").strip().lower().split())
+
+def get_true_false_option_data(options):
+    correct_choice = ""
+    accepted_corrections = []
+    for option in options:
+        option_text = option[1] if len(option) > 1 else ""
+        is_correct = option[2] if len(option) > 2 else 0
+        match_pair = option[3] if len(option) > 3 else None
+        if is_correct == 1 and match_pair != "correction":
+            correct_choice = option_text
+        if match_pair == "correction" and option_text:
+            accepted_corrections.append(option_text)
+    return correct_choice, accepted_corrections
+
+def score_true_false_answer(selected, correction_submitted, options, effective_marks):
+    correct_choice, accepted_corrections = get_true_false_option_data(options)
+    if selected != correct_choice:
+        return 0
+    if selected == "False" and accepted_corrections:
+        submitted_key = normalize_review_text(correction_submitted)
+        accepted_keys = {normalize_review_text(item) for item in accepted_corrections if item}
+        return effective_marks if submitted_key and submitted_key in accepted_keys else 0
+    return effective_marks
+
+def get_fill_in_accepted_answers(options):
+    return [option[1] for option in options if len(option) > 2 and option[2] == 1 and option[1]]
+
+def score_fill_in_answer(answer_text, options, marks):
+    submitted_key = normalize_review_text(answer_text)
+    accepted_keys = {normalize_review_text(item) for item in get_fill_in_accepted_answers(options)}
+    return marks if submitted_key and submitted_key in accepted_keys else 0
+
+def parse_true_false_answer_text(answer_text):
+    raw = (answer_text or "").strip()
+    if "(correction:" in raw:
+        selected, correction = raw.split("(correction:", 1)
+        return selected.strip(), correction.rstrip(") ").strip()
+    return raw, ""
+
+def compute_theory_answer_award(question_type, marks, options, answer_text):
+    if question_type == "mcq_single":
+        correct_values = {option[1] for option in options if len(option) > 2 and option[2] == 1}
+        return marks if answer_text in correct_values else 0
+    if question_type == "mcq_multi":
+        correct_values = sorted(option[1] for option in options if len(option) > 2 and option[2] == 1)
+        selected_values = sorted([item.strip() for item in (answer_text or "").split(",") if item.strip()])
+        return marks if selected_values == correct_values else 0
+    if question_type == "true_false":
+        selected, correction = parse_true_false_answer_text(answer_text)
+        return score_true_false_answer(selected, correction, options, marks)
+    if question_type == "fill_in":
+        return score_fill_in_answer(answer_text, options, marks)
+    if question_type == "match":
+        expected_map = {option[1]: option[3] for option in options if len(option) > 3 and option[3] and option[3] != "correction"}
+        awarded = 0
+        for pair in (answer_text or "").split(";"):
+            if "=" not in pair:
+                continue
+            left, chosen = pair.split("=", 1)
+            if expected_map.get(left.strip()) == chosen.strip():
+                awarded += 1
+        return awarded
+    return 0
+
+def regrade_theory_question_answers(test_id, question_id, selected_group=None, learner_username=None):
+    conn = get_db()
+    cursor = conn.cursor()
+    cursor.execute("""
+        SELECT question_type, marks
+        FROM theory_questions
+        WHERE id = ? AND test_id = ?
+    """, (question_id, test_id))
+    question_row = cursor.fetchone()
+    if not question_row:
+        conn.close()
+        return 0
+
+    q_type, marks = question_row
+    cursor.execute("""
+        SELECT id, option_text, is_correct, match_pair
+        FROM theory_options
+        WHERE question_id = ?
+        ORDER BY id
+    """, (question_id,))
+    options = cursor.fetchall()
+
+    query = """
+        SELECT a.id, a.answer_text, a.submission_id
+        FROM theory_answers a
+        JOIN theory_submissions s ON s.id = a.submission_id
+        JOIN users u ON u.username = s.username
+        WHERE s.test_id = ? AND a.question_id = ?
+    """
+    params = [test_id, question_id]
+    if selected_group:
+        query += " AND u.group_name = ?"
+        params.append(selected_group)
+    if learner_username:
+        query += " AND s.username = ?"
+        params.append(learner_username)
+    cursor.execute(query, params)
+    answer_rows = cursor.fetchall()
+
+    updated = 0
+    submission_ids = set()
+    for answer_id, answer_text, submission_id in answer_rows:
+        awarded = compute_theory_answer_award(q_type, marks, options, answer_text)
+        is_correct = 1 if awarded == marks else 0
+        if q_type == "match":
+            expected_total = len([option for option in options if len(option) > 3 and option[3] and option[3] != "correction"])
+            is_correct = 1 if awarded == expected_total else 0
+        cursor.execute("""
+            UPDATE theory_answers
+            SET marks_awarded = ?, is_correct = ?
+            WHERE id = ?
+        """, (awarded, is_correct, answer_id))
+        updated += cursor.rowcount
+        submission_ids.add(submission_id)
+
+    for submission_id in submission_ids:
+        cursor.execute("""
+            SELECT COALESCE(SUM(marks_awarded), 0)
+            FROM theory_answers
+            WHERE submission_id = ?
+        """, (submission_id,))
+        score = cursor.fetchone()[0] or 0
+        cursor.execute("SELECT total FROM theory_submissions WHERE id = ?", (submission_id,))
+        total_row = cursor.fetchone()
+        total = total_row[0] if total_row and total_row[0] else 0
+        percentage = round((score / total) * 100) if total else 0
+        cursor.execute("""
+            UPDATE theory_submissions
+            SET score = ?, percentage = ?
+            WHERE id = ?
+        """, (score, percentage, submission_id))
+
+    conn.commit()
+    conn.close()
+    return updated
 
 def get_student_dashboard_data(username):
     conn = get_db()
@@ -1546,7 +2275,7 @@ def get_attendance_data(group, start_date=None, end_date=None, teacher_username=
     today_str = datetime.now().date().isoformat()
     days = [day for day in days if day <= today_str]
 
-    # Filter out excluded dates
+    auto_exclude_empty_attendance_days(cursor, [group], created_by=teacher_username or "system", days=days)
     cursor.execute("""
     SELECT date FROM excluded_dates 
     WHERE group_name IS NULL OR group_name = ?
@@ -1568,72 +2297,55 @@ def get_attendance_data(group, start_date=None, end_date=None, teacher_username=
     learners = cursor.fetchall()
 
     attendance = []
-
-    # Precompute late cutoff per day for the group
-    late_cutoffs = {}
-    for day in days:
-        late_cutoffs[day] = get_group_late_threshold(group, day)
+    late_cutoffs = fetch_group_late_thresholds(cursor, group, days)
+    usernames = [user for user, _, _ in learners]
+    login_map = fetch_first_login_times(cursor, usernames, days)
+    override_map = fetch_attendance_override_statuses(cursor, usernames, days)
+    cursor.execute("""
+        SELECT DISTINCT lh.date
+        FROM login_history lh
+        JOIN users u ON u.username = lh.username
+        WHERE u.group_name = ? AND u.role = 'student'
+    """, (group,))
+    class_checked_dates = {row[0] for row in cursor.fetchall()}
 
     for user, name, user_group_name in learners:
+        history = build_attendance_history(
+            cursor,
+            user,
+            group,
+            days,
+            login_map=login_map,
+            override_map=override_map,
+            late_cutoffs=late_cutoffs,
+            class_checked_dates=class_checked_dates,
+        )
+        summary = summarize_attendance_history(history)
         row = {
             "username": user,
             "name": name,
             "group": user_group_name,
-            "days": {}
+            "days": {},
+            "attendance_pct": summary["attendance_pct"],
+            "present_days": summary["present_days"],
+            "absent_days": summary["absent_days"],
+            "late_days": summary["late_days"],
         }
-
-        for day in days:
-
-            # 🔹 FIRST: check real login
-            cursor.execute("""
-            SELECT MIN(login_time)
-            FROM login_history
-            WHERE username = ? AND date = ?
-            """, (user, day))
-
-            result = cursor.fetchone()[0]
-
-            if result:
-                # ✅ REAL LOGIN ALWAYS WINS (they actually logged in)
-                time_str = result.split(" ")[1][:5]
-                cutoff = late_cutoffs.get(day)
-                is_late = cutoff is not None and time_str > cutoff
-
-                row["days"][day] = {
-                    "time": time_str,
-                    "late": is_late,
-                    "manual": False
+        for item in history:
+            if item["status"] == "Present":
+                row["days"][item["date"]] = {
+                    "time": item["time"],
+                    "late": item["late"],
+                    "manual": item["note"] == "Manual"
                 }
-
+            elif item["status"] == "Absent":
+                row["days"][item["date"]] = None
             else:
-                # 🔹 ONLY THEN check override (they didn't log in, but can be manually set)
-                cursor.execute("""
-                SELECT status FROM attendance_override
-                WHERE username = ? AND date = ?
-                """, (user, day))
-
-                override = cursor.fetchone()
-
-                if override:
-                    if override[0] == "present":
-                        row["days"][day] = {
-                            "time": "12:00",
-                            "late": False,
-                            "manual": True
-                        }
-                    else:
-                        row["days"][day] = None
-                else:
-                    row["days"][day] = None
-
-
-        # 🔹 Attendance %
-        total_days = len(days)
-        present_days = sum(1 for d in days if row["days"][d])
-        row["attendance_pct"] = round((present_days / total_days) * 100) if total_days else 0
+                row["days"][item["date"]] = None
 
         attendance.append(row)
 
+    conn.commit()
     conn.close()
     return days, attendance
 
@@ -1804,31 +2516,35 @@ def student_dashboard():
     """, (username,))
     theory_subject_avgs = cursor.fetchall()
 
-    # ─ Attendance (last 7 working days)
-    days = get_last_7_days()
+    attendance_year = datetime.now().year
+    attendance_days = get_current_year_attendance_days()
+    auto_exclude_empty_attendance_days(cursor, [user_group], created_by=username, days=attendance_days)
     cursor.execute("SELECT date FROM excluded_dates WHERE group_name IS NULL OR group_name = ?", (user_group,))
-    excluded = {r[0] for r in cursor.fetchall()}
-    days = [d for d in days if d not in excluded]
-
-    att_history = []
-    cutoffs = {d: get_group_late_threshold(user_group, d) for d in days} if user_group else {}
-    for day in days:
-        cursor.execute("SELECT MIN(login_time) FROM login_history WHERE username = ? AND date = ?", (username, day))
-        lt = cursor.fetchone()[0]
-        if lt:
-            t = lt.split(" ")[1][:5]
-            late = cutoffs.get(day) is not None and t > cutoffs[day]
-            att_history.append({"date": day, "status": "present", "late": late, "time": t})
-        else:
-            cursor.execute("SELECT status FROM attendance_override WHERE username = ? AND date = ?", (username, day))
-            ov = cursor.fetchone()
-            if ov and ov[0] == "present":
-                att_history.append({"date": day, "status": "present", "late": False, "time": "12:00"})
-            else:
-                att_history.append({"date": day, "status": "absent", "late": False, "time": ""})
-
-    present = sum(1 for d in att_history if d["status"] == "present")
-    att_pct = round((present / len(att_history)) * 100) if att_history else 0
+    excluded_dates = {r[0] for r in cursor.fetchall()}
+    login_map = fetch_first_login_times(cursor, [username], attendance_days)
+    override_map = fetch_attendance_override_statuses(cursor, [username], attendance_days)
+    late_cutoffs = fetch_group_late_thresholds(cursor, user_group, attendance_days) if user_group else {}
+    cursor.execute("""
+        SELECT DISTINCT lh.date
+        FROM login_history lh
+        JOIN users u ON u.username = lh.username
+        WHERE u.group_name = ? AND u.role = 'student' AND lh.username != ?
+    """, (user_group, username))
+    class_checked_dates = {row[0] for row in cursor.fetchall()}
+    att_history = build_attendance_history(
+        cursor,
+        username,
+        user_group,
+        attendance_days,
+        login_map=login_map,
+        override_map=override_map,
+        late_cutoffs=late_cutoffs,
+        class_checked_dates=class_checked_dates,
+        excluded_dates=excluded_dates,
+    )
+    attendance_months = build_attendance_months(att_history)
+    attendance_summary = summarize_attendance_history(att_history)
+    att_pct = attendance_summary["attendance_pct"]
 
     # ─ Practical subjects and tasks for inline panel
     today = datetime.now().date().isoformat()
@@ -1956,6 +2672,10 @@ def student_dashboard():
     """, (username,))
     recent_feedback = cursor.fetchall()
 
+    message_threads = get_student_message_threads(username)
+    unread_teacher_messages = get_student_unread_message_count(username)
+    auto_open_chat = student_has_fresh_teacher_reply(username)
+
     conn.close()
     return render_template(
         "student_dashboard.html",
@@ -1969,12 +2689,21 @@ def student_dashboard():
         recent_results=recent_results,
         recent_theory_results=recent_theory_results,
         att_history=att_history,
+        attendance_months=attendance_months,
+        attendance_year=attendance_year,
         att_pct=att_pct,
+        present_days=attendance_summary["present_days"],
+        absent_days=attendance_summary["absent_days"],
+        late_days=attendance_summary["late_days"],
+        total_attendance_days=attendance_summary["total_days"],
         subjects_with_tasks=subjects_with_tasks,
         missing_assignments=missing_assignments,
         missing_tasks=missing_tasks,
         weaknesses=weaknesses,
-        recent_feedback=recent_feedback
+        recent_feedback=recent_feedback,
+        message_threads=message_threads,
+        unread_teacher_messages=unread_teacher_messages,
+        auto_open_chat=auto_open_chat
     )
 
 @app.route("/auto_login")
@@ -2392,7 +3121,7 @@ def upload(username, subject_id, task_id):
         if row and row[0]:
             sample_name = row[1] or f"task_{task_id}_sample"
             sample_link_html = (
-                f'<p><a href="/tasks/{task_id}/clear_uploads">📎 Download task sample</a> '
+                f'<p><a href="/tasks/{task_id}/sample_file" target="_blank">📎 Download task sample</a> '
                 f'({escape(sample_name)})</p>'
             )
     finally:
@@ -2421,28 +3150,7 @@ def subjects(username):
     session_user = session.get("username")
     if session_user != username:
         return "Unauthorized", 401
-
-    update_active_user(username)
-
-    conn = get_db()
-    cursor = conn.cursor()
-
-    cursor.execute("SELECT id, name FROM subjects ORDER BY name")
-    all_subjects = cursor.fetchall()
-    conn.close()
-
-    if not all_subjects:
-        subject_links = "<p>No subjects available yet.</p>"
-    else:
-        subject_links = ""
-        for subj_id, subj_name in all_subjects:
-            subject_links += f'<a href="/tasks/{escape(username)}/{subj_id}">📁 {escape(subj_name)}</a><br>\n'
-
-    return f"""
-    <p><a href="/student_dashboard">← Back to Dashboard</a></p>
-    <h2>📁 Practical Assignments</h2>
-    {subject_links}
-    """
+    return redirect(url_for("learner_tasks"))
 
 @app.route("/tasks/<username>/<subject_id>")
 def tasks(username, subject_id):
@@ -2453,63 +3161,7 @@ def tasks(username, subject_id):
     session_user = session.get("username")
     if session_user != username:
         return "Unauthorized", 401
-
-    # Update active user timestamp
-    update_active_user(username)
-
-    conn = get_db()
-    cursor = conn.cursor()
-
-    # Get subject name
-    cursor.execute("SELECT name FROM subjects WHERE id = ?", (subject_id,))
-    subject_row = cursor.fetchone()
-    if not subject_row:
-        conn.close()
-        return "Subject not found", 404
-    subject_name = subject_row[0]
-
-    # Get user role and group
-    role = get_user_role(username)
-    cursor.execute("SELECT group_name FROM users WHERE username = ?", (username,))
-    group_row = cursor.fetchone()
-    user_group = group_row[0] if group_row else None
-
-    # Get tasks
-    today = datetime.now().date().isoformat()
-    if role in ["teacher", "admin"]:
-        # Teachers/admins see all tasks
-        cursor.execute("""
-        SELECT t.id, t.name, t.assign_date
-        FROM tasks t
-        WHERE t.subject_id = ?
-        ORDER BY t.assign_date, t.name
-        """, (subject_id,))
-    else:
-        # Students see only assigned tasks that are due
-        cursor.execute("""
-        SELECT t.id, t.name, t.assign_date
-        FROM tasks t
-        JOIN task_groups tg ON t.id = tg.task_id
-        WHERE t.subject_id = ? AND tg.group_name = ? AND t.assign_date <= ?
-        ORDER BY t.assign_date, t.name
-        """, (subject_id, user_group, today))
-
-    all_tasks = cursor.fetchall()
-    conn.close()
-
-    if not all_tasks:
-        task_links = "<p>No tasks available.</p>"
-    else:
-        task_links = ""
-        for task_id, task_name, assign_date in all_tasks:
-            task_links += f'<a href="/upload/{escape(username)}/{subject_id}/{task_id}">📄 {escape(task_name)}</a><br>\n'
-
-    escaped_username = escape(username)
-    return f"""
-    <p><a href="/subjects/{escaped_username}">← Back to Subjects</a> | <a href="/student_dashboard">Back to Dashboard</a></p>
-    <h2>{escape(subject_name).upper()} Tasks</h2>
-    {task_links}
-    """
+    return redirect(url_for("learner_tasks"))
 
 @app.route("/view_as_student/<group_name>")
 def view_as_student(group_name):
@@ -2656,185 +3308,166 @@ def teacher_dashboard():
 
     conn = get_db()
     cursor = conn.cursor()
-
-    # ─ Quick stats
-    cursor.execute("SELECT COUNT(*) FROM users WHERE role = 'student'")
-    total_students = cursor.fetchone()[0]
-
     today = datetime.now().strftime("%Y-%m-%d")
-    cursor.execute("SELECT COUNT(DISTINCT username) FROM login_history WHERE date = ?", (today,))
-    active_today = cursor.fetchone()[0]
+    groups = get_groups(username)
+    quick_actions, available_quick_actions = get_teacher_selected_quick_actions(username)
+
+    if role == "teacher":
+        cursor.execute("""
+            SELECT username, full_name, group_name
+            FROM users
+            WHERE role = 'student' AND teacher_username = ?
+            ORDER BY group_name, full_name, username
+        """, (username,))
+    else:
+        cursor.execute("""
+            SELECT username, full_name, group_name
+            FROM users
+            WHERE role = 'student'
+            ORDER BY group_name, full_name, username
+        """)
+    student_rows = cursor.fetchall()
+    total_students = len(student_rows)
+    student_usernames = [row[0] for row in student_rows]
+    student_groups = sorted({row[2] for row in student_rows if row[2]})
+    groups = student_groups or groups
+    group_filter_clause = "AND u.teacher_username = ?" if role == "teacher" else ""
+    group_filter_params = [username] if role == "teacher" else []
+
+    cursor.execute("""
+        SELECT COUNT(DISTINCT lh.username)
+        FROM login_history lh
+        JOIN users u ON u.username = lh.username
+        WHERE lh.date = ? AND u.role = 'student'
+        """ + (" AND u.teacher_username = ?" if role == "teacher" else ""),
+        ((today, username) if role == "teacher" else (today,))
+    )
+    active_today = cursor.fetchone()[0] or 0
 
     days_21 = get_last_21_days()
+    excluded_days = fetch_group_excluded_dates(cursor, groups)
+    filtered_days = [day for day in days_21 if day not in excluded_days]
+    login_times = fetch_first_login_times(cursor, student_usernames, filtered_days)
+    overrides = fetch_attendance_override_statuses(cursor, student_usernames, filtered_days)
 
-    # ─ Group list
-    groups = get_groups(username)
+    group_members = defaultdict(list)
+    for uname, full_name, group_name in student_rows:
+        if group_name:
+            group_members[group_name].append((uname, full_name or uname))
 
-    group_filter_clause = ""
-    group_filter_params = []
-    if role == 'teacher':
-        group_filter_clause = "AND u.teacher_username = ?"
-        group_filter_params = [username]
-
-        cursor.execute(f"""
-            SELECT COUNT(*)
-            FROM users u
-            WHERE u.role = 'student'
-            {group_filter_clause}
-        """, group_filter_params)
-        total_students = cursor.fetchone()[0]
-
-        cursor.execute(f"""
-            SELECT COUNT(DISTINCT lh.username)
-            FROM login_history lh
-            JOIN users u ON u.username = lh.username
-            WHERE lh.date = ? AND u.role = 'student'
-            {group_filter_clause}
-        """, (today, *group_filter_params))
-        active_today = cursor.fetchone()[0]
-    else:
-        cursor.execute("SELECT COUNT(*) FROM users WHERE role = 'student'")
-        total_students = cursor.fetchone()[0]
-
-        cursor.execute("SELECT COUNT(DISTINCT username) FROM login_history WHERE date = ?", (today,))
-        active_today = cursor.fetchone()[0]
-
-    # ─ Group attendance summary + overall avg (uses same logic as attendance page)
     group_att = []
     total_present_all = 0
     total_slots_all = 0
-    for g in groups:
-        days_g, data_g = get_attendance_data(g, teacher_username=username if role == 'teacher' else None)
-        g_count = len(data_g)
-        if g_count and days_g:
-            present = sum(1 for row in data_g for d in days_g if row['days'].get(d))
-            slots = g_count * len(days_g)
-            g_pct = round((present / slots) * 100)
-            total_present_all += present
-            total_slots_all += slots
-        else:
-            g_pct = 0
-        group_att.append({"group": g, "students": g_count, "att_pct": g_pct})
-
+    for group_name in groups:
+        members = group_members.get(group_name, [])
+        group_days = [day for day in filtered_days if day not in excluded_days.get(group_name, set())]
+        present_count = 0
+        total_slots = len(members) * len(group_days)
+        group_present_map = fetch_present_day_map(cursor, [u for u, _ in members], group_days) if members and group_days else {}
+        for day in group_days:
+            present_count += len(group_present_map.get(day, set()))
+        total_present_all += present_count
+        total_slots_all += total_slots
+        group_att.append({
+            "group": group_name,
+            "students": len(members),
+            "att_pct": round((present_count / total_slots) * 100) if total_slots else 0
+        })
     avg_att_pct = round((total_present_all / total_slots_all) * 100) if total_slots_all else 0
 
-    # ─ Low attendance learners
-    low_attendance = get_low_attendance_learners(10, None, username if role == 'teacher' else None)
+    low_attendance = get_low_attendance_learners(10, groups, username if role == "teacher" else None)
 
-    # ─ Combined risk score for learners
-    cursor.execute(f"""
-        SELECT u.username, u.full_name, u.group_name,
-               ROUND(AVG(b.best_score), 1) as avg_score
-        FROM users u
-        LEFT JOIN (
-            SELECT username, subject, task, MAX(score) as best_score
-            FROM results GROUP BY username, subject, task
-        ) b ON u.username = b.username
-        WHERE u.role = 'student' {group_filter_clause}
-        GROUP BY u.username
-    """, group_filter_params)
-    students = cursor.fetchall()
+    practical_avg_map = fetch_student_practical_averages(cursor, username if role == "teacher" else None)
+    theory_avg_map = fetch_student_theory_averages(cursor, username if role == "teacher" else None)
 
-    risk_learners = []
-    for uname, full_name, grp, avg_score in students:
-        avg_score = avg_score or 0
-        present_days = 0
-        for day in days_21:
-            cursor.execute("SELECT 1 FROM login_history WHERE username = ? AND date = ?", (uname, day))
-            if cursor.fetchone():
-                present_days += 1
-                continue
-            cursor.execute("SELECT status FROM attendance_override WHERE username = ? AND date = ?", (uname, day))
-            override = cursor.fetchone()
-            if override and override[0] == 'present':
-                present_days += 1
+    practical_group_avg_map = fetch_group_practical_averages(cursor, groups)
+    theory_group_avg_map = fetch_group_theory_averages(cursor, groups)
 
-        attendance_pct = round((present_days / len(days_21)) * 100) if days_21 else 0
-
-        cursor.execute("""
-            SELECT COUNT(DISTINCT t.id)
-            FROM task_groups tg
+    missing_practical_map = {}
+    missing_theory_map = {}
+    if student_usernames:
+        placeholders = ",".join("?" for _ in student_usernames)
+        cursor.execute(f"""
+            SELECT u.username, COUNT(*)
+            FROM users u
+            JOIN task_groups tg ON tg.group_name = u.group_name
             JOIN tasks t ON t.id = tg.task_id
             JOIN subjects s ON s.id = t.subject_id
-            WHERE tg.group_name = ?
+            WHERE u.username IN ({placeholders})
               AND t.assign_date <= ?
               AND t.task_type = 'practical'
-        """, (grp, today))
-        total_practical = cursor.fetchone()[0] or 0
-
-        cursor.execute("""
-            SELECT COUNT(DISTINCT t.id)
-            FROM task_groups tg
-            JOIN tasks t ON t.id = tg.task_id
-            JOIN subjects s ON s.id = t.subject_id
-            WHERE tg.group_name = ?
-              AND t.assign_date <= ?
-              AND t.task_type = 'practical'
+              AND t.is_active = 1
               AND NOT EXISTS (
                   SELECT 1 FROM results r
-                  WHERE r.username = ?
-                    AND r.subject = s.name
-                    AND r.task = t.name
+                  WHERE r.username = u.username AND r.subject = s.name AND r.task = t.name
               )
-        """, (grp, today, uname))
-        missing_practical = cursor.fetchone()[0] or 0
+            GROUP BY u.username
+        """, (*student_usernames, today))
+        missing_practical_map = {row[0]: row[1] for row in cursor.fetchall()}
 
-        cursor.execute("""
-            SELECT COUNT(DISTINCT tt.id)
-            FROM theory_tests tt
+        cursor.execute(f"""
+            SELECT u.username, COUNT(DISTINCT tt.id)
+            FROM users u
+            JOIN theory_tests tt ON tt.is_active = 1 AND tt.assign_date <= ?
             LEFT JOIN theory_test_groups ttg ON tt.id = ttg.test_id
-            WHERE (ttg.group_name = ? OR ttg.group_name IS NULL)
-              AND tt.assign_date <= ?
-        """, (grp, today))
-        total_theory = cursor.fetchone()[0] or 0
-
-        cursor.execute("""
-            SELECT COUNT(DISTINCT tt.id)
-            FROM theory_tests tt
-            LEFT JOIN theory_test_groups ttg ON tt.id = ttg.test_id
-            WHERE (ttg.group_name = ? OR ttg.group_name IS NULL)
-              AND tt.assign_date <= ?
+            WHERE u.username IN ({placeholders})
+              AND (ttg.group_name = u.group_name OR ttg.group_name IS NULL)
               AND NOT EXISTS (
                   SELECT 1 FROM theory_submissions ts
-                  WHERE ts.username = ?
-                    AND ts.test_id = tt.id
+                  WHERE ts.username = u.username AND ts.test_id = tt.id
               )
-        """, (grp, today, uname))
-        missing_theory = cursor.fetchone()[0] or 0
+            GROUP BY u.username
+        """, (today, *student_usernames))
+        missing_theory_map = {row[0]: row[1] for row in cursor.fetchall()}
 
-        total_assigned = total_practical + total_theory
-        missing_pct = round((missing_practical + missing_theory) / total_assigned * 100) if total_assigned else 0
+    at_risk_students = []
+    combined_students = []
+    for uname, full_name, group_name in student_rows:
+        group_days = [day for day in filtered_days if day not in excluded_days.get(group_name, set())]
+        present_days = 0
+        for day in group_days:
+            if uname in login_times.get(day, {}) or attendance_status_counts_as_present(overrides.get((uname, day))):
+                present_days += 1
+        attendance_pct = round((present_days / len(group_days)) * 100) if group_days else 100
 
-        risk_score = round((100 - attendance_pct) * 0.4 + (100 - avg_score) * 0.4 + missing_pct * 0.2)
-        if risk_score <= 40:
-            status = 'Safe'
-        elif risk_score <= 70:
-            status = 'At Risk'
+        practical_avg = practical_avg_map.get(uname)
+        theory_avg = theory_avg_map.get(uname)
+        if practical_avg is not None and theory_avg is not None:
+            combined_avg = round((practical_avg + theory_avg) / 2, 1)
         else:
-            status = 'High Risk'
+            combined_avg = practical_avg if practical_avg is not None else theory_avg
+        combined_avg = combined_avg if combined_avg is not None else 0
 
+        missing_total = (missing_practical_map.get(uname, 0) or 0) + (missing_theory_map.get(uname, 0) or 0)
+        assigned_total = missing_total
+        if practical_avg is not None or theory_avg is not None:
+            assigned_total = max(assigned_total, 1)
+        missing_pct = round((missing_total / assigned_total) * 100) if assigned_total else 0
+
+        risk_score = round((100 - attendance_pct) * 0.4 + (100 - combined_avg) * 0.4 + missing_pct * 0.2)
         reasons = []
         if attendance_pct < 60:
-            reasons.append(f"A {attendance_pct}% < 60%")
-        if avg_score < 40:
-            reasons.append(f"AVG {avg_score}% < 40%")
-        if missing_pct > 70:
-            reasons.append(f"Missing {missing_pct}% > 70%")
-        if not reasons:
-            reasons.append("multiple risk factors")
-
-        if status != 'Safe':
-            risk_learners.append({
-                'username': uname,
-                'name': full_name or uname,
-                'group': grp or '—',
-                'score': risk_score,
-                'status': status,
-                'reason': ' + '.join(reasons)
+            reasons.append(f"Attendance {attendance_pct}%")
+        if combined_avg < 40:
+            reasons.append(f"Average {combined_avg}%")
+        if missing_total > 0:
+            reasons.append(f"Missing {missing_total}")
+        if risk_score > 40:
+            at_risk_students.append({
+                "username": uname,
+                "name": full_name or uname,
+                "group": group_name or "—",
+                "score": risk_score,
+                "status": "High Risk" if risk_score > 70 else "At Risk",
+                "reason": " | ".join(reasons) if reasons else "Multiple factors"
             })
+        combined_students.append((full_name or uname, group_name or "—", combined_avg))
 
-    risk_learners.sort(key=lambda x: x['score'], reverse=True)
-    at_risk_students = risk_learners[:10]
+    at_risk_students.sort(key=lambda item: item["score"], reverse=True)
+    at_risk_students = at_risk_students[:10]
+    combined_students = [row for row in combined_students if row[2] is not None]
+    top_performers = sorted(combined_students, key=lambda item: item[2], reverse=True)[:5]
+    bottom_performers = sorted(combined_students, key=lambda item: item[2])[:5]
 
     # ─ Recent activity (last 20)
     if role == 'teacher':
@@ -2882,8 +3515,6 @@ def teacher_dashboard():
     recent_submissions = cursor.fetchall()
 
     # ─ Class averages per subject per group (best score per student per task)
-    from collections import defaultdict
-
     # Build practical subjects per group from assigned tasks so new subjects appear even without results.
     practical_subjects = defaultdict(set)
     if role == 'teacher' and groups:
@@ -3154,6 +3785,21 @@ def teacher_dashboard():
         """, (today,))
     missing_by_group = cursor.fetchall()
 
+    group_att_summary = []
+    for item in group_att:
+        practical_group_avg = practical_group_avg_map.get(item["group"])
+        theory_group_avg = theory_group_avg_map.get(item["group"])
+        if practical_group_avg is not None and theory_group_avg is not None:
+            combined_group_avg = round((practical_group_avg + theory_group_avg) / 2, 1)
+        else:
+            combined_group_avg = practical_group_avg if practical_group_avg is not None else theory_group_avg
+        group_att_summary.append({
+            **item,
+            "practical_pct": practical_group_avg,
+            "theory_pct": theory_group_avg,
+            "combined_pct": combined_group_avg
+        })
+
     conn.close()
     return render_template(
         "teacher_dashboard.html",
@@ -3162,7 +3808,7 @@ def teacher_dashboard():
         active_today=active_today,
         avg_att_pct=avg_att_pct,
         groups=groups,
-        group_att=group_att,
+        group_att=group_att_summary,
         low_attendance=low_attendance,
         recent_activities=recent_activities,
         recent_submissions=recent_submissions,
@@ -3173,9 +3819,758 @@ def teacher_dashboard():
         at_risk_students=at_risk_students,
         students_without_classes=students_without_classes,
         missing_by_group=missing_by_group,
+        quick_actions=quick_actions,
+        available_quick_actions=available_quick_actions,
         active_term=get_active_term_range(),
         days_in_period=len(days_21)
     )
+
+
+@app.route("/dashboard")
+def legacy_dashboard():
+    username = session.get("username")
+    if not username:
+        return redirect(url_for("login"))
+    role = get_user_role(username)
+    if role in ["teacher", "admin"]:
+        return redirect(url_for("teacher_dashboard"))
+    return redirect(url_for("student_dashboard"))
+
+
+@app.route("/manage_tests_simple")
+def legacy_manage_tests_simple():
+    return redirect(url_for("manage_tests"))
+
+
+@app.route("/manage_test_questions_simple/<int:test_id>")
+def legacy_manage_test_questions_simple(test_id):
+    return redirect(url_for("manage_test_questions", test_id=test_id))
+
+
+@app.route("/take_test_simple/<int:test_id>", methods=["GET", "POST"])
+def legacy_take_test_simple(test_id):
+    return redirect(url_for("take_test", test_id=test_id), code=307 if request.method == "POST" else 302)
+
+
+@app.route("/response_review")
+def response_review():
+    username = session.get("username")
+    if not username:
+        return redirect(url_for("login"))
+    role = get_user_role(username)
+    if role not in ["teacher", "admin"]:
+        return "Access denied", 403
+
+    review_type = (request.args.get("type") or "theory").strip()
+    selected_group = (request.args.get("group") or "").strip()
+    selected_item = (request.args.get("item") or "").strip()
+    groups = get_groups(username)
+
+    conn = get_db()
+    conn.row_factory = sqlite3.Row
+    cursor = conn.cursor()
+
+    available_items = []
+    if review_type == "theory":
+        query = """
+            SELECT DISTINCT tt.id, COALESCE(tt.subject || ' - ', '') || tt.title
+            FROM theory_submissions s
+            JOIN theory_tests tt ON tt.id = s.test_id
+            JOIN users u ON u.username = s.username
+            WHERE u.role = 'student'
+        """
+        params = []
+        if role == "teacher":
+            query += " AND u.teacher_username = ?"
+            params.append(username)
+        if selected_group:
+            query += " AND u.group_name = ?"
+            params.append(selected_group)
+        query += " ORDER BY tt.title"
+        cursor.execute(query, params)
+        available_items = [(str(row[0]), row[1]) for row in cursor.fetchall()]
+
+    if not selected_item and available_items:
+        selected_item = available_items[0][0]
+
+    question_summaries = []
+    item_label = ""
+    selected_test_id = int(selected_item) if selected_item and selected_item.isdigit() else None
+
+    if review_type == "theory" and selected_test_id:
+        cursor.execute("SELECT title, subject FROM theory_tests WHERE id = ?", (selected_test_id,))
+        test_row = cursor.fetchone()
+        if test_row:
+            item_label = f"{test_row['subject']} - {test_row['title']}" if test_row["subject"] else test_row["title"]
+
+        submission_query = """
+            SELECT s.id, s.username
+            FROM theory_submissions s
+            JOIN (
+                SELECT username, MAX(submitted_at) AS latest_submitted_at
+                FROM theory_submissions
+                WHERE test_id = ?
+                GROUP BY username
+            ) latest ON latest.username = s.username AND latest.latest_submitted_at = s.submitted_at
+            JOIN users u ON u.username = s.username
+            WHERE s.test_id = ?
+        """
+        submission_params = [selected_test_id, selected_test_id]
+        if role == "teacher":
+            submission_query += " AND u.teacher_username = ?"
+            submission_params.append(username)
+        if selected_group:
+            submission_query += " AND u.group_name = ?"
+            submission_params.append(selected_group)
+        cursor.execute(submission_query, submission_params)
+        latest_submissions = cursor.fetchall()
+        submission_ids = [row["id"] for row in latest_submissions]
+
+        cursor.execute("""
+            SELECT id, question_text, question_type, marks
+            FROM theory_questions
+            WHERE test_id = ?
+            ORDER BY order_index
+        """, (selected_test_id,))
+        questions = cursor.fetchall()
+
+        answers_by_question = defaultdict(list)
+        if submission_ids:
+            placeholders = ",".join("?" for _ in submission_ids)
+            cursor.execute(f"""
+                SELECT question_id, answer_text, is_correct, marks_awarded
+                FROM theory_answers
+                WHERE submission_id IN ({placeholders})
+            """, submission_ids)
+            for row in cursor.fetchall():
+                answers_by_question[row["question_id"]].append(dict(row))
+
+        for question in questions:
+            q_id = question["id"]
+            q_type = question["question_type"]
+            marks = question["marks"] or 0
+            cursor.execute("""
+                SELECT id, option_text, is_correct, match_pair
+                FROM theory_options
+                WHERE question_id = ?
+                ORDER BY id
+            """, (q_id,))
+            options = cursor.fetchall()
+            answers = answers_by_question.get(q_id, [])
+            accepted_answers = []
+            option_rows = []
+            correct_count = sum(1 for answer in answers if answer["is_correct"])
+
+            if q_type == "true_false":
+                correct_choice, accepted_corrections = get_true_false_option_data(options)
+                accepted_answers = ([correct_choice] if correct_choice else []) + accepted_corrections
+                buckets = defaultdict(int)
+                for answer in answers:
+                    selected, correction = parse_true_false_answer_text(answer["answer_text"])
+                    label = f"{selected} | {correction}" if correction else (selected or "No answer")
+                    buckets[label] += 1
+                total_answers = len(answers)
+                for label, count in sorted(buckets.items(), key=lambda item: (-item[1], item[0])):
+                    correction_value = label.split(" | ", 1)[1] if " | " in label else ""
+                    option_rows.append({
+                        "label": label,
+                        "count": count,
+                        "pct": round((count / total_answers) * 100) if total_answers else 0,
+                        "is_correct": label == correct_choice,
+                        "acceptable_answer": correction_value if correction_value and normalize_review_text(correction_value) not in {normalize_review_text(item) for item in accepted_corrections} else "",
+                        "remove_answer": correction_value if correction_value and normalize_review_text(correction_value) in {normalize_review_text(item) for item in accepted_corrections} else "",
+                    })
+            elif q_type == "fill_in":
+                accepted_answers = get_fill_in_accepted_answers(options)
+                buckets = defaultdict(int)
+                for answer in answers:
+                    buckets[answer["answer_text"] or "No answer"] += 1
+                total_answers = len(answers)
+                accepted_keys = {normalize_review_text(item) for item in accepted_answers}
+                for label, count in sorted(buckets.items(), key=lambda item: (-item[1], item[0])):
+                    normalized = normalize_review_text(label)
+                    option_rows.append({
+                        "label": label,
+                        "count": count,
+                        "pct": round((count / total_answers) * 100) if total_answers else 0,
+                        "is_correct": normalized in accepted_keys,
+                        "acceptable_answer": label if label and label != "No answer" and normalized not in accepted_keys else "",
+                        "remove_answer": label if label and normalized in accepted_keys else "",
+                    })
+            elif q_type == "match":
+                option_rows = []
+                for option in options:
+                    left = option["option_text"]
+                    accepted = option["match_pair"]
+                    responses = []
+                    for answer in answers:
+                        pieces = [part.strip() for part in (answer["answer_text"] or "").split(";") if "=" in part]
+                        selected_match = ""
+                        for piece in pieces:
+                            col_a, submitted = piece.split("=", 1)
+                            if col_a.strip() == left:
+                                selected_match = submitted.strip()
+                                break
+                        if selected_match:
+                            responses.append(selected_match)
+                    option_rows.append({"left": left, "accepted": accepted, "responses": responses})
+            else:
+                correct_values = {option["option_text"] for option in options if option["is_correct"] == 1}
+                accepted_answers = list(correct_values)
+                buckets = defaultdict(int)
+                for answer in answers:
+                    buckets[answer["answer_text"] or "No answer"] += 1
+                total_answers = len(answers)
+                for label, count in sorted(buckets.items(), key=lambda item: (-item[1], item[0])):
+                    option_rows.append({
+                        "label": label,
+                        "count": count,
+                        "pct": round((count / total_answers) * 100) if total_answers else 0,
+                        "is_correct": label in correct_values,
+                        "acceptable_answer": "",
+                        "remove_answer": "",
+                    })
+
+            question_summaries.append({
+                "question_id": q_id,
+                "question": question["question_text"],
+                "type": q_type,
+                "marks": marks,
+                "responses": len(answers),
+                "correct_pct": round((correct_count / len(answers)) * 100) if answers else 0,
+                "accepted_answers": accepted_answers,
+                "options": option_rows,
+            })
+
+    conn.close()
+    return render_template(
+        "response_review.html",
+        review_type=review_type,
+        groups=groups,
+        selected_group=selected_group,
+        selected_item=selected_item,
+        available_items=available_items,
+        item_label=item_label,
+        question_summaries=question_summaries,
+        selected_test_id=selected_test_id,
+        can_manage_reviews=role in ["teacher", "admin"]
+    )
+
+
+@app.route("/response_review/learner")
+def response_review_learner():
+    username = session.get("username")
+    if not username:
+        return redirect(url_for("login"))
+    role = get_user_role(username)
+    if role not in ["teacher", "admin"]:
+        return "Access denied", 403
+
+    learner_username = (request.args.get("learner") or "").strip()
+    test_id = request.args.get("item", type=int)
+    if not learner_username or not test_id:
+        return redirect(url_for("response_review"))
+
+    conn = get_db()
+    conn.row_factory = sqlite3.Row
+    cursor = conn.cursor()
+    cursor.execute("""
+        SELECT full_name, group_name
+        FROM users
+        WHERE username = ?
+    """, (learner_username,))
+    learner_row = cursor.fetchone()
+    if not learner_row:
+        conn.close()
+        return "Learner not found", 404
+
+    cursor.execute("""
+        SELECT s.id, s.score, s.total, s.percentage, s.submitted_at, tt.title, tt.subject
+        FROM theory_submissions s
+        JOIN theory_tests tt ON tt.id = s.test_id
+        WHERE s.username = ? AND s.test_id = ?
+        ORDER BY s.submitted_at DESC
+        LIMIT 1
+    """, (learner_username, test_id))
+    submission = cursor.fetchone()
+    if not submission:
+        conn.close()
+        return render_template(
+            "response_review_learner.html",
+            learner_name=learner_row["full_name"] or learner_username,
+            learner_username=learner_username,
+            learner_group=learner_row["group_name"] or "—",
+            item_label="No submission found",
+            review_rows=[],
+            score_summary=None,
+            can_manage_reviews=True
+        )
+
+    cursor.execute("""
+        SELECT q.question_text, q.question_type, q.marks, a.answer_text, a.is_correct, a.marks_awarded, a.question_id
+        FROM theory_answers a
+        JOIN theory_questions q ON q.id = a.question_id
+        WHERE a.submission_id = ?
+        ORDER BY q.order_index
+    """, (submission["id"],))
+    answer_rows = cursor.fetchall()
+
+    review_rows = []
+    for row in answer_rows:
+        cursor.execute("""
+            SELECT id, option_text, is_correct, match_pair
+            FROM theory_options
+            WHERE question_id = ?
+            ORDER BY id
+        """, (row["question_id"],))
+        options = cursor.fetchall()
+        correct_answers = []
+        match_rows = []
+        if row["question_type"] == "true_false":
+            correct_choice, accepted_corrections = get_true_false_option_data(options)
+            correct_answers = ([correct_choice] if correct_choice else []) + accepted_corrections
+        elif row["question_type"] == "fill_in":
+            correct_answers = get_fill_in_accepted_answers(options)
+        elif row["question_type"] == "match":
+            expected_map = {option["option_text"]: option["match_pair"] for option in options if option["match_pair"] and option["match_pair"] != "correction"}
+            learner_map = {}
+            for pair in (row["answer_text"] or "").split(";"):
+                if "=" in pair:
+                    left, chosen = pair.split("=", 1)
+                    learner_map[left.strip()] = chosen.strip()
+            for left, accepted in expected_map.items():
+                chosen = learner_map.get(left, "")
+                match_rows.append({
+                    "left": left,
+                    "learner_match": chosen or "No answer",
+                    "correct_match": accepted,
+                    "is_correct": chosen == accepted
+                })
+        else:
+            correct_answers = [option["option_text"] for option in options if option["is_correct"] == 1]
+
+        review_rows.append({
+            "question_id": row["question_id"],
+            "question": row["question_text"],
+            "type": row["question_type"],
+            "marks": row["marks"],
+            "answer": row["answer_text"] or "No answer",
+            "correct": row["is_correct"],
+            "marks_awarded": row["marks_awarded"],
+            "correct_answers": correct_answers,
+            "match_rows": match_rows
+        })
+
+    conn.close()
+    return render_template(
+        "response_review_learner.html",
+        learner_name=learner_row["full_name"] or learner_username,
+        learner_username=learner_username,
+        learner_group=learner_row["group_name"] or "—",
+        item_label=f"{submission['subject']} - {submission['title']}" if submission["subject"] else submission["title"],
+        review_rows=review_rows,
+        score_summary={
+            "score": submission["score"],
+            "total": submission["total"],
+            "percentage": submission["percentage"],
+            "submitted_at": submission["submitted_at"][:16] if submission["submitted_at"] else "—"
+        },
+        can_manage_reviews=True
+    )
+
+
+@app.route("/response_review/true_false_accept", methods=["POST"])
+def response_review_true_false_accept():
+    username = session.get("username")
+    if not username:
+        return redirect(url_for("login"))
+    if get_user_role(username) not in ["teacher", "admin"]:
+        return "Access denied", 403
+
+    test_id = request.form.get("test_id", type=int)
+    question_id = request.form.get("question_id", type=int)
+    acceptable_answer = (request.form.get("acceptable_answer") or "").strip()
+    selected_group = (request.form.get("selected_group") or "").strip()
+    learner_username = (request.form.get("learner_username") or "").strip()
+    if not (test_id and question_id and acceptable_answer):
+        flash("Accepted answer could not be added.", "error")
+        return redirect(url_for("response_review"))
+
+    conn = get_db()
+    cursor = conn.cursor()
+    cursor.execute("SELECT question_type FROM theory_questions WHERE id = ?", (question_id,))
+    row = cursor.fetchone()
+    if not row:
+        conn.close()
+        flash("Question not found.", "error")
+        return redirect(url_for("response_review"))
+    q_type = row[0]
+
+    if q_type == "true_false":
+        cursor.execute("""
+            INSERT INTO theory_options (question_id, option_text, is_correct, match_pair)
+            VALUES (?, ?, 0, 'correction')
+        """, (question_id, acceptable_answer))
+    elif q_type == "fill_in":
+        cursor.execute("""
+            INSERT INTO theory_options (question_id, option_text, is_correct)
+            VALUES (?, ?, 1)
+        """, (question_id, acceptable_answer))
+    conn.commit()
+    conn.close()
+
+    updated = regrade_theory_question_answers(test_id, question_id, selected_group or None, learner_username or None)
+    flash(f"Accepted answer added. {updated} learner answer(s) regraded.", "success")
+    if learner_username:
+        return redirect(url_for("response_review_learner", learner=learner_username, item=test_id))
+    return redirect(url_for("response_review", type="theory", group=selected_group, item=test_id))
+
+
+@app.route("/response_review/accepted_answer_remove", methods=["POST"])
+def response_review_accepted_answer_remove():
+    username = session.get("username")
+    if not username:
+        return redirect(url_for("login"))
+    if get_user_role(username) not in ["teacher", "admin"]:
+        return "Access denied", 403
+
+    test_id = request.form.get("test_id", type=int)
+    question_id = request.form.get("question_id", type=int)
+    remove_answer = (request.form.get("remove_answer") or "").strip()
+    selected_group = (request.form.get("selected_group") or "").strip()
+    if not (test_id and question_id and remove_answer):
+        flash("Accepted answer could not be removed.", "error")
+        return redirect(url_for("response_review"))
+
+    conn = get_db()
+    cursor = conn.cursor()
+    cursor.execute("""
+        DELETE FROM theory_options
+        WHERE question_id = ? AND option_text = ? AND (is_correct = 1 OR match_pair = 'correction')
+    """, (question_id, remove_answer))
+    conn.commit()
+    conn.close()
+
+    updated = regrade_theory_question_answers(test_id, question_id, selected_group or None)
+    flash(f"Accepted answer removed. {updated} learner answer(s) regraded.", "success")
+    return redirect(url_for("response_review", type="theory", group=selected_group, item=test_id))
+
+
+@app.route("/teacher_dashboard/quick_actions", methods=["POST"])
+def update_teacher_quick_actions():
+    username = session.get("username")
+    if not username:
+        return redirect(url_for("login"))
+    role = get_user_role(username)
+    if role not in ["teacher", "admin"]:
+        return "Access denied", 403
+
+    selected = request.form.getlist("quick_actions")
+    valid_ids = {action["key"] for action in get_teacher_quick_action_catalog()}
+    selected = [action_id for action_id in selected if action_id in valid_ids]
+
+    conn = get_db()
+    cursor = conn.cursor()
+    cursor.execute("DELETE FROM teacher_quick_actions WHERE username = ?", (username,))
+    for action_id in selected:
+        cursor.execute("""
+            INSERT INTO teacher_quick_actions (username, action_key)
+            VALUES (?, ?)
+        """, (username, action_id))
+    conn.commit()
+    conn.close()
+    return redirect(url_for("teacher_dashboard"))
+
+
+@app.route("/student/attendance_review_request", methods=["POST"])
+def student_attendance_review_request():
+    username = session.get("username")
+    if not username:
+        return redirect(url_for("login"))
+    if get_user_role(username) != "student":
+        return "Access denied", 403
+
+    attendance_date = request.form.get("attendance_date", "").strip()
+    message = request.form.get("message", "").strip()
+    if not attendance_date:
+        flash("Attendance date is required.", "error")
+        return redirect(url_for("student_dashboard"))
+
+    conn = get_db()
+    cursor = conn.cursor()
+    cursor.execute("""
+        SELECT teacher_username, full_name
+        FROM users
+        WHERE username = ?
+    """, (username,))
+    row = cursor.fetchone()
+    if not row or not row[0]:
+        conn.close()
+        flash("No teacher is assigned to this learner.", "error")
+        return redirect(url_for("student_dashboard"))
+
+    teacher_username = row[0]
+    thread_id = create_communication_thread(
+        cursor,
+        username,
+        "attendance_review",
+        subject_line="Attendance review request",
+        attendance_date=attendance_date,
+        initial_message=message or f"Please review my attendance for {attendance_date}.",
+        chat_session_id=session.get("chat_session_id", "")
+    )
+    cursor.execute("""
+        UPDATE communication_threads
+        SET teacher_username = ?
+        WHERE id = ?
+    """, (teacher_username, thread_id))
+    conn.commit()
+    conn.close()
+    flash("Attendance review request submitted.", "success")
+    return redirect(url_for("student_dashboard"))
+
+
+@app.route("/student/send_message", methods=["POST"])
+def student_send_message():
+    username = session.get("username")
+    if not username:
+        return redirect(url_for("login"))
+    if get_user_role(username) != "student":
+        return "Access denied", 403
+
+    topic = (request.form.get("topic") or "chat").strip() or "chat"
+    message = (request.form.get("message") or "").strip()
+    if not message:
+        flash("Message cannot be empty.", "error")
+        return redirect(url_for("student_dashboard"))
+
+    conn = get_db()
+    cursor = conn.cursor()
+    cursor.execute("""
+        SELECT teacher_username
+        FROM users
+        WHERE username = ?
+    """, (username,))
+    row = cursor.fetchone()
+    if not row or not row[0]:
+        conn.close()
+        flash("No teacher is assigned to this learner.", "error")
+        return redirect(url_for("student_dashboard"))
+
+    teacher_username = row[0]
+    chat_session_id = request.form.get("chat_session_id", "").strip() or session.get("chat_session_id", "")
+    if not chat_session_id:
+        chat_session_id = datetime.now().strftime("%Y%m%d%H%M%S")
+        session["chat_session_id"] = chat_session_id
+
+    cursor.execute("""
+        SELECT id
+        FROM communication_threads
+        WHERE student_username = ? AND topic = ? AND status = 'open' AND chat_session_id = ?
+        ORDER BY id DESC
+        LIMIT 1
+    """, (username, topic, chat_session_id))
+    existing = cursor.fetchone()
+    if existing:
+        add_communication_message(cursor, existing[0], username, "student", message)
+    else:
+        thread_id = create_communication_thread(
+            cursor,
+            username,
+            topic,
+            subject_line="Chat" if topic == "chat" else topic.replace("_", " ").title(),
+            initial_message=message,
+            chat_session_id=chat_session_id
+        )
+        cursor.execute("""
+            UPDATE communication_threads
+            SET teacher_username = ?
+            WHERE id = ?
+        """, (teacher_username, thread_id))
+    conn.commit()
+    conn.close()
+    flash("Message sent.", "success")
+    return redirect(url_for("student_dashboard"))
+
+
+@app.route("/communications")
+def communications():
+    username = session.get("username")
+    if not username:
+        return redirect(url_for("login"))
+    role = get_user_role(username)
+    if role not in ["teacher", "admin"]:
+        return "Access denied", 403
+
+    selected_group = (request.args.get("group") or "").strip()
+    selected_topic = (request.args.get("topic") or "").strip()
+    selected_date = (request.args.get("date") or "").strip()
+    groups = get_groups(username)
+
+    conn = get_db()
+    conn.row_factory = sqlite3.Row
+    cursor = conn.cursor()
+
+    query = """
+        SELECT t.*,
+               u.full_name AS student_name,
+               u.group_name
+        FROM communication_threads t
+        JOIN users u ON u.username = t.student_username
+        WHERE 1=1
+    """
+    params = []
+    if role == "teacher":
+        query += " AND (t.teacher_username = ? OR u.teacher_username = ?)"
+        params.extend([username, username])
+    if selected_group:
+        query += " AND u.group_name = ?"
+        params.append(selected_group)
+    if selected_topic:
+        query += " AND t.topic = ?"
+        params.append(selected_topic)
+    if selected_date:
+        query += " AND (t.attendance_date = ? OR substr(COALESCE(t.updated_at, t.created_at), 1, 10) = ?)"
+        params.extend([selected_date, selected_date])
+    query += " ORDER BY COALESCE(t.updated_at, t.created_at) DESC, t.id DESC"
+    cursor.execute(query, params)
+
+    threads = []
+    for row in cursor.fetchall():
+        thread = dict(row)
+        cursor.execute("""
+            SELECT *
+            FROM communication_messages
+            WHERE thread_id = ?
+            ORDER BY COALESCE(created_at, '') ASC, id ASC
+        """, (thread["id"],))
+        thread["messages"] = [dict(message_row) for message_row in cursor.fetchall()]
+        threads.append(thread)
+
+    conn.close()
+    return render_template(
+        "communications.html",
+        threads=threads,
+        groups=groups,
+        selected_group=selected_group,
+        selected_topic=selected_topic,
+        selected_date=selected_date
+    )
+
+
+@app.route("/communications/reply", methods=["POST"])
+def communications_reply():
+    username = session.get("username")
+    if not username:
+        return redirect(url_for("login"))
+    role = get_user_role(username)
+    if role not in ["teacher", "admin"]:
+        return "Access denied", 403
+
+    thread_id = request.form.get("thread_id", type=int)
+    message = (request.form.get("message") or "").strip()
+    if not thread_id or not message:
+        flash("Reply could not be sent.", "error")
+        return redirect(url_for("communications"))
+
+    conn = get_db()
+    cursor = conn.cursor()
+    add_communication_message(cursor, thread_id, username, role, message)
+    conn.commit()
+    conn.close()
+    flash("Reply sent.", "success")
+    return redirect(url_for("communications", group=request.form.get("group", ""), topic=request.form.get("topic", ""), date=request.form.get("date", "")))
+
+
+@app.route("/communications/mark_read", methods=["POST"])
+def communications_mark_read():
+    username = session.get("username")
+    if not username:
+        return jsonify({"ok": False}), 401
+    role = get_user_role(username)
+    if role not in ["teacher", "admin"]:
+        return jsonify({"ok": False}), 403
+
+    thread_id = request.form.get("thread_id", type=int)
+    if not thread_id:
+        return jsonify({"ok": False}), 400
+
+    now_text = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    conn = get_db()
+    cursor = conn.cursor()
+    cursor.execute("""
+        UPDATE communication_threads
+        SET teacher_read_at = ?
+        WHERE id = ?
+    """, (now_text, thread_id))
+    conn.commit()
+    conn.close()
+    return jsonify({"ok": True})
+
+
+@app.route("/communications/attendance_action", methods=["POST"])
+def communications_attendance_action():
+    username = session.get("username")
+    if not username:
+        return redirect(url_for("login"))
+    role = get_user_role(username)
+    if role not in ["teacher", "admin"]:
+        return "Access denied", 403
+
+    thread_id = request.form.get("thread_id", type=int)
+    student_username = (request.form.get("student_username") or "").strip()
+    attendance_date = (request.form.get("attendance_date") or "").strip()
+    action = (request.form.get("action") or "").strip()
+    status_map = {
+        "mark_present": "present",
+        "mark_late": "late",
+        "mark_absent": "absent"
+    }
+    status = status_map.get(action)
+    if not (thread_id and student_username and attendance_date and status):
+        flash("Attendance action could not be completed.", "error")
+        return redirect(url_for("communications"))
+
+    conn = get_db()
+    cursor = conn.cursor()
+    cursor.execute("""
+        INSERT INTO attendance_override (username, date, status)
+        VALUES (?, ?, ?)
+        ON CONFLICT(username, date) DO UPDATE SET status = excluded.status
+    """, (student_username, attendance_date, status))
+    add_communication_message(
+        cursor,
+        thread_id,
+        username,
+        role,
+        f"Attendance updated to {status.title()} for {attendance_date}."
+    )
+    conn.commit()
+    conn.close()
+    flash(f"Attendance marked {status}.", "success")
+    return redirect(url_for("communications", group=request.form.get("group", ""), topic=request.form.get("topic", ""), date=request.form.get("date", "")))
+
+
+@app.route("/api/message_status")
+def api_message_status():
+    username = session.get("username")
+    if not username:
+        return jsonify({"ok": False}), 401
+    role = get_user_role(username)
+    if role == "student":
+        if request.args.get("mark_read") == "1":
+            mark_student_threads_read(username)
+        return jsonify({
+            "ok": True,
+            "unread": get_student_unread_message_count(username),
+            "auto_open": student_has_fresh_teacher_reply(username)
+        })
+    if role in ["teacher", "admin"]:
+        return jsonify({
+            "ok": True,
+            "unread": get_teacher_unread_message_count(username)
+        })
+    return jsonify({"ok": False}), 403
 
 
 
@@ -3379,6 +4774,7 @@ def attendance():
         terms=terms
     )
 
+@app.route("/admin_panel")
 @app.route("/admin")
 def admin_panel():
     username = session.get("username")
@@ -3638,9 +5034,15 @@ def edit_user(username):
         conn.close()
         return "User not found", 404
 
-    if get_user_role(admin_user) == "teacher" and (user[2] or user[3]):
-        conn.close()
-        return "Access denied", 403
+    if get_user_role(admin_user) == "teacher":
+        user_group = user[2] or ""
+        assigned_teacher = user[3] or ""
+        if assigned_teacher and assigned_teacher != admin_user:
+            conn.close()
+            return "Access denied", 403
+        if not assigned_teacher and user[4] != "student":
+            conn.close()
+            return "Access denied", 403
 
     if request.method == "POST":
         full_name = request.form.get("full_name")
@@ -3699,10 +5101,10 @@ def learner_record(username):
     # ── Attendance ────────────────────────────────────────────────────
     attendance_year = datetime.now().year
     days = get_current_year_attendance_days()
-    history = []
     cursor.execute("SELECT group_name FROM users WHERE username = ?", (username,))
     group_row = cursor.fetchone()
     user_group = group_row[0] if group_row else None
+    auto_exclude_empty_attendance_days(cursor, [user_group], created_by=admin_user, days=days)
     cursor.execute("""
         SELECT date FROM excluded_dates
         WHERE group_name IS NULL OR group_name = ?
@@ -3716,45 +5118,28 @@ def learner_record(username):
     """, (user_group, username))
     class_checked_dates = {row[0] for row in cursor.fetchall()}
 
-    for day in days:
-        weekday = datetime.strptime(day, "%Y-%m-%d").weekday()
-        cursor.execute("SELECT MIN(login_time) FROM login_history WHERE username = ? AND date = ?", (username, day))
-        login_time = cursor.fetchone()[0]
-        cutoff = get_group_late_threshold(user_group, day) if user_group else None
-        if day in excluded_dates:
-            history.append({"date": day, "status": "Normal", "time": "", "late": False, "note": "", "weekday": weekday})
-        elif login_time:
-            time_str = login_time.split(" ")[1][:5]
-            late = cutoff is not None and time_str > cutoff
-            history.append({"date": day, "status": "Present", "time": time_str, "late": late, "note": "Auto", "weekday": weekday})
-        else:
-            cursor.execute("SELECT status FROM attendance_override WHERE username = ? AND date = ?", (username, day))
-            override = cursor.fetchone()
-            if override and override[0] == "present":
-                history.append({"date": day, "status": "Present", "time": "12:00", "late": False, "note": "Manual", "weekday": weekday})
-            elif day in class_checked_dates:
-                history.append({"date": day, "status": "Absent", "time": "", "late": False, "note": "Class checked in", "weekday": weekday})
-            else:
-                history.append({"date": day, "status": "Normal", "time": "", "late": False, "note": "", "weekday": weekday})
-
-    counted_history = [h for h in history if h["status"] in ("Present", "Absent")]
-    total_days = len(counted_history)
-    present_days = sum(1 for h in history if h["status"] == "Present")
-    absent_days = sum(1 for h in history if h["status"] == "Absent")
-    late_days = sum(1 for h in history if h["late"])
-    attendance_pct = round((present_days / total_days) * 100) if total_days else 0
+    login_map = fetch_first_login_times(cursor, [username], days)
+    override_map = fetch_attendance_override_statuses(cursor, [username], days)
+    late_cutoffs = fetch_group_late_thresholds(cursor, user_group, days) if user_group else {}
+    history = build_attendance_history(
+        cursor,
+        username,
+        user_group,
+        days,
+        login_map=login_map,
+        override_map=override_map,
+        late_cutoffs=late_cutoffs,
+        class_checked_dates=class_checked_dates,
+        excluded_dates=excluded_dates,
+    )
+    attendance_summary = summarize_attendance_history(history)
+    total_days = attendance_summary["total_days"]
+    present_days = attendance_summary["present_days"]
+    absent_days = attendance_summary["absent_days"]
+    late_days = attendance_summary["late_days"]
+    attendance_pct = attendance_summary["attendance_pct"]
     recent_history = history[-10:]  # last 10 days
-    attendance_months = []
-    for item in history:
-        month_key = item["date"][:7]
-        if not attendance_months or attendance_months[-1]["key"] != month_key:
-            month_date = datetime.strptime(item["date"], "%Y-%m-%d")
-            attendance_months.append({
-                "key": month_key,
-                "name": month_date.strftime("%B"),
-                "days": []
-            })
-        attendance_months[-1]["days"].append(item)
+    attendance_months = build_attendance_months(history)
 
     # ── Academic results ──────────────────────────────────────────────
     cursor.execute("""
@@ -4334,7 +5719,7 @@ def risk_learners():
         selected_group = None
 
     if not selected_group:
-        return render_template("Riks_learners.html", groups=groups, selected_group=None)
+        return render_template("Riks_learners.html", groups=groups, selected_group=None, summary_cards=[])
 
     conn = get_db()
     cursor = conn.cursor()
@@ -4357,33 +5742,27 @@ def risk_learners():
     students_raw = cursor.fetchall()
 
     days_21 = get_last_21_days()
+    auto_exclude_empty_attendance_days(cursor, [selected_group], created_by=username, days=get_current_year_attendance_days())
+    excluded_days = fetch_group_excluded_dates(cursor, [selected_group]).get(selected_group, set())
+    filtered_days = [day for day in days_21 if day not in excluded_days]
+    student_usernames = [student_username for student_username, _ in students_raw]
+    present_day_map = fetch_present_day_map(cursor, student_usernames, filtered_days)
+    practical_avg_map = fetch_student_practical_averages(cursor, username if role == "teacher" else None)
+    theory_avg_map = fetch_student_theory_averages(cursor, username if role == "teacher" else None)
     today = datetime.now().strftime("%Y-%m-%d")
     risk_students = []
 
     for student_username, full_name in students_raw:
-        cursor.execute("""
-            SELECT ROUND(AVG(best_score), 1)
-            FROM (
-                SELECT subject, task, MAX(score) as best_score
-                FROM results
-                WHERE username = ?
-                GROUP BY subject, task
-            )
-        """, (student_username,))
-        avg_score = cursor.fetchone()[0] or 0
+        practical_avg = practical_avg_map.get(student_username)
+        theory_avg = theory_avg_map.get(student_username)
+        if practical_avg is not None and theory_avg is not None:
+            avg_score = round((practical_avg + theory_avg) / 2, 1)
+        else:
+            avg_score = practical_avg if practical_avg is not None else theory_avg
+        avg_score = avg_score if avg_score is not None else 0
 
-        present_days = 0
-        for day in days_21:
-            cursor.execute("SELECT 1 FROM login_history WHERE username = ? AND date = ?", (student_username, day))
-            if cursor.fetchone():
-                present_days += 1
-                continue
-            cursor.execute("SELECT status FROM attendance_override WHERE username = ? AND date = ?", (student_username, day))
-            override = cursor.fetchone()
-            if override and override[0] == 'present':
-                present_days += 1
-
-        attendance_pct = round((present_days / len(days_21)) * 100) if days_21 else 0
+        present_days = len(present_day_map.get(student_username, set()))
+        attendance_pct = round((present_days / len(filtered_days)) * 100) if filtered_days else 100
 
         cursor.execute("""
             SELECT COUNT(DISTINCT t.id)
@@ -4466,9 +5845,23 @@ def risk_learners():
             'reason': ' + '.join(reasons)
         })
 
+    safe_count = sum(1 for student in risk_students if student["status"] == "Safe")
+    at_risk_count = sum(1 for student in risk_students if student["status"] == "At Risk")
+    high_risk_count = sum(1 for student in risk_students if student["status"] == "High Risk")
+    avg_attendance = round(sum(student["attendance_pct"] for student in risk_students) / len(risk_students), 1) if risk_students else 0
+    avg_combined = round(sum(student["avg_score"] for student in risk_students) / len(risk_students), 1) if risk_students else 0
+    summary_cards = [
+        {"label": "Safe", "value": safe_count, "tone": "ok"},
+        {"label": "At Risk", "value": at_risk_count, "tone": "mid"},
+        {"label": "High Risk", "value": high_risk_count, "tone": "risk"},
+        {"label": "Avg Attendance", "value": f"{avg_attendance}%", "tone": "info"},
+        {"label": "Avg Combined", "value": f"{avg_combined}%", "tone": "info"},
+    ]
+
+    conn.commit()
     conn.close()
     return render_template("Riks_learners.html", groups=groups, selected_group=selected_group,
-                           risk_students=risk_students)
+                           risk_students=risk_students, summary_cards=summary_cards)
 
 
 @app.route("/group_results")
@@ -5424,7 +6817,56 @@ def download_interactive_learning_file(relative_path):
 
 @app.route("/manage_lessons")
 def manage_lessons():
-    return redirect(url_for("manage_lesson_tests"))
+    username = session.get("username")
+    if not username:
+        return redirect(url_for("login"))
+    role = get_user_role(username)
+    if role not in ["teacher", "admin"]:
+        return "Access denied", 403
+
+    conn = get_db()
+    cursor = conn.cursor()
+    cursor.execute("""
+        SELECT
+            l.id, l.title, l.subject, l.assign_date, l.ppt_relative_path, l.linked_test_id, l.is_active,
+            GROUP_CONCAT(DISTINCT lg.group_name),
+            GROUP_CONCAT(DISTINCT lt.teacher_username),
+            COUNT(DISTINCT c.id),
+            t.title
+        FROM theory_lessons l
+        LEFT JOIN theory_lesson_groups lg ON lg.lesson_id = l.id
+        LEFT JOIN theory_lesson_teachers lt ON lt.lesson_id = l.id
+        LEFT JOIN theory_lesson_checkpoints c ON c.lesson_id = l.id
+        LEFT JOIN theory_tests t ON t.id = l.linked_test_id
+        GROUP BY l.id
+        ORDER BY l.created_at DESC, l.id DESC
+    """)
+    lesson_rows = cursor.fetchall()
+    cursor.execute("""
+        SELECT id, title
+        FROM theory_tests
+        ORDER BY title
+    """)
+    theory_tests = cursor.fetchall()
+    groups = get_groups(username) if role == "teacher" else get_groups()
+    teachers = get_teachers()
+    lesson_files = get_interactive_learning_files()
+    conn.close()
+
+    return render_template(
+        "manage_lessons.html",
+        lesson_rows=lesson_rows,
+        groups=groups,
+        teachers=teachers,
+        lesson_files=lesson_files,
+        theory_tests=theory_tests,
+        page_title="Lesson Setup",
+    )
+
+
+@app.route("/manage_lesson_tests")
+def manage_lesson_tests():
+    return redirect(url_for("manage_lessons"))
 
 
 @app.route("/manage_lessons/create", methods=["POST"])
@@ -5838,113 +7280,6 @@ def manage_tests():
     )
 
 
-@app.route("/manage_lesson_tests")
-def manage_lesson_tests():
-    username = session.get("username")
-    if not username:
-        return redirect(url_for("login"))
-    role = get_user_role(username)
-    if role not in ["teacher", "admin"]:
-        return "Access denied", 403
-
-    conn = get_db()
-    cursor = conn.cursor()
-    cursor.execute("""
-        SELECT
-            t.id, t.title, t.subject, t.assign_date, t.time_limit, t.is_active,
-            GROUP_CONCAT(DISTINCT tg.group_name),
-            COUNT(DISTINCT q.id),
-            t.allow_multiple, t.max_attempts, t.show_answers,
-            GROUP_CONCAT(DISTINCT tt.teacher_username),
-            COUNT(DISTINCT l.id),
-            SUM(CASE WHEN q.question_type IN ('content_slide', 'title_slide', 'heading_slide') THEN 1 ELSE 0 END) as content_count
-        FROM theory_tests t
-        LEFT JOIN theory_questions q ON t.id = q.test_id
-        LEFT JOIN theory_test_groups tg ON t.id = tg.test_id
-        LEFT JOIN theory_test_teachers tt ON t.id = tt.test_id
-        LEFT JOIN theory_lessons l ON l.linked_test_id = t.id
-        GROUP BY t.id
-        HAVING COALESCE(content_count, 0) > 0
-        ORDER BY t.created_at DESC
-    """)
-    tests = cursor.fetchall()
-    groups = get_groups(username) if role == 'teacher' else get_groups()
-    teachers = get_teachers()
-    teacher_checkboxes = ''.join(
-        f'<label style="font-weight:normal;display:inline-flex;align-items:center;gap:5px;">'
-        f'<input type="checkbox" name="teachers" value="{escape(t[0])}"> {escape(t[1] or t[0])}</label>'
-        for t in teachers
-    )
-
-    test_list = ""
-    for test in tests:
-        test_id = test[0]
-        test_title = escape(test[1] or "")
-        test_subject = escape(test[2] or "")
-        assign_date = test[3] or '—'
-        time_limit_val = test[4] or 0
-        is_active = bool(test[5])
-        groups_text = escape(test[6] or 'All Groups')
-        question_count = test[7] or 0
-        allow_multiple = bool(test[8])
-        max_attempts = test[9] or 1
-        show_answers = bool(test[10])
-        teachers_text = escape(test[11] or 'All Teachers')
-        status_badge = '<span class="badge-active">Active</span>' if is_active else '<span class="badge-inactive">Inactive</span>'
-        attempt_text = f'{max_attempts} max' if allow_multiple else '1 (single)'
-        toggle_label = 'Deactivate' if is_active else 'Activate'
-        toggle_class = 'btn-warning' if is_active else 'btn-success'
-        test_list += f"""
-        <tr>
-            <td>{test_title}</td>
-            <td>{test_subject or '—'}</td>
-            <td><span class="badge-active" style="background:#ede9fe;color:#6d28d9;">Lesson + Test</span></td>
-            <td>{groups_text}</td>
-            <td>{teachers_text}</td>
-            <td>{question_count}</td>
-            <td>{assign_date}</td>
-            <td>{time_limit_val if time_limit_val else 'No limit'}</td>
-            <td>{attempt_text}</td>
-            <td>{'✔ Yes' if show_answers else '✘ No'}</td>
-            <td>{status_badge}</td>
-            <td style="white-space:nowrap; vertical-align:middle;">
-                <div class="action-cell">
-                <a href="/manage_tests/{test_id}/questions" class="btn btn-primary" title="Edit lesson and test">✏️</a>
-                <a href="/manage_tests/{test_id}/edit" class="btn btn-warning" title="Edit settings">⚙️</a>
-                <button type="button" class="btn btn-success" title="Reuse"
-                    onclick="openReuseModal(this)"
-                    data-test-id="{test_id}"
-                    data-title="{test_title}"
-                    data-subject="{test_subject}"
-                    data-time-limit="{time_limit_val}"
-                    data-allow-multiple="{1 if allow_multiple else 0}"
-                    data-max-attempts="{max_attempts}"
-                    data-show-answers="{1 if show_answers else 0}">📋</button>
-                <form method="post" action="/manage_tests/{test_id}/toggle" style="display:inline-flex; margin:0;">
-                    <button type="submit" class="btn {toggle_class}" title="{toggle_label}">{'⏸' if is_active else '▶'}</button>
-                </form>
-                <form method="post" action="/manage_tests/{test_id}/delete" style="display:inline-flex; margin:0;"
-                      onsubmit="return confirm('Delete this lesson and test and all submissions?')">
-                    <button type="submit" class="btn btn-danger" title="Delete">🗑</button>
-                </form>
-                </div>
-            </td>
-        </tr>
-        """
-    conn.close()
-    return render_template(
-        "manage_tests.html",
-        tests=tests,
-        groups=groups,
-        teacher_checkboxes=teacher_checkboxes,
-        test_list=test_list,
-        linked_test_count=len(tests),
-        standalone_test_count=0,
-        page_title="Lessons",
-        page_intro="This page manages the slide-based lesson flow from the Drive D version.",
-    )
-
-
 @app.route("/manage_tests/create", methods=["POST"])
 def create_test():
     username = session.get("username")
@@ -6109,7 +7444,7 @@ def manage_test_questions(test_id):
     conn = get_db()
     cursor = conn.cursor()
 
-    cursor.execute("SELECT id, title, subject, background_image, COALESCE(background_fit, 'cover') FROM theory_tests WHERE id = ?", (test_id,))
+    cursor.execute("SELECT id, title, subject FROM theory_tests WHERE id = ?", (test_id,))
     test = cursor.fetchone()
     if not test:
         conn.close()
@@ -6118,11 +7453,9 @@ def manage_test_questions(test_id):
     if request.method == "POST":
         action = request.form.get("action")
         if action == "add_question":
-            q_text = externalize_data_uri_images(request.form.get("question_text", "").strip())
+            q_text = request.form.get("question_text", "").strip()
             q_type = request.form.get("question_type", "")
             marks = int(request.form.get("marks", 1))
-            if q_type in LESSON_SLIDE_TYPES:
-                marks = 0
 
             cursor.execute("SELECT COUNT(*) FROM theory_questions WHERE test_id = ?", (test_id,))
             order_index = cursor.fetchone()[0]
@@ -6170,25 +7503,8 @@ def manage_test_questions(test_id):
                             INSERT INTO theory_options (question_id, option_text, is_correct, match_pair)
                             VALUES (?, ?, 1, ?)
                         """, (q_id, a.strip(), b.strip()))
-            elif q_type in LESSON_SLIDE_TYPES:
-                pass
-
             conn.commit()
             log_activity(username, f"added question to test {test_id}")
-
-        elif action == "save_lesson_background":
-            background_image = externalize_data_uri_images(request.form.get("background_image", "").strip())
-            background_file = request.files.get("background_file")
-            if background_file and background_file.filename:
-                raw_image = background_file.read()
-                if raw_image:
-                    background_image = save_lesson_asset(raw_image, background_file.mimetype)
-            background_fit = request.form.get("background_fit", "cover")
-            if background_fit not in ("cover", "contain"):
-                background_fit = "cover"
-            cursor.execute("UPDATE theory_tests SET background_image = ?, background_fit = ? WHERE id = ?", (background_image, background_fit, test_id))
-            conn.commit()
-            log_activity(username, f"updated lesson background for test {test_id}")
 
         elif action == "delete_question":
             q_id = request.form.get("question_id")
@@ -6196,57 +7512,11 @@ def manage_test_questions(test_id):
             cursor.execute("DELETE FROM theory_questions WHERE id = ?", (q_id,))
             conn.commit()
 
-        elif action == "duplicate_question":
-            q_id = request.form.get("question_id")
-            cursor.execute("""
-                SELECT question_text, question_type, marks, order_index
-                FROM theory_questions
-                WHERE id = ? AND test_id = ?
-            """, (q_id, test_id))
-            source = cursor.fetchone()
-            if source:
-                q_text, q_type, marks, order_index = source
-                cursor.execute(
-                    "UPDATE theory_questions SET order_index = order_index + 1 WHERE test_id = ? AND order_index > ?",
-                    (test_id, order_index)
-                )
-                cursor.execute("""
-                    INSERT INTO theory_questions (test_id, question_text, question_type, marks, order_index)
-                    VALUES (?, ?, ?, ?, ?)
-                """, (test_id, q_text, q_type, marks, order_index + 1))
-                new_q_id = cursor.lastrowid
-                cursor.execute("""
-                    SELECT option_text, is_correct, match_pair
-                    FROM theory_options
-                    WHERE question_id = ?
-                    ORDER BY id
-                """, (q_id,))
-                for option_text, is_correct, match_pair in cursor.fetchall():
-                    cursor.execute("""
-                        INSERT INTO theory_options (question_id, option_text, is_correct, match_pair)
-                        VALUES (?, ?, ?, ?)
-                    """, (new_q_id, option_text, is_correct, match_pair))
-                conn.commit()
-                log_activity(username, f"duplicated slide {q_id} in test {test_id}")
-
-        elif action == "reorder_questions":
-            ordered_ids = request.form.get("ordered_ids", "")
-            ids = [int(item) for item in ordered_ids.split(",") if item.strip().isdigit()]
-            for index, q_id in enumerate(ids):
-                cursor.execute(
-                    "UPDATE theory_questions SET order_index = ? WHERE id = ? AND test_id = ?",
-                    (index, q_id, test_id)
-                )
-            conn.commit()
-            log_activity(username, f"reordered slides in test {test_id}")
-
         elif action == "edit_question":
             q_id = request.form.get("question_id")
-            q_text = externalize_data_uri_images(request.form.get("question_text", "").strip())
+            q_text = request.form.get("question_text", "").strip()
             q_type = request.form.get("question_type", "")
             marks = int(request.form.get("marks", 1))
-            if q_type in LESSON_SLIDE_TYPES:
-                marks = 0
 
             cursor.execute("UPDATE theory_questions SET question_text = ?, marks = ? WHERE id = ?",
                            (q_text, marks, q_id))
@@ -6286,132 +7556,8 @@ def manage_test_questions(test_id):
                     if a.strip() and b.strip():
                         cursor.execute("INSERT INTO theory_options (question_id, option_text, is_correct, match_pair) VALUES (?, ?, 1, ?)",
                                        (q_id, a.strip(), b.strip()))
-            elif q_type in LESSON_SLIDE_TYPES:
-                pass
-
             conn.commit()
             log_activity(username, f"edited question {q_id} in test {test_id}")
-
-        elif action == "autosave_question":
-            q_id = request.form.get("question_id")
-            q_text = externalize_data_uri_images(request.form.get("question_text", "").strip())
-            q_type = request.form.get("question_type", "")
-            marks = safe_int(request.form.get("marks"), 0)
-            if q_type in LESSON_SLIDE_TYPES:
-                marks = 0
-
-            cursor.execute("""
-                SELECT 1 FROM theory_questions
-                WHERE id = ? AND test_id = ?
-            """, (q_id, test_id))
-            if not cursor.fetchone():
-                conn.close()
-                return {"ok": False, "error": "not_found"}, 404
-
-            cursor.execute("UPDATE theory_questions SET question_text = ?, marks = ? WHERE id = ?",
-                           (q_text, marks, q_id))
-            cursor.execute("DELETE FROM theory_options WHERE question_id = ?", (q_id,))
-
-            if q_type in ["mcq_single", "mcq_multi"]:
-                options = request.form.getlist("option_text")
-                correct = request.form.getlist("is_correct")
-                for i, opt in enumerate(options):
-                    if opt.strip():
-                        cursor.execute(
-                            "INSERT INTO theory_options (question_id, option_text, is_correct) VALUES (?, ?, ?)",
-                            (q_id, opt.strip(), 1 if str(i) in correct else 0)
-                        )
-            elif q_type == "true_false":
-                correct_answer = request.form.get("tf_correct", "True")
-                correction_term = request.form.get("correction_term", "").strip()
-                cursor.execute("INSERT INTO theory_options (question_id, option_text, is_correct) VALUES (?, 'True', ?)",
-                               (q_id, 1 if correct_answer == "True" else 0))
-                cursor.execute("INSERT INTO theory_options (question_id, option_text, is_correct) VALUES (?, 'False', ?)",
-                               (q_id, 1 if correct_answer == "False" else 0))
-                if correction_term:
-                    cursor.execute("INSERT INTO theory_options (question_id, option_text, is_correct, match_pair) VALUES (?, ?, 0, 'correction')",
-                                   (q_id, correction_term))
-            elif q_type == "fill_in":
-                answer = request.form.get("fill_answer", "").strip()
-                cursor.execute("INSERT INTO theory_options (question_id, option_text, is_correct) VALUES (?, ?, 1)",
-                               (q_id, answer))
-            elif q_type == "match":
-                col_a = request.form.getlist("match_a")
-                col_b = request.form.getlist("match_b")
-                for a, b in zip(col_a, col_b):
-                    if a.strip() and b.strip():
-                        cursor.execute("INSERT INTO theory_options (question_id, option_text, is_correct, match_pair) VALUES (?, ?, 1, ?)",
-                                       (q_id, a.strip(), b.strip()))
-
-            conn.commit()
-            conn.close()
-            return {"ok": True, "saved_at": datetime.now().strftime("%H:%M:%S")}
-
-        elif action == "import_pptx":
-            import_success = None
-            import_error = None
-            pptx_file = request.files.get("pptx_file")
-            append = request.form.get("append") is not None
-
-            try:
-                if not pptx_file or not pptx_file.filename:
-                    raise ValueError("Please choose a PowerPoint .pptx file.")
-                if not pptx_file.filename.lower().endswith(".pptx"):
-                    raise ValueError("Only .pptx files can be imported.")
-
-                if not append:
-                    cursor.execute("""
-                        DELETE FROM theory_options
-                        WHERE question_id IN (SELECT id FROM theory_questions WHERE test_id = ?)
-                    """, (test_id,))
-                    cursor.execute("DELETE FROM theory_questions WHERE test_id = ?", (test_id,))
-                    order_index = 0
-                else:
-                    cursor.execute("""
-                        SELECT COALESCE(MAX(order_index), -1) + 1
-                        FROM theory_questions
-                        WHERE test_id = ?
-                    """, (test_id,))
-                    order_index = cursor.fetchone()[0]
-
-                slide_html = pptx_to_content_slide_html(pptx_file)
-                if not slide_html:
-                    raise ValueError("No text or pictures were found in that PowerPoint file.")
-
-                for html in slide_html:
-                    cursor.execute("""
-                        INSERT INTO theory_questions (test_id, question_text, question_type, marks, order_index)
-                        VALUES (?, ?, 'content_slide', 0, ?)
-                    """, (test_id, externalize_data_uri_images(html), order_index))
-                    order_index += 1
-
-                conn.commit()
-                import_success = f"Imported {len(slide_html)} PowerPoint slide(s)."
-                log_activity(username, f"imported PPTX slides into test {test_id}")
-            except Exception as e:
-                conn.rollback()
-                import_error = str(e)
-
-            cursor.execute("""
-                SELECT id, question_text, question_type, marks, order_index
-                FROM theory_questions WHERE test_id = ? ORDER BY order_index
-            """, (test_id,))
-            questions = cursor.fetchall()
-
-            questions_with_options = []
-            for q in questions:
-                cursor.execute("SELECT id, option_text, is_correct, match_pair FROM theory_options WHERE question_id = ?", (q[0],))
-                options = cursor.fetchall()
-                questions_with_options.append({"q": q, "options": options})
-
-            conn.close()
-            return render_template(
-                "manage_test_questions.html",
-                test=test,
-                questions=questions_with_options,
-                import_success=import_success,
-                import_error=import_error
-            )
 
         elif action == "import_questions_json":
             import_success = None
@@ -6987,26 +8133,11 @@ def take_test(test_id):
             answer_text = selected or ""
             if correction_submitted:
                 answer_text += f" (correction: {correction_submitted})"
-            cursor.execute("SELECT option_text FROM theory_options WHERE question_id = ? AND is_correct = 1 LIMIT 1", (q_id,))
-            correct_row = cursor.fetchone()
-            correct_option = correct_row[0] if correct_row else None
-            cursor.execute("SELECT option_text FROM theory_options WHERE question_id = ? AND match_pair = 'correction' LIMIT 1", (q_id,))
-            correction_row = cursor.fetchone()
-            correction_term = correction_row[0] if correction_row else None
-            if selected == correct_option:
-                if selected == "False" and correction_term:
-                    if correction_submitted.strip().upper() == correction_term.strip().upper():
-                        awarded = effective_marks
-                else:
-                    awarded = effective_marks
+            awarded = score_true_false_answer(selected, correction_submitted, options, effective_marks)
 
         elif q_type == "fill_in":
             answer_text = request.form.get(f"q_{q_id}", "").strip()
-            cursor.execute("SELECT option_text FROM theory_options WHERE question_id = ? AND is_correct = 1 LIMIT 1", (q_id,))
-            correct_row = cursor.fetchone()
-            correct = correct_row[0] if correct_row else ""
-            if answer_text.upper() == correct.upper():
-                awarded = marks
+            awarded = score_fill_in_answer(answer_text, options, marks)
 
         elif q_type == "match":
             match_answers = []

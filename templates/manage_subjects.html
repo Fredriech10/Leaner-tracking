@@ -48,13 +48,18 @@
     </style>
 </head>
 <body>
+{% set current_page = 'manage_subjects' %}
+{% include '_slide_nav.html' %}
 
 <!-- Top bar -->
 <div class="topbar">
     <h1>📁 Manage Subjects</h1>
     <div class="topbar-links">
         <a href="/teacher_dashboard">← Dashboard</a>
+        <a href="/manage_lessons">📘 Lessons</a>
         <a href="/manage_tests">📝 Theory</a>
+        <a href="/response_review">🧾 Review</a>
+        <a href="/communications">💬 Messages</a>
         <a href="/admin">👥 Admin</a>
         <a href="/attendance">📅 Attendance</a>
         <span class="topbar-user">👤 <a href="/edit_user/{{ session_username }}">{{ session_username }}</a></span>

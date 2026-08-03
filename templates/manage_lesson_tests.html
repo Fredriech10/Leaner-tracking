@@ -1,0 +1,114 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Lesson Setup</title>
+    <style>
+        * { box-sizing: border-box; }
+        body { font-family: Arial, sans-serif; margin: 0; padding: 0; background: #f0f2f5; color: #222; }
+        .topbar { background: #005a9e; color: white; padding: 12px 24px; display: flex; justify-content: space-between; align-items: center; gap: 10px; position: sticky; top: 0; z-index: 999; }
+        .topbar h1 { margin: 0; font-size: 1.05em; }
+        .topbar-links { display: flex; gap: 10px; align-items: center; flex-wrap: nowrap; }
+        .topbar-links a { color: white; text-decoration: none; font-size: 0.82em; opacity: 0.9; white-space: nowrap; }
+        .topbar-links a:hover { opacity: 1; text-decoration: underline; }
+        .topbar-user { color: white; font-size: 0.82em; white-space: nowrap; border-left: 1px solid rgba(255,255,255,0.35); padding-left: 10px; }
+        .topbar-user a { color: white; text-decoration: none; font-weight: bold; }
+        .page { padding: 20px 24px; max-width: 1400px; margin: 0 auto; }
+        .card { background: white; border-radius: 8px; padding: 18px; border: 1px solid #ddd; margin-bottom: 16px; }
+        .card h3 { margin: 0 0 14px 0; font-size: 0.95em; color: #005a9e; border-bottom: 2px solid #f0f0f0; padding-bottom: 6px; }
+        table { width: 100%; border-collapse: collapse; font-size: 0.88em; background: white; }
+        th { background: #f5f5f5; padding: 10px; text-align: left; font-size: 0.83em; color: #555; font-weight: bold; border-bottom: 2px solid #ddd; }
+        td { padding: 9px 10px; border-bottom: 1px solid #f0f0f0; vertical-align: top; }
+        tr:last-child td { border-bottom: none; }
+        tr:hover td { background: #fafafa; }
+        .badge { padding: 3px 8px; border-radius: 10px; font-size: 0.78em; font-weight: bold; }
+        .badge-active { background: #c8f7c5; color: #107C10; }
+        .badge-inactive { background: #f7c5c5; color: #A4262C; }
+        .badge-linked { background: #ede9fe; color: #6d28d9; }
+        .badge-plain { background: #e0f2fe; color: #075985; }
+        .btn { padding: 7px 12px; border: none; border-radius: 4px; cursor: pointer; text-decoration: none; font-size: 0.85em; font-weight: bold; display: inline-block; }
+        .btn-primary { background: #0078D4; color: white; }
+        .btn-warning { background: #ff8c00; color: white; }
+        .btn-danger { background: #A4262C; color: white; }
+        .small { font-size: 0.84em; color: #666; }
+        .action-row { white-space: nowrap; }
+    </style>
+</head>
+<body>
+{% set current_page = 'manage_lesson_tests' %}
+{% include '_slide_nav.html' %}
+<div class="topbar">
+    <h1>🧩 Lesson Setup</h1>
+    <div class="topbar-links">
+        <a href="/teacher_dashboard">🏠 Dashboard</a>
+        <a href="/manage_lessons">📘 Lessons</a>
+        <a href="/manage_tests">📝 Theory Tests</a>
+        <span class="topbar-user">👤 <a href="/edit_user/{{ session_username }}">{{ session_username }}</a></span>
+        <a href="/logout">Logout</a>
+    </div>
+</div>
+
+<div class="page">
+    <div class="card">
+        <h3>Lesson Setup</h3>
+        <p class="small">Use this page to configure lesson checkpoints and review which lessons are linked to theory tests. Lessons are created on the Lessons page. Simple question-only tests are created on the Theory Tests page.</p>
+    </div>
+
+    <div class="card">
+        <h3>Existing Lessons</h3>
+        {% if lesson_rows %}
+        <table>
+            <tr>
+                <th>Title</th>
+                <th>Category</th>
+                <th>Subject</th>
+                <th>PowerPoint</th>
+                <th>Linked Test</th>
+                <th>Groups</th>
+                <th>Teachers</th>
+                <th>Checkpoints</th>
+                <th>Assign Date</th>
+                <th>Status</th>
+                <th>Actions</th>
+            </tr>
+            {% for lesson in lesson_rows %}
+            <tr>
+                <td>{{ lesson[1] }}</td>
+                <td>
+                    <span class="badge {{ 'badge-linked' if lesson[5] else 'badge-plain' }}">
+                        {{ 'Lesson linked to test' if lesson[5] else 'Lesson only' }}
+                    </span>
+                </td>
+                <td>{{ lesson[2] or '—' }}</td>
+                <td>{{ lesson[4] }}</td>
+                <td>{{ lesson[10] or '—' }}</td>
+                <td>{{ lesson[7] or 'All Groups' }}</td>
+                <td>{{ lesson[8] or 'All Teachers' }}</td>
+                <td>{{ lesson[9] or 0 }}</td>
+                <td>{{ lesson[3] }}</td>
+                <td>
+                    {% if lesson[6] %}
+                    <span class="badge badge-active">Active</span>
+                    {% else %}
+                    <span class="badge badge-inactive">Inactive</span>
+                    {% endif %}
+                </td>
+                <td class="action-row">
+                    <a href="/manage_lessons/{{ lesson[0] }}/checkpoints" class="btn btn-primary">✏️ Checkpoints</a>
+                    <form method="post" action="/manage_lessons/{{ lesson[0] }}/toggle" style="display:inline;">
+                        <button type="submit" class="btn btn-warning">{% if lesson[6] %}Pause{% else %}Activate{% endif %}</button>
+                    </form>
+                    <form method="post" action="/manage_lessons/{{ lesson[0] }}/delete" style="display:inline;" onsubmit="return confirm('Delete this lesson and all learner progress?');">
+                        <button type="submit" class="btn btn-danger">🗑 Delete</button>
+                    </form>
+                </td>
+            </tr>
+            {% endfor %}
+        </table>
+        {% else %}
+        <p>No lessons created yet.</p>
+        {% endif %}
+    </div>
+</div>
+</body>
+</html>

@@ -1,0 +1,170 @@
+<style>
+    :root {
+        --slide-nav-collapsed: 68px;
+        --slide-nav-expanded: 224px;
+        --slide-nav-bg: linear-gradient(180deg, #f8fbff 0%, #eef6ff 100%);
+        --slide-nav-border: #d5e3f1;
+        --slide-nav-text: #1e3a5f;
+        --slide-nav-accent: #005a9e;
+        --slide-nav-hover: #dbeafe;
+        --slide-nav-active: #cfe8ff;
+    }
+    body { transition: margin-left 160ms ease; }
+    body.with-slide-nav { margin-left: var(--slide-nav-collapsed); }
+    body.with-slide-nav.slide-nav-expanded { margin-left: var(--slide-nav-expanded); }
+    .slide-nav-shell {
+        position: fixed;
+        inset: 0 auto 0 0;
+        width: var(--slide-nav-collapsed);
+        background: var(--slide-nav-bg);
+        border-right: 1px solid var(--slide-nav-border);
+        z-index: 1200;
+        display: flex;
+        flex-direction: column;
+        transition: width 160ms ease;
+        overflow: hidden;
+    }
+    body.slide-nav-expanded .slide-nav-shell { width: var(--slide-nav-expanded); }
+    .slide-nav-header {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        min-height: 58px;
+        border-bottom: 1px solid var(--slide-nav-border);
+        padding: 8px;
+    }
+    body.slide-nav-expanded .slide-nav-header { justify-content: space-between; padding: 8px 10px; }
+    .slide-nav-brand {
+        display: none;
+        font-size: 0.84em;
+        font-weight: bold;
+        color: var(--slide-nav-text);
+        letter-spacing: 0.02em;
+    }
+    body.slide-nav-expanded .slide-nav-brand { display: block; }
+    .slide-nav-toggle {
+        width: 42px;
+        height: 42px;
+        border: 1px solid var(--slide-nav-border);
+        border-radius: 10px;
+        background: white;
+        color: var(--slide-nav-accent);
+        cursor: pointer;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 1.05em;
+    }
+    .slide-nav-list {
+        display: flex;
+        flex-direction: column;
+        gap: 6px;
+        padding: 12px 8px;
+        overflow-y: auto;
+    }
+    .slide-nav-link {
+        position: relative;
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        min-height: 42px;
+        padding: 0 12px;
+        border-radius: 10px;
+        color: var(--slide-nav-text);
+        text-decoration: none;
+        font-size: 0.88em;
+        font-weight: 600;
+        white-space: nowrap;
+    }
+    .slide-nav-link:hover { background: var(--slide-nav-hover); }
+    .slide-nav-link.active { background: var(--slide-nav-active); color: var(--slide-nav-accent); }
+    .slide-nav-icon {
+        width: 20px;
+        text-align: center;
+        flex-shrink: 0;
+        font-size: 1.05em;
+    }
+    .slide-nav-label {
+        display: none;
+        overflow: hidden;
+        text-overflow: ellipsis;
+    }
+    body.slide-nav-expanded .slide-nav-label { display: inline; }
+    .slide-nav-link[data-tooltip]:not(.active)::after {
+        content: attr(data-tooltip);
+        position: absolute;
+        left: calc(100% + 10px);
+        top: 50%;
+        transform: translateY(-50%);
+        background: #0f172a;
+        color: white;
+        padding: 6px 10px;
+        border-radius: 8px;
+        font-size: 0.78em;
+        opacity: 0;
+        pointer-events: none;
+        transition: opacity 120ms ease;
+    }
+    body:not(.slide-nav-expanded) .slide-nav-link:hover::after { opacity: 1; }
+    body.slide-nav-expanded .slide-nav-link::after { display: none; }
+    @media (max-width: 900px) {
+        body.with-slide-nav { margin-left: 0; }
+        body.with-slide-nav.slide-nav-expanded { margin-left: 0; }
+        .slide-nav-shell { transform: translateX(-100%); width: var(--slide-nav-expanded); box-shadow: 0 18px 40px rgba(15, 23, 42, 0.18); }
+        body.slide-nav-expanded .slide-nav-shell { transform: translateX(0); }
+        .slide-nav-brand, .slide-nav-label { display: inline; }
+        .slide-nav-header { justify-content: space-between; padding: 8px 10px; }
+    }
+</style>
+{% set nav_items = [] %}
+{% if session_role in ['teacher', 'admin'] %}
+    {% set nav_items = [
+        ('teacher_dashboard', '/teacher_dashboard', '🏠', 'Dashboard'),
+        ('attendance', '/attendance', '📅', 'Attendance'),
+        ('group_results', '/group_results', '📊', 'Results'),
+        ('risk_learners', '/risk_learners', '🚨', 'Learners At Risk'),
+        ('manage_subjects', '/manage_subjects', '📁', 'Practical'),
+        ('manage_tests', '/manage_tests', '📝', 'Theory Tests'),
+        ('manage_lessons', '/manage_lessons', '🧩', 'Lesson Setup'),
+        ('response_review', '/response_review', '🧾', 'Review'),
+        ('communications', '/communications', '💬', 'Messages'),
+        ('marking_setup', '/marking_setup', '⚙️', 'Marking Setup'),
+        ('admin', '/admin', '🛠️', 'Admin')
+    ] %}
+{% else %}
+    {% set nav_items = [
+        ('student_dashboard', '/student_dashboard', '🏠', 'Dashboard'),
+        ('my_tasks', '/my_tasks', '📁', 'Practical Tasks'),
+        ('lessons', '/lessons', '📘', 'Theory Lessons'),
+        ('tests', '/tests', '📝', 'Theory Tests')
+    ] %}
+{% endif %}
+<aside class="slide-nav-shell">
+    <div class="slide-nav-header">
+        <div class="slide-nav-brand">Learner Tracking</div>
+        <button type="button" class="slide-nav-toggle" id="slideNavToggle" aria-label="Toggle navigation">☰</button>
+    </div>
+    <nav class="slide-nav-list">
+        {% for key, href, icon, label in nav_items %}
+        <a href="{{ href }}" class="slide-nav-link{% if current_page == key %} active{% endif %}" data-tooltip="{{ label }}">
+            <span class="slide-nav-icon">{{ icon }}</span>
+            <span class="slide-nav-label">{{ label }}</span>
+        </a>
+        {% endfor %}
+    </nav>
+</aside>
+<script>
+(function () {
+    document.body.classList.add('with-slide-nav');
+    const toggle = document.getElementById('slideNavToggle');
+    const storageKey = 'learnerTrackingSlideNavExpanded';
+    if (sessionStorage.getItem(storageKey) === '1') {
+        document.body.classList.add('slide-nav-expanded');
+    }
+    if (!toggle) return;
+    toggle.addEventListener('click', function () {
+        document.body.classList.toggle('slide-nav-expanded');
+        sessionStorage.setItem(storageKey, document.body.classList.contains('slide-nav-expanded') ? '1' : '0');
+    });
+})();
+</script>

@@ -1,0 +1,1167 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Edit Lesson Slides</title>
+    <style>
+        * { box-sizing: border-box; }
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            background: linear-gradient(135deg, #f7fbff 0%, #fff7ed 48%, #f4fff8 100%);
+            color: #1f2937;
+        }
+        .topbar { background: linear-gradient(90deg, #005a9e, #0f766e); color: white; padding: 14px 24px; display: flex; justify-content: space-between; align-items: center; position: sticky; top: 0; z-index: 10; }
+        .topbar a { color: white; text-decoration: none; font-size: 0.9em; }
+        .page { width: 90%; max-width: 90%; margin: 0 auto; padding: 24px; }
+        .hero { display: flex; justify-content: space-between; gap: 20px; align-items: flex-end; margin-bottom: 20px; }
+        .hero h1 { margin: 0 0 6px; font-size: 1.8em; color: #0f172a; }
+        .hero p { margin: 0; color: #475569; }
+        .panel, .slide-card {
+            background: rgba(255,255,255,0.92);
+            border: 1px solid rgba(15,23,42,0.10);
+            border-radius: 8px;
+            box-shadow: 0 14px 32px rgba(15,23,42,0.08);
+        }
+        .panel { padding: 18px; margin-bottom: 18px; }
+        .panel.accent { background: linear-gradient(135deg, rgba(0,120,212,0.10), rgba(22,163,74,0.10)), rgba(255,255,255,0.94); }
+        .panel h2 { margin: 0 0 12px; font-size: 1.05em; color: #0f766e; }
+        .grid { display: grid; grid-template-columns: 1.4fr 0.8fr 120px; gap: 14px; align-items: start; }
+        .form-group { margin-bottom: 12px; }
+        label { font-weight: bold; display: block; margin-bottom: 5px; font-size: 0.9em; color: #334155; }
+        input[type=text], input[type=number], select, textarea {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid #cbd5e1;
+            border-radius: 8px;
+            font: inherit;
+            background: white;
+        }
+        textarea { min-height: 96px; resize: vertical; line-height: 1.45; }
+        input:focus, select:focus, textarea:focus { outline: none; border-color: #0078D4; box-shadow: 0 0 0 3px rgba(0,120,212,0.15); }
+        .btn { border: 0; border-radius: 8px; padding: 9px 13px; cursor: pointer; font-weight: bold; text-decoration: none; display: inline-flex; align-items: center; justify-content: center; gap: 6px; }
+        .btn-primary { background: #0078D4; color: white; }
+        .btn-success { background: #16a34a; color: white; }
+        .btn-danger { background: #dc2626; color: white; }
+        .btn-warning { background: #f59e0b; color: white; }
+        .btn-muted { background: #e2e8f0; color: #334155; }
+        .btn:hover { filter: brightness(0.96); transform: translateY(-1px); }
+        .option-row, .match-row { display: grid; grid-template-columns: 34px 1fr; gap: 8px; align-items: center; margin-bottom: 8px; }
+        .match-row { grid-template-columns: 1fr 28px 1fr; }
+        .slide-list { display: grid; gap: 14px; }
+        .slide-list.reordering .slide-card { outline: 2px dashed #0078D4; }
+        .slide-card { padding: 14px; position: relative; overflow: hidden; animation: riseIn 0.35s ease; display: grid; grid-template-columns: 260px 1fr; gap: 14px; align-items: start; }
+        .slide-card.dragging { opacity: 0.55; transform: scale(0.98); }
+        .slide-card:before { content: ""; position: absolute; inset: 0 0 auto 0; height: 6px; background: linear-gradient(90deg, #0078D4, #16a34a, #f59e0b, #db2777); }
+        .slide-card.content { background: linear-gradient(135deg, rgba(0,120,212,0.10), rgba(245,158,11,0.10)), rgba(255,255,255,0.94); }
+        .slide-head { display: flex; justify-content: space-between; gap: 12px; margin-bottom: 12px; }
+        .slide-title { margin: 0; color: #0f172a; font-size: 1.05em; line-height: 1.4; }
+        .slide-details { min-width: 0; }
+        .drag-handle {
+            border: 1px solid #cbd5e1;
+            background: white;
+            color: #475569;
+            border-radius: 8px;
+            padding: 7px 10px;
+            cursor: grab;
+            font-weight: bold;
+            user-select: none;
+        }
+        .drag-handle:active { cursor: grabbing; }
+        .lesson-bg,
+        .rte-editor {
+            background-image: var(--lesson-bg-image);
+            background-size: var(--lesson-bg-fit, cover);
+            background-position: center;
+            background-repeat: no-repeat;
+        }
+        .mini-slide-stage {
+            position: relative;
+            width: 100%;
+            aspect-ratio: 16 / 9;
+            min-height: 0;
+            margin: 0;
+            border: 1px solid #dbe4ef;
+            border-radius: 8px;
+            background-color: #f8fbff;
+            overflow: hidden;
+        }
+        .mini-slide-surface {
+            position: absolute;
+            left: 0;
+            top: 0;
+            width: 960px;
+            height: 540px;
+            transform-origin: top left;
+            background: transparent;
+        }
+        .mini-slide-surface > :not(.slide-box) {
+            padding: 22px;
+        }
+        .mini-slide-stage .slide-box {
+            position: absolute;
+            max-width: 100%;
+            max-height: 100%;
+            border-radius: 8px;
+            overflow: hidden;
+            background: rgba(255,255,255,0.82);
+            padding: 8px;
+            font-size: 0.85em;
+            cursor: default;
+            resize: none;
+        }
+        .mini-slide-stage .slide-box.image-box { padding: 0; background: transparent; }
+        .mini-slide-stage .slide-box.image-box img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            margin: 0;
+            max-height: none;
+            box-shadow: none;
+            pointer-events: none;
+        }
+        .mini-slide-stage .slide-box.text-box h1 { font-size: 1.5em; margin: 0 0 6px; }
+        .mini-slide-stage .slide-box.text-box p { margin: 0 0 6px; }
+        .mini-slide-stage .box-resize-handle { display: none; }
+        .mini-slide-stage .box-delete-btn { display: none; }
+        .mini-slide-stage .slide-bg,
+        .rte-editor .slide-bg { display: none; }
+        .question-thumb {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            text-align: center;
+            padding: 14px;
+            color: #0f766e;
+            font-weight: bold;
+            background: linear-gradient(135deg, #eff6ff 0%, #ecfdf5 100%);
+        }
+        .slide-summary {
+            position: relative;
+            z-index: 1;
+            color: #475569;
+            line-height: 1.45;
+            margin-top: 8px;
+            max-height: 4.4em;
+            overflow: hidden;
+        }
+        .badge { border-radius: 99px; padding: 4px 9px; font-size: 0.78em; font-weight: bold; white-space: nowrap; }
+        .badge.type { background: #e0f2fe; color: #075985; }
+        .badge.marks { background: #dcfce7; color: #14532d; }
+        .correct { color: #15803d; font-weight: bold; }
+        .muted { color: #64748b; font-size: 0.9em; }
+        .actions { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 12px; }
+        .edit-panel { display: none; margin-top: 14px; padding: 14px; background: #fff7ed; border: 1px solid #fed7aa; border-radius: 8px; }
+        .edit-panel.open { display: block; }
+        .autosave-status { color: #64748b; font-size: 0.85em; align-self: center; }
+        .autosave-status.saving { color: #b45309; }
+        .autosave-status.saved { color: #15803d; }
+        .autosave-status.error { color: #dc2626; }
+        .rte-toolbar { display: flex; gap: 5px; margin-bottom: 5px; flex-wrap: wrap; }
+        .rte-btn { border: 1px solid #cbd5e1; background: white; border-radius: 6px; padding: 5px 10px; cursor: pointer; }
+        .rte-editor {
+            min-height: 420px;
+            aspect-ratio: 16 / 9;
+            border: 1px solid #cbd5e1;
+            border-radius: 8px;
+            background-color: #f8fbff;
+            padding: 0;
+            line-height: 1.5;
+            position: relative;
+            overflow: hidden;
+        }
+        .rte-editor > :not(.slide-box) {
+            margin-left: 12px;
+            margin-right: 12px;
+        }
+        .rte-editor > :not(.slide-box):first-child {
+            margin-top: 12px;
+        }
+        .rte-editor:focus { outline: none; border-color: #0078D4; box-shadow: 0 0 0 3px rgba(0,120,212,0.15); }
+        .rte-editor img { display: block; max-width: 100%; max-height: 320px; object-fit: contain; border-radius: 8px; margin: 12px auto; box-shadow: 0 12px 28px rgba(15,23,42,0.16); }
+        .rte-editor h1, .rte-editor h2 { margin: 8px 0; line-height: 1.15; color: #0f172a; }
+        .rte-help { margin-top: 6px; color: #64748b; font-size: 0.85em; }
+        html.restoring body { overflow: hidden; }
+        .restore-overlay {
+            position: fixed;
+            inset: 0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: rgba(248,250,252,0.94);
+            z-index: 9999;
+            color: #0f766e;
+            font-weight: bold;
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.16s ease;
+        }
+        html.restoring .restore-overlay,
+        .restore-overlay.active {
+            opacity: 1;
+            pointer-events: auto;
+        }
+        .restore-box {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 16px 20px;
+            border: 1px solid #dbe4ef;
+            border-radius: 8px;
+            background: white;
+            box-shadow: 0 18px 42px rgba(15,23,42,0.16);
+        }
+        .restore-spinner {
+            width: 22px;
+            height: 22px;
+            border: 3px solid #cbd5e1;
+            border-top-color: #0078D4;
+            border-radius: 50%;
+            animation: spin 0.8s linear infinite;
+        }
+        .slide-box {
+            position: absolute;
+            left: 40px;
+            top: 40px;
+            min-width: 130px;
+            min-height: 48px;
+            padding: 10px;
+            border: 1px dashed transparent;
+            border-radius: 8px;
+            background: rgba(255,255,255,0.82);
+            cursor: move;
+            overflow: hidden;
+        }
+        .slide-box:hover, .slide-box.selected { border-color: #0078D4; box-shadow: 0 8px 18px rgba(0,120,212,0.14); }
+        .slide-box.text-box { font-size: 1.05em; color: #0f172a; }
+        .slide-box.image-box { padding: 0; background: transparent; }
+        .slide-box.image-box img { width: 100%; height: 100%; max-height: none; object-fit: cover; margin: 0; pointer-events: none; }
+        .slide-box { z-index: 1; }
+        .box-resize-handle {
+            position: absolute;
+            right: 0;
+            bottom: 0;
+            width: 18px;
+            height: 18px;
+            border-radius: 8px 0 7px 0;
+            background: #0078D4;
+            cursor: nwse-resize;
+            z-index: 3;
+        }
+        .box-resize-handle:before {
+            content: "";
+            position: absolute;
+            right: 4px;
+            bottom: 4px;
+            width: 7px;
+            height: 7px;
+            border-right: 2px solid white;
+            border-bottom: 2px solid white;
+        }
+        .box-delete-btn {
+            position: absolute;
+            right: -10px;
+            top: -10px;
+            width: 24px;
+            height: 24px;
+            min-height: 24px;
+            border: 2px solid white;
+            border-radius: 50%;
+            background: #dc2626;
+            color: white;
+            cursor: pointer;
+            display: none;
+            align-items: center;
+            justify-content: center;
+            font-size: 16px;
+            line-height: 1;
+            font-weight: bold;
+            padding: 0;
+            z-index: 4;
+            box-shadow: 0 6px 16px rgba(15,23,42,0.22);
+        }
+        .slide-box:hover .box-delete-btn,
+        .slide-box.selected .box-delete-btn {
+            display: flex;
+        }
+        @keyframes riseIn { from { opacity: 0; transform: translateY(12px); } to { opacity: 1; transform: translateY(0); } }
+        @keyframes spin { to { transform: rotate(360deg); } }
+        @media (max-width: 820px) {
+            .topbar {
+                position: static;
+                padding: 12px 14px;
+                align-items: flex-start;
+                gap: 8px;
+                flex-direction: column;
+            }
+            .page { padding: 16px 14px 28px; }
+            .hero { display: block; }
+            .hero h1 { font-size: 1.35em; }
+            .hero .btn { margin-top: 10px; }
+            .panel { padding: 14px; }
+            .grid { grid-template-columns: 1fr; gap: 10px; }
+            .rte-toolbar {
+                overflow-x: auto;
+                flex-wrap: nowrap;
+                padding-bottom: 4px;
+            }
+            .rte-btn, .btn {
+                min-height: 44px;
+                white-space: nowrap;
+            }
+            .rte-editor {
+                min-height: 320px;
+                aspect-ratio: 16 / 9;
+            }
+            .slide-box {
+                min-width: 70px;
+                min-height: 34px;
+                padding: 8px;
+                font-size: 0.95em;
+            }
+            .slide-card {
+                grid-template-columns: 150px 1fr;
+                gap: 10px;
+                padding: 12px;
+            }
+            .slide-head {
+                display: block;
+            }
+            .slide-head > div:last-child {
+                margin-top: 8px;
+                flex-wrap: wrap;
+            }
+            .mini-slide-stage {
+                border-radius: 6px;
+            }
+            .mini-slide-stage .slide-box {
+                font-size: 0.72em;
+                padding: 4px;
+            }
+            .mini-slide-stage .slide-box.text-box h1 { font-size: 1.05em; }
+            .mini-slide-stage .slide-box.text-box p { font-size: 0.86em; }
+            .actions { gap: 6px; }
+            .actions .btn { flex: 1 1 96px; }
+            .edit-panel {
+                grid-column: 1 / -1;
+                padding: 10px;
+            }
+        }
+        @media (max-width: 520px) {
+            .slide-card { grid-template-columns: 1fr; }
+            .mini-slide-stage { max-width: 100%; }
+            .slide-title { font-size: 0.98em; }
+        }
+    </style>
+    <script>
+        if (sessionStorage.getItem('lessonBuilderScrollY') || sessionStorage.getItem('lessonBuilderCardId')) {
+            document.documentElement.classList.add('restoring');
+        }
+    </script>
+</head>
+<body style="{% if test[3] %}--lesson-bg-image: linear-gradient(rgba(255,255,255,0.02), rgba(255,255,255,0.02)), url('{{ test[3] }}');{% endif %} --lesson-bg-fit: {{ test[4] or 'cover' }};">
+<div class="restore-overlay" id="restoreOverlay">
+    <div class="restore-box">
+        <span class="restore-spinner"></span>
+    </div>
+</div>
+<div class="topbar">
+    <strong>Lesson Builder</strong>
+    <a href="/manage_tests">Back to Tests</a>
+</div>
+
+<main class="page">
+    <div class="hero">
+        <div>
+            <h1>{{ test[1] }}</h1>
+            <p>{{ test[2] or 'Theory lesson' }} · {{ questions|length }} slide{{ 's' if questions|length != 1 }}</p>
+        </div>
+        <a class="btn btn-primary" href="/preview_test/{{ test[0] }}" target="_blank">Preview Lesson</a>
+    </div>
+
+    {% if import_success %}<div class="panel" style="border-color:#86efac;color:#166534;">{{ import_success }}</div>{% endif %}
+    {% if import_error %}<div class="panel" style="border-color:#fca5a5;color:#991b1b;">{{ import_error }}</div>{% endif %}
+
+    <section class="panel">
+        <h2>Lesson Slide Background</h2>
+        <form method="post" id="backgroundForm">
+            <input type="hidden" name="action" value="save_lesson_background">
+            <input type="hidden" name="background_image" id="lessonBackgroundImage" value="{{ test[3] or '' }}">
+            <input type="hidden" name="background_fit" id="lessonBackgroundFit" value="{{ test[4] or 'cover' }}">
+            <div style="display:flex;gap:8px;flex-wrap:wrap;">
+                <button type="button" class="btn btn-primary" onclick="setGlobalBackgroundUrl()">Background URL</button>
+                <label class="btn btn-primary">
+                    Upload Background
+                    <input type="file" accept="image/*" style="display:none;" onchange="setGlobalBackgroundFile(this)">
+                </label>
+                <button type="button" class="btn btn-muted" onclick="clearGlobalBackground()">Clear Background</button>
+                <button type="button" class="btn btn-muted" id="fitCoverBtn" onclick="setBackgroundFit('cover')">Fill Area</button>
+                <button type="button" class="btn btn-muted" id="fitContainBtn" onclick="setBackgroundFit('contain')">Show Full Image</button>
+                <button type="submit" class="btn btn-success">Save Background</button>
+            </div>
+            <p class="muted">This background is used behind every slide in this lesson.</p>
+        </form>
+    </section>
+
+    <section class="panel accent">
+        <h2>Add New Content Or Question Slide</h2>
+        <form method="post" id="questionForm">
+            <input type="hidden" name="action" value="add_question">
+            <div class="grid">
+                <div class="form-group" id="qtextGroup">
+                    <label>Slide Content</label>
+                    <div id="rte_add_wrapper"></div>
+                    <input type="hidden" name="question_text" id="hidden_rte_add">
+                </div>
+                <div class="form-group">
+                    <label>Slide Type</label>
+                    <select name="question_type" id="questionType" onchange="showFields('dynamicFields', this.value)" required>
+                        <option value="title_slide">Title Slide</option>
+                        <option value="heading_slide">Heading Slide</option>
+                        <option value="content_slide">Content Slide</option>
+                        <option value="mcq_single">Multiple Choice</option>
+                        <option value="mcq_multi">Multi Select</option>
+                        <option value="fill_in">Fill in the Blank</option>
+                        <option value="true_false">True / False</option>
+                        <option value="match">Match Columns</option>
+                    </select>
+                </div>
+                <div class="form-group" id="marksGroup">
+                    <label>Marks</label>
+                    <input type="number" name="marks" id="marksInput" value="0" min="0" max="10">
+                </div>
+            </div>
+            <div id="dynamicFields"></div>
+            <button type="submit" class="btn btn-success" onclick="syncAllRTEs()">Add Slide</button>
+        </form>
+    </section>
+
+    <section class="panel">
+        <h2>Import Existing PowerPoint</h2>
+        <form method="post" enctype="multipart/form-data">
+            <input type="hidden" name="action" value="import_pptx">
+            <div class="form-group">
+                <label>PowerPoint File (.pptx)</label>
+                <input type="file" name="pptx_file" accept=".pptx,application/vnd.openxmlformats-officedocument.presentationml.presentation" required>
+            </div>
+            <label style="display:flex;align-items:center;gap:8px;font-weight:normal;">
+                <input type="checkbox" name="append" value="1" checked>
+                <strong>Append imported slides to this lesson</strong>
+            </label>
+            <p class="muted">Text boxes and pictures are imported as movable slide boxes. Animations and transitions from PowerPoint are not imported.</p>
+            <button type="submit" class="btn btn-primary">Import PowerPoint</button>
+        </form>
+    </section>
+
+    <section class="panel">
+        <h2>Import Slides From JSON</h2>
+        <form method="post">
+            <input type="hidden" name="action" value="import_questions_json">
+            <div class="form-group">
+                <label>Questions JSON</label>
+                <textarea name="questions_json" placeholder='Paste JSON with top-level key "questions".'></textarea>
+            </div>
+            <label style="display:flex;align-items:center;gap:8px;font-weight:normal;">
+                <input type="checkbox" name="append" value="1" checked>
+                <strong>Append to current lesson</strong>
+            </label>
+            <button type="submit" class="btn btn-primary" style="margin-top:12px;">Import</button>
+        </form>
+    </section>
+
+    <section>
+        <div class="hero" style="margin-top:8px;">
+            <h1 style="font-size:1.25em;">Current Lesson Flow</h1>
+            {% if questions %}
+            <form method="post" id="reorderForm" style="display:flex;gap:8px;align-items:center;">
+                <input type="hidden" name="action" value="reorder_questions">
+                <input type="hidden" name="ordered_ids" id="orderedIds">
+                <button type="submit" class="btn btn-success" onclick="captureSlideOrder()">Save Order</button>
+            </form>
+            {% endif %}
+        </div>
+        {% if not questions %}
+            <div class="panel muted">No slides added yet. Start with a content slide, then add questions between explanation slides.</div>
+        {% endif %}
+        <div class="slide-list" id="slideList">
+        {% for item in questions %}
+        {% set q = item.q %}
+        {% set opts = item.options %}
+        {% set q_id = q[0] %}
+        {% set q_type = q[2] %}
+            <article class="slide-card {{ 'content' if q_type in ['content_slide', 'title_slide', 'heading_slide'] }}" id="card_{{ q_id }}" data-question-id="{{ q_id }}">
+                {% if q_type in ['content_slide', 'title_slide', 'heading_slide'] %}
+                    <div class="mini-slide-stage lesson-bg"><div class="mini-slide-surface">{{ q[1] | safe }}</div></div>
+                {% else %}
+                    <div class="mini-slide-stage question-thumb lesson-bg">
+                        {% if q_type == 'mcq_single' %}Multiple Choice
+                        {% elif q_type == 'mcq_multi' %}Multi Select
+                        {% elif q_type == 'fill_in' %}Fill Blank
+                        {% elif q_type == 'true_false' %}True / False
+                        {% elif q_type == 'match' %}Match Columns
+                        {% endif %}
+                    </div>
+                {% endif %}
+
+                <div class="slide-details">
+                    <div class="slide-head">
+                        <div>
+                            <span class="badge type">
+                                {% if q_type == 'title_slide' %}Title
+                                {% elif q_type == 'heading_slide' %}Heading
+                                {% elif q_type == 'content_slide' %}Content
+                                {% elif q_type == 'mcq_single' %}Multiple Choice
+                                {% elif q_type == 'mcq_multi' %}Multi Select
+                                {% elif q_type == 'fill_in' %}Fill Blank
+                                {% elif q_type == 'true_false' %}True / False
+                                {% elif q_type == 'match' %}Match Columns
+                                {% endif %}
+                            </span>
+                            <h3 class="slide-title" style="margin-top:8px;">Slide {{ loop.index }}</h3>
+                        </div>
+                        <div style="display:flex;gap:8px;align-items:center;">
+                            {% if q_type in ['content_slide', 'title_slide', 'heading_slide'] %}
+                            <span class="badge marks">No marks</span>
+                            {% else %}
+                            <span class="badge marks">{{ q[3] }} mark{{ 's' if q[3] != 1 }}</span>
+                            {% endif %}
+                            <span class="drag-handle" draggable="true" title="Drag slide to reorder">Move</span>
+                        </div>
+                    </div>
+
+                {% if q_type in ['content_slide', 'title_slide', 'heading_slide'] %}
+                    <p class="muted">
+                        {% if q_type == 'title_slide' %}Title slide
+                        {% elif q_type == 'heading_slide' %}Heading slide
+                        {% else %}Content slide{% endif %}
+                    </p>
+                {% elif q_type in ['mcq_single', 'mcq_multi'] %}
+                    <div class="slide-summary">{{ q[1] | safe }}</div>
+                    <ul>{% for o in opts %}<li {% if o[2] %}class="correct"{% endif %}>{{ o[1] }}{% if o[2] %} - correct{% endif %}</li>{% endfor %}</ul>
+                {% elif q_type == 'fill_in' %}
+                    <div class="slide-summary">{{ q[1] | safe }}</div>
+                    <p class="muted">Answer: <span class="correct">{{ opts[0][1] if opts }}</span></p>
+                {% elif q_type == 'true_false' %}
+                    <div class="slide-summary">{{ q[1] | safe }}</div>
+                    <p class="muted">{% for o in opts %}{% if o[2] %}Correct: <span class="correct">{{ o[1] }}</span>{% endif %}{% endfor %}</p>
+                {% elif q_type == 'match' %}
+                    <div class="slide-summary">{{ q[1] | safe }}</div>
+                    <table style="border-collapse:collapse;width:100%;font-size:0.92em;">
+                        {% for o in opts %}<tr><td style="border:1px solid #e2e8f0;padding:6px;">{{ o[1] }}</td><td style="border:1px solid #e2e8f0;padding:6px;">{{ o[3] }}</td></tr>{% endfor %}
+                    </table>
+                {% endif %}
+
+                    <div class="actions">
+                        <button type="button" class="btn btn-warning" onclick="toggleEdit({{ q_id }})">Edit</button>
+                        <form method="post" style="margin:0;">
+                            <input type="hidden" name="action" value="duplicate_question">
+                            <input type="hidden" name="question_id" value="{{ q_id }}">
+                            <button type="submit" class="btn btn-muted">Duplicate</button>
+                        </form>
+                        <form method="post" onsubmit="return confirm('Delete this slide?')" style="margin:0;">
+                            <input type="hidden" name="action" value="delete_question">
+                            <input type="hidden" name="question_id" value="{{ q_id }}">
+                            <button type="submit" class="btn btn-danger">Delete</button>
+                        </form>
+                    </div>
+
+                    <div class="edit-panel" id="edit_{{ q_id }}">
+                    <form method="post" class="autosave-form" data-question-id="{{ q_id }}">
+                        <input type="hidden" name="action" value="edit_question">
+                        <input type="hidden" name="question_id" value="{{ q_id }}">
+                        <input type="hidden" name="question_type" value="{{ q_type }}">
+                        <div class="form-group">
+                            <label>Slide Content</label>
+                            <div id="rte_edit_{{ q_id }}_wrapper"></div>
+                            <input type="hidden" name="question_text" id="hidden_rte_edit_{{ q_id }}" value="{{ q[1] | e }}">
+                            <div class="rte-help">Use Text Box and image buttons to build the slide. Drag a box from its empty area, or hold Alt while dragging, to move it.</div>
+                        </div>
+                        <div class="form-group" style="max-width:140px;{% if q_type in ['content_slide', 'title_slide', 'heading_slide'] %}display:none;{% endif %}">
+                            <label>Marks</label>
+                            <input type="number" name="marks" value="{{ q[3] }}" min="0" max="10">
+                        </div>
+                        {% if q_type in ['mcq_single', 'mcq_multi'] %}
+                            <label>Options</label>
+                            <div id="editOptions_{{ q_id }}">
+                            {% for o in opts %}
+                                <div class="option-row">
+                                    <input type="{{ 'radio' if q_type == 'mcq_single' else 'checkbox' }}" name="is_correct" value="{{ loop.index0 }}" {{ 'checked' if o[2] else '' }}>
+                                    <input type="text" name="option_text" value="{{ o[1] }}" required>
+                                </div>
+                            {% endfor %}
+                            </div>
+                            <button type="button" class="btn btn-muted" onclick="addEditOption('editOptions_{{ q_id }}', '{{ 'radio' if q_type == 'mcq_single' else 'checkbox' }}')">Add Option</button>
+                        {% elif q_type == 'true_false' %}
+                            {% set correct_tf = opts | selectattr('2', 'equalto', 1) | list %}
+                            {% set correction_opt = opts | selectattr('3', 'equalto', 'correction') | list %}
+                            <div class="form-group">
+                                <label>Correct Answer</label>
+                                <select name="tf_correct">
+                                    <option value="True" {{ 'selected' if correct_tf and correct_tf[0][1] == 'True' else '' }}>True</option>
+                                    <option value="False" {{ 'selected' if correct_tf and correct_tf[0][1] == 'False' else '' }}>False</option>
+                                </select>
+                            </div>
+                            <div class="form-group">
+                                <label>Correction Word</label>
+                                <input type="text" name="correction_term" value="{{ correction_opt[0][1] if correction_opt else '' }}">
+                            </div>
+                        {% elif q_type == 'fill_in' %}
+                            <div class="form-group"><label>Correct Answer</label><input type="text" name="fill_answer" value="{{ opts[0][1] if opts else '' }}" required></div>
+                        {% elif q_type == 'match' %}
+                            <label>Match Pairs</label>
+                            <div id="editMatch_{{ q_id }}">
+                            {% for o in opts %}
+                                <div class="match-row"><input type="text" name="match_a" value="{{ o[1] }}" required><span>-></span><input type="text" name="match_b" value="{{ o[3] }}" required></div>
+                            {% endfor %}
+                            </div>
+                            <button type="button" class="btn btn-muted" onclick="addEditMatchRow('editMatch_{{ q_id }}')">Add Pair</button>
+                        {% endif %}
+                        <div class="actions">
+                            <button type="submit" class="btn btn-primary" onclick="syncAllRTEs()">Save Changes</button>
+                            <button type="button" class="btn btn-muted" onclick="toggleEdit({{ q_id }})">Cancel</button>
+                            <span class="autosave-status" id="autosave_{{ q_id }}">Auto-save ready</span>
+                        </div>
+                    </form>
+                    </div>
+                </div>
+            </article>
+        {% endfor %}
+        </div>
+    </section>
+</main>
+
+<script>
+function buildRTE(editorId, hiddenId, initialHtml) {
+    const wrapper = document.getElementById(editorId + '_wrapper');
+    if (!wrapper) return;
+    wrapper.innerHTML = `
+        <div class="rte-toolbar">
+            <button type="button" class="rte-btn" onmousedown="event.preventDefault(); rteBlock('h1', '${editorId}')">Title</button>
+            <button type="button" class="rte-btn" onmousedown="event.preventDefault(); rteBlock('h2', '${editorId}')">Heading</button>
+            <button type="button" class="rte-btn" onmousedown="event.preventDefault(); rteCmd('bold', '${editorId}')"><b>B</b></button>
+            <button type="button" class="rte-btn" onmousedown="event.preventDefault(); rteCmd('italic', '${editorId}')"><i>I</i></button>
+            <button type="button" class="rte-btn" onmousedown="event.preventDefault(); rteCmd('underline', '${editorId}')"><u>U</u></button>
+            <button type="button" class="rte-btn" onmousedown="event.preventDefault(); rteCmd('insertUnorderedList', '${editorId}')">List</button>
+            <button type="button" class="rte-btn" onmousedown="event.preventDefault(); insertTextBox('${editorId}')">Text Box</button>
+            <button type="button" class="rte-btn" onmousedown="event.preventDefault(); insertImageUrl('${editorId}')">Image URL</button>
+            <label class="rte-btn" style="display:inline-flex;align-items:center;">
+                Upload Image
+                <input type="file" accept="image/*" style="display:none;" onchange="insertImageFile('${editorId}', this)">
+            </label>
+            <button type="button" class="rte-btn" onmousedown="event.preventDefault(); deleteSelectedSlideBox('${editorId}')">Delete Selected</button>
+        </div>
+        <div class="rte-editor" id="${editorId}" contenteditable="true"></div>
+    `;
+    const editor = document.getElementById(editorId);
+    editor.innerHTML = initialHtml || '';
+    cleanLegacyBackgrounds(editor);
+    prepareSlideBoxes(editor);
+    editor.addEventListener('input', () => {
+        syncRTE(editorId, hiddenId);
+        scheduleAutosaveForEditor(editorId);
+    });
+    editor.addEventListener('mousedown', startSlideBoxDrag);
+    syncRTE(editorId, hiddenId);
+}
+function setGlobalBackgroundUrl() {
+    const url = prompt('Paste the background image URL');
+    if (!url) return;
+    setGlobalBackground(url.trim());
+}
+function setGlobalBackgroundFile(input) {
+    const file = input.files && input.files[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = () => setGlobalBackground(reader.result);
+    reader.readAsDataURL(file);
+    input.value = '';
+}
+function setGlobalBackground(src) {
+    document.getElementById('lessonBackgroundImage').value = src;
+    applyGlobalBackground();
+}
+function clearGlobalBackground() {
+    document.getElementById('lessonBackgroundImage').value = '';
+    applyGlobalBackground();
+}
+function setBackgroundFit(fit) {
+    document.getElementById('lessonBackgroundFit').value = fit;
+    applyGlobalBackground();
+}
+function applyGlobalBackground() {
+    const src = document.getElementById('lessonBackgroundImage')?.value || '';
+    const fit = document.getElementById('lessonBackgroundFit')?.value || 'cover';
+    document.body.style.setProperty(
+        '--lesson-bg-image',
+        src ? `linear-gradient(rgba(255,255,255,0.02), rgba(255,255,255,0.02)), url("${src}")` : ''
+    );
+    document.body.style.setProperty('--lesson-bg-fit', fit);
+    document.getElementById('fitCoverBtn')?.classList.toggle('btn-primary', fit === 'cover');
+    document.getElementById('fitContainBtn')?.classList.toggle('btn-primary', fit === 'contain');
+}
+function cleanLegacyBackgrounds(root) {
+    root.querySelectorAll('.slide-bg').forEach(el => el.remove());
+}
+function rteCmd(cmd, editorId) {
+    document.getElementById(editorId).focus();
+    document.execCommand(cmd, false, null);
+    syncRTE(editorId, 'hidden_' + editorId);
+}
+function rteBlock(tag, editorId) {
+    document.getElementById(editorId).focus();
+    document.execCommand('formatBlock', false, tag);
+    syncRTE(editorId, 'hidden_' + editorId);
+}
+function insertImageUrl(editorId) {
+    const url = prompt('Paste the image URL');
+    if (!url) return;
+    insertImageHtml(editorId, url.trim());
+}
+function insertImageFile(editorId, input) {
+    const file = input.files && input.files[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = () => insertImageHtml(editorId, reader.result);
+    reader.readAsDataURL(file);
+    input.value = '';
+}
+function insertImageHtml(editorId, src) {
+    const editor = document.getElementById(editorId);
+    editor.focus();
+    const box = createSlideBox('image-box', '<img src="' + src + '" alt="">', 320, 210);
+    editor.appendChild(box);
+    prepareSlideBoxes(editor);
+    syncRTE(editorId, 'hidden_' + editorId);
+}
+function insertTextBox(editorId) {
+    const editor = document.getElementById(editorId);
+    const box = createSlideBox('text-box', '<h1>Slide Title</h1><p>Type your text here.</p>', 300, 150);
+    editor.appendChild(box);
+    prepareSlideBoxes(editor);
+    syncRTE(editorId, 'hidden_' + editorId);
+}
+function createSlideBox(extraClass, html, width, height) {
+    const box = document.createElement('div');
+    box.className = 'slide-box ' + extraClass;
+    box.contentEditable = 'true';
+    box.style.left = '40px';
+    box.style.top = '40px';
+    box.style.width = width + 'px';
+    box.style.height = height + 'px';
+    box.innerHTML = html;
+    ensureBoxControls(box);
+    return box;
+}
+function prepareSlideBoxes(editor) {
+    editor.querySelectorAll('.slide-box').forEach(box => {
+        box.contentEditable = 'true';
+        ensureBoxControls(box);
+        box.addEventListener('input', () => syncRTE(editor.id, 'hidden_' + editor.id));
+    });
+}
+function ensureBoxControls(box) {
+    if (!box.querySelector(':scope > .box-resize-handle')) {
+        const handle = document.createElement('span');
+        handle.className = 'box-resize-handle';
+        handle.contentEditable = 'false';
+        box.appendChild(handle);
+    }
+    if (!box.querySelector(':scope > .box-delete-btn')) {
+        const del = document.createElement('button');
+        del.type = 'button';
+        del.className = 'box-delete-btn';
+        del.contentEditable = 'false';
+        del.title = 'Delete this box';
+        del.setAttribute('aria-label', 'Delete this box');
+        del.innerHTML = '&times;';
+        del.addEventListener('mousedown', event => {
+            event.preventDefault();
+            event.stopPropagation();
+        });
+        del.addEventListener('click', event => {
+            event.preventDefault();
+            event.stopPropagation();
+            deleteSlideBox(box);
+        });
+        box.appendChild(del);
+    }
+}
+function deleteSlideBox(box) {
+    const editor = box.closest('.rte-editor');
+    box.remove();
+    if (editor) {
+        syncRTE(editor.id, 'hidden_' + editor.id);
+        scheduleAutosaveForEditor(editor.id);
+        editor.focus();
+    }
+}
+function deleteSelectedSlideBox(editorId) {
+    const editor = document.getElementById(editorId);
+    if (!editor) return;
+    const selected = editor.querySelector('.slide-box.selected');
+    if (!selected) {
+        alert('Select a text box or image first.');
+        return;
+    }
+    deleteSlideBox(selected);
+}
+let dragBox = null;
+let dragEditor = null;
+let dragOffsetX = 0;
+let dragOffsetY = 0;
+let resizeBox = null;
+let resizeEditor = null;
+let resizeStartX = 0;
+let resizeStartY = 0;
+let resizeStartWidth = 0;
+let resizeStartHeight = 0;
+function startSlideBoxDrag(event) {
+    const box = event.target.closest('.slide-box');
+    if (!box) return;
+    document.querySelectorAll('.slide-box.selected').forEach(el => el.classList.remove('selected'));
+    box.classList.add('selected');
+    if (event.target.classList.contains('box-resize-handle')) {
+        resizeBox = box;
+        resizeEditor = event.currentTarget;
+        resizeStartX = event.clientX;
+        resizeStartY = event.clientY;
+        resizeStartWidth = box.offsetWidth;
+        resizeStartHeight = box.offsetHeight;
+        event.preventDefault();
+        return;
+    }
+    if (event.target.closest('img') || event.target === box || event.altKey) {
+        dragBox = box;
+        dragEditor = event.currentTarget;
+        const boxRect = box.getBoundingClientRect();
+        dragOffsetX = event.clientX - boxRect.left;
+        dragOffsetY = event.clientY - boxRect.top;
+        event.preventDefault();
+    }
+}
+document.addEventListener('mousemove', event => {
+    if (resizeBox && resizeEditor) {
+        const editorRect = resizeEditor.getBoundingClientRect();
+        const boxRect = resizeBox.getBoundingClientRect();
+        const maxWidth = resizeEditor.clientWidth - (boxRect.left - editorRect.left);
+        const maxHeight = resizeEditor.clientHeight - (boxRect.top - editorRect.top);
+        const width = Math.max(60, Math.min(maxWidth, resizeStartWidth + event.clientX - resizeStartX));
+        const height = Math.max(40, Math.min(maxHeight, resizeStartHeight + event.clientY - resizeStartY));
+        resizeBox.style.width = width + 'px';
+        resizeBox.style.height = height + 'px';
+        return;
+    }
+    if (!dragBox || !dragEditor) return;
+    const editorRect = dragEditor.getBoundingClientRect();
+    const maxLeft = dragEditor.clientWidth - dragBox.offsetWidth;
+    const maxTop = dragEditor.clientHeight - dragBox.offsetHeight;
+    const left = Math.max(0, Math.min(maxLeft, event.clientX - editorRect.left - dragOffsetX));
+    const top = Math.max(0, Math.min(maxTop, event.clientY - editorRect.top - dragOffsetY));
+    dragBox.style.left = left + 'px';
+    dragBox.style.top = top + 'px';
+});
+document.addEventListener('mouseup', () => {
+    if (dragBox && dragEditor) {
+        syncRTE(dragEditor.id, 'hidden_' + dragEditor.id);
+        scheduleAutosaveForEditor(dragEditor.id);
+    }
+    if (resizeBox && resizeEditor) {
+        syncRTE(resizeEditor.id, 'hidden_' + resizeEditor.id);
+        scheduleAutosaveForEditor(resizeEditor.id);
+    }
+    dragBox = null;
+    dragEditor = null;
+    resizeBox = null;
+    resizeEditor = null;
+});
+let draggedSlideCard = null;
+function initSlideReorder() {
+    const list = document.getElementById('slideList');
+    if (!list) return;
+    list.addEventListener('dragstart', event => {
+        const handle = event.target.closest('.drag-handle');
+        if (!handle) return;
+        const card = handle.closest('.slide-card');
+        if (!card) return;
+        draggedSlideCard = card;
+        card.classList.add('dragging');
+        list.classList.add('reordering');
+        event.dataTransfer.effectAllowed = 'move';
+        event.dataTransfer.setData('text/plain', card.dataset.questionId);
+    });
+    list.addEventListener('dragend', event => {
+        if (!event.target.closest('.drag-handle')) return;
+        if (draggedSlideCard) draggedSlideCard.classList.remove('dragging');
+        draggedSlideCard = null;
+        list.classList.remove('reordering');
+        renumberSlideCards();
+    });
+    list.addEventListener('dragover', event => {
+        event.preventDefault();
+        const after = getDragAfterElement(list, event.clientY);
+        if (!draggedSlideCard) return;
+        if (after == null) list.appendChild(draggedSlideCard);
+        else list.insertBefore(draggedSlideCard, after);
+        renumberSlideCards();
+    });
+}
+function getDragAfterElement(container, y) {
+    const cards = [...container.querySelectorAll('.slide-card:not(.dragging)')];
+    return cards.reduce((closest, child) => {
+        const box = child.getBoundingClientRect();
+        const offset = y - box.top - box.height / 2;
+        if (offset < 0 && offset > closest.offset) return { offset, element: child };
+        return closest;
+    }, { offset: Number.NEGATIVE_INFINITY, element: null }).element;
+}
+function renumberSlideCards() {
+    document.querySelectorAll('#slideList .slide-card').forEach((card, index) => {
+        const title = card.querySelector('.slide-title');
+        if (title) title.textContent = `Slide ${index + 1}`;
+    });
+}
+function scaleSlideThumbnails() {
+    document.querySelectorAll('.mini-slide-stage').forEach(stage => {
+        const surface = stage.querySelector('.mini-slide-surface');
+        if (!surface) return;
+        const scale = stage.clientWidth / 960;
+        surface.style.transform = `scale(${scale})`;
+    });
+}
+function captureSlideOrder() {
+    const input = document.getElementById('orderedIds');
+    if (input) {
+        input.value = [...document.querySelectorAll('#slideList .slide-card')]
+            .map(card => card.dataset.questionId)
+            .join(',');
+    }
+    rememberBuilderPosition();
+}
+function rememberBuilderPosition() {
+    const activeCard = document.activeElement ? document.activeElement.closest('.slide-card') : null;
+    const openPanel = document.querySelector('.edit-panel.open');
+    const targetCard = activeCard || (openPanel ? openPanel.closest('.slide-card') : null);
+    sessionStorage.setItem('lessonBuilderScrollY', String(window.scrollY));
+    if (targetCard && targetCard.id) sessionStorage.setItem('lessonBuilderCardId', targetCard.id);
+}
+function attachBackgroundToForm(form) {
+    const bgValue = document.getElementById('lessonBackgroundImage')?.value || '';
+    const fitValue = document.getElementById('lessonBackgroundFit')?.value || 'cover';
+    let field = form.querySelector('input[name="background_image"]');
+    if (!field) {
+        field = document.createElement('input');
+        field.type = 'hidden';
+        field.name = 'background_image';
+        form.appendChild(field);
+    }
+    field.value = bgValue;
+    let fitField = form.querySelector('input[name="background_fit"]');
+    if (!fitField) {
+        fitField = document.createElement('input');
+        fitField.type = 'hidden';
+        fitField.name = 'background_fit';
+        form.appendChild(fitField);
+    }
+    fitField.value = fitValue;
+}
+function restoreBuilderPosition() {
+    const overlay = document.getElementById('restoreOverlay');
+    const cardId = sessionStorage.getItem('lessonBuilderCardId');
+    const scrollY = sessionStorage.getItem('lessonBuilderScrollY');
+    const finishRestore = () => {
+        requestAnimationFrame(() => {
+            requestAnimationFrame(() => {
+                document.documentElement.classList.remove('restoring');
+                overlay?.classList.remove('active');
+            });
+        });
+    };
+    if (cardId) {
+        const card = document.getElementById(cardId);
+        if (card) {
+            card.scrollIntoView({ block: 'center' });
+            sessionStorage.removeItem('lessonBuilderCardId');
+            sessionStorage.removeItem('lessonBuilderScrollY');
+            finishRestore();
+            return;
+        }
+    }
+    if (scrollY !== null) {
+        window.scrollTo(0, Number(scrollY) || 0);
+        sessionStorage.removeItem('lessonBuilderScrollY');
+    }
+    finishRestore();
+}
+function syncRTE(editorId, hiddenId) {
+    const editor = document.getElementById(editorId);
+    const hidden = document.getElementById(hiddenId);
+    if (editor && hidden) {
+        normalizeSlideBoxes(editor);
+        const cleanCopy = editor.cloneNode(true);
+        cleanCopy.querySelectorAll('.box-resize-handle, .box-delete-btn').forEach(control => control.remove());
+        hidden.value = cleanCopy.innerHTML;
+    }
+}
+function syncAllRTEs() {
+    document.querySelectorAll('.rte-editor').forEach(editor => syncRTE(editor.id, 'hidden_' + editor.id));
+}
+function normalizeSlideBoxes(editor) {
+    cleanLegacyBackgrounds(editor);
+    const width = editor.clientWidth || 960;
+    const height = editor.clientHeight || 540;
+    editor.querySelectorAll('.slide-box').forEach(box => {
+        const left = parseCssSize(box.style.left, width);
+        const top = parseCssSize(box.style.top, height);
+        const boxWidth = parseCssSize(box.style.width, width) || box.offsetWidth;
+        const boxHeight = parseCssSize(box.style.height, height) || box.offsetHeight;
+        box.style.left = `${(left / width) * 100}%`;
+        box.style.top = `${(top / height) * 100}%`;
+        box.style.width = `${(boxWidth / width) * 100}%`;
+        box.style.height = `${(boxHeight / height) * 100}%`;
+    });
+}
+function parseCssSize(value, parentSize) {
+    if (!value) return 0;
+    if (value.endsWith('%')) return (parseFloat(value) / 100) * parentSize;
+    return parseFloat(value) || 0;
+}
+function toggleEdit(qId) {
+    document.getElementById('edit_' + qId).classList.toggle('open');
+}
+function showFields(containerId, type) {
+    const container = document.getElementById(containerId);
+    const marks = document.getElementById('marksInput');
+    const marksGroup = document.getElementById('marksGroup');
+    container.innerHTML = '';
+    const isLessonSlide = ['content_slide', 'title_slide', 'heading_slide'].includes(type);
+    marks.value = isLessonSlide ? 0 : 1;
+    marks.readOnly = isLessonSlide;
+    if (marksGroup) marksGroup.style.display = isLessonSlide ? 'none' : 'block';
+    if (type === 'title_slide') {
+        const editor = document.getElementById('rte_add');
+        if (editor && !editor.innerHTML.trim()) {
+            editor.innerHTML = '<div class="slide-box text-box" style="left:12%;top:30%;width:76%;height:28%;text-align:center;font-size:1.35em;"><h1>Lesson Title</h1><p>Subtitle or topic</p></div>';
+            syncRTE('rte_add', 'hidden_rte_add');
+        }
+    } else if (type === 'heading_slide') {
+        const editor = document.getElementById('rte_add');
+        if (editor && !editor.innerHTML.trim()) {
+            editor.innerHTML = '<div class="slide-box text-box" style="left:9%;top:18%;width:82%;height:22%;font-size:1.18em;"><h2>Section Heading</h2><p>Short introduction</p></div>';
+            syncRTE('rte_add', 'hidden_rte_add');
+        }
+    }
+    if (type === 'mcq_single' || type === 'mcq_multi') {
+        const inputType = type === 'mcq_single' ? 'radio' : 'checkbox';
+        container.innerHTML = `<label>Answer Options</label><div id="optionsList">${[0,1,2,3].map(i => `<div class="option-row"><input type="${inputType}" name="is_correct" value="${i}"><input type="text" name="option_text" placeholder="Option ${i+1}"></div>`).join('')}</div><button type="button" class="btn btn-muted" onclick="addOptionTo('optionsList','${inputType}')">Add Option</button>`;
+    } else if (type === 'true_false') {
+        container.innerHTML = `<div class="form-group"><label>Correct Answer</label><select name="tf_correct"><option value="True">True</option><option value="False">False</option></select></div><div class="form-group"><label>Correction Word</label><input type="text" name="correction_term" placeholder="Only needed when False needs a replacement word"></div>`;
+    } else if (type === 'fill_in') {
+        container.innerHTML = `<div class="form-group"><label>Correct Answer</label><input type="text" name="fill_answer" required></div>`;
+    } else if (type === 'match') {
+        container.innerHTML = `<label>Match Pairs</label><div id="matchList">${[0,1,2,3].map(i => `<div class="match-row"><input type="text" name="match_a" placeholder="Column A ${i+1}"><span>-></span><input type="text" name="match_b" placeholder="Column B ${i+1}"></div>`).join('')}</div><button type="button" class="btn btn-muted" onclick="addMatchTo('matchList')">Add Pair</button>`;
+    }
+}
+function addOptionTo(listId, inputType) {
+    const list = document.getElementById(listId);
+    const count = list.children.length;
+    const div = document.createElement('div');
+    div.className = 'option-row';
+    div.innerHTML = `<input type="${inputType}" name="is_correct" value="${count}"><input type="text" name="option_text" placeholder="Option ${count + 1}">`;
+    list.appendChild(div);
+}
+function addMatchTo(listId) {
+    const list = document.getElementById(listId);
+    const count = list.children.length;
+    const div = document.createElement('div');
+    div.className = 'match-row';
+    div.innerHTML = `<input type="text" name="match_a" placeholder="Column A ${count + 1}"><span>-></span><input type="text" name="match_b" placeholder="Column B ${count + 1}">`;
+    list.appendChild(div);
+}
+function addEditOption(listId, inputType) { addOptionTo(listId, inputType); }
+function addEditMatchRow(listId) { addMatchTo(listId); }
+const autosaveTimers = {};
+function getAutosaveFormFromEditor(editorId) {
+    const editor = document.getElementById(editorId);
+    return editor ? editor.closest('form.autosave-form') : null;
+}
+function getAutosaveStatus(form) {
+    return form ? document.getElementById('autosave_' + form.dataset.questionId) : null;
+}
+function setAutosaveStatus(form, text, state) {
+    const status = getAutosaveStatus(form);
+    if (!status) return;
+    status.textContent = text;
+    status.className = 'autosave-status' + (state ? ' ' + state : '');
+}
+function scheduleAutosaveForEditor(editorId) {
+    const form = getAutosaveFormFromEditor(editorId);
+    if (form) scheduleAutosave(form);
+}
+function scheduleAutosave(form) {
+    if (!form || !form.classList.contains('autosave-form')) return;
+    const key = form.dataset.questionId;
+    clearTimeout(autosaveTimers[key]);
+    setAutosaveStatus(form, 'Unsaved changes...', 'saving');
+    autosaveTimers[key] = setTimeout(() => autosaveForm(form), 1200);
+}
+function autosaveForm(form) {
+    if (!form || form.dataset.autosaving === '1') return;
+    syncAllRTEs();
+    attachBackgroundToForm(form);
+    const data = new FormData(form);
+    data.set('action', 'autosave_question');
+    form.dataset.autosaving = '1';
+    setAutosaveStatus(form, 'Saving...', 'saving');
+    fetch(window.location.href, {
+        method: 'POST',
+        body: data,
+        headers: { 'X-Requested-With': 'fetch' }
+    })
+    .then(response => {
+        if (!response.ok) throw new Error('Save failed');
+        return response.json();
+    })
+    .then(result => {
+        setAutosaveStatus(form, result.saved_at ? 'Auto-saved ' + result.saved_at : 'Auto-saved', 'saved');
+    })
+    .catch(() => {
+        setAutosaveStatus(form, 'Auto-save failed. Use Save Changes.', 'error');
+    })
+    .finally(() => {
+        form.dataset.autosaving = '0';
+    });
+}
+document.addEventListener('DOMContentLoaded', () => {
+    buildRTE('rte_add', 'hidden_rte_add', '');
+    document.querySelectorAll('[id^="rte_edit_"][id$="_wrapper"]').forEach(wrapper => {
+        const editorId = wrapper.id.replace('_wrapper', '');
+        const hiddenId = 'hidden_' + editorId;
+        const hidden = document.getElementById(hiddenId);
+        buildRTE(editorId, hiddenId, hidden ? hidden.value : '');
+    });
+    showFields('dynamicFields', document.getElementById('questionType').value);
+    initSlideReorder();
+    applyGlobalBackground();
+    scaleSlideThumbnails();
+    document.querySelectorAll('form').forEach(form => {
+        form.addEventListener('submit', () => {
+            attachBackgroundToForm(form);
+            rememberBuilderPosition();
+        });
+    });
+    document.querySelectorAll('form.autosave-form').forEach(form => {
+        form.addEventListener('input', event => {
+            if (event.target.closest('.rte-editor')) return;
+            scheduleAutosave(form);
+        });
+        form.addEventListener('change', () => scheduleAutosave(form));
+    });
+    requestAnimationFrame(() => {
+        scaleSlideThumbnails();
+        restoreBuilderPosition();
+    });
+});
+window.addEventListener('resize', scaleSlideThumbnails);
+</script>
+</body>
+</html>

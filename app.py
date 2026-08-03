@@ -6828,39 +6828,81 @@ def manage_lessons():
     cursor = conn.cursor()
     cursor.execute("""
         SELECT
-            l.id, l.title, l.subject, l.assign_date, l.ppt_relative_path, l.linked_test_id, l.is_active,
-            GROUP_CONCAT(DISTINCT lg.group_name),
-            GROUP_CONCAT(DISTINCT lt.teacher_username),
-            COUNT(DISTINCT c.id),
-            t.title
-        FROM theory_lessons l
-        LEFT JOIN theory_lesson_groups lg ON lg.lesson_id = l.id
-        LEFT JOIN theory_lesson_teachers lt ON lt.lesson_id = l.id
-        LEFT JOIN theory_lesson_checkpoints c ON c.lesson_id = l.id
-        LEFT JOIN theory_tests t ON t.id = l.linked_test_id
-        GROUP BY l.id
-        ORDER BY l.created_at DESC, l.id DESC
+            t.id, t.title, t.subject, t.assign_date, t.time_limit, t.is_active,
+            GROUP_CONCAT(DISTINCT tg.group_name),
+            COUNT(DISTINCT q.id),
+            t.allow_multiple, t.max_attempts, t.show_answers,
+            GROUP_CONCAT(DISTINCT tt.teacher_username),
+            SUM(CASE WHEN q.question_type IN ('content_slide', 'title_slide', 'heading_slide') THEN 1 ELSE 0 END) as content_count
+        FROM theory_tests t
+        LEFT JOIN theory_questions q ON t.id = q.test_id
+        LEFT JOIN theory_test_groups tg ON t.id = tg.test_id
+        LEFT JOIN theory_test_teachers tt ON t.id = tt.test_id
+        GROUP BY t.id
+        HAVING COALESCE(content_count, 0) > 0
+        ORDER BY t.created_at DESC
     """)
-    lesson_rows = cursor.fetchall()
-    cursor.execute("""
-        SELECT id, title
-        FROM theory_tests
-        ORDER BY title
-    """)
-    theory_tests = cursor.fetchall()
+    lessons = cursor.fetchall()
     groups = get_groups(username) if role == "teacher" else get_groups()
     teachers = get_teachers()
-    lesson_files = get_interactive_learning_files()
+    teacher_checkboxes = ''.join(
+        f'<label style="font-weight:normal;display:inline-flex;align-items:center;gap:5px;">'
+        f'<input type="checkbox" name="teachers" value="{escape(t[0])}"> {escape(t[1] or t[0])}</label>'
+        for t in teachers
+    )
+    lesson_list = ""
+    for lesson in lessons:
+        lesson_id = lesson[0]
+        lesson_title = escape(lesson[1] or "")
+        lesson_subject = escape(lesson[2] or "")
+        assign_date = lesson[3] or '—'
+        time_limit_val = lesson[4] or 0
+        is_active = bool(lesson[5])
+        groups_text = escape(lesson[6] or 'All Groups')
+        total_items = lesson[7] or 0
+        show_answers = bool(lesson[10])
+        teachers_text = escape(lesson[11] or 'All Teachers')
+        content_count = lesson[12] or 0
+        test_question_count = max(0, total_items - content_count)
+        status_badge = '<span class="badge-active">Active</span>' if is_active else '<span class="badge-inactive">Inactive</span>'
+        toggle_label = 'Deactivate' if is_active else 'Activate'
+        toggle_class = 'btn-warning' if is_active else 'btn-success'
+        lesson_list += f"""
+        <tr>
+            <td>{lesson_title}</td>
+            <td>{lesson_subject or '—'}</td>
+            <td>{groups_text}</td>
+            <td>{teachers_text}</td>
+            <td>{content_count}</td>
+            <td>{test_question_count}</td>
+            <td>{assign_date}</td>
+            <td>{time_limit_val if time_limit_val else 'No limit'}</td>
+            <td>{'✔ Yes' if show_answers else '✘ No'}</td>
+            <td>{status_badge}</td>
+            <td style="white-space:nowrap; vertical-align:middle;">
+                <div class="action-cell">
+                <a href="/manage_lessons/{lesson_id}/questions" class="btn btn-primary" title="Edit lesson">✏️</a>
+                <a href="/manage_tests/{lesson_id}/edit" class="btn btn-warning" title="Edit settings">⚙️</a>
+                <form method="post" action="/manage_tests/{lesson_id}/toggle" style="display:inline-flex; margin:0;">
+                    <button type="submit" class="btn {toggle_class}" title="{toggle_label}">{'⏸' if is_active else '▶'}</button>
+                </form>
+                <form method="post" action="/manage_tests/{lesson_id}/delete" style="display:inline-flex; margin:0;"
+                      onsubmit="return confirm('Delete this lesson setup, its questions, and all learner submissions?')">
+                    <button type="submit" class="btn btn-danger" title="Delete lesson">🗑</button>
+                </form>
+                </div>
+            </td>
+        </tr>
+        """
     conn.close()
 
     return render_template(
         "manage_lessons.html",
-        lesson_rows=lesson_rows,
         groups=groups,
-        teachers=teachers,
-        lesson_files=lesson_files,
-        theory_tests=theory_tests,
+        teacher_checkboxes=teacher_checkboxes,
+        test_list=lesson_list,
         page_title="Lesson Setup",
+        page_intro="Create and manage slide-based lessons here. Theory Tests remain the plain question-only tests.",
     )
 
 
@@ -6880,40 +6922,36 @@ def create_lesson():
     title = request.form.get("title", "").strip()
     subject = request.form.get("subject", "").strip()
     assign_date = request.form.get("assign_date", "").strip()
-    ppt_relative_path = request.form.get("ppt_relative_path", "").strip()
-    linked_test_id = request.form.get("linked_test_id", "").strip() or None
+    time_limit = safe_int(request.form.get("time_limit"), 0)
+    allow_multiple = 1 if request.form.get("allow_multiple") else 0
+    max_attempts = safe_int(request.form.get("max_attempts"), 1)
+    show_answers = 1 if request.form.get("show_answers") else 0
     groups = request.form.getlist("groups")
     teachers = request.form.getlist("teachers")
 
-    if not title or not assign_date or not ppt_relative_path:
-        return "Title, assign date, and PowerPoint file are required", 400
-
-    if not resolve_interactive_learning_path(ppt_relative_path):
-        return "Selected PowerPoint file was not found", 400
+    if not title or not assign_date:
+        return "Title and assign date are required", 400
 
     conn = get_db()
     cursor = conn.cursor()
     cursor.execute("""
-        INSERT INTO theory_lessons
-            (title, subject, assign_date, ppt_relative_path, linked_test_id, created_by, created_at, is_active)
-        VALUES (?, ?, ?, ?, ?, ?, ?, 1)
-    """, (title, subject, assign_date, ppt_relative_path, linked_test_id, username, datetime.now().isoformat()))
+        INSERT INTO theory_tests
+            (title, subject, assign_date, time_limit, allow_multiple, max_attempts, show_answers, created_by, created_at)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+    """, (title, subject, assign_date, time_limit, allow_multiple, max_attempts, show_answers, username, datetime.now().isoformat()))
     lesson_id = cursor.lastrowid
 
     for group_name in groups:
         if group_name.strip():
-            cursor.execute("INSERT INTO theory_lesson_groups (lesson_id, group_name) VALUES (?, ?)", (lesson_id, group_name))
+            cursor.execute("INSERT INTO theory_test_groups (test_id, group_name) VALUES (?, ?)", (lesson_id, group_name))
     for teacher_username in teachers:
         if teacher_username.strip():
-            cursor.execute(
-                "INSERT INTO theory_lesson_teachers (lesson_id, teacher_username) VALUES (?, ?)",
-                (lesson_id, teacher_username),
-            )
+            cursor.execute("INSERT INTO theory_test_teachers (test_id, teacher_username) VALUES (?, ?)", (lesson_id, teacher_username))
 
     conn.commit()
     conn.close()
     log_activity(username, f"created theory lesson '{title}'")
-    return redirect(url_for("manage_lesson_checkpoints", lesson_id=lesson_id))
+    return redirect(url_for("manage_lesson_questions", test_id=lesson_id))
 
 
 @app.route("/manage_lessons/<int:lesson_id>/toggle", methods=["POST"])
@@ -7435,6 +7473,15 @@ def delete_test(test_id):
 
 @app.route("/manage_tests/<int:test_id>/questions", methods=["GET", "POST"])
 def manage_test_questions(test_id):
+    return _manage_theory_questions(test_id, "test")
+
+
+@app.route("/manage_lessons/<int:test_id>/questions", methods=["GET", "POST"])
+def manage_lesson_questions(test_id):
+    return _manage_theory_questions(test_id, "lesson")
+
+
+def _manage_theory_questions(test_id, builder_mode):
     username = session.get("username")
     if not username:
         return redirect(url_for("login"))
@@ -7444,7 +7491,7 @@ def manage_test_questions(test_id):
     conn = get_db()
     cursor = conn.cursor()
 
-    cursor.execute("SELECT id, title, subject FROM theory_tests WHERE id = ?", (test_id,))
+    cursor.execute("SELECT id, title, subject, background_image, COALESCE(background_fit, 'cover') FROM theory_tests WHERE id = ?", (test_id,))
     test = cursor.fetchone()
     if not test:
         conn.close()
@@ -7454,8 +7501,12 @@ def manage_test_questions(test_id):
         action = request.form.get("action")
         if action == "add_question":
             q_text = request.form.get("question_text", "").strip()
+            if builder_mode == "lesson":
+                q_text = externalize_data_uri_images(q_text)
             q_type = request.form.get("question_type", "")
             marks = int(request.form.get("marks", 1))
+            if q_type in LESSON_SLIDE_TYPES:
+                marks = 0
 
             cursor.execute("SELECT COUNT(*) FROM theory_questions WHERE test_id = ?", (test_id,))
             order_index = cursor.fetchone()[0]
@@ -7506,6 +7557,50 @@ def manage_test_questions(test_id):
             conn.commit()
             log_activity(username, f"added question to test {test_id}")
 
+        elif action == "duplicate_question" and builder_mode == "lesson":
+            q_id = request.form.get("question_id")
+            cursor.execute("""
+                SELECT question_text, question_type, marks, order_index
+                FROM theory_questions
+                WHERE id = ? AND test_id = ?
+            """, (q_id, test_id))
+            source = cursor.fetchone()
+            if source:
+                q_text, q_type, marks, order_index = source
+                cursor.execute(
+                    "UPDATE theory_questions SET order_index = order_index + 1 WHERE test_id = ? AND order_index > ?",
+                    (test_id, order_index)
+                )
+                cursor.execute("""
+                    INSERT INTO theory_questions (test_id, question_text, question_type, marks, order_index)
+                    VALUES (?, ?, ?, ?, ?)
+                """, (test_id, q_text, q_type, marks, order_index + 1))
+                new_q_id = cursor.lastrowid
+                cursor.execute("""
+                    SELECT option_text, is_correct, match_pair
+                    FROM theory_options
+                    WHERE question_id = ?
+                    ORDER BY id
+                """, (q_id,))
+                for option_text, is_correct, match_pair in cursor.fetchall():
+                    cursor.execute("""
+                        INSERT INTO theory_options (question_id, option_text, is_correct, match_pair)
+                        VALUES (?, ?, ?, ?)
+                    """, (new_q_id, option_text, is_correct, match_pair))
+                conn.commit()
+                log_activity(username, f"duplicated slide {q_id} in test {test_id}")
+
+        elif action == "reorder_questions" and builder_mode == "lesson":
+            ordered_ids = request.form.get("ordered_ids", "")
+            ids = [int(item) for item in ordered_ids.split(",") if item.strip().isdigit()]
+            for index, q_id in enumerate(ids):
+                cursor.execute(
+                    "UPDATE theory_questions SET order_index = ? WHERE id = ? AND test_id = ?",
+                    (index, q_id, test_id)
+                )
+            conn.commit()
+            log_activity(username, f"reordered slides in test {test_id}")
+
         elif action == "delete_question":
             q_id = request.form.get("question_id")
             cursor.execute("DELETE FROM theory_options WHERE question_id = ?", (q_id,))
@@ -7515,8 +7610,12 @@ def manage_test_questions(test_id):
         elif action == "edit_question":
             q_id = request.form.get("question_id")
             q_text = request.form.get("question_text", "").strip()
+            if builder_mode == "lesson":
+                q_text = externalize_data_uri_images(q_text)
             q_type = request.form.get("question_type", "")
             marks = int(request.form.get("marks", 1))
+            if q_type in LESSON_SLIDE_TYPES:
+                marks = 0
 
             cursor.execute("UPDATE theory_questions SET question_text = ?, marks = ? WHERE id = ?",
                            (q_text, marks, q_id))
@@ -7558,6 +7657,145 @@ def manage_test_questions(test_id):
                                        (q_id, a.strip(), b.strip()))
             conn.commit()
             log_activity(username, f"edited question {q_id} in test {test_id}")
+
+        elif action == "autosave_question" and builder_mode == "lesson":
+            q_id = request.form.get("question_id")
+            q_text = externalize_data_uri_images(request.form.get("question_text", "").strip())
+            marks = safe_int(request.form.get("marks"), 0)
+            q_type = request.form.get("question_type", "")
+            if q_type in LESSON_SLIDE_TYPES:
+                marks = 0
+
+            cursor.execute("SELECT 1 FROM theory_questions WHERE id = ? AND test_id = ?", (q_id, test_id))
+            if not cursor.fetchone():
+                conn.close()
+                return {"ok": False, "error": "not_found"}, 404
+
+            cursor.execute("UPDATE theory_questions SET question_text = ?, marks = ? WHERE id = ?", (q_text, marks, q_id))
+            cursor.execute("DELETE FROM theory_options WHERE question_id = ?", (q_id,))
+
+            if q_type in ["mcq_single", "mcq_multi"]:
+                options = request.form.getlist("option_text")
+                correct = request.form.getlist("is_correct")
+                for i, opt in enumerate(options):
+                    if opt.strip():
+                        cursor.execute(
+                            "INSERT INTO theory_options (question_id, option_text, is_correct) VALUES (?, ?, ?)",
+                            (q_id, opt.strip(), 1 if str(i) in correct else 0)
+                        )
+            elif q_type == "true_false":
+                correct_answer = request.form.get("tf_correct", "True")
+                correction_term = request.form.get("correction_term", "").strip()
+                cursor.execute("INSERT INTO theory_options (question_id, option_text, is_correct) VALUES (?, 'True', ?)",
+                               (q_id, 1 if correct_answer == "True" else 0))
+                cursor.execute("INSERT INTO theory_options (question_id, option_text, is_correct) VALUES (?, 'False', ?)",
+                               (q_id, 1 if correct_answer == "False" else 0))
+                if correction_term:
+                    cursor.execute("INSERT INTO theory_options (question_id, option_text, is_correct, match_pair) VALUES (?, ?, 0, 'correction')",
+                                   (q_id, correction_term))
+            elif q_type == "fill_in":
+                answer = request.form.get("fill_answer", "").strip()
+                cursor.execute("INSERT INTO theory_options (question_id, option_text, is_correct) VALUES (?, ?, 1)", (q_id, answer))
+            elif q_type == "match":
+                col_a = request.form.getlist("match_a")
+                col_b = request.form.getlist("match_b")
+                for a, b in zip(col_a, col_b):
+                    if a.strip() and b.strip():
+                        cursor.execute(
+                            "INSERT INTO theory_options (question_id, option_text, is_correct, match_pair) VALUES (?, ?, 1, ?)",
+                            (q_id, a.strip(), b.strip())
+                        )
+
+            if "background_image" in request.form:
+                background_image = externalize_data_uri_images(request.form.get("background_image", "").strip() or None)
+                background_fit = request.form.get("background_fit", "cover").strip() or "cover"
+                if background_fit not in ("cover", "contain", "stretch"):
+                    background_fit = "cover"
+                cursor.execute(
+                    "UPDATE theory_tests SET background_image = ?, background_fit = ? WHERE id = ?",
+                    (background_image, background_fit, test_id)
+                )
+
+            conn.commit()
+            return {"ok": True, "saved_at": datetime.now().strftime("%H:%M:%S")}
+
+        elif action == "save_lesson_background" and builder_mode == "lesson":
+            background_image = externalize_data_uri_images(request.form.get("background_image", "").strip() or None)
+            background_fit = request.form.get("background_fit", "cover").strip() or "cover"
+            if background_fit not in ("cover", "contain", "stretch"):
+                background_fit = "cover"
+            cursor.execute(
+                "UPDATE theory_tests SET background_image = ?, background_fit = ? WHERE id = ?",
+                (background_image, background_fit, test_id)
+            )
+            conn.commit()
+            log_activity(username, f"updated lesson background for test {test_id}")
+
+        elif action == "import_pptx" and builder_mode == "lesson":
+            import_success = None
+            import_error = None
+            pptx_file = request.files.get("pptx_file")
+            append = request.form.get("append") is not None
+
+            try:
+                if not pptx_file or not pptx_file.filename:
+                    raise ValueError("Please choose a PowerPoint .pptx file.")
+                if not pptx_file.filename.lower().endswith(".pptx"):
+                    raise ValueError("Only .pptx files can be imported.")
+
+                if not append:
+                    cursor.execute("""
+                        DELETE FROM theory_options
+                        WHERE question_id IN (SELECT id FROM theory_questions WHERE test_id = ?)
+                    """, (test_id,))
+                    cursor.execute("DELETE FROM theory_questions WHERE test_id = ?", (test_id,))
+                    order_index = 0
+                else:
+                    cursor.execute("""
+                        SELECT COALESCE(MAX(order_index), -1) + 1
+                        FROM theory_questions
+                        WHERE test_id = ?
+                    """, (test_id,))
+                    order_index = cursor.fetchone()[0]
+
+                slide_html = pptx_to_content_slide_html(pptx_file)
+                if not slide_html:
+                    raise ValueError("No text or pictures were found in that PowerPoint file.")
+
+                for html in slide_html:
+                    cursor.execute("""
+                        INSERT INTO theory_questions (test_id, question_text, question_type, marks, order_index)
+                        VALUES (?, ?, 'content_slide', 0, ?)
+                    """, (test_id, externalize_data_uri_images(html), order_index))
+                    order_index += 1
+
+                conn.commit()
+                log_activity(username, f"imported PPTX slides into test {test_id}")
+                import_success = f"Imported {len(slide_html)} PowerPoint slide(s)."
+            except Exception as e:
+                conn.rollback()
+                import_error = str(e)
+
+            cursor.execute("""
+                SELECT id, question_text, question_type, marks, order_index
+                FROM theory_questions WHERE test_id = ? ORDER BY order_index
+            """, (test_id,))
+            questions = cursor.fetchall()
+            questions_with_options = []
+            for q in questions:
+                cursor.execute("SELECT id, option_text, is_correct, match_pair FROM theory_options WHERE question_id = ?", (q[0],))
+                options = cursor.fetchall()
+                questions_with_options.append({"q": q, "options": options})
+
+            conn.close()
+            return render_template(
+                "manage_lesson_questions.html",
+                test=test,
+                questions=questions_with_options,
+                import_success=import_success,
+                import_error=import_error,
+                builder_mode=builder_mode
+            )
 
         elif action == "import_questions_json":
             import_success = None
@@ -7620,14 +7858,17 @@ def manage_test_questions(test_id):
 
             conn.close()
             return render_template(
-                "manage_test_questions.html",
+                "manage_lesson_questions.html" if builder_mode == "lesson" else "manage_test_questions.html",
                 test=test,
                 questions=questions_with_options,
                 import_success=import_success,
-                import_error=import_error
+                import_error=import_error,
+                builder_mode=builder_mode
             )
 
         conn.close()
+        if builder_mode == "lesson":
+            return redirect(url_for("manage_lesson_questions", test_id=test_id))
         return redirect(url_for("manage_test_questions", test_id=test_id))
 
     # GET — load questions with their options
@@ -7644,7 +7885,12 @@ def manage_test_questions(test_id):
         questions_with_options.append({"q": q, "options": options})
 
     conn.close()
-    return render_template("manage_test_questions.html", test=test, questions=questions_with_options)
+    return render_template(
+        "manage_lesson_questions.html" if builder_mode == "lesson" else "manage_test_questions.html",
+        test=test,
+        questions=questions_with_options,
+        builder_mode=builder_mode
+    )
 
 
 @app.route("/tests")

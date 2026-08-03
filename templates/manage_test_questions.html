@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>Edit Test Questions</title>
+    <title>{{ 'Edit Lesson Setup' if builder_mode == 'lesson' else 'Edit Test Questions' }}</title>
     <style>
         * { box-sizing: border-box; }
         body { font-family: Arial, sans-serif; margin: 0; padding: 0; background: #f0f2f5; color: #222; }
@@ -47,13 +47,14 @@
     </style>
 </head>
 <body>
-{% set current_page = 'manage_tests' %}
+{% set is_lesson_builder = builder_mode == 'lesson' %}
+{% set current_page = 'manage_lessons' if is_lesson_builder else 'manage_tests' %}
 {% include '_slide_nav.html' %}
 
 <div class="topbar">
-    <h1>✏️ Edit Test Questions</h1>
+    <h1>✏️ {{ 'Edit Lesson Setup' if is_lesson_builder else 'Edit Test Questions' }}</h1>
     <div class="topbar-links">
-        <a href="/manage_tests">← Back to Tests</a>
+        <a href="{{ '/manage_lessons' if is_lesson_builder else '/manage_tests' }}">← Back</a>
         <span class="topbar-user">👤 <a href="/edit_user/{{ session_username }}">{{ session_username }}</a></span>
         <a href="/logout">Logout</a>
     </div>
@@ -62,8 +63,30 @@
 <div class="page">
     <h2>✏️ {{ test[1] }} <small style="color:gray; font-size:0.7em;">{{ test[2] }}</small></h2>
 
+    {% if is_lesson_builder %}
+    <div class="import-form" style="background:#eef7ff; border-color:#b8daf8;">
+        <h3>Lesson Background</h3>
+        <form method="post">
+            <input type="hidden" name="action" value="save_lesson_background">
+            <div class="form-group">
+                <label>Background Image URL or Path</label>
+                <input type="text" name="background_image" value="{{ test[3] or '' }}" placeholder="Optional image path or URL">
+            </div>
+            <div class="form-group" style="max-width:220px;">
+                <label>Background Fit</label>
+                <select name="background_fit">
+                    <option value="cover" {{ 'selected' if (test[4] or 'cover') == 'cover' else '' }}>Cover</option>
+                    <option value="contain" {{ 'selected' if test[4] == 'contain' else '' }}>Contain</option>
+                    <option value="stretch" {{ 'selected' if test[4] == 'stretch' else '' }}>Stretch</option>
+                </select>
+            </div>
+            <button type="submit" class="btn btn-primary">Save Background</button>
+        </form>
+    </div>
+    {% endif %}
+
     <div class="import-form">
-        <h3>Import Questions (JSON paste)</h3>
+        <h3>{{ 'Import Lesson Questions (JSON paste)' if is_lesson_builder else 'Import Questions (JSON paste)' }}</h3>
         {% if import_success %}<p style="color:#107C10;font-weight:bold;">{{ import_success }}</p>{% endif %}
         {% if import_error %}<p style="color:#A4262C;font-weight:bold;">{{ import_error }}</p>{% endif %}
         <form method="post">
@@ -84,18 +107,23 @@
     </div>
 
     <div class="add-form">
-        <h3>Add Question</h3>
+        <h3>{{ 'Add Slide or Question' if is_lesson_builder else 'Add Question' }}</h3>
         <form method="post" id="questionForm">
             <input type="hidden" name="action" value="add_question">
             <div class="form-group" id="qtextGroup">
-                <label>Question Text</label>
-                <textarea name="question_text" id="addQText" required placeholder="Type your question here..."></textarea>
+                <label>{{ 'Slide or Question Content' if is_lesson_builder else 'Question Text' }}</label>
+                <textarea name="question_text" id="addQText" required placeholder="{{ 'Type slide content or a question here...' if is_lesson_builder else 'Type your question here...' }}"></textarea>
             </div>
             <div style="display:flex; gap:15px; flex-wrap:wrap;">
                 <div class="form-group" style="flex:1; min-width:180px;">
-                    <label>Question Type</label>
+                    <label>{{ 'Item Type' if is_lesson_builder else 'Question Type' }}</label>
                     <select name="question_type" id="questionType" onchange="handleQuestionTypeChange(this)" required>
                         <option value="">-- Select Type --</option>
+                        {% if is_lesson_builder %}
+                        <option value="title_slide">Title Slide</option>
+                        <option value="heading_slide">Heading Slide</option>
+                        <option value="content_slide">Content Slide</option>
+                        {% endif %}
                         <option value="mcq_single">Multiple Choice (Single Answer)</option>
                         <option value="mcq_multi">Multiple Choice (Multi Answer)</option>
                         <option value="fill_in">Fill in the Blank</option>
@@ -105,11 +133,11 @@
                 </div>
                 <div class="form-group" style="width:100px;">
                     <label>Marks</label>
-                    <input type="number" name="marks" value="1" min="1" max="10">
+                    <input type="number" name="marks" value="1" min="0" max="10">
                 </div>
             </div>
             <div id="dynamicFields"></div>
-            <button type="submit" class="btn btn-primary" style="margin-top:10px;">➕ Add Question</button>
+            <button type="submit" class="btn btn-primary" style="margin-top:10px;">➕ Add {{ 'Item' if is_lesson_builder else 'Question' }}</button>
         </form>
     </div>
 
@@ -130,7 +158,10 @@
         <h4>
             Q{{ loop.index }}.
             <span class="type-badge">
-                {% if q_type == 'mcq_single' %}MCQ Single
+                {% if q_type == 'title_slide' %}Title Slide
+                {% elif q_type == 'heading_slide' %}Heading Slide
+                {% elif q_type == 'content_slide' %}Content Slide
+                {% elif q_type == 'mcq_single' %}MCQ Single
                 {% elif q_type == 'mcq_multi' %}MCQ Multi
                 {% elif q_type == 'fill_in' %}Fill in Blank
                 {% elif q_type == 'true_false' %}True / False
@@ -141,7 +172,9 @@
         </h4>
         <p>{{ q[1] | safe }}</p>
 
-        {% if q_type in ['mcq_single', 'mcq_multi'] %}
+        {% if q_type in ['title_slide', 'heading_slide', 'content_slide'] %}
+            <div style="padding:10px 12px; background:#fff; border:1px solid #ddd; border-radius:6px;">{{ q[1] | safe }}</div>
+        {% elif q_type in ['mcq_single', 'mcq_multi'] %}
             <ul>
             {% for o in opts %}
                 <li {% if o[2] %}class="correct"{% endif %}>{{ o[1] }} {% if o[2] %}✔{% endif %}</li>
@@ -189,17 +222,19 @@
 
                 {% if q_type != 'true_false' %}
                 <div class="form-group">
-                    <label>Question Text</label>
+                    <label>{{ 'Slide or Question Content' if is_lesson_builder else 'Question Text' }}</label>
                     <textarea name="question_text" required>{{ q[1] }}</textarea>
                 </div>
                 {% endif %}
 
                 <div class="form-group" style="width:120px;">
                     <label>Marks</label>
-                    <input type="number" name="marks" value="{{ q[3] }}" min="1" max="10">
+                    <input type="number" name="marks" value="{{ q[3] }}" min="0" max="10">
                 </div>
 
-                {% if q_type in ['mcq_single', 'mcq_multi'] %}
+                {% if q_type in ['title_slide', 'heading_slide', 'content_slide'] %}
+                <p style="color:#666; margin:0;">Slide items use the content above and do not require answer options.</p>
+                {% elif q_type in ['mcq_single', 'mcq_multi'] %}
                 <label>Options</label>
                 <div id="editOptions_{{ q_id }}">
                     {% for o in opts %}
@@ -330,14 +365,25 @@ function handleQuestionTypeChange(selectEl) {
         `;
         buildRTE('rte_add_tf', 'hidden_rte_add_tf', '');
     } else {
-        group.innerHTML = `<label>Question Text</label><textarea name="question_text" id="addQText" required placeholder="Type your question here..."></textarea>`;
+        const isSlide = ['title_slide', 'heading_slide', 'content_slide'].includes(type);
+        group.innerHTML = `<label>${isSlide ? 'Slide Content' : 'Question Text'}</label><textarea name="question_text" id="addQText" required placeholder="${isSlide ? 'Type slide content here...' : 'Type your question here...'}"></textarea>`;
+    }
+    const marksInput = document.querySelector('input[name="marks"]');
+    if (marksInput) {
+        if (['title_slide', 'heading_slide', 'content_slide'].includes(type)) {
+            marksInput.value = '0';
+        } else if (marksInput.value === '0') {
+            marksInput.value = '1';
+        }
     }
     showFields('dynamicFields', type);
 }
 function showFields(containerId, type) {
     const container = document.getElementById(containerId);
     container.innerHTML = '';
-    if (type === 'mcq_single' || type === 'mcq_multi') {
+    if (type === 'title_slide' || type === 'heading_slide' || type === 'content_slide') {
+        container.innerHTML = '';
+    } else if (type === 'mcq_single' || type === 'mcq_multi') {
         const inputType = type === 'mcq_single' ? 'radio' : 'checkbox';
         const lbl = type === 'mcq_single' ? 'Options (select correct answer)' : 'Options (check all correct answers)';
         container.innerHTML = `

@@ -118,6 +118,34 @@
         .slide-nav-brand, .slide-nav-label { display: inline; }
         .slide-nav-header { justify-content: space-between; padding: 8px 10px; }
     }
+    .floating-back-btn {
+        position: fixed;
+        right: 18px;
+        bottom: 18px;
+        z-index: 1250;
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        padding: 10px 14px;
+        border: 1px solid #cbd5e1;
+        border-radius: 999px;
+        background: rgba(255,255,255,0.96);
+        color: #0f172a;
+        text-decoration: none;
+        font-size: 0.86em;
+        font-weight: 700;
+        box-shadow: 0 12px 28px rgba(15, 23, 42, 0.16);
+        backdrop-filter: blur(10px);
+    }
+    .floating-back-btn:hover { background: white; color: var(--slide-nav-accent); }
+    .floating-back-btn.hidden { display: none; }
+    @media (max-width: 900px) {
+        .floating-back-btn {
+            right: 12px;
+            bottom: 12px;
+            padding: 10px 12px;
+        }
+    }
 </style>
 {% set nav_items = [] %}
 {% if session_role in ['teacher', 'admin'] %}
@@ -156,10 +184,15 @@
         {% endfor %}
     </nav>
 </aside>
+<a href="#" class="floating-back-btn{% if current_page in ['teacher_dashboard', 'student_dashboard'] %} hidden{% endif %}" id="floatingBackBtn" aria-label="Go back">
+    <span>←</span>
+    <span>Back</span>
+</a>
 <script>
 (function () {
     document.body.classList.add('with-slide-nav');
     const toggle = document.getElementById('slideNavToggle');
+    const backBtn = document.getElementById('floatingBackBtn');
     const storageKey = 'learnerTrackingSlideNavExpanded';
     if (sessionStorage.getItem(storageKey) === '1') {
         document.body.classList.add('slide-nav-expanded');
@@ -169,5 +202,18 @@
         document.body.classList.toggle('slide-nav-expanded');
         sessionStorage.setItem(storageKey, document.body.classList.contains('slide-nav-expanded') ? '1' : '0');
     });
+
+    if (backBtn) {
+        backBtn.addEventListener('click', function (event) {
+            event.preventDefault();
+            const fallback = {{ ('"/teacher_dashboard"' if session_role in ['teacher', 'admin'] else '"/student_dashboard"') | safe }};
+            const sameOriginReferrer = document.referrer && document.referrer.indexOf(window.location.origin) === 0;
+            if (sameOriginReferrer && window.history.length > 1) {
+                window.history.back();
+                return;
+            }
+            window.location.href = fallback;
+        });
+    }
 })();
 </script>

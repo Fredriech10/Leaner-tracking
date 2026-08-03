@@ -127,8 +127,8 @@
     <div class="topbar-links">
         <a href="/teacher_dashboard">← Dashboard</a>
         <a href="/manage_subjects">📁 Practical</a>
-        <a href="/manage_lessons">📘 Lessons</a>
-        <a href="/manage_tests">📝 Theory</a>
+        <a href="/manage_lessons">🧩 Lesson Setup</a>
+        <a href="/manage_tests">📝 Theory Tests</a>
         <a href="/response_review">🧾 Review</a>
         <a href="/communications">💬 Messages</a>
         <span class="topbar-user">👤 <a href="/edit_user/{{ session_username }}">{{ session_username }}</a></span>
@@ -150,7 +150,39 @@
     </form>
 </div>
 
-{% if selected_group %}
+{% if not selected_group %}
+<div class="summary-layout">
+    <div class="card">
+        <h3>Group Results Summary</h3>
+        {% if result_summaries %}
+        <table>
+            <tr><th>Group</th><th>Students</th><th>Practical</th><th>Theory</th><th>Combined</th></tr>
+            {% for item in result_summaries %}
+            <tr>
+                <td><a href="/group_results?group={{ item.group }}" class="table-row-link">{{ item.group }}</a></td>
+                <td>{{ item.students }}</td>
+                <td>{{ item.practical_avg if item.practical_avg is not none else '—' }}{% if item.practical_avg is not none %}%{% endif %}</td>
+                <td>{{ item.theory_avg if item.theory_avg is not none else '—' }}{% if item.theory_avg is not none %}%{% endif %}</td>
+                <td>{{ item.combined_avg }}%</td>
+            </tr>
+            {% endfor %}
+        </table>
+        {% else %}
+        <p style="color:#888;">No result summary available.</p>
+        {% endif %}
+    </div>
+    <div class="card">
+        <h3>Combined Average Charts</h3>
+        {% for item in result_summaries %}
+        <div class="bar-row">
+            <span>{{ item.group }}</span>
+            <div class="bar-track"><div class="bar-fill" style="width: {{ item.combined_avg }}%;"></div></div>
+            <span>{{ item.combined_avg }}%</span>
+        </div>
+        {% endfor %}
+    </div>
+</div>
+{% else %}
 
 <div class="summary-stats">
     <div class="stat-box">
@@ -252,40 +284,8 @@
                             <div class="tooltip">
                                 <strong>All Attempts:</strong><br>
                                 {% for score in result.all_scores %}{{ loop.index }}. {{ score }}%<br>{% endfor %}
-</div>
-{% else %}
-<div class="summary-layout">
-    <div class="card">
-        <h3>Group Results Summary</h3>
-        {% if result_summaries %}
-        <table>
-            <tr><th>Group</th><th>Students</th><th>Practical</th><th>Theory</th><th>Combined</th></tr>
-            {% for item in result_summaries %}
-            <tr>
-                <td><a href="/group_results?group={{ item.group }}" class="table-row-link">{{ item.group }}</a></td>
-                <td>{{ item.students }}</td>
-                <td>{{ item.practical_avg if item.practical_avg is not none else '—' }}{% if item.practical_avg is not none %}%{% endif %}</td>
-                <td>{{ item.theory_avg if item.theory_avg is not none else '—' }}{% if item.theory_avg is not none %}%{% endif %}</td>
-                <td>{{ item.combined_avg }}%</td>
-            </tr>
-            {% endfor %}
-        </table>
-        {% else %}
-        <p style="color:#888;">No result summary available.</p>
-        {% endif %}
-    </div>
-    <div class="card">
-        <h3>Combined Average Charts</h3>
-        {% for item in result_summaries %}
-        <div class="bar-row">
-            <span>{{ item.group }}</span>
-            <div class="bar-track"><div class="bar-fill" style="width: {{ item.combined_avg }}%;"></div></div>
-            <span>{{ item.combined_avg }}%</span>
-        </div>
-        {% endfor %}
-    </div>
-</div>
-{% endif %}
+                            </div>
+                            {% endif %}
                             <br>
                             <button class="btn-danger" style="margin-top:3px;" onclick="openRemoveModal('practical','{{ task.subject }}','{{ task.name }}','','{{ student.username }}','{{ selected_group }}')">✕ Remove</button>
                         {% else %}
@@ -326,11 +326,6 @@
 
     {% endif %}
 </div>
-
-{% else %}
-    <div class="card">
-        <p style="color:#888;">Please select a group to view results.</p>
-    </div>
 {% endif %}
 
 </div>

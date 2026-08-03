@@ -2254,34 +2254,6 @@ def get_groups(username=None):
     conn.close()
     return groups
 
-
-def lesson_is_available_to_group(cursor, lesson_id, group_name):
-    cursor.execute("SELECT 1 FROM theory_lesson_groups WHERE lesson_id = ? LIMIT 1", (lesson_id,))
-    has_group_rows = cursor.fetchone() is not None
-    if not has_group_rows:
-        return True
-    cursor.execute(
-        "SELECT 1 FROM theory_lesson_groups WHERE lesson_id = ? AND group_name = ? LIMIT 1",
-        (lesson_id, group_name),
-    )
-    return cursor.fetchone() is not None
-
-
-def lesson_is_available_to_teacher(cursor, lesson_id, teacher_username):
-    role = get_user_role(teacher_username)
-    if role == "admin":
-        return True
-    cursor.execute("SELECT 1 FROM theory_lesson_teachers WHERE lesson_id = ? LIMIT 1", (lesson_id,))
-    has_teacher_rows = cursor.fetchone() is not None
-    if not has_teacher_rows:
-        return True
-    cursor.execute(
-        "SELECT 1 FROM theory_lesson_teachers WHERE lesson_id = ? AND teacher_username = ? LIMIT 1",
-        (lesson_id, teacher_username),
-    )
-    return cursor.fetchone() is not None
-
-
 def add_learner_note_entry(cursor, username, note, created_by, flag=""):
     cursor.execute("""
         INSERT INTO learner_notes (username, note, flag, created_by, created_at)

@@ -30,6 +30,7 @@
         .btn-secondary { background: #ccc; color: #333; }
         .section-title { font-size: 1em; font-weight: bold; color: #0078D4; margin-bottom: 10px; border-bottom: 2px solid #eee; padding-bottom: 6px; }
         #maxAttemptsGroup { margin-top: 10px; padding: 10px; background: white; border: 1px solid #ddd; border-radius: 5px; display: {{ 'block' if test[5] else 'none' }}; }
+        .autosave-note { color:#5b7087; font-size:0.82em; margin-top:12px; }
     </style>
 </head>
 <body>
@@ -55,7 +56,7 @@
 </div>
 
 <div class="edit-form">
-    <form method="post">
+    <form method="post" id="editTestForm">
 
         <!-- Groups -->
         <div class="form-group">
@@ -125,15 +126,94 @@
             <button type="submit" class="btn btn-primary">💾 Save Changes</button>
             <a href="/manage_tests" class="btn btn-secondary">Cancel</a>
         </div>
+        <div class="autosave-note" id="editTestAutosaveNote">Draft saves automatically on this device.</div>
     </form>
 </div>
 
 </div>
 
 <script>
+const editTestDraftKey = 'editTestDraft:{{ test[0] }}';
+
+function getEditTestDraft() {
+    const form = document.getElementById('editTestForm');
+    const payload = {};
+    form.querySelectorAll('input[name], select[name], textarea[name]').forEach((input) => {
+        if (input.type === 'checkbox') {
+            if (!Array.isArray(payload[input.name])) payload[input.name] = [];
+            if (input.checked) payload[input.name].push(input.value || true);
+            return;
+        }
+        payload[input.name] = input.value;
+    });
+    return payload;
+}
+
+function restoreEditTestDraft(payload) {
+    if (!payload) return;
+    const form = document.getElementById('editTestForm');
+    form.querySelectorAll('input[name], select[name], textarea[name]').forEach((input) => {
+        if (!(input.name in payload)) return;
+        if (input.type === 'checkbox') {
+            const saved = payload[input.name];
+            if (Array.isArray(saved)) {
+                input.checked = saved.includes(input.value || true);
+            } else {
+                input.checked = Boolean(saved);
+            }
+            return;
+        }
+        input.value = payload[input.name] == null ? '' : payload[input.name];
+    });
+}
+
 function toggleMaxAttempts(checkbox) {
     document.getElementById('maxAttemptsGroup').style.display = checkbox.checked ? 'block' : 'none';
 }
+
+(function () {
+    const form = document.getElementById('editTestForm');
+    const note = document.getElementById('editTestAutosaveNote');
+    if (!form) return;
+    let timer = null;
+
+    function setNote(text) {
+        if (note) note.textContent = text;
+    }
+
+    try {
+        const stored = localStorage.getItem(editTestDraftKey);
+        if (stored) {
+            restoreEditTestDraft(JSON.parse(stored));
+            const allowMultiple = document.getElementById('allowMultiple');
+            if (allowMultiple) toggleMaxAttempts(allowMultiple);
+            setNote('Draft restored automatically.');
+        }
+    } catch (error) {
+        setNote('Draft restore failed.');
+    }
+
+    function queueSave() {
+        clearTimeout(timer);
+        timer = setTimeout(() => {
+            try {
+                localStorage.setItem(editTestDraftKey, JSON.stringify(getEditTestDraft()));
+                setNote('Draft saved automatically.');
+            } catch (error) {
+                setNote('Draft could not be saved.');
+            }
+        }, 180);
+    }
+
+    form.querySelectorAll('input[name], select[name], textarea[name]').forEach((input) => {
+        input.addEventListener('input', queueSave);
+        input.addEventListener('change', queueSave);
+    });
+
+    form.addEventListener('submit', () => {
+        localStorage.removeItem(editTestDraftKey);
+    });
+})();
 </script>
 
 </body>

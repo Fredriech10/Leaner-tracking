@@ -146,6 +146,39 @@
             padding: 10px 12px;
         }
     }
+    .global-restore-overlay {
+        position: fixed;
+        inset: 0;
+        background: rgba(240, 242, 245, 0.7);
+        display: none;
+        align-items: center;
+        justify-content: center;
+        z-index: 1300;
+        backdrop-filter: blur(2px);
+    }
+    html.restoring-page .global-restore-overlay,
+    .global-restore-overlay.active { display: flex; }
+    .global-restore-box {
+        background: white;
+        border: 1px solid #d9e4f0;
+        border-radius: 14px;
+        padding: 14px 18px;
+        box-shadow: 0 16px 36px rgba(0, 57, 107, 0.14);
+        display: inline-flex;
+        align-items: center;
+        gap: 10px;
+        color: #23405f;
+        font-size: 0.92em;
+    }
+    .global-restore-spinner {
+        width: 16px;
+        height: 16px;
+        border: 2px solid #c8d8e8;
+        border-top-color: #0078D4;
+        border-radius: 50%;
+        animation: globalRestoreSpin 0.7s linear infinite;
+    }
+    @keyframes globalRestoreSpin { to { transform: rotate(360deg); } }
 </style>
 {% set nav_items = [] %}
 {% if session_role in ['teacher', 'admin'] %}
@@ -188,20 +221,48 @@
     <span>←</span>
     <span>Back</span>
 </a>
+<div class="global-restore-overlay" id="globalRestoreOverlay">
+    <div class="global-restore-box">
+        <span class="global-restore-spinner"></span>
+        <span>Returning to your previous place...</span>
+    </div>
+</div>
 <script>
 (function () {
     document.body.classList.add('with-slide-nav');
     const toggle = document.getElementById('slideNavToggle');
     const backBtn = document.getElementById('floatingBackBtn');
+    const restoreOverlay = document.getElementById('globalRestoreOverlay');
     const storageKey = 'learnerTrackingSlideNavExpanded';
+    const scrollKey = 'learnerTrackingGlobalScrollY:' + window.location.pathname;
     if (sessionStorage.getItem(storageKey) === '1') {
         document.body.classList.add('slide-nav-expanded');
     }
-    if (!toggle) return;
-    toggle.addEventListener('click', function () {
-        document.body.classList.toggle('slide-nav-expanded');
-        sessionStorage.setItem(storageKey, document.body.classList.contains('slide-nav-expanded') ? '1' : '0');
-    });
+    function saveScrollPosition() {
+        sessionStorage.setItem(scrollKey, String(window.scrollY || window.pageYOffset || 0));
+    }
+    function restoreScrollPosition() {
+        if (sessionStorage.getItem('lessonBuilderScrollY') || sessionStorage.getItem('lessonBuilderCardId')) return;
+        const scrollY = sessionStorage.getItem(scrollKey);
+        if (scrollY === null) return;
+        document.documentElement.classList.add('restoring-page');
+        if (restoreOverlay) restoreOverlay.classList.add('active');
+        requestAnimationFrame(function () {
+            window.scrollTo(0, Number(scrollY) || 0);
+            setTimeout(function () {
+                sessionStorage.removeItem(scrollKey);
+                document.documentElement.classList.remove('restoring-page');
+                if (restoreOverlay) restoreOverlay.classList.remove('active');
+            }, 160);
+        });
+    }
+
+    if (toggle) {
+        toggle.addEventListener('click', function () {
+            document.body.classList.toggle('slide-nav-expanded');
+            sessionStorage.setItem(storageKey, document.body.classList.contains('slide-nav-expanded') ? '1' : '0');
+        });
+    }
 
     if (backBtn) {
         backBtn.addEventListener('click', function (event) {
@@ -215,5 +276,17 @@
             window.location.href = fallback;
         });
     }
+
+    document.querySelectorAll('form').forEach(function (form) {
+        form.addEventListener('submit', saveScrollPosition);
+    });
+    document.querySelectorAll('a.btn, button.btn').forEach(function (element) {
+        element.addEventListener('click', function () {
+            if (element.type !== 'button' || element.closest('form') === null) {
+                saveScrollPosition();
+            }
+        });
+    });
+    window.addEventListener('load', restoreScrollPosition);
 })();
 </script>

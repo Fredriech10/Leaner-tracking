@@ -1828,15 +1828,17 @@ def compute_theory_answer_award(question_type, marks, options, answer_text):
     if question_type == "fill_in":
         return score_fill_in_answer(answer_text, options, marks)
     if question_type == "match":
-        expected_map = {option[1]: option[3] for option in options if len(option) > 3 and option[3] and option[3] != "correction"}
-        awarded = 0
+        learner_map = {}
         for pair in (answer_text or "").split(";"):
             if "=" not in pair:
                 continue
             left, chosen = pair.split("=", 1)
-            if expected_map.get(left.strip()) == chosen.strip():
-                awarded += 1
-        return awarded
+            learner_map[left.strip()] = chosen.strip()
+        legacy_map = {option[1]: option[3] for option in options if len(option) > 3 and option[3] and option[3] != "correction"}
+        swapped_map = {option[3]: option[1] for option in options if len(option) > 3 and option[3] and option[3] != "correction"}
+        legacy_awarded = sum(1 for left, accepted in legacy_map.items() if learner_map.get(left, "") == accepted)
+        swapped_awarded = sum(1 for left, accepted in swapped_map.items() if learner_map.get(left, "") == accepted)
+        return max(legacy_awarded, swapped_awarded)
     return 0
 
 QUESTION_BANK_SUPPORTED_TYPES = ["mcq_single", "fill_in", "true_false", "match"]
@@ -1920,6 +1922,80 @@ def get_question_bank_counts(cursor, modules=None, subjects=None):
         """, params)
         counts[q_type] = cursor.fetchone()[0] or 0
     return counts
+
+def build_match_review_rows(options, answer_text):
+    learner_map = {}
+    for pair in (answer_text or "").split(";"):
+        if "=" in pair:
+            left, chosen = pair.split("=", 1)
+            learner_map[left.strip()] = chosen.strip()
+    legacy_map = {option[1]: option[3] for option in options if len(option) > 3 and option[3] and option[3] != "correction"}
+    swapped_map = {option[3]: option[1] for option in options if len(option) > 3 and option[3] and option[3] != "correction"}
+    legacy_score = sum(1 for left, accepted in legacy_map.items() if learner_map.get(left, "") == accepted)
+    swapped_score = sum(1 for left, accepted in swapped_map.items() if learner_map.get(left, "") == accepted)
+    active_map = swapped_map if swapped_score > legacy_score else legacy_map
+    rows = []
+    for left, accepted in active_map.items():
+        chosen = learner_map.get(left, "")
+        rows.append({
+            "left": left,
+            "learner_match": chosen or "No answer",
+            "correct_match": accepted,
+            "is_correct": chosen == accepted
+        })
+    return rows, active_map
+
+def pick_unique_bank_question_ids(cursor, question_type, needed, modules=None, subjects=None, used_question_texts=None):
+    modules = parse_module_names(",".join(modules or []))
+    subjects = [item.strip() for item in (subjects or []) if item and item.strip()]
+    used_question_texts = {item.strip().lower() for item in (used_question_texts or set()) if item}
+    where_parts = ["question_type = ?"]
+    params = [question_type]
+    if modules:
+        module_filters = " OR ".join(["LOWER(COALESCE(modules, '')) LIKE ?" for _ in modules])
+        where_parts.append(f"({module_filters})")
+        params.extend(f"%{module.lower()}%" for module in modules)
+    if subjects:
+        subject_filters = " OR ".join(["LOWER(COALESCE(subject, '')) = ?" for _ in subjects])
+        where_parts.append(f"({subject_filters})")
+        params.extend(subject.lower() for subject in subjects)
+    cursor.execute(f"""
+        SELECT id, question_text
+        FROM question_bank_questions
+        WHERE {' AND '.join(where_parts)}
+        ORDER BY RANDOM()
+    """, params)
+    picked_ids = []
+    seen_texts = set(used_question_texts)
+    seen_match_pairs = set()
+    for bank_question_id, question_text in cursor.fetchall():
+        normalized_text = (question_text or "").strip().lower()
+        if question_type != "match" and normalized_text in seen_texts:
+            continue
+        if question_type == "match":
+            cursor.execute("""
+                SELECT option_text, match_pair
+                FROM question_bank_options
+                WHERE bank_question_id = ?
+                ORDER BY id
+                LIMIT 1
+            """, (bank_question_id,))
+            option_row = cursor.fetchone()
+            if not option_row:
+                continue
+            pair_signature = (
+                (option_row[0] or "").strip().lower(),
+                (option_row[1] or "").strip().lower(),
+            )
+            if pair_signature in seen_match_pairs:
+                continue
+            seen_match_pairs.add(pair_signature)
+        else:
+            seen_texts.add(normalized_text)
+        picked_ids.append(bank_question_id)
+        if len(picked_ids) >= needed:
+            break
+    return picked_ids, seen_texts
 
 def clone_bank_question_to_test(cursor, bank_question_id, test_id, order_index):
     cursor.execute("""
@@ -4369,20 +4445,7 @@ def response_review_learner():
         elif row["question_type"] == "fill_in":
             correct_answers = get_fill_in_accepted_answers(options)
         elif row["question_type"] == "match":
-            expected_map = {option["option_text"]: option["match_pair"] for option in options if option["match_pair"] and option["match_pair"] != "correction"}
-            learner_map = {}
-            for pair in (row["answer_text"] or "").split(";"):
-                if "=" in pair:
-                    left, chosen = pair.split("=", 1)
-                    learner_map[left.strip()] = chosen.strip()
-            for left, accepted in expected_map.items():
-                chosen = learner_map.get(left, "")
-                match_rows.append({
-                    "left": left,
-                    "learner_match": chosen or "No answer",
-                    "correct_match": accepted,
-                    "is_correct": chosen == accepted
-                })
+            match_rows, _ = build_match_review_rows(options, row["answer_text"])
         else:
             correct_answers = [option["option_text"] for option in options if option["is_correct"] == 1]
 
@@ -7579,7 +7642,7 @@ def question_bank():
                                 right = candidate_right
                                 break
                         if left and right:
-                            option_payload.append((left, 1, right))
+                            option_payload.append((right, 1, left))
                     if bank_question_exists(cursor, q_text, q_type, subject, modules, option_payload):
                         skipped += 1
                         continue
@@ -7639,7 +7702,7 @@ def question_bank():
                         left = left.strip()
                         right = right.strip()
                         if left and right:
-                            option_payload.append((left, 1, right))
+                            option_payload.append((right, 1, left))
                             break
                 if bank_question_exists(cursor, q_text, q_type, subject, modules, option_payload):
                     error = "That question already exists in the bank."
@@ -7779,8 +7842,8 @@ def question_bank_template():
             "marks": "1",
             "subject": "Keyboard",
             "modules": "Shortcuts",
-            "match_a_1": "Ctrl+C",
-            "match_b_1": "Copy",
+            "match_a_1": "Copy",
+            "match_b_1": "Ctrl+C",
         },
         {
             "question_text": "Match the shortcut to the action.",
@@ -7788,8 +7851,8 @@ def question_bank_template():
             "marks": "1",
             "subject": "Keyboard",
             "modules": "Shortcuts",
-            "match_a_1": "Ctrl+V",
-            "match_b_1": "Paste",
+            "match_a_1": "Paste",
+            "match_b_1": "Ctrl+V",
         },
     ])
 
@@ -7863,26 +7926,18 @@ def generate_theory_test():
         else:
             selected_questions = []
             selected_match_pairs = []
+            used_question_texts = set()
             for q_type, needed in request_counts.items():
                 if needed <= 0:
                     continue
-                where_parts = ["question_type = ?"]
-                params = [q_type]
-                module_filters = " OR ".join(["LOWER(COALESCE(modules, '')) LIKE ?" for _ in selected_modules])
-                where_parts.append(f"({module_filters})")
-                params.extend(f"%{module.lower()}%" for module in selected_modules)
-                if selected_subjects:
-                    subject_filters = " OR ".join(["LOWER(COALESCE(subject, '')) = ?" for _ in selected_subjects])
-                    where_parts.append(f"({subject_filters})")
-                    params.extend(subject.lower() for subject in selected_subjects)
-                cursor.execute(f"""
-                    SELECT id
-                    FROM question_bank_questions
-                    WHERE {' AND '.join(where_parts)}
-                    ORDER BY RANDOM()
-                    LIMIT ?
-                """, (*params, needed))
-                picked = [row[0] for row in cursor.fetchall()]
+                picked, used_question_texts = pick_unique_bank_question_ids(
+                    cursor,
+                    q_type,
+                    needed,
+                    selected_modules,
+                    selected_subjects,
+                    used_question_texts,
+                )
                 if len(picked) < needed:
                     scope_text = "selected modules"
                     if selected_subjects:
@@ -8128,6 +8183,41 @@ def _manage_theory_questions(test_id, builder_mode):
         conn.close()
         return "Test not found", 404
 
+    bank_selected_subject = (request.args.get("bank_subject") or "").strip()
+    bank_selected_module = (request.args.get("bank_module") or "").strip()
+    bank_selected_type = (request.args.get("bank_type") or "").strip()
+
+    def load_bank_picker_data():
+        cursor.execute("SELECT modules FROM question_bank_questions WHERE COALESCE(modules, '') != ''")
+        bank_module_names = []
+        for (modules_text,) in cursor.fetchall():
+            bank_module_names.extend(parse_module_names(modules_text))
+        bank_module_names = sorted({item for item in bank_module_names}, key=str.lower)
+
+        cursor.execute("SELECT DISTINCT TRIM(subject) FROM question_bank_questions WHERE COALESCE(TRIM(subject), '') != '' ORDER BY LOWER(TRIM(subject))")
+        bank_subject_names = [row[0] for row in cursor.fetchall() if row[0]]
+
+        where_parts = []
+        params = []
+        if bank_selected_subject:
+            where_parts.append("LOWER(COALESCE(subject, '')) = ?")
+            params.append(bank_selected_subject.lower())
+        if bank_selected_module:
+            where_parts.append("LOWER(COALESCE(modules, '')) LIKE ?")
+            params.append(f"%{bank_selected_module.lower()}%")
+        if bank_selected_type and bank_selected_type in QUESTION_BANK_SUPPORTED_TYPES:
+            where_parts.append("question_type = ?")
+            params.append(bank_selected_type)
+        where_clause = f"WHERE {' AND '.join(where_parts)}" if where_parts else ""
+        cursor.execute(f"""
+            SELECT id, question_text, question_type, marks, subject, modules
+            FROM question_bank_questions
+            {where_clause}
+            ORDER BY id DESC
+            LIMIT 200
+        """, params)
+        return bank_subject_names, bank_module_names, cursor.fetchall()
+
     if request.method == "POST":
         action = request.form.get("action")
         if action == "add_question":
@@ -8288,6 +8378,44 @@ def _manage_theory_questions(test_id, builder_mode):
                                        (q_id, a.strip(), b.strip()))
             conn.commit()
             log_activity(username, f"edited question {q_id} in test {test_id}")
+
+        elif action == "import_bank_questions" and builder_mode != "lesson":
+            selected_bank_ids = [safe_int(item, 0) for item in request.form.getlist("bank_question_ids")]
+            selected_bank_ids = [item for item in selected_bank_ids if item > 0]
+            if selected_bank_ids:
+                cursor.execute("""
+                    SELECT COALESCE(MAX(order_index), -1) + 1
+                    FROM theory_questions
+                    WHERE test_id = ?
+                """, (test_id,))
+                order_index = cursor.fetchone()[0]
+                cursor.execute("""
+                    SELECT LOWER(TRIM(question_text))
+                    FROM theory_questions
+                    WHERE test_id = ?
+                """, (test_id,))
+                existing_texts = {row[0] for row in cursor.fetchall() if row[0]}
+                selected_match_ids = []
+                selected_regular_ids = []
+                for bank_question_id in selected_bank_ids:
+                    cursor.execute("SELECT question_type, question_text FROM question_bank_questions WHERE id = ?", (bank_question_id,))
+                    bank_row = cursor.fetchone()
+                    if not bank_row:
+                        continue
+                    bank_type, bank_text = bank_row
+                    normalized_text = (bank_text or "").strip().lower()
+                    if bank_type == "match":
+                        selected_match_ids.append(bank_question_id)
+                    elif normalized_text not in existing_texts:
+                        selected_regular_ids.append(bank_question_id)
+                        existing_texts.add(normalized_text)
+                for bank_question_id in selected_regular_ids:
+                    clone_bank_question_to_test(cursor, bank_question_id, test_id, order_index)
+                    order_index += 1
+                if selected_match_ids:
+                    create_generated_match_question(cursor, selected_match_ids, test_id, order_index)
+                conn.commit()
+                log_activity(username, f"imported question bank items into test {test_id}")
 
         elif action == "autosave_question" and builder_mode == "lesson":
             q_id = request.form.get("question_id")
@@ -8485,7 +8613,9 @@ def _manage_theory_questions(test_id, builder_mode):
             for q in questions:
                 cursor.execute("SELECT id, option_text, is_correct, match_pair FROM theory_options WHERE question_id = ?", (q[0],))
                 options = cursor.fetchall()
-                questions_with_options.append({"q": q, "options": options})
+            questions_with_options.append({"q": q, "options": options})
+
+            bank_subject_names, bank_module_names, bank_questions = load_bank_picker_data()
 
             conn.close()
             return render_template(
@@ -8494,7 +8624,13 @@ def _manage_theory_questions(test_id, builder_mode):
                 questions=questions_with_options,
                 import_success=import_success,
                 import_error=import_error,
-                builder_mode=builder_mode
+                builder_mode=builder_mode,
+                bank_subject_names=bank_subject_names,
+                bank_module_names=bank_module_names,
+                bank_questions=bank_questions,
+                bank_selected_subject=bank_selected_subject,
+                bank_selected_module=bank_selected_module,
+                bank_selected_type=bank_selected_type,
             )
 
         conn.close()
@@ -8515,12 +8651,20 @@ def _manage_theory_questions(test_id, builder_mode):
         options = cursor.fetchall()
         questions_with_options.append({"q": q, "options": options})
 
+    bank_subject_names, bank_module_names, bank_questions = load_bank_picker_data()
+
     conn.close()
     return render_template(
         "manage_lesson_questions.html" if builder_mode == "lesson" else "manage_test_questions.html",
         test=test,
         questions=questions_with_options,
-        builder_mode=builder_mode
+        builder_mode=builder_mode,
+        bank_subject_names=bank_subject_names,
+        bank_module_names=bank_module_names,
+        bank_questions=bank_questions,
+        bank_selected_subject=bank_selected_subject,
+        bank_selected_module=bank_selected_module,
+        bank_selected_type=bank_selected_type,
     )
 
 

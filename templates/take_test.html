@@ -255,6 +255,10 @@
         .drop-zone.drag-over { background: #ecfeff; border-color: #0891b2; transform: scale(1.02); }
         .drop-zone.filled { background: #dcfce7; border-color: #16a34a; color: #14532d; border-style: solid; }
         .draggable-b { border: 1px solid #16a34a; background: #f0fdf4; cursor: grab; margin-bottom: 8px; }
+        .slide.match-slide { overflow-y: auto; padding-right: 18px; }
+        .match-container { align-items: start; }
+        .match-column { min-width: 0; }
+        .match-pool { margin-top: 8px; max-height: 420px; overflow-y: auto; padding-right: 6px; }
         .slide-nav {
             display: flex;
             align-items: center;
@@ -443,7 +447,7 @@
 {% set q_id = q[0] %}
 {% set q_type = q[2] %}
 {% set marks = q[3] %}
-            <section class="slide {{ 'content-slide' if q_type in ['content_slide', 'title_slide', 'heading_slide'] }} {{ 'slide-designed' if 'slide-box' in (q[1] or '') }} {{ 'active no-motion' if loop.index0 == (initial_slide | default(0)) }}" data-slide="{{ loop.index0 }}" {% if test[7] %}style="background-image:linear-gradient(rgba(255,255,255,0.10), rgba(255,255,255,0.10)), url('{{ test[7] }}'); background-size: {{ test[8] if test|length > 8 else 'cover' }}; background-position: center; background-repeat: no-repeat;"{% endif %}>
+            <section class="slide {{ 'content-slide' if q_type in ['content_slide', 'title_slide', 'heading_slide'] }} {{ 'slide-designed' if 'slide-box' in (q[1] or '') }} {{ 'match-slide' if q_type == 'match' }} {{ 'active no-motion' if loop.index0 == (initial_slide | default(0)) }}" data-slide="{{ loop.index0 }}" {% if test[7] %}style="background-image:linear-gradient(rgba(255,255,255,0.10), rgba(255,255,255,0.10)), url('{{ test[7] }}'); background-size: {{ test[8] if test|length > 8 else 'cover' }}; background-position: center; background-repeat: no-repeat;"{% endif %}>
                 <div class="slide-kicker">
                     {% if q_type == 'title_slide' %}Title Slide
                     {% elif q_type == 'heading_slide' %}Heading Slide
@@ -488,22 +492,22 @@
                     {% elif q_type == 'fill_in' %}
                         <input type="text" name="q_{{ q_id }}" placeholder="Type your answer..." autocomplete="off" required>
                     {% elif q_type == 'match' %}
-                        <p class="hint">Drag items from Column B and drop them next to the matching item.</p>
+                        <p class="hint">Drag items from Column A and drop them next to the matching item in Column B.</p>
                         <div class="match-container">
-                            <div>
+                            <div class="match-column">
                                 {% for o in opts %}
                                 <div class="match-row">
-                                    <div class="match-item-a">{{ o[1] }}</div>
+                                    <div class="match-item-a">{{ o[3] }}</div>
                                     <span style="text-align:center;">-></span>
                                     <div class="drop-zone" data-col-index="{{ loop.index }}" data-q="{{ q_id }}" ondragover="allowDrop(event)" ondrop="dropItem(event)" ondragenter="dragEnter(event)" ondragleave="dragLeave(event)">Drop here</div>
                                     <input type="hidden" name="q_{{ q_id }}_{{ loop.index }}" id="hidden_{{ q_id }}_{{ loop.index }}">
                                 </div>
                                 {% endfor %}
                             </div>
-                            <div>
-                                <strong class="hint">Column B</strong>
-                                <div id="pool_{{ q_id }}" style="margin-top:8px;">
-                                {% set b_values = opts | map(attribute=3) | list %}
+                            <div class="match-column">
+                                <strong class="hint">Column A</strong>
+                                <div id="pool_{{ q_id }}" class="match-pool">
+                                {% set b_values = opts | map(attribute=1) | list %}
                                 {% for val in b_values %}
                                     <div class="draggable-b" draggable="true" data-value="{{ val }}" ondragstart="dragStart(event)">{{ val }}</div>
                                 {% endfor %}

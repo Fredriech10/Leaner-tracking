@@ -52,12 +52,12 @@
         .btn-teal { background:#0078D4; color:white; padding:7px 16px; border:none; border-radius:4px; cursor:pointer; font-size:0.88em; font-weight:bold; }
         .group-check-grid { display:flex; flex-wrap:wrap; gap:8px; margin-top:6px; }
         .group-check-grid label { font-weight:normal; display:inline-flex; align-items:center; gap:5px; background:white; border:1px solid #ddd; padding:5px 10px; border-radius:5px; cursor:pointer; font-size:0.85em; }
-
         .create-form { background: #f9f9f9; border: 1px solid #ddd; padding: 20px; border-radius: 6px; margin-bottom: 30px; }
         .form-row { display: flex; gap: 15px; flex-wrap: wrap; align-items: flex-end; margin-bottom: 10px; }
         .form-group { display: flex; flex-direction: column; gap: 4px; }
         label { font-weight: bold; font-size: 0.9em; }
         input, select { padding: 7px; border: 1px solid #ccc; border-radius: 4px; }
+        .autosave-note { color:#5b7087; font-size:0.82em; margin-top:10px; }
     </style>
 </head>
 <body>
@@ -90,7 +90,7 @@
         <a href="/question_bank" class="btn btn-primary">📚 Question Bank</a>
         <a href="/generate_theory_test" class="btn btn-success">🎲 Generate From Bank</a>
     </div>
-    <form method="post" action="/manage_tests/create">
+    <form method="post" action="/manage_tests/create" id="createTestForm">
         <div class="form-row">
             <div class="form-group">
                 <label>Test Title</label>
@@ -150,6 +150,7 @@
                 <button type="submit" class="btn btn-primary">Create Test</button>
             </div>
         </div>
+        <div class="autosave-note" id="createTestAutosaveNote">Draft saves automatically on this device.</div>
     </form>
 </div>
 
@@ -234,11 +235,107 @@
                 <button type="button" class="btn-cancel" onclick="closeReuseModal()">Cancel</button>
                 <button type="submit" class="btn-teal">📋 Create Copy</button>
             </div>
+            <div class="autosave-note" id="reuseAutosaveNote">Reuse draft saves automatically while this window is open.</div>
         </form>
     </div>
 </div>
 
 <script>
+const createTestDraftKey = 'manageTests:createDraft';
+const reuseTestDraftKey = 'manageTests:reuseDraft';
+
+function getFormDraftValue(input) {
+    if (input.type === 'checkbox') return input.checked;
+    return input.value;
+}
+
+function setFormDraftValue(input, value) {
+    if (input.type === 'checkbox') {
+        input.checked = Boolean(value);
+        return;
+    }
+    input.value = value == null ? '' : value;
+}
+
+function collectFormDraft(form) {
+    const payload = {};
+    form.querySelectorAll('input[name], select[name], textarea[name]').forEach((input) => {
+        if (!input.name) return;
+        if (input.type === 'checkbox' && input.name !== 'allow_multiple' && input.name !== 'show_answers' && input.name !== 'groups') {
+            payload[input.name] = input.checked;
+            return;
+        }
+        if (input.type === 'checkbox') {
+            if (!Array.isArray(payload[input.name])) payload[input.name] = [];
+            if (input.checked) payload[input.name].push(input.value || true);
+            return;
+        }
+        payload[input.name] = input.value;
+    });
+    return payload;
+}
+
+function restoreFormDraft(form, payload) {
+    if (!payload) return;
+    form.querySelectorAll('input[name], select[name], textarea[name]').forEach((input) => {
+        if (!input.name || !(input.name in payload)) return;
+        if (input.type === 'checkbox') {
+            const saved = payload[input.name];
+            if (Array.isArray(saved)) {
+                input.checked = saved.includes(input.value || true);
+            } else {
+                input.checked = Boolean(saved);
+            }
+            return;
+        }
+        setFormDraftValue(input, payload[input.name]);
+    });
+}
+
+function attachFormAutosave(form, storageKey, noteId, afterRestore) {
+    if (!form) return;
+    const note = document.getElementById(noteId);
+    let saveTimer = null;
+
+    function updateNote(text) {
+        if (note) note.textContent = text;
+    }
+
+    function saveDraft() {
+        try {
+            localStorage.setItem(storageKey, JSON.stringify(collectFormDraft(form)));
+            updateNote('Draft saved automatically.');
+        } catch (error) {
+            updateNote('Draft could not be saved.');
+        }
+    }
+
+    function queueSave() {
+        clearTimeout(saveTimer);
+        saveTimer = setTimeout(saveDraft, 180);
+    }
+
+    try {
+        const stored = localStorage.getItem(storageKey);
+        if (stored) {
+            restoreFormDraft(form, JSON.parse(stored));
+            if (typeof afterRestore === 'function') afterRestore();
+            updateNote('Draft restored automatically.');
+        }
+    } catch (error) {
+        updateNote('Draft restore failed.');
+    }
+
+    form.querySelectorAll('input[name], select[name], textarea[name]').forEach((input) => {
+        input.addEventListener('input', queueSave);
+        input.addEventListener('change', queueSave);
+    });
+
+    form.addEventListener('submit', () => {
+        localStorage.removeItem(storageKey);
+    });
+}
+
 function toggleMaxAttempts(checkbox) {
     document.getElementById('maxAttemptsGroup').style.display = checkbox.checked ? 'block' : 'none';
 }
@@ -279,6 +376,26 @@ function closeReuseModal() {
 document.getElementById('reuseModal').addEventListener('click', function(e) {
     if (e.target === this) closeReuseModal();
 });
+
+attachFormAutosave(
+    document.getElementById('createTestForm'),
+    createTestDraftKey,
+    'createTestAutosaveNote',
+    function () {
+        const allowMultiple = document.getElementById('allowMultiple');
+        if (allowMultiple) toggleMaxAttempts(allowMultiple);
+    }
+);
+
+attachFormAutosave(
+    document.getElementById('reuseForm'),
+    reuseTestDraftKey,
+    'reuseAutosaveNote',
+    function () {
+        const allowMultiple = document.getElementById('reuse_allow_multiple');
+        if (allowMultiple) toggleReuseAttempts(allowMultiple);
+    }
+);
 </script>
 
 </body>

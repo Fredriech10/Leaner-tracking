@@ -44,6 +44,11 @@
         .rte-btn.active { background: #0078D4; color: white; border-color: #0078D4; }
         .rte-editor { border: 1px solid #ccc; border-radius: 4px; padding: 8px; min-height: 60px; background: white; outline: none; font-family: Arial, sans-serif; font-size: 1em; line-height: 1.5; }
         .rte-editor:focus { border-color: #0078D4; box-shadow: 0 0 0 2px rgba(0,120,212,0.15); }
+        .bank-filter-grid { display:grid; grid-template-columns: 1fr 1fr 1fr auto auto; gap:10px; align-items:end; margin-bottom:14px; }
+        .bank-table { width:100%; border-collapse:collapse; font-size:0.88em; }
+        .bank-table th, .bank-table td { border:1px solid #ddd; padding:8px 10px; text-align:left; vertical-align:top; }
+        .bank-table th { background:#f3f7fb; }
+        .bank-table-wrap { max-height:420px; overflow:auto; background:white; border:1px solid #ddd; border-radius:6px; }
     </style>
 </head>
 <body>
@@ -105,6 +110,75 @@
             <button type="submit" class="btn btn-primary">⬇️ Import</button>
         </form>
     </div>
+
+    {% if not is_lesson_builder %}
+    <div class="import-form" style="background:#eefaf0; border-color:#b9e2c1;">
+        <h3>Add Questions From Question Bank</h3>
+        <form method="get" class="bank-filter-grid">
+            <div class="form-group" style="margin-bottom:0;">
+                <label>Subject</label>
+                <select name="bank_subject">
+                    <option value="">All Subjects</option>
+                    {% for subject_name in bank_subject_names %}
+                    <option value="{{ subject_name }}" {% if bank_selected_subject == subject_name %}selected{% endif %}>{{ subject_name }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="form-group" style="margin-bottom:0;">
+                <label>Module</label>
+                <select name="bank_module">
+                    <option value="">All Modules</option>
+                    {% for module_name in bank_module_names %}
+                    <option value="{{ module_name }}" {% if bank_selected_module == module_name %}selected{% endif %}>{{ module_name }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="form-group" style="margin-bottom:0;">
+                <label>Question Type</label>
+                <select name="bank_type">
+                    <option value="">All Types</option>
+                    <option value="mcq_single" {% if bank_selected_type == 'mcq_single' %}selected{% endif %}>Multiple Choice</option>
+                    <option value="fill_in" {% if bank_selected_type == 'fill_in' %}selected{% endif %}>Fill In</option>
+                    <option value="true_false" {% if bank_selected_type == 'true_false' %}selected{% endif %}>True / False</option>
+                    <option value="match" {% if bank_selected_type == 'match' %}selected{% endif %}>Match</option>
+                </select>
+            </div>
+            <button type="submit" class="btn btn-primary">Apply</button>
+            <a href="/manage_tests/{{ test[0] }}/questions" class="btn btn-cancel">Clear</a>
+        </form>
+        <form method="post">
+            <input type="hidden" name="action" value="import_bank_questions">
+            <div class="bank-table-wrap">
+                <table class="bank-table">
+                    <tr>
+                        <th style="width:38px;"><input type="checkbox" onclick="toggleBankSelection(this.checked)"></th>
+                        <th>Question</th>
+                        <th>Type</th>
+                        <th>Module</th>
+                        <th>Subject</th>
+                        <th>Marks</th>
+                    </tr>
+                    {% for bank_q in bank_questions %}
+                    <tr>
+                        <td><input type="checkbox" name="bank_question_ids" value="{{ bank_q[0] }}" class="bank-question-checkbox"></td>
+                        <td>{{ bank_q[1] }}</td>
+                        <td>{{ bank_q[2] | replace('_', ' ') | title }}</td>
+                        <td>{{ bank_q[5] or '—' }}</td>
+                        <td>{{ bank_q[4] or '—' }}</td>
+                        <td>{{ bank_q[3] }}</td>
+                    </tr>
+                    {% endfor %}
+                </table>
+            </div>
+            <div style="display:flex; gap:10px; align-items:center; margin-top:12px; flex-wrap:wrap;">
+                <button type="button" class="btn btn-cancel" onclick="toggleBankSelection(true)">Select All</button>
+                <button type="button" class="btn btn-cancel" onclick="toggleBankSelection(false)">Clear Selection</button>
+                <button type="submit" class="btn btn-primary">Add Selected To This Paper</button>
+                <span style="color:#666; font-size:0.88em;">Selected match bank rows are combined into one match question.</span>
+            </div>
+        </form>
+    </div>
+    {% endif %}
 
     <div class="add-form">
         <h3>{{ 'Add Slide or Question' if is_lesson_builder else 'Add Question' }}</h3>
@@ -447,6 +521,11 @@ function addEditMatchRow(listId) {
     div.className = 'match-row';
     div.innerHTML = `<input type="text" name="match_a" placeholder="Column A item ${count+1}" required><span>→</span><input type="text" name="match_b" placeholder="Column B item ${count+1}" required>`;
     list.appendChild(div);
+}
+function toggleBankSelection(checked) {
+    document.querySelectorAll('.bank-question-checkbox').forEach((checkbox) => {
+        checkbox.checked = checked;
+    });
 }
 </script>
 

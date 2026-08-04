@@ -103,6 +103,7 @@
                     Use `correct_answer` as `True` or `False` for true/false.<br>
                     Use `correct_answer` for fill-in answers.<br>
                     For `match`, each CSV row should contain one pair only using `match_a_1` and `match_b_1`.<br>
+                    Stored mapping uses `match_b_1` as the displayed side and `match_a_1` as the matched answer side.<br>
                     When you generate a test, the requested match count is merged into one match question.
                 </div>
                 <button type="submit" class="btn btn-primary">Import To Bank</button>
@@ -217,7 +218,7 @@ function toggleBankFields(type) {
     } else if (type === 'match') {
         html = `
             <div class="form-group"><label>Match Pairs</label>
-                <div class="form-row"><input type="text" name="match_a" placeholder="Column A"><input type="text" name="match_b" placeholder="Column B"></div>
+                <div class="form-row"><input type="text" name="match_a" placeholder="Column A (answer side)"><input type="text" name="match_b" placeholder="Column B (display side)"></div>
                 <div style="margin-top:8px; color:#666; font-size:0.83em;">Store one pair per bank question. Generated tests combine multiple stored pairs into one match question.</div>
             </div>`;
     }

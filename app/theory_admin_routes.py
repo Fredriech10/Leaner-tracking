@@ -6,15 +6,13 @@ from flask import Response, jsonify, redirect, render_template, request, session
 from markupsafe import escape
 
 from app.database import get_db, get_groups, get_teachers, get_user_role, log_activity
-from app.helpers import (
+from app.helper_common import normalize_question_bank_group_text, parse_module_names, safe_int
+from app.helper_theory import (
     bank_question_exists,
     clone_bank_question_to_test,
     create_generated_match_question,
     get_question_bank_counts,
-    normalize_question_bank_group_text,
-    parse_module_names,
     pick_unique_bank_question_ids,
-    safe_int,
 )
 
 QUESTION_BANK_SUPPORTED_TYPES = ("mcq_single", "true_false", "fill_in", "match")

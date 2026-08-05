@@ -5,7 +5,7 @@ from io import BytesIO
 from markupsafe import escape
 
 from app.database import get_db, get_groups, get_teachers, get_user_role, log_activity, save_result, update_weakness
-from app.helpers import get_marking_scripts, mark_file
+from app.helper_marking import get_marking_scripts, mark_file
 from app.runtime import update_active_user
 
 

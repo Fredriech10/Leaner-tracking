@@ -5,13 +5,10 @@ from datetime import datetime
 from flask import redirect, render_template, request, session, url_for
 
 from app.database import get_db, get_user_role, log_activity
-from app.helpers import (
+from app.helper_common import externalize_data_uri_images, parse_module_names, pptx_to_content_slide_html, safe_int
+from app.helper_theory import (
     clone_bank_question_to_test,
-    externalize_data_uri_images,
     merge_bank_match_rows_into_test,
-    parse_module_names,
-    pptx_to_content_slide_html,
-    safe_int,
     score_fill_in_answer,
     score_true_false_answer,
 )

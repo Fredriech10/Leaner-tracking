@@ -5,7 +5,7 @@ from flask import redirect, render_template, request, send_file, session, url_fo
 from markupsafe import escape
 
 from app.database import get_db, get_marking_db, get_teachers, get_user_role, log_activity
-from app.helpers import get_marking_scripts
+from app.helper_marking import get_marking_scripts
 
 
 def register_task_admin_routes(app):

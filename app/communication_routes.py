@@ -4,7 +4,7 @@ from datetime import datetime
 from flask import flash, jsonify, redirect, render_template, request, session, url_for
 
 from app.database import get_db, get_groups, get_user_role
-from app.helpers import (
+from app.helper_communication import (
     add_communication_message,
     create_communication_thread,
     get_student_unread_message_count,

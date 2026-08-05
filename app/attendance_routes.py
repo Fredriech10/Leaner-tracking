@@ -4,7 +4,7 @@ import pandas as pd
 from flask import redirect, render_template, request, send_file, session, url_for
 
 from app.database import get_db, get_groups, get_user_role, log_activity
-from app.helpers import (
+from app.helper_attendance import (
     add_learner_note_entry,
     build_attendance_group_summary,
     get_attendance_data,

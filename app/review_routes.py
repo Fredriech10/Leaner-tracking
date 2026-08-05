@@ -4,7 +4,7 @@ from collections import defaultdict
 from flask import flash, redirect, render_template, request, session, url_for
 
 from app.database import get_db, get_groups, get_user_role
-from app.helpers import (
+from app.helper_theory import (
     build_match_review_rows,
     get_fill_in_accepted_answers,
     get_true_false_option_data,

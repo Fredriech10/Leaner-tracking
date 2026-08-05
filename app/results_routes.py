@@ -4,7 +4,7 @@ import pandas as pd
 from flask import redirect, render_template, request, send_file, session, url_for
 
 from app.database import get_db, get_groups, get_user_role, log_activity
-from app.helpers import (
+from app.helper_attendance import (
     auto_exclude_empty_attendance_days,
     build_attendance_group_summary,
     build_attendance_history,
@@ -13,14 +13,16 @@ from app.helpers import (
     fetch_first_login_times,
     fetch_group_excluded_dates,
     fetch_group_late_thresholds,
+    get_current_year_attendance_days,
+    get_last_21_days,
+    summarize_attendance_history,
+)
+from app.helper_results import (
     fetch_group_practical_averages,
     fetch_group_theory_averages,
     fetch_student_practical_averages,
     fetch_student_theory_averages,
     fetch_theory_module_weaknesses,
-    get_current_year_attendance_days,
-    get_last_21_days,
-    summarize_attendance_history,
 )
 
 

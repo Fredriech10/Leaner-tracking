@@ -1,100 +1,42 @@
-import os
-import importlib
-import base64
-import mimetypes
 import re
 import sqlite3
-import zipfile
-import uuid
 from datetime import datetime, timedelta
-from io import BytesIO
-from xml.etree import ElementTree as ET
-from markupsafe import escape
-from .database import get_db
 
-
-INTERACTIVE_LEARNING_DIR = os.path.join(
-    os.path.dirname(os.path.dirname(os.path.abspath(__file__))),
-    "INTERACTIVE LEARNING",
+from .helper_common import (
+    externalize_data_uri_images,
+    extract_pptx_slides,
+    get_interactive_learning_files,
+    normalize_question_bank_group_text,
+    normalize_relative_path,
+    parse_module_names,
+    pptx_to_content_slide_html,
+    resolve_interactive_learning_path,
+    safe_int,
 )
-LESSON_ASSET_DIR = os.path.join("static", "uploads", "lesson_assets")
-MAX_LESSON_IMAGE_DIMENSION = 1600
-DATA_URI_IMAGE_RE = re.compile(r"data:(image/[a-zA-Z0-9.+-]+);base64,([A-Za-z0-9+/=\r\n]+)")
-
-
-def safe_int(value, default=0):
-    try:
-        return int(value)
-    except (TypeError, ValueError):
-        return default
-
-
-def save_lesson_asset(raw_image, mime_type=None):
-    os.makedirs(LESSON_ASSET_DIR, exist_ok=True)
-    try:
-        from PIL import Image
-
-        image = Image.open(BytesIO(raw_image))
-        image.thumbnail((MAX_LESSON_IMAGE_DIMENSION, MAX_LESSON_IMAGE_DIMENSION))
-        filename = f"{uuid.uuid4().hex}.webp"
-        filepath = os.path.join(LESSON_ASSET_DIR, filename)
-        if image.mode not in ("RGB", "RGBA"):
-            image = image.convert("RGBA" if "A" in image.getbands() else "RGB")
-        save_kwargs = {"format": "WEBP", "quality": 82, "method": 6}
-        if image.mode == "RGBA":
-            save_kwargs["lossless"] = False
-        image.save(filepath, **save_kwargs)
-    except Exception:
-        ext = mimetypes.guess_extension(mime_type or "") or ".png"
-        if ext == ".jpe":
-            ext = ".jpg"
-        filename = f"{uuid.uuid4().hex}{ext}"
-        filepath = os.path.join(LESSON_ASSET_DIR, filename)
-        with open(filepath, "wb") as asset_file:
-            asset_file.write(raw_image)
-    return f"/static/uploads/lesson_assets/{filename}"
-
-
-def save_data_uri_image(data_uri):
-    match = DATA_URI_IMAGE_RE.fullmatch(data_uri.strip())
-    if not match:
-        return data_uri
-    mime_type, encoded = match.groups()
-    raw_image = base64.b64decode(encoded)
-    return save_lesson_asset(raw_image, mime_type)
-
-
-def externalize_data_uri_images(html_or_uri):
-    if not html_or_uri:
-        return html_or_uri
-    return DATA_URI_IMAGE_RE.sub(lambda match: save_data_uri_image(match.group(0)), html_or_uri)
-
-
-def parse_module_names(raw_value):
-    raw_value = (raw_value or "").replace("\r", "\n")
-    parts = []
-    for chunk in raw_value.replace(";", ",").split(","):
-        for line in chunk.split("\n"):
-            cleaned = line.strip()
-            if cleaned:
-                parts.append(cleaned)
-    seen = set()
-    ordered = []
-    for item in parts:
-        key = item.lower()
-        if key in seen:
-            continue
-        seen.add(key)
-        ordered.append(item)
-    return ordered
-
-
-def normalize_question_bank_group_text(question_text):
-    text = " ".join((question_text or "").strip().split())
-    if not text:
-        return ""
-    text = re.sub(r"\s*\((?:case|scenario|batch)\s+[^)]*\)\s*$", "", text, flags=re.IGNORECASE)
-    return text.strip().lower()
+from .helper_communication import (
+    add_communication_message,
+    create_communication_thread,
+    get_student_message_threads,
+    get_student_unread_message_count,
+    get_teacher_quick_action_catalog,
+    get_teacher_selected_quick_actions,
+    get_teacher_unread_message_count,
+    mark_student_threads_read,
+    student_has_fresh_teacher_reply,
+)
+from .helper_marking import get_marking_scripts, mark_file
+from .helper_theory import (
+    bank_question_exists,
+    build_bank_option_signature,
+    compute_theory_answer_award,
+    get_fill_in_accepted_answers,
+    get_true_false_option_data,
+    normalize_review_text,
+    parse_true_false_answer_text,
+    score_fill_in_answer,
+    score_true_false_answer,
+)
+from .database import get_db
 
 
 # ── Term helpers ──────────────────────────────────────────────────────────────
@@ -187,207 +129,6 @@ def get_days_in_active_term():
             days.append(current.strftime("%Y-%m-%d"))
         current += timedelta(days=1)
     return days
-
-
-def normalize_review_text(value):
-    return " ".join((value or "").strip().lower().split())
-
-
-def parse_true_false_answer_text(answer_text):
-    raw = (answer_text or "").strip()
-    if "(correction:" in raw:
-        selected, correction = raw.split("(correction:", 1)
-        return selected.strip(), correction.rstrip(") ").strip()
-    return raw, ""
-
-
-def get_true_false_option_data(options):
-    correct_choice = ""
-    accepted_corrections = []
-    for option in options:
-        option_text = option[1] if len(option) > 1 else ""
-        is_correct = option[2] if len(option) > 2 else 0
-        match_pair = option[3] if len(option) > 3 else None
-        if is_correct == 1 and match_pair != "correction":
-            correct_choice = option_text
-        if match_pair == "correction" and option_text:
-            accepted_corrections.append(option_text)
-    return correct_choice, accepted_corrections
-
-
-def score_true_false_answer(selected, correction_submitted, options, effective_marks):
-    correct_choice, accepted_corrections = get_true_false_option_data(options)
-    if selected != correct_choice:
-        return 0
-    if selected == "False" and accepted_corrections:
-        submitted_key = normalize_review_text(correction_submitted)
-        accepted_keys = {normalize_review_text(item) for item in accepted_corrections if item}
-        return effective_marks if submitted_key and submitted_key in accepted_keys else 0
-    return effective_marks
-
-
-def get_fill_in_accepted_answers(options):
-    return [option[1] for option in options if len(option) > 2 and option[2] == 1 and option[1]]
-
-
-def score_fill_in_answer(answer_text, options, marks):
-    submitted_key = normalize_review_text(answer_text)
-    accepted_keys = {normalize_review_text(item) for item in get_fill_in_accepted_answers(options)}
-    return marks if submitted_key and submitted_key in accepted_keys else 0
-
-
-def compute_theory_answer_award(question_type, marks, options, answer_text):
-    if question_type == "mcq_single":
-        correct_values = {option[1] for option in options if len(option) > 2 and option[2] == 1}
-        return marks if answer_text in correct_values else 0
-    if question_type == "mcq_multi":
-        correct_values = sorted(option[1] for option in options if len(option) > 2 and option[2] == 1)
-        selected_values = sorted([item.strip() for item in (answer_text or "").split(",") if item.strip()])
-        return marks if selected_values == correct_values else 0
-    if question_type == "true_false":
-        selected, correction = parse_true_false_answer_text(answer_text)
-        return score_true_false_answer(selected, correction, options, marks)
-    if question_type == "fill_in":
-        return score_fill_in_answer(answer_text, options, marks)
-    if question_type == "match":
-        learner_map = {}
-        for pair in (answer_text or "").split(";"):
-            if "=" not in pair:
-                continue
-            left, chosen = pair.split("=", 1)
-            learner_map[left.strip()] = chosen.strip()
-        indexed_awarded = 0
-        indexed_present = False
-        for idx, option in enumerate(options, start=1):
-            if len(option) <= 3 or not option[3] or option[3] == "correction":
-                continue
-            if str(idx) in learner_map:
-                indexed_present = True
-                if learner_map.get(str(idx), "") == option[1]:
-                    indexed_awarded += 1
-        if indexed_present:
-            return indexed_awarded
-        legacy_map = {option[1]: option[3] for option in options if len(option) > 3 and option[3] and option[3] != "correction"}
-        swapped_map = {option[3]: option[1] for option in options if len(option) > 3 and option[3] and option[3] != "correction"}
-        legacy_awarded = sum(1 for left, accepted in legacy_map.items() if learner_map.get(left, "") == accepted)
-        swapped_awarded = sum(1 for left, accepted in swapped_map.items() if learner_map.get(left, "") == accepted)
-        return max(legacy_awarded, swapped_awarded)
-    return 0
-
-
-def build_bank_option_signature(question_type, options):
-    normalized = []
-    for option_text, is_correct, match_pair in options:
-        normalized.append((
-            (option_text or "").strip().lower(),
-            safe_int(is_correct, 0),
-            (match_pair or "").strip().lower(),
-        ))
-    if question_type == "match":
-        normalized.sort()
-    return tuple(normalized)
-
-
-def bank_question_exists(cursor, question_text, question_type, subject, modules, options):
-    normalized_text = normalize_question_bank_group_text(question_text)
-    normalized_subject = (subject or "").strip().lower()
-    normalized_modules = (modules or "").strip().lower()
-    target_signature = build_bank_option_signature(question_type, options)
-
-    cursor.execute("""
-        SELECT id, question_text
-        FROM question_bank_questions
-        WHERE question_type = ?
-          AND LOWER(TRIM(COALESCE(subject, ''))) = ?
-          AND LOWER(TRIM(COALESCE(modules, ''))) = ?
-    """, (question_type, normalized_subject, normalized_modules))
-    candidate_rows = cursor.fetchall()
-    for candidate_id, candidate_text in candidate_rows:
-        if normalize_question_bank_group_text(candidate_text) != normalized_text:
-            continue
-        cursor.execute("""
-            SELECT option_text, is_correct, match_pair
-            FROM question_bank_options
-            WHERE bank_question_id = ?
-            ORDER BY id
-        """, (candidate_id,))
-        candidate_signature = build_bank_option_signature(question_type, cursor.fetchall())
-        if candidate_signature == target_signature:
-            return True
-    return False
-
-
-def normalize_relative_path(path):
-    return path.replace("/", os.sep).replace("\\", os.sep).strip()
-
-
-def get_interactive_learning_files():
-    files = []
-    if not os.path.isdir(INTERACTIVE_LEARNING_DIR):
-        return files
-
-    for root, _, filenames in os.walk(INTERACTIVE_LEARNING_DIR):
-        for filename in filenames:
-            lower = filename.lower()
-            if lower.startswith("~$"):
-                continue
-            if lower.endswith((".ppt", ".pptx", ".pps", ".ppsx")):
-                full_path = os.path.join(root, filename)
-                rel_path = os.path.relpath(full_path, INTERACTIVE_LEARNING_DIR)
-                files.append({
-                    "relative_path": rel_path.replace("\\", "/"),
-                    "display_name": os.path.splitext(filename)[0],
-                    "folder": os.path.dirname(rel_path).replace("\\", "/"),
-                })
-
-    files.sort(key=lambda item: (item["folder"].lower(), item["display_name"].lower()))
-    return files
-
-
-def resolve_interactive_learning_path(relative_path):
-    if not relative_path:
-        return None
-
-    normalized = os.path.normpath(os.path.join(INTERACTIVE_LEARNING_DIR, normalize_relative_path(relative_path)))
-    base_dir = os.path.normpath(INTERACTIVE_LEARNING_DIR)
-
-    if not normalized.startswith(base_dir):
-        return None
-    if not os.path.isfile(normalized):
-        return None
-    return normalized
-
-
-def extract_pptx_slides(file_path):
-    lower = file_path.lower()
-    if not lower.endswith((".pptx", ".ppsx")):
-        return []
-
-    namespace = {"a": "http://schemas.openxmlformats.org/drawingml/2006/main"}
-    slides = []
-
-    with zipfile.ZipFile(file_path) as archive:
-        slide_names = [
-            name for name in archive.namelist()
-            if name.startswith("ppt/slides/slide") and name.endswith(".xml")
-        ]
-        slide_names.sort(key=lambda item: int(re.search(r"slide(\d+)\.xml$", item).group(1)))
-
-        for index, slide_name in enumerate(slide_names, start=1):
-            root = ET.fromstring(archive.read(slide_name))
-            text_runs = [
-                (node.text or "").strip()
-                for node in root.findall(".//a:t", namespace)
-                if (node.text or "").strip()
-            ]
-            slides.append({
-                "number": index,
-                "title": text_runs[0] if text_runs else f"Slide {index}",
-                "text_runs": text_runs,
-                "body": text_runs[1:] if len(text_runs) > 1 else [],
-            })
-
-    return slides
 
 
 def get_low_attendance_learners(limit=10):
@@ -984,177 +725,6 @@ def get_low_attendance_learners_filtered(limit=10, groups=None, teacher_username
     return results[:limit]
 
 
-def get_teacher_quick_action_catalog():
-    return [
-        {"key": "manage_subjects", "label": "Practical", "icon": "📁", "href": "/manage_subjects", "kind": "link"},
-        {"key": "manage_lessons", "label": "Lesson Setup", "icon": "📘", "href": "/manage_lessons", "kind": "link"},
-        {"key": "manage_tests", "label": "Theory Tests", "icon": "📝", "href": "/manage_tests", "kind": "link"},
-        {"key": "response_review", "label": "Review Responses", "icon": "🧾", "href": "/response_review", "kind": "link"},
-        {"key": "marking_setup", "label": "Marking Setup", "icon": "🛠️", "href": "/marking_setup", "kind": "link"},
-        {"key": "attendance", "label": "Attendance", "icon": "📅", "href": "/attendance", "kind": "link"},
-        {"key": "group_results", "label": "Results", "icon": "📊", "href": "/group_results", "kind": "link"},
-        {"key": "communications", "label": "Messages", "icon": "💬", "href": "/communications", "kind": "link"},
-        {"key": "export", "label": "Export", "icon": "⬇️", "kind": "export"},
-        {"key": "view_group", "label": "View Group", "icon": "👁", "kind": "view_group"},
-    ]
-
-
-def get_teacher_selected_quick_actions(username):
-    catalog = get_teacher_quick_action_catalog()
-    catalog_map = {item["key"]: item for item in catalog}
-    default_keys = ["manage_subjects", "manage_tests", "attendance", "communications", "response_review", "export", "view_group"]
-    conn = get_db()
-    cursor = conn.cursor()
-    cursor.execute(
-        """
-        SELECT action_key
-        FROM teacher_quick_actions
-        WHERE username = ?
-        ORDER BY rowid
-        """,
-        (username,),
-    )
-    stored_keys = [row[0] for row in cursor.fetchall()]
-    conn.close()
-    selected = [catalog_map[key] for key in stored_keys if key in catalog_map]
-    if not selected:
-        selected = [catalog_map[key] for key in default_keys if key in catalog_map]
-    selected_keys = {item["key"] for item in selected}
-    available = [dict(item, selected=item["key"] in selected_keys) for item in catalog]
-    return selected, available
-
-
-def get_teacher_unread_message_count(username):
-    conn = get_db()
-    cursor = conn.cursor()
-    cursor.execute(
-        """
-        SELECT COUNT(*)
-        FROM communication_threads t
-        WHERE t.teacher_username = ?
-          AND EXISTS (
-              SELECT 1
-              FROM communication_messages m
-              WHERE m.thread_id = t.id
-                AND COALESCE(m.sender_role, '') = 'student'
-                AND (t.teacher_read_at IS NULL OR COALESCE(m.created_at, '') > t.teacher_read_at)
-          )
-        """,
-        (username,),
-    )
-    count = cursor.fetchone()[0] or 0
-    conn.close()
-    return count
-
-
-def get_student_unread_message_count(username):
-    conn = get_db()
-    cursor = conn.cursor()
-    cursor.execute(
-        """
-        SELECT COUNT(*)
-        FROM communication_threads t
-        WHERE t.student_username = ?
-          AND EXISTS (
-              SELECT 1
-              FROM communication_messages m
-              WHERE m.thread_id = t.id
-                AND COALESCE(m.sender_role, '') IN ('teacher', 'admin')
-                AND (t.student_read_at IS NULL OR COALESCE(m.created_at, '') > t.student_read_at)
-          )
-        """,
-        (username,),
-    )
-    count = cursor.fetchone()[0] or 0
-    conn.close()
-    return count
-
-
-def student_has_fresh_teacher_reply(username):
-    return get_student_unread_message_count(username) > 0
-
-
-def get_student_message_threads(username):
-    conn = get_db()
-    conn.row_factory = sqlite3.Row
-    cursor = conn.cursor()
-    cursor.execute("""
-        SELECT *
-        FROM communication_threads
-        WHERE student_username = ?
-        ORDER BY COALESCE(updated_at, created_at) DESC, id DESC
-    """, (username,))
-    threads = []
-    for row in cursor.fetchall():
-        thread = dict(row)
-        cursor.execute("""
-            SELECT *
-            FROM communication_messages
-            WHERE thread_id = ?
-            ORDER BY COALESCE(created_at, '') ASC, id ASC
-        """, (thread["id"],))
-        thread["messages"] = [dict(message_row) for message_row in cursor.fetchall()]
-        threads.append(thread)
-    conn.close()
-    return threads
-
-
-def mark_student_threads_read(username):
-    now_text = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-    conn = get_db()
-    cursor = conn.cursor()
-    cursor.execute("""
-        UPDATE communication_threads
-        SET student_read_at = ?
-        WHERE student_username = ?
-    """, (now_text, username))
-    conn.commit()
-    conn.close()
-
-
-def create_communication_thread(cursor, student_username, topic, subject_line="", attendance_date="", initial_message="", chat_session_id=""):
-    created_at = datetime.now().isoformat()
-    cursor.execute("SELECT full_name, group_name, teacher_username FROM users WHERE username = ?", (student_username,))
-    user_row = cursor.fetchone()
-    group_name = user_row[1] if user_row else ""
-    teacher_username = user_row[2] if user_row else ""
-    cursor.execute(
-        """
-        INSERT INTO communication_threads (
-            student_username, teacher_username, group_name, topic, subject_line,
-            attendance_date, status, chat_session_id, created_at, updated_at
-        )
-        VALUES (?, ?, ?, ?, ?, ?, 'open', ?, ?, ?)
-        """,
-        (student_username, teacher_username, group_name, topic, subject_line, attendance_date, chat_session_id, created_at, created_at),
-    )
-    thread_id = cursor.lastrowid
-    if initial_message:
-        add_communication_message(cursor, thread_id, student_username, "student", initial_message)
-    return thread_id
-
-
-def add_communication_message(cursor, thread_id, sender_username, sender_role, message):
-    created_at = datetime.now().isoformat()
-    cursor.execute(
-        """
-        INSERT INTO communication_messages (thread_id, sender_username, sender_role, message, created_at)
-        VALUES (?, ?, ?, ?, ?)
-        """,
-        (thread_id, sender_username, sender_role, message, created_at),
-    )
-    cursor.execute(
-        """
-        UPDATE communication_threads
-        SET updated_at = ?,
-            teacher_read_at = CASE WHEN ? IN ('teacher', 'admin') THEN ? ELSE teacher_read_at END,
-            student_read_at = CASE WHEN ? = 'student' THEN ? ELSE student_read_at END
-        WHERE id = ?
-        """,
-        (created_at, sender_role, created_at, sender_role, created_at, thread_id),
-    )
-
-
 QUESTION_BANK_SUPPORTED_TYPES = ["mcq_single", "fill_in", "true_false", "match"]
 
 
@@ -1672,72 +1242,3 @@ def calculate_attendance_percentage(data, days):
                 present += 1
 
     return round((present / total_cells) * 100) if total_cells else 0
-
-
-def pptx_to_content_slide_html(uploaded_file):
-    from pptx import Presentation
-
-    prs = Presentation(uploaded_file)
-    slide_w = float(prs.slide_width)
-    slide_h = float(prs.slide_height)
-    html_slides = []
-
-    for slide in prs.slides:
-        boxes = []
-        for shape in slide.shapes:
-            left = max(0, (float(shape.left) / slide_w) * 100)
-            top = max(0, (float(shape.top) / slide_h) * 100)
-            width = max(5, (float(shape.width) / slide_w) * 100)
-            height = max(5, (float(shape.height) / slide_h) * 100)
-            style = f"left:{left:.2f}%;top:{top:.2f}%;width:{width:.2f}%;height:{height:.2f}%;"
-
-            if getattr(shape, "has_text_frame", False):
-                text = shape.text.strip()
-                if not text:
-                    continue
-                paragraphs = "".join(
-                    f"<p>{escape(line)}</p>"
-                    for line in text.splitlines()
-                    if line.strip()
-                )
-                boxes.append(f'<div class="slide-box text-box" style="{style}">{paragraphs}</div>')
-                continue
-
-            if hasattr(shape, "image"):
-                image = shape.image
-                ext = (image.ext or "png").lower()
-                mime = mimetypes.types_map.get(f".{ext}", "image/png")
-                encoded = base64.b64encode(image.blob).decode("ascii")
-                src = f"data:{mime};base64,{encoded}"
-                boxes.append(f'<div class="slide-box image-box" style="{style}"><img src="{src}" alt=""></div>')
-
-        if boxes:
-            html_slides.append("".join(boxes))
-
-    return html_slides
-
-
-# ── Marking helper ────────────────────────────────────────────────────────────
-
-def mark_file(filepath, marking_script, marking_setup_id=None):
-    if not marking_script:
-        return {"task_name": "Unknown Task", "score": 0, "total": 0, "percentage": 0, "results": [],
-                "error": "No marking script assigned to this task. Please contact your teacher."}
-    try:
-        module = importlib.import_module(f"marking.tasks.{marking_script}")
-        if marking_setup_id is not None and hasattr(module, "mark_with_setup"):
-            return module.mark_with_setup(filepath, int(marking_setup_id))
-        return module.mark(filepath)
-    except ModuleNotFoundError:
-        return {"task_name": marking_script, "score": 0, "total": 0, "percentage": 0, "results": [],
-                "error": f"Marking script '{marking_script}' not found. Please contact your teacher."}
-
-
-def get_marking_scripts():
-    tasks_dir = os.path.join(os.path.dirname(os.path.dirname(__file__)), "marking", "tasks")
-    scripts = []
-    if os.path.exists(tasks_dir):
-        for f in sorted(os.listdir(tasks_dir)):
-            if f.endswith(".py") and f != "__init__.py":
-                scripts.append(f[:-3])
-    return scripts

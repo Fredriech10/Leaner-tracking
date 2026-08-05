@@ -8,7 +8,7 @@ from flask import redirect, render_template, request, send_file, session, url_fo
 from werkzeug.utils import secure_filename
 
 from app.database import get_marking_db, get_user_role
-from app.helpers import safe_int
+from app.helper_common import safe_int
 
 
 def register_marking_setup_routes(app):

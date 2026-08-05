@@ -5,7 +5,7 @@ from flask import redirect, render_template, request, send_file, session, url_fo
 from markupsafe import escape
 
 from app.database import get_db, get_groups, get_teachers, get_user_role, log_activity
-from app.helpers import safe_int, resolve_interactive_learning_path
+from app.helper_common import resolve_interactive_learning_path, safe_int
 
 
 def register_lesson_routes(app):

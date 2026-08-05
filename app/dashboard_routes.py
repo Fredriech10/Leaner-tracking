@@ -4,7 +4,7 @@ from datetime import datetime, timedelta
 from flask import redirect, render_template, session, url_for
 
 from app.database import get_db, get_groups, get_user_role
-from app.helpers import (
+from app.helper_attendance import (
     auto_exclude_empty_attendance_days,
     build_attendance_history,
     build_attendance_months,
@@ -12,20 +12,24 @@ from app.helpers import (
     fetch_first_login_times,
     fetch_group_excluded_dates,
     fetch_group_late_thresholds,
+    get_active_term_range,
+    get_current_year_attendance_days,
+    get_last_21_days,
+    get_low_attendance_learners_filtered as get_low_attendance_learners,
+    summarize_attendance_history,
+)
+from app.helper_communication import (
+    get_student_message_threads,
+    get_student_unread_message_count,
+    get_teacher_selected_quick_actions,
+    student_has_fresh_teacher_reply,
+)
+from app.helper_results import (
     fetch_group_practical_averages,
     fetch_group_theory_averages,
     fetch_student_practical_averages,
     fetch_student_theory_averages,
     fetch_theory_module_weaknesses,
-    get_active_term_range,
-    get_current_year_attendance_days,
-    get_last_21_days,
-    get_student_message_threads,
-    get_student_unread_message_count,
-    get_teacher_selected_quick_actions,
-    get_low_attendance_learners_filtered as get_low_attendance_learners,
-    student_has_fresh_teacher_reply,
-    summarize_attendance_history,
 )
 from app.runtime import TIMEOUT, active_users, lock, update_active_user
 

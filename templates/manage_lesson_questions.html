@@ -644,10 +644,18 @@ function buildRTE(editorId, hiddenId, initialHtml) {
         <div class="rte-toolbar">
             <button type="button" class="rte-btn" onmousedown="event.preventDefault(); rteBlock('h1', '${editorId}')">Title</button>
             <button type="button" class="rte-btn" onmousedown="event.preventDefault(); rteBlock('h2', '${editorId}')">Heading</button>
+            <button type="button" class="rte-btn" onmousedown="event.preventDefault(); rteBlock('p', '${editorId}')">Text</button>
             <button type="button" class="rte-btn" onmousedown="event.preventDefault(); rteCmd('bold', '${editorId}')"><b>B</b></button>
             <button type="button" class="rte-btn" onmousedown="event.preventDefault(); rteCmd('italic', '${editorId}')"><i>I</i></button>
             <button type="button" class="rte-btn" onmousedown="event.preventDefault(); rteCmd('underline', '${editorId}')"><u>U</u></button>
             <button type="button" class="rte-btn" onmousedown="event.preventDefault(); rteCmd('insertUnorderedList', '${editorId}')">List</button>
+            <select class="rte-btn" onmousedown="saveEditorSelection('${editorId}')" onchange="applyTextSize('${editorId}', this.value); this.selectedIndex = 0;">
+                <option value="">Text Size</option>
+                <option value="14px">Small</option>
+                <option value="18px">Medium</option>
+                <option value="24px">Large</option>
+                <option value="32px">XL</option>
+            </select>
             <button type="button" class="rte-btn" onmousedown="event.preventDefault(); insertTextBox('${editorId}')">Text Box</button>
             <button type="button" class="rte-btn" onmousedown="event.preventDefault(); insertImageUrl('${editorId}')">Image URL</button>
             <label class="rte-btn" style="display:inline-flex;align-items:center;">
@@ -665,8 +673,12 @@ function buildRTE(editorId, hiddenId, initialHtml) {
     editor.addEventListener('input', () => {
         syncRTE(editorId, hiddenId);
         scheduleAutosaveForEditor(editorId);
+        saveEditorSelection(editorId);
     });
     editor.addEventListener('mousedown', startSlideBoxDrag);
+    editor.addEventListener('mouseup', () => saveEditorSelection(editorId));
+    editor.addEventListener('keyup', () => saveEditorSelection(editorId));
+    editor.addEventListener('focus', () => saveEditorSelection(editorId));
     syncRTE(editorId, hiddenId);
 }
 function setGlobalBackgroundUrl() {
@@ -708,15 +720,75 @@ function applyGlobalBackground() {
 function cleanLegacyBackgrounds(root) {
     root.querySelectorAll('.slide-bg').forEach(el => el.remove());
 }
+const savedEditorSelections = {};
+function saveEditorSelection(editorId) {
+    const editor = document.getElementById(editorId);
+    const selection = window.getSelection();
+    if (!editor || !selection || selection.rangeCount === 0) return;
+    const range = selection.getRangeAt(0);
+    if (!editor.contains(range.commonAncestorContainer)) return;
+    savedEditorSelections[editorId] = range.cloneRange();
+}
+function restoreEditorSelection(editorId) {
+    const editor = document.getElementById(editorId);
+    const range = savedEditorSelections[editorId];
+    if (!editor || !range) return false;
+    const selection = window.getSelection();
+    selection.removeAllRanges();
+    selection.addRange(range);
+    editor.focus();
+    return true;
+}
 function rteCmd(cmd, editorId) {
+    restoreEditorSelection(editorId);
     document.getElementById(editorId).focus();
     document.execCommand(cmd, false, null);
     syncRTE(editorId, 'hidden_' + editorId);
+    saveEditorSelection(editorId);
 }
 function rteBlock(tag, editorId) {
+    restoreEditorSelection(editorId);
     document.getElementById(editorId).focus();
     document.execCommand('formatBlock', false, tag);
     syncRTE(editorId, 'hidden_' + editorId);
+    saveEditorSelection(editorId);
+}
+function applyTextSize(editorId, size) {
+    if (!size) return;
+    const editor = document.getElementById(editorId);
+    if (!editor) return;
+    restoreEditorSelection(editorId);
+    editor.focus();
+    const selection = window.getSelection();
+    const selectedBox = editor.querySelector('.slide-box.selected');
+    const findTargetBlock = node => {
+        if (!node) return false;
+        const element = node.nodeType === Node.ELEMENT_NODE ? node : node.parentElement;
+        if (!element) return null;
+        const block = element.closest('h1, h2, p, div, li, span, .slide-box');
+        if (!block || !editor.contains(block)) return null;
+        return block;
+    };
+
+    const anchorBlock = findTargetBlock(selection && selection.anchorNode);
+    if (anchorBlock && anchorBlock !== editor) {
+        anchorBlock.style.fontSize = size;
+        if (anchorBlock.classList && anchorBlock.classList.contains('slide-box')) {
+            anchorBlock.querySelectorAll('h1, h2, p, li, span').forEach(node => {
+                node.style.fontSize = size;
+            });
+        }
+    } else if (selectedBox) {
+        selectedBox.style.fontSize = size;
+        selectedBox.querySelectorAll('h1, h2, p, li, span').forEach(node => {
+            node.style.fontSize = size;
+        });
+    } else {
+        return;
+    }
+    syncRTE(editorId, 'hidden_' + editorId);
+    scheduleAutosaveForEditor(editorId);
+    saveEditorSelection(editorId);
 }
 function insertImageUrl(editorId) {
     const url = prompt('Paste the image URL');

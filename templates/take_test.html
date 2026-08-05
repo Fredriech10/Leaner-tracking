@@ -662,6 +662,18 @@ function changeSlide(dir) {
     if (restrictForwardSlides && dir > 0 && currentSlide >= maxViewedSlide + 1) return;
     goToSlide(currentSlide + dir);
 }
+var testForm = document.getElementById('testForm');
+if (testForm) {
+    testForm.addEventListener('keydown', function (event) {
+        if (event.key !== 'Enter') return;
+        if (event.ctrlKey || event.shiftKey || event.altKey || event.metaKey) return;
+        if (event.target && event.target.tagName === 'TEXTAREA') return;
+        if (currentSlide < slides.length - 1) {
+            event.preventDefault();
+            changeSlide(1);
+        }
+    });
+}
 function saveLessonProgress(completed) {
     if (isPreview || !isLessonOnly || lessonCompleted) return;
     var delta = unsavedTimeSeconds;

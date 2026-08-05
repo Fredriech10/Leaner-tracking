@@ -602,6 +602,18 @@ def init_db():
     )
     """)
 
+    try:
+        cursor.execute("PRAGMA table_info(theory_questions)")
+        theory_question_cols = [c[1] for c in cursor.fetchall()]
+        if "bank_question_id" not in theory_question_cols:
+            cursor.execute("ALTER TABLE theory_questions ADD COLUMN bank_question_id INTEGER")
+        if "source_subject" not in theory_question_cols:
+            cursor.execute("ALTER TABLE theory_questions ADD COLUMN source_subject TEXT")
+        if "source_modules" not in theory_question_cols:
+            cursor.execute("ALTER TABLE theory_questions ADD COLUMN source_modules TEXT")
+    except Exception as e:
+        print(f"Note: theory_questions source migration: {e}")
+
     cursor.execute("""
     CREATE TABLE IF NOT EXISTS theory_options (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -1602,6 +1614,61 @@ def fetch_group_theory_averages(cursor, groups):
     )
     return {group: average for group, average in cursor.fetchall()}
 
+def fetch_theory_module_weaknesses(cursor, username=None, group_name=None, limit=10):
+    where_parts = ["latest.rn = 1"]
+    params = []
+    if username:
+        where_parts.append("latest.username = ?")
+        params.append(username)
+    if group_name:
+        where_parts.append("u.group_name = ?")
+        params.append(group_name)
+    where_clause = " AND ".join(where_parts)
+    cursor.execute(f"""
+        SELECT latest.username, tq.source_modules, tq.question_type, ta.is_correct
+        FROM (
+            SELECT ts.id, ts.username, ts.test_id,
+                   ROW_NUMBER() OVER (
+                       PARTITION BY ts.username, ts.test_id
+                       ORDER BY COALESCE(ts.submitted_at, '') DESC, ts.id DESC
+                   ) AS rn
+            FROM theory_submissions ts
+        ) latest
+        JOIN theory_answers ta ON ta.submission_id = latest.id
+        JOIN theory_questions tq ON tq.id = ta.question_id
+        JOIN users u ON u.username = latest.username
+        WHERE {where_clause}
+    """, params)
+    summary = {}
+    for learner_username, source_modules, question_type, is_correct in cursor.fetchall():
+        modules = parse_module_names(source_modules or "") or ["Unmapped"]
+        for module_name in modules:
+            item = summary.setdefault(module_name, {
+                "asked": 0,
+                "wrong": 0,
+                "learners": set(),
+                "question_types": set(),
+            })
+            item["asked"] += 1
+            item["wrong"] += 0 if is_correct else 1
+            item["learners"].add(learner_username)
+            if question_type:
+                item["question_types"].add(question_type)
+    rows = []
+    for module_name, item in summary.items():
+        if not item["asked"]:
+            continue
+        rows.append({
+            "module": module_name,
+            "asked": item["asked"],
+            "wrong": item["wrong"],
+            "wrong_pct": round((item["wrong"] / item["asked"]) * 100),
+            "learners": len(item["learners"]),
+            "question_types": ", ".join(sorted(item["question_types"])),
+        })
+    rows.sort(key=lambda row: (row["wrong_pct"], row["wrong"], row["asked"]), reverse=True)
+    return rows[:limit]
+
 def get_teacher_quick_action_catalog():
     return [
         {"key": "manage_subjects", "label": "Practical", "icon": "📁", "href": "/manage_subjects", "kind": "link"},
@@ -1834,6 +1901,17 @@ def compute_theory_answer_award(question_type, marks, options, answer_text):
                 continue
             left, chosen = pair.split("=", 1)
             learner_map[left.strip()] = chosen.strip()
+        indexed_awarded = 0
+        indexed_present = False
+        for idx, option in enumerate(options, start=1):
+            if len(option) <= 3 or not option[3] or option[3] == "correction":
+                continue
+            if str(idx) in learner_map:
+                indexed_present = True
+                if learner_map.get(str(idx), "") == option[1]:
+                    indexed_awarded += 1
+        if indexed_present:
+            return indexed_awarded
         legacy_map = {option[1]: option[3] for option in options if len(option) > 3 and option[3] and option[3] != "correction"}
         swapped_map = {option[3]: option[1] for option in options if len(option) > 3 and option[3] and option[3] != "correction"}
         legacy_awarded = sum(1 for left, accepted in legacy_map.items() if learner_map.get(left, "") == accepted)
@@ -1929,6 +2007,19 @@ def build_match_review_rows(options, answer_text):
         if "=" in pair:
             left, chosen = pair.split("=", 1)
             learner_map[left.strip()] = chosen.strip()
+    indexed_rows = []
+    for idx, option in enumerate(options, start=1):
+        if len(option) <= 3 or not option[3] or option[3] == "correction":
+            continue
+        if str(idx) in learner_map:
+            indexed_rows.append({
+                "left": option[3],
+                "learner_match": learner_map.get(str(idx), "") or "No answer",
+                "correct_match": option[1],
+                "is_correct": learner_map.get(str(idx), "") == option[1]
+            })
+    if indexed_rows:
+        return indexed_rows, {row["left"]: row["correct_match"] for row in indexed_rows}
     legacy_map = {option[1]: option[3] for option in options if len(option) > 3 and option[3] and option[3] != "correction"}
     swapped_map = {option[3]: option[1] for option in options if len(option) > 3 and option[3] and option[3] != "correction"}
     legacy_score = sum(1 for left, accepted in legacy_map.items() if learner_map.get(left, "") == accepted)
@@ -1999,18 +2090,18 @@ def pick_unique_bank_question_ids(cursor, question_type, needed, modules=None, s
 
 def clone_bank_question_to_test(cursor, bank_question_id, test_id, order_index):
     cursor.execute("""
-        SELECT question_text, question_type, marks
+        SELECT question_text, question_type, marks, subject, modules
         FROM question_bank_questions
         WHERE id = ?
     """, (bank_question_id,))
     row = cursor.fetchone()
     if not row:
         return None
-    question_text, question_type, marks = row
+    question_text, question_type, marks, subject, modules = row
     cursor.execute("""
-        INSERT INTO theory_questions (test_id, question_text, question_type, marks, order_index)
-        VALUES (?, ?, ?, ?, ?)
-    """, (test_id, question_text, question_type, marks, order_index))
+        INSERT INTO theory_questions (test_id, question_text, question_type, marks, order_index, bank_question_id, source_subject, source_modules)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+    """, (test_id, question_text, question_type, marks, order_index, bank_question_id, subject, modules))
     new_question_id = cursor.lastrowid
     cursor.execute("""
         SELECT option_text, is_correct, match_pair
@@ -2026,49 +2117,111 @@ def clone_bank_question_to_test(cursor, bank_question_id, test_id, order_index):
     return new_question_id
 
 def create_generated_match_question(cursor, bank_question_ids, test_id, order_index):
+    merged_count, _ = merge_bank_match_rows_into_test(cursor, bank_question_ids, test_id, order_index)
+    return merged_count
+
+def merge_bank_match_rows_into_test(cursor, bank_question_ids, test_id, order_index):
     if not bank_question_ids:
-        return None
+        return 0, order_index
 
     placeholders = ",".join("?" for _ in bank_question_ids)
     cursor.execute(f"""
-        SELECT id, question_text, marks
-        FROM question_bank_questions
-        WHERE id IN ({placeholders})
+        SELECT qbq.id, qbq.question_text, qbo.option_text, qbo.is_correct, qbo.match_pair
+        FROM question_bank_questions qbq
+        JOIN question_bank_options qbo ON qbo.bank_question_id = qbq.id
+        WHERE qbq.id IN ({placeholders})
+          AND qbq.question_type = 'match'
+          AND COALESCE(qbo.match_pair, '') != ''
+        ORDER BY qbq.id, qbo.id
     """, bank_question_ids)
-    question_rows = cursor.fetchall()
-    if not question_rows:
-        return None
+    rows = cursor.fetchall()
+    if not rows:
+        return 0, order_index
 
-    question_map = {row[0]: row for row in question_rows}
-    ordered_rows = [question_map[q_id] for q_id in bank_question_ids if q_id in question_map]
-    if not ordered_rows:
-        return None
-
-    question_text = ordered_rows[0][1] or "Match Column A to B"
-    total_marks = sum(max(1, safe_int(row[2], 1)) for row in ordered_rows)
-    cursor.execute("""
-        INSERT INTO theory_questions (test_id, question_text, question_type, marks, order_index)
-        VALUES (?, ?, 'match', ?, ?)
-    """, (test_id, question_text, total_marks, order_index))
-    new_question_id = cursor.lastrowid
-
-    for bank_question_id in bank_question_ids:
-        cursor.execute("""
-            SELECT option_text, is_correct, match_pair
-            FROM question_bank_options
-            WHERE bank_question_id = ? AND COALESCE(match_pair, '') != ''
-            ORDER BY id
-            LIMIT 1
-        """, (bank_question_id,))
-        option_row = cursor.fetchone()
-        if not option_row:
+    all_pairs = []
+    seen_pairs = set()
+    question_labels = []
+    source_subjects = set()
+    source_modules_set = set()
+    for bank_question_id, question_text, option_text, is_correct, match_pair in rows:
+        if question_text:
+            question_labels.append(question_text)
+        cursor.execute("SELECT subject, modules FROM question_bank_questions WHERE id = ?", (bank_question_id,))
+        source_row = cursor.fetchone()
+        if source_row:
+            if source_row[0]:
+                source_subjects.add(source_row[0])
+            source_modules_set.update(parse_module_names(source_row[1] or ""))
+        pair_signature = ((option_text or "").strip().lower(), (match_pair or "").strip().lower())
+        if not pair_signature[0] or not pair_signature[1] or pair_signature in seen_pairs:
             continue
-        option_text, is_correct, match_pair = option_row
+        seen_pairs.add(pair_signature)
+        all_pairs.append((option_text, is_correct, match_pair))
+
+    if not all_pairs:
+        return 0, order_index
+
+    cursor.execute("""
+        SELECT id, COALESCE(source_modules, '')
+        FROM theory_questions
+        WHERE test_id = ?
+          AND question_type = 'match'
+        ORDER BY order_index, id
+        LIMIT 1
+    """, (test_id,))
+    existing_question = cursor.fetchone()
+
+    if existing_question:
+        question_id = existing_question[0]
+        source_modules_set.update(parse_module_names(existing_question[1] or ""))
+    else:
+        source_subject = next(iter(source_subjects), "")
+        source_modules = ", ".join(sorted(source_modules_set, key=str.lower))
+        question_text = question_labels[0] if question_labels else "Match Column A to B"
+        cursor.execute("""
+            INSERT INTO theory_questions (test_id, question_text, question_type, marks, order_index, source_subject, source_modules)
+            VALUES (?, ?, 'match', 0, ?, ?, ?)
+        """, (test_id, question_text, order_index, source_subject, source_modules))
+        question_id = cursor.lastrowid
+        order_index += 1
+
+    cursor.execute("""
+        SELECT option_text, match_pair
+        FROM theory_options
+        WHERE question_id = ?
+          AND COALESCE(match_pair, '') != ''
+    """, (question_id,))
+    existing_pairs = {
+        ((option_text or "").strip().lower(), (match_pair or "").strip().lower())
+        for option_text, match_pair in cursor.fetchall()
+    }
+
+    inserted = 0
+    for option_text, is_correct, match_pair in all_pairs:
+        pair_signature = ((option_text or "").strip().lower(), (match_pair or "").strip().lower())
+        if pair_signature in existing_pairs:
+            continue
         cursor.execute("""
             INSERT INTO theory_options (question_id, option_text, is_correct, match_pair)
             VALUES (?, ?, ?, ?)
-        """, (new_question_id, option_text, is_correct, match_pair))
-    return new_question_id
+        """, (question_id, option_text, is_correct, match_pair))
+        existing_pairs.add(pair_signature)
+        inserted += 1
+
+    cursor.execute("""
+        SELECT COUNT(*)
+        FROM theory_options
+        WHERE question_id = ?
+          AND COALESCE(match_pair, '') != ''
+    """, (question_id,))
+    total_pairs = cursor.fetchone()[0] or 0
+    cursor.execute("""
+        UPDATE theory_questions
+        SET marks = ?, source_modules = ?
+        WHERE id = ?
+    """, (total_pairs, ", ".join(sorted(source_modules_set, key=str.lower)), question_id))
+
+    return inserted, order_index
 
 def regrade_theory_question_answers(test_id, question_id, selected_group=None, learner_username=None):
     conn = get_db()
@@ -2205,36 +2358,64 @@ def get_low_attendance_learners(limit=10, groups=None, teacher_username=None):
     conn = get_db()
     cursor = conn.cursor()
 
-    # Get excluded dates (global only for cross-group summary)
-    cursor.execute("SELECT date FROM excluded_dates WHERE group_name IS NULL")
-    excluded = {row[0] for row in cursor.fetchall()}
-    days = [d for d in days if d not in excluded]
-
     if teacher_username:
-        cursor.execute(
-            "SELECT username, full_name FROM users WHERE role = 'student' AND teacher_username = ?",
-            (teacher_username,))
+        cursor.execute("""
+            SELECT username, full_name, group_name
+            FROM users
+            WHERE role = 'student' AND teacher_username = ?
+            ORDER BY group_name, full_name, username
+        """, (teacher_username,))
     elif groups:
         placeholders = ",".join("?" for _ in groups)
-        cursor.execute(f"SELECT username, full_name FROM users WHERE role = 'student' AND group_name IN ({placeholders})", groups)
+        cursor.execute(f"""
+            SELECT username, full_name, group_name
+            FROM users
+            WHERE role = 'student' AND group_name IN ({placeholders})
+            ORDER BY group_name, full_name, username
+        """, groups)
     else:
-        cursor.execute("SELECT username, full_name FROM users WHERE role = 'student'")
+        cursor.execute("""
+            SELECT username, full_name, group_name
+            FROM users
+            WHERE role = 'student'
+            ORDER BY group_name, full_name, username
+        """)
     learners = cursor.fetchall()
 
-    results = []
-    for username, full_name in learners:
-        present = 0
-        for day in days:
-            cursor.execute("SELECT 1 FROM login_history WHERE username = ? AND date = ?", (username, day))
-            if cursor.fetchone():
-                present += 1
-                continue
-            cursor.execute("SELECT status FROM attendance_override WHERE username = ? AND date = ?", (username, day))
-            override = cursor.fetchone()
-            if override and override[0] == "present":
-                present += 1
+    learner_groups = sorted({row[2] for row in learners if row[2]})
+    excluded_by_group = fetch_group_excluded_dates(cursor, learner_groups)
+    login_map = fetch_first_login_times(cursor, [row[0] for row in learners], days)
+    override_map = fetch_attendance_override_statuses(cursor, [row[0] for row in learners], days)
+    late_cutoffs_by_group = {
+        group_name: fetch_group_late_thresholds(cursor, group_name, days)
+        for group_name in learner_groups
+    }
+    class_checked_by_group = {}
+    for group_name in learner_groups:
+        cursor.execute("""
+            SELECT DISTINCT lh.date
+            FROM login_history lh
+            JOIN users u ON u.username = lh.username
+            WHERE u.group_name = ? AND u.role = 'student'
+        """, (group_name,))
+        class_checked_by_group[group_name] = {row[0] for row in cursor.fetchall()}
 
-        absent = len(days) - present
+    results = []
+    for username, full_name, group_name in learners:
+        excluded_dates = excluded_by_group.get(group_name, set())
+        group_days = [day for day in days if day not in excluded_dates]
+        history = build_attendance_history(
+            cursor,
+            username,
+            group_name,
+            group_days,
+            login_map=login_map,
+            override_map=override_map,
+            late_cutoffs=late_cutoffs_by_group.get(group_name, {}),
+            class_checked_dates=class_checked_by_group.get(group_name, set()),
+            excluded_dates=excluded_dates,
+        )
+        absent = summarize_attendance_history(history)["absent_days"]
         results.append((full_name or username, username, absent))
 
     conn.close()
@@ -3532,16 +3713,6 @@ def view_as_student(group_name):
     """, (group_name,))
     students = cursor.fetchall()
 
-    # Subject averages for the group
-    cursor.execute("""
-        SELECT r.subject, ROUND(AVG(r.score), 1)
-        FROM results r
-        JOIN users u ON r.username = u.username
-        WHERE u.group_name = ?
-        GROUP BY r.subject
-    """, (group_name,))
-    subject_avgs = cursor.fetchall()
-
     # Overall group average
     practical_group_avg = fetch_group_practical_averages(cursor, [group_name]).get(group_name)
     theory_group_avg = fetch_group_theory_averages(cursor, [group_name]).get(group_name)
@@ -3560,13 +3731,22 @@ def view_as_student(group_name):
     """, (group_name,))
     recent_results = cursor.fetchall()
 
-    # Attendance last 7 days for the group
-    days = get_last_7_days()
+    # Attendance calendar for the current year
+    attendance_year = datetime.now().year
+    days = get_current_year_attendance_days()
+    auto_exclude_empty_attendance_days(cursor, [group_name], created_by=admin_user, days=days)
     excluded = fetch_group_excluded_dates(cursor, [group_name]).get(group_name, set())
-    days = [d for d in days if d not in excluded]
     student_usernames = [student_username for student_username, _full_name in students]
     login_times = fetch_first_login_times(cursor, student_usernames, days)
     overrides = fetch_attendance_override_statuses(cursor, student_usernames, days)
+    late_cutoffs = fetch_group_late_thresholds(cursor, group_name, days)
+    cursor.execute("""
+        SELECT DISTINCT lh.date
+        FROM login_history lh
+        JOIN users u ON u.username = lh.username
+        WHERE u.group_name = ? AND u.role = 'student'
+    """, (group_name,))
+    class_checked_dates = {row[0] for row in cursor.fetchall()}
 
     att_summary = []
     for day in days:
@@ -3580,6 +3760,8 @@ def view_as_student(group_name):
                 [day],
                 login_map=login_times,
                 override_map=overrides,
+                late_cutoffs=late_cutoffs,
+                class_checked_dates=class_checked_dates,
                 excluded_dates=excluded,
             )
             summary = summarize_attendance_history(history)
@@ -3588,6 +3770,31 @@ def view_as_student(group_name):
         total_counted = present + absent
         pct = round((present / total_counted) * 100) if total_counted else 0
         att_summary.append({"date": day, "present": present, "total": total_counted, "pct": pct})
+    att_summary_map = {item["date"]: item for item in att_summary}
+    attendance_history = []
+    for day in days:
+        weekday = datetime.strptime(day, "%Y-%m-%d").weekday()
+        summary = att_summary_map.get(day, {"pct": 0, "present": 0, "total": 0})
+        if day in excluded:
+            status = "Normal"
+        elif summary["total"] == 0:
+            status = "Normal"
+        elif summary["pct"] > 0:
+            status = "Present"
+        else:
+            status = "Absent"
+        attendance_history.append({
+            "date": day,
+            "status": status,
+            "time": f"{summary['pct']}% class" if summary["total"] else "",
+            "late": False,
+            "note": "",
+            "weekday": weekday,
+            "class_pct": summary["pct"],
+            "present": summary["present"],
+            "total": summary["total"],
+        })
+    attendance_months = build_attendance_months(attendance_history)
 
     # Missing tasks for the group
     today = datetime.now().date().isoformat()
@@ -3617,6 +3824,7 @@ def view_as_student(group_name):
         GROUP BY w.skill ORDER BY total DESC LIMIT 5
     """, (group_name,))
     weaknesses = cursor.fetchall()
+    theory_module_weaknesses = fetch_theory_module_weaknesses(cursor, group_name=group_name, limit=10)
 
     # Theory test results for the group
     cursor.execute("""
@@ -3629,18 +3837,37 @@ def view_as_student(group_name):
     """, (group_name,))
     theory_avgs = cursor.fetchall()
 
+    practical_avg_map = fetch_student_practical_averages(cursor)
+    theory_avg_map = fetch_student_theory_averages(cursor)
+    class_rankings = []
+    for student_username, full_name in students:
+        practical_avg = practical_avg_map.get(student_username)
+        theory_avg = theory_avg_map.get(student_username)
+        if practical_avg is not None and theory_avg is not None:
+            combined_avg = round((practical_avg + theory_avg) / 2, 1)
+        else:
+            combined_avg = practical_avg if practical_avg is not None else theory_avg
+        combined_avg = combined_avg if combined_avg is not None else 0
+        class_rankings.append((student_username, full_name or student_username, combined_avg))
+    class_rankings.sort(key=lambda item: item[2], reverse=True)
+    top_performers = class_rankings[:5]
+
     conn.close()
     return render_template(
         "view_as_student.html",
         group_name=group_name,
         student_count=student_count,
         students=students,
-        subject_avgs=subject_avgs,
         overall_avg=overall_avg,
         recent_results=recent_results,
         att_summary=att_summary,
+        attendance_months=attendance_months,
+        attendance_year=attendance_year,
+        top_performers=top_performers,
+        class_rankings=class_rankings,
         missing_tasks=missing_tasks,
         weaknesses=weaknesses,
+        theory_module_weaknesses=theory_module_weaknesses,
         theory_avgs=theory_avgs
     )
 
@@ -4285,13 +4512,15 @@ def response_review():
                 total_answers = len(answers)
                 for label, count in sorted(buckets.items(), key=lambda item: (-item[1], item[0])):
                     correction_value = label.split(" | ", 1)[1] if " | " in label else ""
+                    is_existing_accepted = correction_value and normalize_review_text(correction_value) in {normalize_review_text(item) for item in accepted_corrections}
                     option_rows.append({
                         "label": label,
                         "count": count,
                         "pct": round((count / total_answers) * 100) if total_answers else 0,
                         "is_correct": label == correct_choice,
-                        "acceptable_answer": correction_value if correction_value and normalize_review_text(correction_value) not in {normalize_review_text(item) for item in accepted_corrections} else "",
-                        "remove_answer": correction_value if correction_value and normalize_review_text(correction_value) in {normalize_review_text(item) for item in accepted_corrections} else "",
+                        "acceptable_answer": correction_value if correction_value and not is_existing_accepted else "",
+                        "remove_answer": correction_value if is_existing_accepted else "",
+                        "action_label": "Use correction" if correction_value else "",
                     })
             elif q_type == "fill_in":
                 accepted_answers = get_fill_in_accepted_answers(options)
@@ -4309,24 +4538,30 @@ def response_review():
                         "is_correct": normalized in accepted_keys,
                         "acceptable_answer": label if label and label != "No answer" and normalized not in accepted_keys else "",
                         "remove_answer": label if label and normalized in accepted_keys else "",
+                        "action_label": "Use response" if label and label != "No answer" else "",
                     })
             elif q_type == "match":
                 option_rows = []
-                for option in options:
-                    left = option["option_text"]
-                    accepted = option["match_pair"]
+                orientation_rows = None
+                for answer in answers:
+                    orientation_rows, _ = build_match_review_rows(options, answer["answer_text"] or "")
+                    if orientation_rows:
+                        break
+                if orientation_rows is None:
+                    orientation_rows, _ = build_match_review_rows(options, "")
+                for row_data in orientation_rows:
                     responses = []
                     for answer in answers:
-                        pieces = [part.strip() for part in (answer["answer_text"] or "").split(";") if "=" in part]
-                        selected_match = ""
-                        for piece in pieces:
-                            col_a, submitted = piece.split("=", 1)
-                            if col_a.strip() == left:
-                                selected_match = submitted.strip()
+                        learner_rows, _ = build_match_review_rows(options, answer["answer_text"] or "")
+                        for learner_row in learner_rows:
+                            if learner_row["left"] == row_data["left"] and learner_row["learner_match"] != "No answer":
+                                responses.append(learner_row["learner_match"])
                                 break
-                        if selected_match:
-                            responses.append(selected_match)
-                    option_rows.append({"left": left, "accepted": accepted, "responses": responses})
+                    option_rows.append({
+                        "left": row_data["left"],
+                        "accepted": row_data["correct_match"],
+                        "responses": responses
+                    })
             else:
                 correct_values = {option["option_text"] for option in options if option["is_correct"] == 1}
                 accepted_answers = list(correct_values)
@@ -4449,6 +4684,14 @@ def response_review_learner():
         else:
             correct_answers = [option["option_text"] for option in options if option["is_correct"] == 1]
 
+        suggested_acceptable_answer = ""
+        if row["question_type"] == "true_false":
+            _selected, submitted_correction = parse_true_false_answer_text(row["answer_text"] or "")
+            if submitted_correction:
+                suggested_acceptable_answer = submitted_correction
+        elif row["question_type"] == "fill_in":
+            suggested_acceptable_answer = (row["answer_text"] or "").strip()
+
         review_rows.append({
             "question_id": row["question_id"],
             "question": row["question_text"],
@@ -4458,7 +4701,8 @@ def response_review_learner():
             "correct": row["is_correct"],
             "marks_awarded": row["marks_awarded"],
             "correct_answers": correct_answers,
-            "match_rows": match_rows
+            "match_rows": match_rows,
+            "suggested_acceptable_answer": suggested_acceptable_answer,
         })
 
     conn.close()
@@ -4490,9 +4734,10 @@ def response_review_true_false_accept():
     test_id = request.form.get("test_id", type=int)
     question_id = request.form.get("question_id", type=int)
     acceptable_answer = (request.form.get("acceptable_answer") or "").strip()
+    submitted_answer = (request.form.get("submitted_answer") or "").strip()
     selected_group = (request.form.get("selected_group") or "").strip()
     learner_username = (request.form.get("learner_username") or "").strip()
-    if not (test_id and question_id and acceptable_answer):
+    if not (test_id and question_id):
         flash("Accepted answer could not be added.", "error")
         return redirect(url_for("response_review"))
 
@@ -4506,12 +4751,53 @@ def response_review_true_false_accept():
         return redirect(url_for("response_review"))
     q_type = row[0]
 
+    if q_type == "true_false" and not acceptable_answer:
+        _selected, derived_correction = parse_true_false_answer_text(submitted_answer)
+        acceptable_answer = derived_correction
+    elif q_type == "fill_in" and not acceptable_answer:
+        acceptable_answer = submitted_answer.strip()
+
+    if not acceptable_answer:
+        conn.close()
+        flash("No learner response was available to add.", "error")
+        if learner_username:
+            return redirect(url_for("response_review_learner", learner=learner_username, item=test_id))
+        return redirect(url_for("response_review", type="theory", group=selected_group, item=test_id))
+
     if q_type == "true_false":
+        cursor.execute("""
+            SELECT 1
+            FROM theory_options
+            WHERE question_id = ?
+              AND match_pair = 'correction'
+              AND LOWER(TRIM(option_text)) = LOWER(TRIM(?))
+            LIMIT 1
+        """, (question_id, acceptable_answer))
+        if cursor.fetchone():
+            conn.close()
+            flash("That correction is already accepted.", "success")
+            if learner_username:
+                return redirect(url_for("response_review_learner", learner=learner_username, item=test_id))
+            return redirect(url_for("response_review", type="theory", group=selected_group, item=test_id))
         cursor.execute("""
             INSERT INTO theory_options (question_id, option_text, is_correct, match_pair)
             VALUES (?, ?, 0, 'correction')
         """, (question_id, acceptable_answer))
     elif q_type == "fill_in":
+        cursor.execute("""
+            SELECT 1
+            FROM theory_options
+            WHERE question_id = ?
+              AND is_correct = 1
+              AND LOWER(TRIM(option_text)) = LOWER(TRIM(?))
+            LIMIT 1
+        """, (question_id, acceptable_answer))
+        if cursor.fetchone():
+            conn.close()
+            flash("That answer is already accepted.", "success")
+            if learner_username:
+                return redirect(url_for("response_review_learner", learner=learner_username, item=test_id))
+            return redirect(url_for("response_review", type="theory", group=selected_group, item=test_id))
         cursor.execute("""
             INSERT INTO theory_options (question_id, option_text, is_correct)
             VALUES (?, ?, 1)
@@ -5696,6 +5982,7 @@ def learner_record(username):
         WHERE username = ? ORDER BY count DESC LIMIT 10
     """, (username,))
     weaknesses = cursor.fetchall()
+    theory_module_weaknesses = fetch_theory_module_weaknesses(cursor, username=username, limit=10)
 
     # ── Recent activity ───────────────────────────────────────────────
     cursor.execute("""
@@ -5734,6 +6021,7 @@ def learner_record(username):
         missing_items=missing_items[:12],
         trend=trend,
         weaknesses=weaknesses,
+        theory_module_weaknesses=theory_module_weaknesses,
         recent_activity=recent_activity,
         notes=notes
     )
@@ -7578,9 +7866,24 @@ def question_bank():
                 cursor.execute("DELETE FROM question_bank_questions WHERE id = ?", (question_id,))
                 conn.commit()
                 message = "Question removed from bank."
-        elif action == "bulk_delete_questions":
-            question_ids = [safe_int(item, 0) for item in request.form.getlist("question_ids")]
+        elif action == "delete_question_group":
+            raw_ids = (request.form.get("question_ids") or "").strip()
+            question_ids = [safe_int(part, 0) for part in raw_ids.split(",") if part.strip()]
             question_ids = [item for item in question_ids if item > 0]
+            if question_ids:
+                placeholders = ",".join("?" for _ in question_ids)
+                cursor.execute(f"DELETE FROM question_bank_options WHERE bank_question_id IN ({placeholders})", question_ids)
+                cursor.execute(f"DELETE FROM question_bank_questions WHERE id IN ({placeholders})", question_ids)
+                conn.commit()
+                message = f"Removed {len(question_ids)} grouped match pair(s)."
+        elif action == "bulk_delete_questions":
+            question_ids = []
+            for raw_item in request.form.getlist("question_ids"):
+                for part in str(raw_item).split(","):
+                    parsed = safe_int(part, 0)
+                    if parsed > 0:
+                        question_ids.append(parsed)
+            question_ids = sorted(set(question_ids))
             if question_ids:
                 placeholders = ",".join("?" for _ in question_ids)
                 cursor.execute(f"DELETE FROM question_bank_options WHERE bank_question_id IN ({placeholders})", question_ids)
@@ -7742,7 +8045,7 @@ def question_bank():
         ORDER BY id DESC
     """, params)
     question_rows = cursor.fetchall()
-    questions = []
+    raw_questions = []
     for row in question_rows:
         cursor.execute("""
             SELECT id, option_text, is_correct, match_pair
@@ -7750,7 +8053,42 @@ def question_bank():
             WHERE bank_question_id = ?
             ORDER BY id
         """, (row[0],))
-        questions.append({"q": row, "options": cursor.fetchall()})
+        raw_questions.append({"q": row, "options": cursor.fetchall()})
+
+    questions = []
+    grouped_match = {}
+    grouped_order = []
+    for item in raw_questions:
+        q = item["q"]
+        if q[2] == "match":
+            group_key = (
+                (q[1] or "").strip().lower(),
+                (q[4] or "").strip().lower(),
+                (q[5] or "").strip().lower(),
+            )
+            if group_key not in grouped_match:
+                grouped_match[group_key] = {
+                    "q": q,
+                    "options": [],
+                    "group_ids": [],
+                    "pair_count": 0,
+                    "is_grouped_match": True,
+                }
+                grouped_order.append(group_key)
+            grouped_match[group_key]["options"].extend(item["options"])
+            grouped_match[group_key]["group_ids"].append(q[0])
+            grouped_match[group_key]["pair_count"] += len([opt for opt in item["options"] if opt[3] and opt[3] != "correction"])
+        else:
+            questions.append({
+                "q": q,
+                "options": item["options"],
+                "group_ids": [q[0]],
+                "pair_count": len([opt for opt in item["options"] if opt[3] and opt[3] != "correction"]),
+                "is_grouped_match": False,
+            })
+
+    match_group_items = [grouped_match[key] for key in grouped_order]
+    questions = match_group_items + questions
 
     cursor.execute("SELECT modules FROM question_bank_questions WHERE COALESCE(modules, '') != ''")
     module_names = []
@@ -8226,17 +8564,41 @@ def _manage_theory_questions(test_id, builder_mode):
                 q_text = externalize_data_uri_images(q_text)
             q_type = request.form.get("question_type", "")
             marks = int(request.form.get("marks", 1))
+            source_modules = ", ".join(parse_module_names(",".join(request.form.getlist("source_modules")) or request.form.get("source_modules") or ""))
             if q_type in LESSON_SLIDE_TYPES:
                 marks = 0
 
             cursor.execute("SELECT COUNT(*) FROM theory_questions WHERE test_id = ?", (test_id,))
             order_index = cursor.fetchone()[0]
-
-            cursor.execute("""
-                INSERT INTO theory_questions (test_id, question_text, question_type, marks, order_index)
-                VALUES (?, ?, ?, ?, ?)
-            """, (test_id, q_text, q_type, marks, order_index))
-            q_id = cursor.lastrowid
+            q_id = None
+            if builder_mode != "lesson" and q_type == "match":
+                cursor.execute("""
+                    SELECT id, COALESCE(source_modules, '')
+                    FROM theory_questions
+                    WHERE test_id = ?
+                      AND question_type = 'match'
+                      AND LOWER(TRIM(question_text)) = LOWER(TRIM(?))
+                    ORDER BY order_index, id
+                    LIMIT 1
+                """, (test_id, q_text))
+                existing_match_question = cursor.fetchone()
+                if existing_match_question:
+                    q_id = existing_match_question[0]
+                    merged_modules = ", ".join(sorted({
+                        *parse_module_names(existing_match_question[1] or ""),
+                        *parse_module_names(source_modules or ""),
+                    }, key=str.lower))
+                    cursor.execute("""
+                        UPDATE theory_questions
+                        SET source_subject = ?, source_modules = ?
+                        WHERE id = ?
+                    """, (test[2], merged_modules, q_id))
+            if q_id is None:
+                cursor.execute("""
+                    INSERT INTO theory_questions (test_id, question_text, question_type, marks, order_index, source_subject, source_modules)
+                    VALUES (?, ?, ?, ?, ?, ?, ?)
+                """, (test_id, q_text, q_type, marks, order_index, test[2], source_modules))
+                q_id = cursor.lastrowid
 
             # Handle options per question type
             if q_type in ["mcq_single", "mcq_multi"]:
@@ -8269,12 +8631,35 @@ def _manage_theory_questions(test_id, builder_mode):
             elif q_type == "match":
                 col_a = request.form.getlist("match_a")
                 col_b = request.form.getlist("match_b")
+                cursor.execute("""
+                    SELECT option_text, match_pair
+                    FROM theory_options
+                    WHERE question_id = ?
+                      AND COALESCE(match_pair, '') != ''
+                """, (q_id,))
+                existing_pairs = {
+                    ((option_text or "").strip().lower(), (match_pair or "").strip().lower())
+                    for option_text, match_pair in cursor.fetchall()
+                }
+                pair_count = 0
                 for a, b in zip(col_a, col_b):
                     if a.strip() and b.strip():
+                        pair_signature = (b.strip().lower(), a.strip().lower())
+                        if pair_signature in existing_pairs:
+                            continue
                         cursor.execute("""
                             INSERT INTO theory_options (question_id, option_text, is_correct, match_pair)
                             VALUES (?, ?, 1, ?)
-                        """, (q_id, a.strip(), b.strip()))
+                        """, (q_id, b.strip(), a.strip()))
+                        existing_pairs.add(pair_signature)
+                cursor.execute("""
+                    SELECT COUNT(*)
+                    FROM theory_options
+                    WHERE question_id = ?
+                      AND COALESCE(match_pair, '') != ''
+                """, (q_id,))
+                pair_count = cursor.fetchone()[0] or 0
+                cursor.execute("UPDATE theory_questions SET marks = ? WHERE id = ?", (pair_count, q_id))
             conn.commit()
             log_activity(username, f"added question to test {test_id}")
 
@@ -8335,11 +8720,12 @@ def _manage_theory_questions(test_id, builder_mode):
                 q_text = externalize_data_uri_images(q_text)
             q_type = request.form.get("question_type", "")
             marks = int(request.form.get("marks", 1))
+            source_modules = ", ".join(parse_module_names(",".join(request.form.getlist("source_modules")) or request.form.get("source_modules") or ""))
             if q_type in LESSON_SLIDE_TYPES:
                 marks = 0
 
-            cursor.execute("UPDATE theory_questions SET question_text = ?, marks = ? WHERE id = ?",
-                           (q_text, marks, q_id))
+            cursor.execute("UPDATE theory_questions SET question_text = ?, marks = ?, source_subject = ?, source_modules = ? WHERE id = ?",
+                           (q_text, marks, test[2], source_modules, q_id))
 
             # Replace all options
             cursor.execute("DELETE FROM theory_options WHERE question_id = ?", (q_id,))
@@ -8372,10 +8758,13 @@ def _manage_theory_questions(test_id, builder_mode):
             elif q_type == "match":
                 col_a = request.form.getlist("match_a")
                 col_b = request.form.getlist("match_b")
+                pair_count = 0
                 for a, b in zip(col_a, col_b):
                     if a.strip() and b.strip():
                         cursor.execute("INSERT INTO theory_options (question_id, option_text, is_correct, match_pair) VALUES (?, ?, 1, ?)",
-                                       (q_id, a.strip(), b.strip()))
+                                       (q_id, b.strip(), a.strip()))
+                        pair_count += 1
+                cursor.execute("UPDATE theory_questions SET marks = ? WHERE id = ?", (pair_count, q_id))
             conn.commit()
             log_activity(username, f"edited question {q_id} in test {test_id}")
 
@@ -8413,7 +8802,12 @@ def _manage_theory_questions(test_id, builder_mode):
                     clone_bank_question_to_test(cursor, bank_question_id, test_id, order_index)
                     order_index += 1
                 if selected_match_ids:
-                    create_generated_match_question(cursor, selected_match_ids, test_id, order_index)
+                    _, order_index = merge_bank_match_rows_into_test(
+                        cursor,
+                        selected_match_ids,
+                        test_id,
+                        order_index,
+                    )
                 conn.commit()
                 log_activity(username, f"imported question bank items into test {test_id}")
 
@@ -8458,12 +8852,15 @@ def _manage_theory_questions(test_id, builder_mode):
             elif q_type == "match":
                 col_a = request.form.getlist("match_a")
                 col_b = request.form.getlist("match_b")
+                pair_count = 0
                 for a, b in zip(col_a, col_b):
                     if a.strip() and b.strip():
                         cursor.execute(
                             "INSERT INTO theory_options (question_id, option_text, is_correct, match_pair) VALUES (?, ?, 1, ?)",
-                            (q_id, a.strip(), b.strip())
+                            (q_id, b.strip(), a.strip())
                         )
+                        pair_count += 1
+                cursor.execute("UPDATE theory_questions SET marks = ? WHERE id = ?", (pair_count, q_id))
 
             if "background_image" in request.form:
                 background_image = externalize_data_uri_images(request.form.get("background_image", "").strip() or None)
@@ -8640,7 +9037,7 @@ def _manage_theory_questions(test_id, builder_mode):
 
     # GET — load questions with their options
     cursor.execute("""
-        SELECT id, question_text, question_type, marks, order_index
+        SELECT id, question_text, question_type, marks, order_index, source_subject, source_modules
         FROM theory_questions WHERE test_id = ? ORDER BY order_index
     """, (test_id,))
     questions = cursor.fetchall()
@@ -9033,17 +9430,15 @@ def take_test(test_id):
             if q_type in ["mcq_single", "mcq_multi"]:
                 random.shuffle(options)
             elif q_type == "match":
-                # For match questions we only randomize Column B display order.
-                # Keep Column A order stable so grading indices still match.
-                # Structure of `options` for match questions is:
-                #   (id, col_a_text, is_correct, match_pair_col_b_text)
+                # Stored format:
+                #   option_text = draggable pool value (Column B display side)
+                #   match_pair = stable row label (Column A answer side)
+                # Keep row labels stable, shuffle only pool values for display variety.
                 options = sorted(options, key=lambda o: o[0])
-                b_opts = options[:]
-                random.shuffle(b_opts)
-                # Re-pack so Column A values remain in original order (options),
-                # while Column B (match_pair) is shuffled for display.
+                display_values = options[:]
+                random.shuffle(display_values)
                 options = [
-                    (o[0], o[1], o[2], b_opts[i][3])
+                    (o[0], display_values[i][1], o[2], o[3])
                     for i, o in enumerate(options)
                 ]
             # Store option IDs in shuffled order in session
@@ -9163,10 +9558,10 @@ def take_test(test_id):
             match_answers = []
             awarded = 0
             for idx, o in enumerate(options, start=1):
-                col_a_item = o[1]
-                col_b_correct = o[3]
+                col_a_item = o[3]
+                col_b_correct = o[1]
                 submitted = request.form.get(f"q_{q_id}_{idx}", "")
-                match_answers.append(f"{col_a_item}={submitted}")
+                match_answers.append(f"{idx}={submitted}")
                 if submitted == col_b_correct:
                     awarded += 1
             answer_text = "; ".join(match_answers)

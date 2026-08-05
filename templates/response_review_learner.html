@@ -105,16 +105,18 @@
                     <div class="accepted-value">{{ row.correct_answers | join(', ') }}</div>
                 </div>
                 {% endif %}
-                {% if can_manage_reviews and row.type in ['true_false', 'fill_in'] %}
+                {% if can_manage_reviews and row.type in ['true_false', 'fill_in'] and row.suggested_acceptable_answer %}
                 <form method="post" action="/response_review/true_false_accept" class="review-form">
                     <input type="hidden" name="learner_username" value="{{ learner_username }}">
                     <input type="hidden" name="test_id" value="{{ request.args.get('item') }}">
                     <input type="hidden" name="question_id" value="{{ row.question_id }}">
+                    <input type="hidden" name="acceptable_answer" value="{{ row.suggested_acceptable_answer }}">
+                    <input type="hidden" name="submitted_answer" value="{{ row.answer }}">
                     <label>
-                        Add another accepted answer
-                        <input type="text" name="acceptable_answer" placeholder="Type an accepted answer..." required>
+                        Add learner response to accepted answers
+                        <input type="text" value="{{ row.suggested_acceptable_answer }}" readonly>
                     </label>
-                    <button type="submit" class="btn">Add and Regrade</button>
+                    <button type="submit" class="btn">Use Learner Answer and Regrade</button>
                 </form>
                 {% endif %}
             </div>

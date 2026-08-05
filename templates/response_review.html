@@ -155,7 +155,8 @@
                                     <input type="hidden" name="question_id" value="{{ question.question_id }}">
                                     <input type="hidden" name="selected_group" value="{{ selected_group }}">
                                     <input type="hidden" name="acceptable_answer" value="{{ option.acceptable_answer }}">
-                                    <button type="submit" class="btn">Add</button>
+                                    <input type="hidden" name="submitted_answer" value="{{ option.label }}">
+                                    <button type="submit" class="btn">{{ option.action_label or 'Use response' }}</button>
                                 </form>
                                 {% elif can_manage_reviews and review_type == 'theory' and question.type in ['true_false', 'fill_in'] and option.remove_answer %}
                                 <form method="post" action="/response_review/accepted_answer_remove" style="margin:0;">

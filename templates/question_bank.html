@@ -162,16 +162,25 @@
             {% for item in questions %}
             {% set q = item.q %}
             <tr>
-                <td><input type="checkbox" name="question_ids" value="{{ q[0] }}" class="question-select"></td>
-                <td>{{ q[1] }}</td>
+                <td><input type="checkbox" name="question_ids" value="{{ item.group_ids | join(',') }}" class="question-select"></td>
+                <td>
+                    {{ q[1] }}
+                    {% if item.is_grouped_match %}
+                    <div style="color:#666; font-size:0.82em; margin-top:4px;">Grouped match prompt • {{ item.pair_count }} pair{{ 's' if item.pair_count != 1 }}</div>
+                    {% endif %}
+                </td>
                 <td>{{ q[2] | replace('_', ' ') | title }}</td>
                 <td>{{ q[5] or '—' }}</td>
                 <td>{{ q[4] or '—' }}</td>
-                <td>{{ q[3] }}</td>
+                <td>{% if item.is_grouped_match %}{{ item.pair_count }}{% else %}{{ q[3] }}{% endif %}</td>
                 <td>
                     <form method="post" onsubmit="return confirm('Remove this bank question?')">
-                        <input type="hidden" name="action" value="delete_question">
+                        <input type="hidden" name="action" value="{{ 'delete_question_group' if item.is_grouped_match else 'delete_question' }}">
+                        {% if item.is_grouped_match %}
+                        <input type="hidden" name="question_ids" value="{{ item.group_ids | join(',') }}">
+                        {% else %}
                         <input type="hidden" name="question_id" value="{{ q[0] }}">
+                        {% endif %}
                         <button type="submit" class="btn btn-danger">Delete</button>
                     </form>
                 </td>
@@ -181,9 +190,13 @@
                 <td colspan="7" style="background:#fafcff;">
                     {% for option in item.options %}
                         <div>
-                            {{ option[1] }}
-                            {% if option[2] %}<strong style="color:#107C10;">✔</strong>{% endif %}
-                            {% if option[3] and option[3] != 'correction' %} → {{ option[3] }}{% elif option[3] == 'correction' %} | accepted: {{ option[1] }}{% endif %}
+                            {% if item.is_grouped_match and option[3] and option[3] != 'correction' %}
+                                {{ option[3] }} → {{ option[1] }}
+                            {% else %}
+                                {{ option[1] }}
+                                {% if option[2] %}<strong style="color:#107C10;">✔</strong>{% endif %}
+                                {% if option[3] and option[3] != 'correction' %} → {{ option[3] }}{% elif option[3] == 'correction' %} | accepted: {{ option[1] }}{% endif %}
+                            {% endif %}
                         </div>
                     {% endfor %}
                 </td>

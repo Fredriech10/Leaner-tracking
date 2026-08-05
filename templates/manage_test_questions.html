@@ -49,6 +49,10 @@
         .bank-table th, .bank-table td { border:1px solid #ddd; padding:8px 10px; text-align:left; vertical-align:top; }
         .bank-table th { background:#f3f7fb; }
         .bank-table-wrap { max-height:420px; overflow:auto; background:white; border:1px solid #ddd; border-radius:6px; }
+        .module-picker { display:flex; gap:8px; align-items:center; }
+        .module-selected { display:flex; gap:6px; flex-wrap:wrap; margin-top:8px; }
+        .module-chip { display:inline-flex; align-items:center; gap:6px; padding:4px 10px; border-radius:999px; background:#e8f0fe; color:#0f3d91; font-size:0.84em; }
+        .module-chip button { border:none; background:none; color:#A4262C; cursor:pointer; font-weight:bold; padding:0; line-height:1; }
     </style>
 </head>
 <body>
@@ -209,6 +213,21 @@
                     <label>Marks</label>
                     <input type="number" name="marks" value="1" min="0" max="10">
                 </div>
+                {% if not is_lesson_builder %}
+                <div class="form-group" style="flex:1; min-width:220px;">
+                    <label>Modules</label>
+                    <div class="module-picker">
+                        <select id="addModuleSelect">
+                            <option value="">Select module</option>
+                            {% for module_name in bank_module_names %}
+                            <option value="{{ module_name }}">{{ module_name }}</option>
+                            {% endfor %}
+                        </select>
+                        <button type="button" class="btn-add" onclick="addModuleToContainer('addModuleSelect', 'addModuleContainer')">Add Module</button>
+                    </div>
+                    <div id="addModuleContainer" class="module-selected"></div>
+                </div>
+                {% endif %}
             </div>
             <div id="dynamicFields"></div>
             <button type="submit" class="btn btn-primary" style="margin-top:10px;">➕ Add {{ 'Item' if is_lesson_builder else 'Question' }}</button>
@@ -271,8 +290,8 @@
                 <tr><th style="padding:4px 12px;">Column A</th><th style="padding:4px 12px;">Column B</th></tr>
                 {% for o in opts %}
                 <tr>
-                    <td style="padding:4px 12px; border:1px solid #ddd;">{{ o[1] }}</td>
                     <td style="padding:4px 12px; border:1px solid #ddd;">{{ o[3] }}</td>
+                    <td style="padding:4px 12px; border:1px solid #ddd;">{{ o[1] }}</td>
                 </tr>
                 {% endfor %}
             </table>
@@ -305,6 +324,30 @@
                     <label>Marks</label>
                     <input type="number" name="marks" value="{{ q[3] }}" min="0" max="10">
                 </div>
+                {% if not is_lesson_builder %}
+                {% set selected_modules = (q[6] or '').split(',') | map('trim') | list %}
+                <div class="form-group">
+                    <label>Modules</label>
+                    <div class="module-picker">
+                        <select id="editModuleSelect_{{ q_id }}">
+                            <option value="">Select module</option>
+                            {% for module_name in bank_module_names %}
+                            <option value="{{ module_name }}">{{ module_name }}</option>
+                            {% endfor %}
+                        </select>
+                        <button type="button" class="btn-add" onclick="addModuleToContainer('editModuleSelect_{{ q_id }}', 'editModuleContainer_{{ q_id }}')">Add Module</button>
+                    </div>
+                    <div id="editModuleContainer_{{ q_id }}" class="module-selected">
+                        {% for module_name in selected_modules if module_name %}
+                        <span class="module-chip" data-module="{{ module_name }}">
+                            {{ module_name }}
+                            <input type="hidden" name="source_modules" value="{{ module_name }}">
+                            <button type="button" onclick="removeModuleChip(this)">×</button>
+                        </span>
+                        {% endfor %}
+                    </div>
+                </div>
+                {% endif %}
 
                 {% if q_type in ['title_slide', 'heading_slide', 'content_slide'] %}
                 <p style="color:#666; margin:0;">Slide items use the content above and do not require answer options.</p>
@@ -353,9 +396,9 @@
                 <div id="editMatch_{{ q_id }}">
                     {% for o in opts %}
                     <div class="match-row">
-                        <input type="text" name="match_a" value="{{ o[1] }}" required>
+                        <input type="text" name="match_a" value="{{ o[3] }}" required>
                         <span>→</span>
-                        <input type="text" name="match_b" value="{{ o[3] }}" required>
+                        <input type="text" name="match_b" value="{{ o[1] }}" required>
                     </div>
                     {% endfor %}
                 </div>
@@ -521,6 +564,26 @@ function addEditMatchRow(listId) {
     div.className = 'match-row';
     div.innerHTML = `<input type="text" name="match_a" placeholder="Column A item ${count+1}" required><span>→</span><input type="text" name="match_b" placeholder="Column B item ${count+1}" required>`;
     list.appendChild(div);
+}
+function addModuleToContainer(selectId, containerId) {
+    const select = document.getElementById(selectId);
+    const container = document.getElementById(containerId);
+    if (!select || !container || !select.value) return;
+    const value = select.value;
+    if ([...container.querySelectorAll('.module-chip')].some(chip => chip.dataset.module === value)) {
+        select.value = '';
+        return;
+    }
+    const chip = document.createElement('span');
+    chip.className = 'module-chip';
+    chip.dataset.module = value;
+    chip.innerHTML = `${value}<input type="hidden" name="source_modules" value="${value}"><button type="button" onclick="removeModuleChip(this)">×</button>`;
+    container.appendChild(chip);
+    select.value = '';
+}
+function removeModuleChip(button) {
+    const chip = button.closest('.module-chip');
+    if (chip) chip.remove();
 }
 function toggleBankSelection(checked) {
     document.querySelectorAll('.bank-question-checkbox').forEach((checkbox) => {

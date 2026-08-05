@@ -41,12 +41,26 @@
         .badge-missing { background: #f7c5c5; color: #A4262C; }
         .badge-ok { background: #c8f7c5; color: #107C10; }
 
-        /* Att bar */
-        .att-row { display: flex; align-items: center; gap: 10px; margin-bottom: 7px; font-size: 0.87em; }
-        .att-row .date { width: 70px; color: #555; }
-        .att-row .bar-bg { flex: 1; background: #eee; border-radius: 4px; height: 12px; }
-        .att-row .bar-fill { border-radius: 4px; height: 12px; }
-        .att-row .pct { width: 40px; text-align: right; font-weight: bold; }
+        .attendance-slider { position: relative; overflow: hidden; padding: 0 0 12px; }
+        .attendance-month { display: none; width: 100%; border: 1px solid #e5e7eb; border-radius: 8px; padding: 12px; background: #f8fafc; }
+        .attendance-month.active { display: block; }
+        .attendance-calendar { display: grid; grid-template-columns: repeat(5, minmax(52px, 1fr)); gap: 8px; }
+        .calendar-head { font-size: 0.76em; font-weight: bold; color: #64748b; text-align: center; text-transform: uppercase; }
+        .day-tile { min-height: 82px; border-radius: 10px; border: 1px solid #dbe4f0; background: white; padding: 8px 6px; display: flex; flex-direction: column; justify-content: space-between; gap: 6px; }
+        .day-tile .date { font-size: 0.78em; font-weight: bold; color: #334155; }
+        .day-tile .status { font-size: 0.74em; font-weight: bold; }
+        .day-tile .time { font-size: 0.7em; color: #475569; }
+        .day-present { background: #dcfce7; border-color: #86efac; }
+        .day-absent { background: #fee2e2; border-color: #fca5a5; }
+        .day-normal { background: #f8fafc; border-color: #e2e8f0; }
+        .legend-dot { display: inline-block; width: 10px; height: 10px; border-radius: 999px; margin-right: 6px; vertical-align: middle; }
+        .legend-present { background: #22c55e; }
+        .legend-absent { background: #ef4444; }
+        .legend-normal { background: #cbd5e1; }
+        .calendar-legend { display: flex; flex-wrap: wrap; gap: 14px; font-size: 0.8em; color: #475569; margin-top: 12px; }
+        .calendar-controls { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-bottom: 10px; }
+        .calendar-controls button { border: 1px solid #cbd5e1; background: white; border-radius: 8px; padding: 6px 12px; cursor: pointer; font-weight: bold; color: #0f172a; }
+        .calendar-current { font-weight: bold; color: #0f172a; }
 
         /* Skill bars */
         .skill-bar { display: flex; align-items: center; gap: 8px; margin-bottom: 6px; }
@@ -95,23 +109,47 @@
 
         <!-- Attendance -->
         <div class="card">
-            <h3>📅 Group Attendance (Last 7 Days)</h3>
-            {% if att_summary %}
-            {% for day in att_summary %}
-            <div class="att-row">
-                <div class="date">{{ day.date[5:] }}</div>
-                <div class="bar-bg">
-                    <div class="bar-fill"
-                         style="width:{{ day.pct }}%;
-                                background: {{ '#107C10' if day.pct >= 80 else ('#ff8c00' if day.pct >= 60 else '#A4262C') }};">
-                    </div>
-                </div>
-                <div class="pct" style="color: {{ '#107C10' if day.pct >= 80 else ('#ff8c00' if day.pct >= 60 else '#A4262C') }};">
-                    {{ day.pct }}%
-                </div>
-                <div style="font-size:0.8em; color:#888;">{{ day.present }}/{{ day.total }}</div>
+            <h3>📅 Group Attendance Calendar ({{ attendance_year }})</h3>
+            {% if attendance_months %}
+            <div class="calendar-controls">
+                <button type="button" id="prevMonthBtn">Previous</button>
+                <div class="calendar-current" id="calendarCurrentMonth"></div>
+                <button type="button" id="nextMonthBtn">Next</button>
             </div>
-            {% endfor %}
+            <div class="attendance-slider">
+                {% for month in attendance_months %}
+                <section class="attendance-month {% if loop.last %}active{% endif %}" data-month-name="{{ month.name }}">
+                    <div class="attendance-calendar">
+                        <div class="calendar-head">Mon</div>
+                        <div class="calendar-head">Tue</div>
+                        <div class="calendar-head">Wed</div>
+                        <div class="calendar-head">Thu</div>
+                        <div class="calendar-head">Fri</div>
+                        {% if month.days %}
+                            {% for blank in range(month.days[0].weekday) %}
+                            <div></div>
+                            {% endfor %}
+                        {% endif %}
+                        {% for row in month.days %}
+                        <div class="day-tile {% if row.status == 'Present' %}day-present{% elif row.status == 'Absent' %}day-absent{% else %}day-normal{% endif %}">
+                            <div class="date">{{ row.date[8:] }}</div>
+                            {% if row.status != 'Normal' %}
+                            <div>
+                                <div class="status">{{ row.class_pct }}% class</div>
+                                <div class="time">{{ row.present }}/{{ row.total }} present</div>
+                            </div>
+                            {% endif %}
+                        </div>
+                        {% endfor %}
+                    </div>
+                </section>
+                {% endfor %}
+            </div>
+            <div class="calendar-legend">
+                <span><span class="legend-dot legend-present"></span>Attendance recorded</span>
+                <span><span class="legend-dot legend-absent"></span>No one present</span>
+                <span><span class="legend-dot legend-normal"></span>No record / excluded</span>
+            </div>
             <div style="margin-top:10px;">
                 <a href="/attendance?group={{ group_name }}" style="font-size:0.85em; color:#005a9e;">View full attendance →</a>
             </div>
@@ -120,15 +158,16 @@
             {% endif %}
         </div>
 
-        <!-- Subject Averages -->
+        <!-- Top Performers -->
         <div class="card">
-            <h3>📊 Subject Averages</h3>
-            {% if subject_avgs %}
+            <h3>🏅 Top Performers</h3>
+            {% if top_performers %}
             <table>
-                <tr><th>Subject</th><th>Group Average</th></tr>
-                {% for subj, avg in subject_avgs %}
+                <tr><th>Rank</th><th>Learner</th><th>Average</th></tr>
+                {% for uname, name, avg in top_performers %}
                 <tr>
-                    <td>{{ subj }}</td>
+                    <td>#{{ loop.index }}</td>
+                    <td><a href="/learner_record/{{ uname }}" class="chip" style="padding:0; border:none; background:none;">{{ name }}</a></td>
                     <td>
                         <span class="{{ 'score-high' if avg >= 60 else ('score-mid' if avg >= 40 else 'score-low') }}">
                             {{ avg }}%
@@ -137,8 +176,25 @@
                 </tr>
                 {% endfor %}
             </table>
+            <details style="margin-top:12px;">
+                <summary style="cursor:pointer; font-weight:bold; color:#005a9e;">Show full class rankings</summary>
+                <table style="margin-top:10px;">
+                    <tr><th>Rank</th><th>Learner</th><th>Average</th></tr>
+                    {% for uname, name, avg in class_rankings %}
+                    <tr>
+                        <td>#{{ loop.index }}</td>
+                        <td><a href="/learner_record/{{ uname }}" class="chip" style="padding:0; border:none; background:none;">{{ name }}</a></td>
+                        <td>
+                            <span class="{{ 'score-high' if avg >= 60 else ('score-mid' if avg >= 40 else 'score-low') }}">
+                                {{ avg }}%
+                            </span>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </table>
+            </details>
             {% else %}
-            <p style="color:#888; font-size:0.9em;">No results yet.</p>
+            <p style="color:#888; font-size:0.9em;">No learner rankings available yet.</p>
             {% endif %}
         </div>
     </div>
@@ -211,6 +267,27 @@
             {% endif %}
         </div>
 
+        <div class="card">
+            <h3>🧠 Theory Module Weaknesses</h3>
+            {% if theory_module_weaknesses %}
+            <table>
+                <tr><th>Module</th><th>Wrong %</th><th>Wrong</th><th>Asked</th><th>Learners</th></tr>
+                {% for item in theory_module_weaknesses %}
+                <tr>
+                    <td>{{ item.module }}</td>
+                    <td><span class="{{ 'score-low' if item.wrong_pct >= 60 else ('score-mid' if item.wrong_pct >= 35 else 'score-high') }}">{{ item.wrong_pct }}%</span></td>
+                    <td>{{ item.wrong }}</td>
+                    <td>{{ item.asked }}</td>
+                    <td>{{ item.learners }}</td>
+                </tr>
+                {% endfor %}
+            </table>
+            <p style="color:#64748b; font-size:0.82em; margin-top:10px;">Manual theory questions that are not linked to a bank module appear as <strong>Unmapped</strong>.</p>
+            {% else %}
+            <p style="color:#888; font-size:0.9em;">No theory module weakness data yet.</p>
+            {% endif %}
+        </div>
+
         <!-- Theory Test Averages -->
         <div class="card">
             <h3>📝 Theory Test Averages</h3>
@@ -248,5 +325,26 @@
     </div>
 
 </div>
+<script>
+document.addEventListener('DOMContentLoaded', () => {
+    const months = Array.from(document.querySelectorAll('.attendance-month'));
+    if (!months.length) return;
+    let currentIndex = Math.max(0, months.findIndex(month => month.classList.contains('active')));
+    const label = document.getElementById('calendarCurrentMonth');
+    const render = () => {
+        months.forEach((month, index) => month.classList.toggle('active', index === currentIndex));
+        if (label) label.textContent = months[currentIndex].dataset.monthName || '';
+    };
+    document.getElementById('prevMonthBtn')?.addEventListener('click', () => {
+        currentIndex = (currentIndex - 1 + months.length) % months.length;
+        render();
+    });
+    document.getElementById('nextMonthBtn')?.addEventListener('click', () => {
+        currentIndex = (currentIndex + 1) % months.length;
+        render();
+    });
+    render();
+});
+</script>
 </body>
 </html>

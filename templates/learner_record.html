@@ -384,6 +384,27 @@
     {% endif %}
 </div>
 
+<div class="card" style="margin-top:18px;">
+    <h3>🧠 Theory Module Weaknesses</h3>
+    {% if theory_module_weaknesses %}
+    <table>
+        <tr><th>Module</th><th>Wrong %</th><th>Wrong</th><th>Asked</th><th>Question Types</th></tr>
+        {% for item in theory_module_weaknesses %}
+        <tr>
+            <td>{{ item.module }}</td>
+            <td><span class="{{ 'score-low' if item.wrong_pct >= 60 else ('score-mid' if item.wrong_pct >= 35 else 'score-high') }}">{{ item.wrong_pct }}%</span></td>
+            <td>{{ item.wrong }}</td>
+            <td>{{ item.asked }}</td>
+            <td>{{ item.question_types or '—' }}</td>
+        </tr>
+        {% endfor %}
+    </table>
+    <p style="color:#64748b; font-size:0.82em; margin-top:10px;">Manual theory questions that are not linked to a bank module appear as <strong>Unmapped</strong>.</p>
+    {% else %}
+    <p style="color:#888; font-size:0.9em;">No theory module weakness data yet.</p>
+    {% endif %}
+</div>
+
 <!-- ── Row 3: Recent Results + Theory ──────────────────────────────── -->
 <div class="grid" style="margin-bottom:18px;">
 

@@ -1939,6 +1939,13 @@ def parse_module_names(raw_value):
         ordered.append(item)
     return ordered
 
+def normalize_question_bank_group_text(question_text):
+    text = " ".join((question_text or "").strip().split())
+    if not text:
+        return ""
+    text = re.sub(r"\s*\((?:case|scenario|batch)\s+[^)]*\)\s*$", "", text, flags=re.IGNORECASE)
+    return text.strip().lower()
+
 def build_bank_option_signature(question_type, options):
     normalized = []
     for option_text, is_correct, match_pair in options:
@@ -1952,21 +1959,22 @@ def build_bank_option_signature(question_type, options):
     return tuple(normalized)
 
 def bank_question_exists(cursor, question_text, question_type, subject, modules, options):
-    normalized_text = (question_text or "").strip().lower()
+    normalized_text = normalize_question_bank_group_text(question_text)
     normalized_subject = (subject or "").strip().lower()
     normalized_modules = (modules or "").strip().lower()
     target_signature = build_bank_option_signature(question_type, options)
 
     cursor.execute("""
-        SELECT id
+        SELECT id, question_text
         FROM question_bank_questions
-        WHERE LOWER(TRIM(question_text)) = ?
-          AND question_type = ?
+        WHERE question_type = ?
           AND LOWER(TRIM(COALESCE(subject, ''))) = ?
           AND LOWER(TRIM(COALESCE(modules, ''))) = ?
-    """, (normalized_text, question_type, normalized_subject, normalized_modules))
-    candidate_ids = [row[0] for row in cursor.fetchall()]
-    for candidate_id in candidate_ids:
+    """, (question_type, normalized_subject, normalized_modules))
+    candidate_rows = cursor.fetchall()
+    for candidate_id, candidate_text in candidate_rows:
+        if normalize_question_bank_group_text(candidate_text) != normalized_text:
+            continue
         cursor.execute("""
             SELECT option_text, is_correct, match_pair
             FROM question_bank_options
@@ -8056,39 +8064,47 @@ def question_bank():
         raw_questions.append({"q": row, "options": cursor.fetchall()})
 
     questions = []
-    grouped_match = {}
+    grouped_questions = {}
     grouped_order = []
     for item in raw_questions:
         q = item["q"]
-        if q[2] == "match":
-            group_key = (
-                (q[1] or "").strip().lower(),
-                (q[4] or "").strip().lower(),
-                (q[5] or "").strip().lower(),
-            )
-            if group_key not in grouped_match:
-                grouped_match[group_key] = {
-                    "q": q,
-                    "options": [],
-                    "group_ids": [],
-                    "pair_count": 0,
-                    "is_grouped_match": True,
-                }
-                grouped_order.append(group_key)
-            grouped_match[group_key]["options"].extend(item["options"])
-            grouped_match[group_key]["group_ids"].append(q[0])
-            grouped_match[group_key]["pair_count"] += len([opt for opt in item["options"] if opt[3] and opt[3] != "correction"])
-        else:
-            questions.append({
+        group_key = (
+            normalize_question_bank_group_text(q[1]),
+            (q[2] or "").strip().lower(),
+            (q[4] or "").strip().lower(),
+            (q[5] or "").strip().lower(),
+        )
+        if group_key not in grouped_questions:
+            grouped_questions[group_key] = {
                 "q": q,
-                "options": item["options"],
-                "group_ids": [q[0]],
-                "pair_count": len([opt for opt in item["options"] if opt[3] and opt[3] != "correction"]),
-                "is_grouped_match": False,
-            })
+                "options": [],
+                "group_ids": [],
+                "pair_count": 0,
+                "is_grouped_match": q[2] == "match",
+                "is_grouped_question": False,
+            }
+            grouped_order.append(group_key)
+        grouped_questions[group_key]["options"].extend(item["options"])
+        grouped_questions[group_key]["group_ids"].append(q[0])
+        grouped_questions[group_key]["pair_count"] += len([opt for opt in item["options"] if opt[3] and opt[3] != "correction"])
 
-    match_group_items = [grouped_match[key] for key in grouped_order]
-    questions = match_group_items + questions
+    for key in grouped_order:
+        grouped_item = grouped_questions[key]
+        grouped_item["is_grouped_question"] = len(grouped_item["group_ids"]) > 1
+        seen_options = set()
+        unique_options = []
+        for option in grouped_item["options"]:
+            option_key = (
+                (option[1] or "").strip().lower(),
+                int(option[2] or 0),
+                (option[3] or "").strip().lower(),
+            )
+            if option_key in seen_options:
+                continue
+            seen_options.add(option_key)
+            unique_options.append(option)
+        grouped_item["options"] = unique_options
+        questions.append(grouped_item)
 
     cursor.execute("SELECT modules FROM question_bank_questions WHERE COALESCE(modules, '') != ''")
     module_names = []
@@ -8554,7 +8570,25 @@ def _manage_theory_questions(test_id, builder_mode):
             ORDER BY id DESC
             LIMIT 200
         """, params)
-        return bank_subject_names, bank_module_names, cursor.fetchall()
+        raw_questions = cursor.fetchall()
+        bank_questions = []
+        for row in raw_questions:
+            row = list(row)
+            if row[2] == "match":
+                cursor.execute("""
+                    SELECT option_text, match_pair
+                    FROM question_bank_options
+                    WHERE bank_question_id = ?
+                      AND COALESCE(match_pair, '') != ''
+                    ORDER BY id
+                    LIMIT 1
+                """, (row[0],))
+                pair_row = cursor.fetchone()
+                if pair_row:
+                    option_text, match_pair = pair_row
+                    row[1] = f"{match_pair} -> {option_text}"
+            bank_questions.append(tuple(row))
+        return bank_subject_names, bank_module_names, bank_questions
 
     if request.method == "POST":
         action = request.form.get("action")

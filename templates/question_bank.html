@@ -164,9 +164,20 @@
             <tr>
                 <td><input type="checkbox" name="question_ids" value="{{ item.group_ids | join(',') }}" class="question-select"></td>
                 <td>
-                    {{ q[1] }}
                     {% if item.is_grouped_match %}
-                    <div style="color:#666; font-size:0.82em; margin-top:4px;">Grouped match prompt • {{ item.pair_count }} pair{{ 's' if item.pair_count != 1 }}</div>
+                    {% for option in item.options if option[3] and option[3] != 'correction' %}
+                    <div>{{ option[3] }} → {{ option[1] }}</div>
+                    {% endfor %}
+                    {% else %}
+                    {{ q[1] }}
+                    {% endif %}
+                    {% if item.is_grouped_question %}
+                    <div style="color:#666; font-size:0.82em; margin-top:4px;">
+                        Grouped {{ q[2] | replace('_', ' ') | lower }} entry • {{ item.group_ids|length }} record{{ 's' if item.group_ids|length != 1 else '' }}
+                    </div>
+                    {% endif %}
+                    {% if item.is_grouped_match %}
+                    <div style="color:#666; font-size:0.82em; margin-top:4px;">{{ item.pair_count }} pair{{ 's' if item.pair_count != 1 }}</div>
                     {% endif %}
                 </td>
                 <td>{{ q[2] | replace('_', ' ') | title }}</td>
@@ -175,8 +186,8 @@
                 <td>{% if item.is_grouped_match %}{{ item.pair_count }}{% else %}{{ q[3] }}{% endif %}</td>
                 <td>
                     <form method="post" onsubmit="return confirm('Remove this bank question?')">
-                        <input type="hidden" name="action" value="{{ 'delete_question_group' if item.is_grouped_match else 'delete_question' }}">
-                        {% if item.is_grouped_match %}
+                        <input type="hidden" name="action" value="{{ 'delete_question_group' if item.is_grouped_question else 'delete_question' }}">
+                        {% if item.is_grouped_question %}
                         <input type="hidden" name="question_ids" value="{{ item.group_ids | join(',') }}">
                         {% else %}
                         <input type="hidden" name="question_id" value="{{ q[0] }}">

@@ -40,7 +40,7 @@ def register_lesson_routes(app):
                 COUNT(DISTINCT q.id),
                 t.allow_multiple, t.max_attempts, t.show_answers,
                 GROUP_CONCAT(DISTINCT tt.teacher_username),
-                SUM(CASE WHEN q.question_type IN ('content_slide', 'title_slide', 'heading_slide') THEN 1 ELSE 0 END) as content_count
+                COUNT(DISTINCT CASE WHEN q.question_type IN ('content_slide', 'title_slide', 'heading_slide') THEN q.id END) as content_count
             FROM theory_tests t
             LEFT JOIN theory_questions q ON t.id = q.test_id
             LEFT JOIN theory_test_groups tg ON t.id = tg.test_id
@@ -90,7 +90,7 @@ def register_lesson_routes(app):
                 <td style="white-space:nowrap; vertical-align:middle;">
                     <div class="action-cell">
                     <a href="/manage_lessons/{lesson_id}/questions" class="btn btn-primary" title="Edit lesson">✏️</a>
-                    <a href="/manage_tests/{lesson_id}/edit" class="btn btn-warning" title="Edit settings">⚙️</a>
+                    <a href="/manage_lessons/{lesson_id}/edit" class="btn btn-warning" title="Edit settings">⚙️</a>
                     <form method="post" action="/manage_lessons/{lesson_id}/toggle" style="display:inline-flex; margin:0;">
                         <button type="submit" class="btn {toggle_class}" title="{toggle_label}">{'⏸' if is_active else '▶'}</button>
                     </form>
@@ -161,6 +161,81 @@ def register_lesson_routes(app):
         conn.close()
         log_activity(username, f"created theory lesson '{title}'")
         return redirect(url_for("manage_lesson_questions", test_id=lesson_id))
+
+    @app.route("/manage_lessons/<int:lesson_id>/edit", methods=["GET", "POST"])
+    def edit_lesson(lesson_id):
+        username = session.get("username")
+        if not username:
+            return redirect(url_for("login"))
+        role = get_user_role(username)
+        if role not in ["teacher", "admin"]:
+            return "Access denied", 403
+
+        conn = get_db()
+        cursor = conn.cursor()
+        cursor.execute(
+            """
+            SELECT id, title, subject, assign_date, time_limit, allow_multiple, max_attempts, show_answers
+            FROM theory_tests
+            WHERE id = ?
+            """,
+            (lesson_id,),
+        )
+        lesson = cursor.fetchone()
+        if not lesson:
+            conn.close()
+            return "Lesson not found", 404
+
+        if request.method == "POST":
+            allow_multiple = 1 if request.form.get("allow_multiple") else 0
+            max_attempts = safe_int(request.form.get("max_attempts"), 1)
+            show_answers = 1 if request.form.get("show_answers") else 0
+            groups = request.form.getlist("groups")
+            teachers = request.form.getlist("teachers")
+            assign_date = request.form.get("assign_date")
+
+            cursor.execute(
+                """
+                UPDATE theory_tests
+                SET assign_date = ?, allow_multiple = ?, max_attempts = ?, show_answers = ?
+                WHERE id = ?
+                """,
+                (assign_date, allow_multiple, max_attempts, show_answers, lesson_id),
+            )
+
+            cursor.execute("DELETE FROM theory_test_groups WHERE test_id = ?", (lesson_id,))
+            for group_name in groups:
+                if group_name.strip():
+                    cursor.execute("INSERT INTO theory_test_groups (test_id, group_name) VALUES (?, ?)", (lesson_id, group_name))
+
+            cursor.execute("DELETE FROM theory_test_teachers WHERE test_id = ?", (lesson_id,))
+            for teacher_username in teachers:
+                if teacher_username.strip():
+                    cursor.execute(
+                        "INSERT INTO theory_test_teachers (test_id, teacher_username) VALUES (?, ?)",
+                        (lesson_id, teacher_username),
+                    )
+
+            conn.commit()
+            conn.close()
+            log_activity(username, f"edited lesson settings for lesson {lesson_id}")
+            return redirect(url_for("manage_lessons"))
+
+        cursor.execute("SELECT group_name FROM theory_test_groups WHERE test_id = ?", (lesson_id,))
+        current_groups = {row[0] for row in cursor.fetchall()}
+        cursor.execute("SELECT teacher_username FROM theory_test_teachers WHERE test_id = ?", (lesson_id,))
+        current_teachers = {row[0] for row in cursor.fetchall()}
+        all_groups = get_groups(username) if role == "teacher" else get_groups()
+        all_teachers = get_teachers()
+        conn.close()
+        return render_template(
+            "edit_test.html",
+            test=lesson,
+            current_groups=current_groups,
+            all_groups=all_groups,
+            all_teachers=all_teachers,
+            current_teachers=current_teachers,
+        )
 
     @app.route("/manage_lessons/<int:lesson_id>/toggle", methods=["POST"])
     def toggle_lesson(lesson_id):

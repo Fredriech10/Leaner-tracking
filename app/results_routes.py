@@ -9,6 +9,7 @@ from app.helper_attendance import (
     build_attendance_group_summary,
     build_attendance_history,
     build_attendance_months,
+    fetch_class_checked_dates,
     fetch_attendance_override_statuses,
     fetch_first_login_times,
     fetch_group_excluded_dates,
@@ -54,9 +55,10 @@ def register_results_routes(app):
 
         attendance_year = datetime.now().year
         days = get_current_year_attendance_days()
-        cursor.execute("SELECT group_name FROM users WHERE username = ?", (username,))
+        cursor.execute("SELECT group_name, teacher_username FROM users WHERE username = ?", (username,))
         group_row = cursor.fetchone()
         user_group = group_row[0] if group_row else None
+        learner_teacher = group_row[1] if group_row else None
         auto_exclude_empty_attendance_days(cursor, [user_group], created_by=admin_user, days=days)
         cursor.execute(
             """
@@ -66,20 +68,11 @@ def register_results_routes(app):
             (user_group,),
         )
         excluded_dates = {row[0] for row in cursor.fetchall()}
-        cursor.execute(
-            """
-            SELECT DISTINCT lh.date
-            FROM login_history lh
-            JOIN users u ON u.username = lh.username
-            WHERE u.group_name = ? AND lh.username != ?
-            """,
-            (user_group, username),
-        )
-        class_checked_dates = {row[0] for row in cursor.fetchall()}
+        class_checked_dates = fetch_class_checked_dates(cursor, user_group, teacher_username=learner_teacher, exclude_username=username)
 
         login_map = fetch_first_login_times(cursor, [username], days)
         override_map = fetch_attendance_override_statuses(cursor, [username], days)
-        late_cutoffs = fetch_group_late_thresholds(cursor, user_group, days) if user_group else {}
+        late_cutoffs = fetch_group_late_thresholds(cursor, user_group, days, teacher_username=learner_teacher) if user_group else {}
         history = build_attendance_history(
             cursor,
             username,

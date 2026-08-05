@@ -8,6 +8,7 @@ from app.helper_attendance import (
     auto_exclude_empty_attendance_days,
     build_attendance_history,
     build_attendance_months,
+    fetch_class_checked_dates,
     fetch_attendance_override_statuses,
     fetch_first_login_times,
     fetch_group_excluded_dates,
@@ -50,10 +51,11 @@ def register_dashboard_routes(app):
         conn = get_db()
         cursor = conn.cursor()
 
-        cursor.execute("SELECT full_name, group_name FROM users WHERE username = ?", (username,))
+        cursor.execute("SELECT full_name, group_name, teacher_username FROM users WHERE username = ?", (username,))
         user_row = cursor.fetchone()
         display_name = user_row[0] if user_row and user_row[0] else username
         user_group = user_row[1] if user_row else None
+        learner_teacher = user_row[2] if user_row else None
 
         cursor.execute(
             """
@@ -129,17 +131,8 @@ def register_dashboard_routes(app):
         excluded_dates = {row[0] for row in cursor.fetchall()}
         login_map = fetch_first_login_times(cursor, [username], attendance_days)
         override_map = fetch_attendance_override_statuses(cursor, [username], attendance_days)
-        late_cutoffs = fetch_group_late_thresholds(cursor, user_group, attendance_days) if user_group else {}
-        cursor.execute(
-            """
-            SELECT DISTINCT lh.date
-            FROM login_history lh
-            JOIN users u ON u.username = lh.username
-            WHERE u.group_name = ? AND u.role = 'student' AND lh.username != ?
-            """,
-            (user_group, username),
-        )
-        class_checked_dates = {row[0] for row in cursor.fetchall()}
+        late_cutoffs = fetch_group_late_thresholds(cursor, user_group, attendance_days, teacher_username=learner_teacher) if user_group else {}
+        class_checked_dates = fetch_class_checked_dates(cursor, user_group, teacher_username=learner_teacher, exclude_username=username)
         att_history = build_attendance_history(
             cursor,
             username,
@@ -352,30 +345,37 @@ def register_dashboard_routes(app):
         admin_user = session.get("username")
         if not admin_user:
             return redirect(url_for("login"))
-        if get_user_role(admin_user) not in ["teacher", "admin"]:
+        viewer_role = get_user_role(admin_user)
+        if viewer_role not in ["teacher", "admin"]:
             return "Access denied", 403
 
         conn = get_db()
         cursor = conn.cursor()
 
+        user_filter_clause = " AND teacher_username = ?" if viewer_role == "teacher" else ""
+        user_filter_params = [admin_user] if viewer_role == "teacher" else []
+
         cursor.execute(
-            """
+            f"""
             SELECT username, full_name, group_name FROM users
-            WHERE group_name = ? AND role = 'student' LIMIT 1
+            WHERE group_name = ? AND role = 'student'{user_filter_clause} LIMIT 1
             """,
-            (group_name,),
+            [group_name, *user_filter_params],
         )
         rep = cursor.fetchone()
 
-        cursor.execute("SELECT COUNT(*) FROM users WHERE group_name = ? AND role = 'student'", (group_name,))
+        cursor.execute(
+            f"SELECT COUNT(*) FROM users WHERE group_name = ? AND role = 'student'{user_filter_clause}",
+            [group_name, *user_filter_params],
+        )
         student_count = cursor.fetchone()[0]
 
         cursor.execute(
-            """
+            f"""
             SELECT username, full_name FROM users
-            WHERE group_name = ? AND role = 'student' ORDER BY full_name
+            WHERE group_name = ? AND role = 'student'{user_filter_clause} ORDER BY full_name
             """,
-            (group_name,),
+            [group_name, *user_filter_params],
         )
         students = cursor.fetchall()
 
@@ -387,14 +387,14 @@ def register_dashboard_routes(app):
             overall_avg = practical_group_avg if practical_group_avg is not None else (theory_group_avg or 0)
 
         cursor.execute(
-            """
+            f"""
             SELECT u.full_name, r.subject, r.task, r.score, r.timestamp
             FROM results r
             JOIN users u ON r.username = u.username
-            WHERE u.group_name = ?
+            WHERE u.group_name = ?{(' AND u.teacher_username = ?' if viewer_role == 'teacher' else '')}
             ORDER BY r.timestamp DESC LIMIT 10
             """,
-            (group_name,),
+            [group_name, *user_filter_params],
         )
         recent_results = cursor.fetchall()
 
@@ -405,17 +405,9 @@ def register_dashboard_routes(app):
         student_usernames = [student_username for student_username, _full_name in students]
         login_times = fetch_first_login_times(cursor, student_usernames, days)
         overrides = fetch_attendance_override_statuses(cursor, student_usernames, days)
-        late_cutoffs = fetch_group_late_thresholds(cursor, group_name, days)
-        cursor.execute(
-            """
-            SELECT DISTINCT lh.date
-            FROM login_history lh
-            JOIN users u ON u.username = lh.username
-            WHERE u.group_name = ? AND u.role = 'student'
-            """,
-            (group_name,),
-        )
-        class_checked_dates = {row[0] for row in cursor.fetchall()}
+        scoped_teacher = admin_user if viewer_role == "teacher" else None
+        late_cutoffs = fetch_group_late_thresholds(cursor, group_name, days, teacher_username=scoped_teacher)
+        class_checked_dates = fetch_class_checked_dates(cursor, group_name, teacher_username=scoped_teacher)
 
         att_summary = []
         for day in days:

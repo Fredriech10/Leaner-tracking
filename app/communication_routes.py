@@ -4,6 +4,13 @@ from datetime import datetime
 from flask import flash, jsonify, redirect, render_template, request, session, url_for
 
 from app.database import get_db, get_groups, get_user_role
+from app.helper_attendance import (
+    build_attendance_history,
+    fetch_class_checked_dates,
+    fetch_attendance_override_statuses,
+    fetch_first_login_times,
+    fetch_group_late_thresholds,
+)
 from app.helper_communication import (
     add_communication_message,
     create_communication_thread,
@@ -223,6 +230,39 @@ def register_communication_routes(app):
                 (thread["id"],),
             )
             thread["messages"] = [dict(message_row) for message_row in cursor.fetchall()]
+            if thread.get("topic") == "attendance_review" and thread.get("attendance_date") and thread.get("student_username") and thread.get("group_name"):
+                attendance_day = thread["attendance_date"]
+                student_username = thread["student_username"]
+                group_name = thread["group_name"]
+                login_map = fetch_first_login_times(cursor, [student_username], [attendance_day])
+                override_map = fetch_attendance_override_statuses(cursor, [student_username], [attendance_day])
+                thread_teacher = thread.get("teacher_username")
+                late_cutoffs = fetch_group_late_thresholds(cursor, group_name, [attendance_day], teacher_username=thread_teacher)
+                class_checked_dates = fetch_class_checked_dates(cursor, group_name, teacher_username=thread_teacher)
+                history = build_attendance_history(
+                    cursor,
+                    student_username,
+                    group_name,
+                    [attendance_day],
+                    login_map=login_map,
+                    override_map=override_map,
+                    late_cutoffs=late_cutoffs,
+                    class_checked_dates=class_checked_dates,
+                )
+                current_item = history[0] if history else None
+                if current_item:
+                    if current_item["status"] == "Present":
+                        thread["attendance_state_code"] = "L" if current_item["late"] else "P"
+                        thread["attendance_state_label"] = "Late" if current_item["late"] else "Present"
+                    elif current_item["status"] == "Absent":
+                        thread["attendance_state_code"] = "A"
+                        thread["attendance_state_label"] = "Absent"
+                    else:
+                        thread["attendance_state_code"] = "-"
+                        thread["attendance_state_label"] = "Normal"
+                else:
+                    thread["attendance_state_code"] = "-"
+                    thread["attendance_state_label"] = "Unknown"
             threads.append(thread)
 
         conn.close()

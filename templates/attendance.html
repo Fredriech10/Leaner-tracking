@@ -244,9 +244,9 @@
 
 <!-- Legend -->
 <div class="legend">
-    <span class="legend-item" style="background:#c8f7c5; color:#107C10;">✔ Present</span>
+    <span class="legend-item" style="background:#c8f7c5; color:#107C10;">P Present</span>
     <span class="legend-item" style="background:#f7c5c5; color:#A4262C;">✖ Absent</span>
-    <span class="legend-item" style="background:#ffe0b2; color:#b36b00;">⏰ Late</span>
+    <span class="legend-item" style="background:#ffe0b2; color:#b36b00;">L Late</span>
 </div>
 
 <!-- Action Bar -->
@@ -429,13 +429,13 @@
             <!-- EDIT MODE -->
             <input type="text"
                    name="att_{{ row.username }}|{{ day }}"
-                   value="{% if value %}✔{% else %}x{% endif %}"
-                   placeholder="(✔ or x)"
+                   value="{% if value and value.late %}L{% elif value %}P{% else %}x{% endif %}"
+                   placeholder="(P, L or x)"
                    style="width:40px; text-align:center;">
         {% else %}
             <!-- VIEW MODE -->
             {% if value %}
-                ✔ {{ value.time }}
+                {{ 'L' if value.late else 'P' }}
             {% else %}
                 ✖
             {% endif %}

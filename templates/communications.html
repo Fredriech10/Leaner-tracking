@@ -44,6 +44,12 @@
         .message-meta { font-size: 0.75em; color: #64748b; margin-top: 4px; }
         .action-row { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 10px; }
         .reply-box { margin-top: 12px; display: grid; gap: 8px; }
+        .attendance-state { display:inline-flex; align-items:center; gap:8px; margin:10px 0 2px; padding:8px 10px; border-radius:8px; background:#f8fafc; border:1px solid #dbe5ef; font-size:0.88em; font-weight:bold; }
+        .attendance-code { display:inline-flex; align-items:center; justify-content:center; width:26px; height:26px; border-radius:999px; color:white; font-size:0.82em; }
+        .attendance-code.present { background:#107c10; }
+        .attendance-code.late { background:#ff8c00; }
+        .attendance-code.absent { background:#a4262c; }
+        .attendance-code.normal { background:#64748b; }
         .flash { padding: 12px 14px; border-radius: 8px; margin-bottom: 14px; font-weight: bold; }
         .flash.success { background: #dcfce7; color: #166534; border: 1px solid #86efac; }
         .flash.error { background: #fee2e2; color: #991b1b; border: 1px solid #fca5a5; }
@@ -138,6 +144,13 @@
                     {% endfor %}
 
                     {% if thread.topic == 'attendance_review' and thread.attendance_date %}
+                    {% set state_code = thread.attendance_state_code or '-' %}
+                    {% set state_label = thread.attendance_state_label or 'Unknown' %}
+                    <div class="attendance-state">
+                        <span>Current attendance:</span>
+                        <span class="attendance-code {% if state_code == 'P' %}present{% elif state_code == 'L' %}late{% elif state_code == 'A' %}absent{% else %}normal{% endif %}">{{ state_code }}</span>
+                        <span>{{ state_label }} for {{ thread.attendance_date }}</span>
+                    </div>
                     <div class="action-row">
                     <form method="post" action="/communications/attendance_action">
                         <input type="hidden" name="thread_id" value="{{ thread.id }}">

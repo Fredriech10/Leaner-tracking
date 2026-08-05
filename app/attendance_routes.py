@@ -169,7 +169,10 @@ def register_attendance_routes(app):
             }
             for day in days:
                 val = row["days"].get(day)
-                base[day] = val["time"] if val else "A"
+                if not val:
+                    base[day] = "A"
+                else:
+                    base[day] = "L" if val.get("late") else "P"
             rows.append(base)
 
         df = pd.DataFrame(rows)
@@ -231,7 +234,10 @@ def register_attendance_routes(app):
                     }
                     for day in filtered_days:
                         val = row["days"].get(day)
-                        base[day] = val["time"] if val else "A"
+                        if not val:
+                            base[day] = "A"
+                        else:
+                            base[day] = "L" if val.get("late") else "P"
                     rows.append(base)
                 df = pd.DataFrame(rows)
                 sheet_name = group.replace("/", "_").replace("\\", "_")[:31]
@@ -364,8 +370,10 @@ def register_attendance_routes(app):
             if value == "":
                 continue
 
-            if value == "x":
+            if value in {"x", "a", "absent"}:
                 status = "absent"
+            elif value in {"l", "late"}:
+                status = "late"
             else:
                 status = "present"
 

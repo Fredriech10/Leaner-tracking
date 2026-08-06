@@ -47,10 +47,15 @@ def fetch_student_theory_averages(cursor, teacher_username=None):
     return {username: average for username, average in cursor.fetchall()}
 
 
-def fetch_group_practical_averages(cursor, groups):
+def fetch_group_practical_averages(cursor, groups, teacher_username=None):
     if not groups:
         return {}
     placeholders = ",".join("?" for _ in groups)
+    params = list(groups)
+    teacher_filter = ""
+    if teacher_username:
+        teacher_filter = " AND u.teacher_username = ?"
+        params.append(teacher_username)
     cursor.execute(
         f"""
         SELECT u.group_name, ROUND(AVG(best_scores.best_score), 1)
@@ -60,18 +65,23 @@ def fetch_group_practical_averages(cursor, groups):
             GROUP BY username, subject, task
         ) best_scores
         JOIN users u ON u.username = best_scores.username
-        WHERE u.role = 'student' AND u.group_name IN ({placeholders})
+        WHERE u.role = 'student' AND u.group_name IN ({placeholders}){teacher_filter}
         GROUP BY u.group_name
         """,
-        groups,
+        params,
     )
     return {group: average for group, average in cursor.fetchall()}
 
 
-def fetch_group_theory_averages(cursor, groups):
+def fetch_group_theory_averages(cursor, groups, teacher_username=None):
     if not groups:
         return {}
     placeholders = ",".join("?" for _ in groups)
+    params = list(groups)
+    teacher_filter = ""
+    if teacher_username:
+        teacher_filter = " AND u.teacher_username = ?"
+        params.append(teacher_username)
     cursor.execute(
         f"""
         SELECT u.group_name, ROUND(AVG(best_scores.best_pct), 1)
@@ -81,10 +91,10 @@ def fetch_group_theory_averages(cursor, groups):
             GROUP BY username, test_id
         ) best_scores
         JOIN users u ON u.username = best_scores.username
-        WHERE u.role = 'student' AND u.group_name IN ({placeholders})
+        WHERE u.role = 'student' AND u.group_name IN ({placeholders}){teacher_filter}
         GROUP BY u.group_name
         """,
-        groups,
+        params,
     )
     return {group: average for group, average in cursor.fetchall()}
 

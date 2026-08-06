@@ -1,10 +1,13 @@
 from datetime import datetime
 
-from flask import redirect, render_template, request, session, url_for
+from flask import flash, redirect, render_template, request, session, url_for
 
 from app.database import (
     create_user_if_not_exists,
+    get_db,
+    get_groups,
     get_user_role,
+    get_teachers,
     log_activity,
     log_login,
     update_last_active,
@@ -14,6 +17,36 @@ from app.runtime import active_users, lock
 
 def should_record_attendance_login():
     return True
+
+
+def get_user_profile_row(username):
+    conn = get_db()
+    cursor = conn.cursor()
+    cursor.execute(
+        "SELECT username, full_name, group_name, teacher_username, role FROM users WHERE username = ?",
+        (username,),
+    )
+    row = cursor.fetchone()
+    conn.close()
+    return row
+
+
+def student_needs_registration(username):
+    user = get_user_profile_row(username)
+    if not user:
+        return False
+    role = user[4] or "student"
+    full_name = (user[1] or "").strip()
+    return role == "student" and not full_name
+
+
+def post_login_redirect(username):
+    role = get_user_role(username)
+    if role in ["teacher", "admin"]:
+        return redirect(url_for("teacher_dashboard"))
+    if student_needs_registration(username):
+        return redirect(url_for("complete_registration"))
+    return redirect(url_for("student_dashboard"))
 
 
 def register_session_routes(app):
@@ -34,10 +67,7 @@ def register_session_routes(app):
                 with lock:
                     active_users[username] = datetime.now()
 
-                role = get_user_role(username)
-                if role in ["teacher", "admin"]:
-                    return redirect(url_for("teacher_dashboard"))
-                return redirect(url_for("student_dashboard"))
+                return post_login_redirect(username)
             return "Invalid username", 400
 
         return render_template("login.html")
@@ -68,12 +98,74 @@ def register_session_routes(app):
             with lock:
                 active_users[username] = datetime.now()
 
-            role = get_user_role(username)
-            if role in ["teacher", "admin"]:
-                return redirect(url_for("teacher_dashboard"))
-            return redirect(url_for("student_dashboard"))
+            return post_login_redirect(username)
 
         return "Invalid auto-login", 400
+
+    @app.route("/complete_registration", methods=["GET", "POST"])
+    def complete_registration():
+        username = session.get("username")
+        if not username:
+            return redirect(url_for("login"))
+
+        user = get_user_profile_row(username)
+        if not user:
+            session.clear()
+            return redirect(url_for("login"))
+
+        role = user[4] or "student"
+        if role in ["teacher", "admin"]:
+            return redirect(url_for("teacher_dashboard"))
+        if not student_needs_registration(username):
+            return redirect(url_for("student_dashboard"))
+
+        teacher_rows = get_teachers()
+        teacher_options = [
+            {"username": teacher_username, "full_name": full_name or teacher_username}
+            for teacher_username, full_name in teacher_rows
+            if teacher_username
+        ]
+        group_options = [group_name for group_name in get_groups() if group_name and group_name.strip()]
+
+        if request.method == "POST":
+            first_name = (request.form.get("first_name") or "").strip()
+            surname = (request.form.get("surname") or "").strip()
+            teacher_username = (request.form.get("teacher_username") or "").strip()
+            group_name = (request.form.get("group_name") or "").strip()
+
+            valid_teachers = {item["username"] for item in teacher_options}
+            valid_groups = set(group_options)
+
+            if not first_name or not surname or not teacher_username or not group_name:
+                flash("All fields are required.", "error")
+            elif teacher_username not in valid_teachers:
+                flash("Please select a valid teacher.", "error")
+            elif group_name not in valid_groups:
+                flash("Please select a valid group.", "error")
+            else:
+                full_name = f"{surname.upper()}, {first_name.upper()}"
+                conn = get_db()
+                cursor = conn.cursor()
+                cursor.execute(
+                    """
+                    UPDATE users
+                    SET full_name = ?, teacher_username = ?, group_name = ?
+                    WHERE username = ?
+                    """,
+                    (full_name, teacher_username, group_name, username),
+                )
+                conn.commit()
+                conn.close()
+                log_activity(username, "completed first-time registration")
+                flash("Registration completed.", "success")
+                return redirect(url_for("student_dashboard"))
+
+        return render_template(
+            "complete_registration.html",
+            username=username,
+            teacher_options=teacher_options,
+            group_options=group_options,
+        )
 
     @app.route("/logout")
     def logout():

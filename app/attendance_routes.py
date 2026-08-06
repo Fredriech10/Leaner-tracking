@@ -57,6 +57,7 @@ def register_attendance_routes(app):
             return "Access denied", 403
 
         selected_group = request.args.get("group")
+        selected_teacher = (request.args.get("teacher") or "").strip() or None
         edit_mode = request.args.get("edit") == "1"
         range_param = request.args.get("range", "week")
 
@@ -74,9 +75,62 @@ def register_attendance_routes(app):
             start_date = (datetime.now() - timedelta(days=7)).strftime("%Y-%m-%d")
             end_date = today
 
-        groups = get_groups(username) if role == "teacher" else get_groups()
+        conn = get_db()
+        cursor = conn.cursor()
+        teacher_options = []
+        class_scopes = []
 
-        if role == "teacher" and selected_group and selected_group not in groups:
+        if role == "teacher":
+            groups = get_groups(username)
+            selected_teacher = username
+        else:
+            cursor.execute(
+                """
+                SELECT DISTINCT teacher_username
+                FROM users
+                WHERE role = 'student'
+                  AND teacher_username IS NOT NULL
+                  AND teacher_username != ''
+                ORDER BY teacher_username
+                """
+            )
+            teacher_options = [row[0] for row in cursor.fetchall()]
+            if selected_teacher and selected_teacher not in teacher_options:
+                selected_teacher = None
+            if selected_teacher:
+                cursor.execute(
+                    """
+                    SELECT DISTINCT group_name
+                    FROM users
+                    WHERE role = 'student'
+                      AND teacher_username = ?
+                      AND group_name IS NOT NULL
+                      AND group_name != ''
+                    ORDER BY group_name
+                    """,
+                    (selected_teacher,),
+                )
+                groups = [row[0] for row in cursor.fetchall()]
+            else:
+                groups = []
+                cursor.execute(
+                    """
+                    SELECT DISTINCT teacher_username, group_name
+                    FROM users
+                    WHERE role = 'student'
+                      AND teacher_username IS NOT NULL
+                      AND teacher_username != ''
+                      AND group_name IS NOT NULL
+                      AND group_name != ''
+                    ORDER BY teacher_username, group_name
+                    """
+                )
+                class_scopes = [
+                    {"teacher_username": row[0], "group": row[1], "label": f"{row[1]} ({row[0]})"}
+                    for row in cursor.fetchall()
+                ]
+
+        if selected_group and selected_group not in groups:
             selected_group = None
 
         days = []
@@ -90,23 +144,40 @@ def register_attendance_routes(app):
                 selected_group,
                 start_date,
                 end_date,
-                teacher_username=username if role == "teacher" else None,
+                teacher_username=selected_teacher,
             )
             daily_present_counts = {day: sum(1 for row in data if row["days"].get(day)) for day in days}
             daily_absent_counts = {day: len(data) - daily_present_counts[day] for day in days}
         else:
-            conn = get_db()
-            cursor = conn.cursor()
-            attendance_summary = build_attendance_group_summary(
-                cursor,
-                groups,
-                teacher_username=username if role == "teacher" else None,
-                days=get_last_21_days(),
-            )
-            conn.close()
+            if role == "admin" and not selected_teacher:
+                for scope in class_scopes:
+                    scope_summary = build_attendance_group_summary(
+                        cursor,
+                        [scope["group"]],
+                        teacher_username=scope["teacher_username"],
+                        days=get_last_21_days(),
+                    )
+                    if not scope_summary:
+                        continue
+                    item = scope_summary[0]
+                    attendance_summary.append(
+                        {
+                            **item,
+                            "teacher_username": scope["teacher_username"],
+                            "label": scope["label"],
+                        }
+                    )
+            else:
+                attendance_summary = build_attendance_group_summary(
+                    cursor,
+                    groups,
+                    teacher_username=selected_teacher,
+                    days=get_last_21_days(),
+                )
+                for item in attendance_summary:
+                    item["teacher_username"] = selected_teacher
+                    item["label"] = item["group"] if role == "teacher" else f"{item['group']} ({selected_teacher})"
 
-        conn = get_db()
-        cursor = conn.cursor()
         if selected_group:
             cursor.execute(
                 """
@@ -133,6 +204,8 @@ def register_attendance_routes(app):
         return render_template(
             "attendance.html",
             groups=groups,
+            teacher_options=teacher_options,
+            selected_teacher=selected_teacher,
             selected_group=selected_group,
             days=days,
             data=data,
@@ -260,18 +333,29 @@ def register_attendance_routes(app):
 
         group = request.form.get("group")
         date = request.form.get("date")
+        selected_teacher = (request.form.get("teacher") or "").strip() or None
 
         if not group or not date:
             return "Missing data", 400
 
         conn = get_db()
         cursor = conn.cursor()
-        cursor.execute(
-            """
-            SELECT username FROM users WHERE group_name = ? AND role = 'student'
-            """,
-            (group,),
-        )
+        if selected_teacher:
+            cursor.execute(
+                """
+                SELECT username
+                FROM users
+                WHERE group_name = ? AND role = 'student' AND teacher_username = ?
+                """,
+                (group, selected_teacher),
+            )
+        else:
+            cursor.execute(
+                """
+                SELECT username FROM users WHERE group_name = ? AND role = 'student'
+                """,
+                (group,),
+            )
         users = [u[0] for u in cursor.fetchall()]
 
         if users:
@@ -295,7 +379,7 @@ def register_attendance_routes(app):
 
         conn.commit()
         conn.close()
-        return redirect(url_for("attendance", group=group))
+        return redirect(url_for("attendance", group=group, teacher=selected_teacher))
 
     @app.route("/mark_all_present", methods=["POST"])
     def mark_all_present():
@@ -308,18 +392,29 @@ def register_attendance_routes(app):
 
         group = request.form.get("group")
         date = request.form.get("date")
+        selected_teacher = (request.form.get("teacher") or "").strip() or None
 
         if not group or not date:
             return "Missing data", 400
 
         conn = get_db()
         cursor = conn.cursor()
-        cursor.execute(
-            """
-            SELECT username FROM users WHERE group_name = ? AND role = 'student'
-            """,
-            (group,),
-        )
+        if selected_teacher:
+            cursor.execute(
+                """
+                SELECT username
+                FROM users
+                WHERE group_name = ? AND role = 'student' AND teacher_username = ?
+                """,
+                (group, selected_teacher),
+            )
+        else:
+            cursor.execute(
+                """
+                SELECT username FROM users WHERE group_name = ? AND role = 'student'
+                """,
+                (group,),
+            )
         users = [u[0] for u in cursor.fetchall()]
 
         if users:
@@ -341,7 +436,7 @@ def register_attendance_routes(app):
         conn.commit()
         log_activity(username, f"marked all in {group} present on {date}")
         conn.close()
-        return redirect(url_for("attendance", group=group))
+        return redirect(url_for("attendance", group=group, teacher=selected_teacher))
 
     @app.route("/save_attendance", methods=["POST"])
     def save_attendance():
@@ -353,6 +448,7 @@ def register_attendance_routes(app):
             return "Access denied", 403
 
         group = request.form.get("group")
+        selected_teacher = (request.form.get("teacher") or "").strip() or None
 
         conn = get_db()
         cursor = conn.cursor()
@@ -394,7 +490,7 @@ def register_attendance_routes(app):
         conn.commit()
         log_activity(username, f"saved attendance for {group}")
         conn.close()
-        return redirect(url_for("attendance", group=group))
+        return redirect(url_for("attendance", group=group, teacher=selected_teacher))
 
     @app.route("/exclude_date", methods=["POST"])
     def exclude_date():
@@ -469,7 +565,13 @@ def register_attendance_routes(app):
         conn.commit()
         log_activity(username, f"excluded date {date} for group {group or 'all groups'} ({reason})")
         conn.close()
-        return redirect(url_for("attendance", group=request.form.get("selected_group")))
+        return redirect(
+            url_for(
+                "attendance",
+                group=request.form.get("selected_group"),
+                teacher=(request.form.get("selected_teacher") or "").strip() or None,
+            )
+        )
 
     @app.route("/include_date", methods=["POST"])
     def include_date():
@@ -499,7 +601,13 @@ def register_attendance_routes(app):
         conn.commit()
         log_activity(username, f"included date {date} for group {group or 'all groups'}")
         conn.close()
-        return redirect(url_for("attendance", group=request.form.get("selected_group")))
+        return redirect(
+            url_for(
+                "attendance",
+                group=request.form.get("selected_group"),
+                teacher=(request.form.get("selected_teacher") or "").strip() or None,
+            )
+        )
 
     @app.route("/mark_all_absent", methods=["POST"])
     def mark_all_absent():
@@ -512,18 +620,29 @@ def register_attendance_routes(app):
 
         group = request.form.get("group")
         date = request.form.get("date")
+        selected_teacher = (request.form.get("teacher") or "").strip() or None
 
         if not group or not date:
             return "Missing data", 400
 
         conn = get_db()
         cursor = conn.cursor()
-        cursor.execute(
-            """
-            SELECT username FROM users WHERE group_name = ? AND role = 'student'
-            """,
-            (group,),
-        )
+        if selected_teacher:
+            cursor.execute(
+                """
+                SELECT username
+                FROM users
+                WHERE group_name = ? AND role = 'student' AND teacher_username = ?
+                """,
+                (group, selected_teacher),
+            )
+        else:
+            cursor.execute(
+                """
+                SELECT username FROM users WHERE group_name = ? AND role = 'student'
+                """,
+                (group,),
+            )
         users = [u[0] for u in cursor.fetchall()]
 
         if users:
@@ -545,7 +664,7 @@ def register_attendance_routes(app):
         conn.commit()
         log_activity(username, f"marked all in {group} absent on {date}")
         conn.close()
-        return redirect(url_for("attendance", group=group))
+        return redirect(url_for("attendance", group=group, teacher=selected_teacher))
 
     @app.route("/api/excluded_dates", methods=["GET"])
     def api_excluded_dates():

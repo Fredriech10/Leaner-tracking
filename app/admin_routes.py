@@ -1,7 +1,7 @@
 from io import BytesIO
 
 import pandas as pd
-from flask import flash, redirect, render_template, request, send_file, session, url_for
+from flask import flash, jsonify, redirect, render_template, request, send_file, session, url_for
 
 from app.database import get_db, get_groups, get_teachers, get_user_role, log_activity
 
@@ -145,15 +145,83 @@ def register_admin_routes(app):
             groups = [g[0] for g in cursor.fetchall()]
 
         conn.close()
+        teacher_options = [
+            {"username": teacher[0], "full_name": teacher[1] or teacher[0]}
+            for teacher in get_teachers()
+        ]
         return render_template(
             "admin.html",
             users=users,
             groups=groups,
+            all_teachers=teacher_options,
             search=search,
             selected_group=group,
             sort=sort,
             order=order,
         )
+
+    @app.route("/admin/update_user_field", methods=["POST"])
+    def update_user_field():
+        admin_user = session.get("username")
+        if not admin_user:
+            return jsonify({"ok": False, "error": "Not logged in"}), 401
+
+        admin_role = get_user_role(admin_user)
+        if admin_role not in ["teacher", "admin"]:
+            return jsonify({"ok": False, "error": "Access denied"}), 403
+
+        payload = request.get_json(silent=True) or {}
+        username = (payload.get("username") or "").strip()
+        field = (payload.get("field") or "").strip()
+        value = payload.get("value")
+
+        allowed_fields = {"full_name", "group_name", "teacher_username"}
+        if not username or field not in allowed_fields:
+            return jsonify({"ok": False, "error": "Invalid request"}), 400
+
+        if value is None:
+            value = ""
+        value = str(value).strip()
+        if field in {"group_name", "teacher_username"} and value == "":
+            value = None
+
+        conn = get_db()
+        cursor = conn.cursor()
+        cursor.execute(
+            "SELECT username, full_name, group_name, teacher_username, role FROM users WHERE username = ?",
+            (username,),
+        )
+        user = cursor.fetchone()
+        if not user:
+            conn.close()
+            return jsonify({"ok": False, "error": "User not found"}), 404
+
+        if admin_role == "teacher":
+            assigned_teacher = user[3] or ""
+            if assigned_teacher and assigned_teacher != admin_user:
+                conn.close()
+                return jsonify({"ok": False, "error": "Access denied"}), 403
+            if field == "teacher_username" and value not in {None, admin_user}:
+                conn.close()
+                return jsonify({"ok": False, "error": "Teachers can only assign themselves"}), 403
+
+        if field == "teacher_username" and value is not None:
+            teachers = {teacher[0] for teacher in get_teachers()}
+            if value not in teachers:
+                conn.close()
+                return jsonify({"ok": False, "error": "Teacher not found"}), 400
+
+        if field == "group_name" and value is not None:
+            existing_groups = set(get_groups())
+            if value not in existing_groups:
+                conn.close()
+                return jsonify({"ok": False, "error": "Group not found"}), 400
+
+        cursor.execute(f"UPDATE users SET {field} = ? WHERE username = ?", (value, username))
+        conn.commit()
+        conn.close()
+        log_activity(admin_user, f"updated {field} for {username}")
+        return jsonify({"ok": True, "value": value or ""})
 
     @app.route("/import_users", methods=["POST"])
     def import_users():

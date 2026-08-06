@@ -1,0 +1,215 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>My Results</title>
+    <style>
+        * { box-sizing: border-box; }
+        body { font-family: Arial, sans-serif; margin: 0; padding: 0; background: #f0f2f5; color: #222; }
+        .topbar { background: #0078D4; color: white; padding: 12px 24px; display: flex; justify-content: space-between; align-items: center; flex-wrap: nowrap; gap: 10px; position: sticky; top: 0; z-index: 999; }
+        .topbar h1 { margin: 0; font-size: 1.05em; white-space: nowrap; }
+        .topbar-links { display: flex; gap: 10px; align-items: center; flex-wrap: nowrap; }
+        .topbar-links a { color: white; text-decoration: none; font-size: 0.82em; opacity: 0.9; white-space: nowrap; }
+        .topbar-links a:hover { opacity: 1; text-decoration: underline; }
+        .topbar-user { color: white; font-size: 0.82em; white-space: nowrap; border-left: 1px solid rgba(255,255,255,0.35); padding-left: 10px; }
+        .topbar-user a { color: white; text-decoration: none; font-weight: bold; }
+        .topbar-user a:hover { text-decoration: underline; }
+        .page { padding: 20px 24px; max-width: 1380px; margin: 0 auto; }
+        .hero { background: linear-gradient(135deg, #0078D4, #005a9e); color: white; border-radius: 12px; padding: 22px 24px; margin-bottom: 18px; display: flex; justify-content: space-between; gap: 16px; align-items: center; }
+        .hero h2 { margin: 0 0 6px 0; font-size: 1.45em; }
+        .hero p { margin: 0; opacity: 0.9; font-size: 0.95em; }
+        .hero-metrics { display: flex; gap: 10px; flex-wrap: wrap; }
+        .metric { background: rgba(255,255,255,0.16); border: 1px solid rgba(255,255,255,0.18); border-radius: 12px; padding: 12px 16px; min-width: 110px; text-align: center; }
+        .metric .value { font-size: 1.45em; font-weight: bold; }
+        .metric .label { font-size: 0.74em; opacity: 0.9; margin-top: 4px; }
+        .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 16px; }
+        .card { background: white; border-radius: 8px; padding: 18px; border: 1px solid #ddd; }
+        .card h3 { margin: 0 0 14px 0; font-size: 0.95em; color: #0078D4; border-bottom: 2px solid #f0f0f0; padding-bottom: 6px; }
+        table { width: 100%; border-collapse: collapse; font-size: 0.88em; }
+        th { background: #f5f5f5; padding: 8px 10px; text-align: left; font-size: 0.82em; color: #555; }
+        td { padding: 8px 10px; border-bottom: 1px solid #f0f0f0; }
+        tr:last-child td { border-bottom: none; }
+        .score-high { color: #107C10; font-weight: bold; }
+        .score-mid { color: #ff8c00; font-weight: bold; }
+        .score-low { color: #A4262C; font-weight: bold; }
+        .score-none { color: #888; font-style: italic; }
+        .badge { padding: 2px 8px; border-radius: 10px; font-size: 0.76em; font-weight: bold; }
+        .badge-practical { background: #e8f5e9; color: #107C10; }
+        .badge-theory { background: #e3f2fd; color: #0078D4; }
+        .badge-submitted { background: #dcfce7; color: #166534; }
+        .badge-missing { background: #fee2e2; color: #991b1b; }
+        .muted { color: #888; font-size: 0.9em; }
+        @media (max-width: 900px) {
+            .hero { flex-direction: column; align-items: flex-start; }
+            .grid-2 { grid-template-columns: 1fr; }
+        }
+    </style>
+</head>
+<body>
+{% set current_page = 'my_results' %}
+{% include '_slide_nav.html' %}
+
+<div class="topbar">
+    <h1>📊 My Results</h1>
+    <div class="topbar-links">
+        <a href="/student_dashboard">🏠 Dashboard</a>
+        <a href="/my_tasks">📁 Tasks</a>
+        <a href="/lessons">📘 Lessons</a>
+        <a href="/tests">📝 Tests</a>
+        <span class="topbar-user">👤 <a href="/edit_user/{{ session_username }}">{{ session_username }}</a></span>
+        <a href="/logout">Logout</a>
+    </div>
+</div>
+
+<div class="page">
+    <div class="hero">
+        <div>
+            <h2>{{ display_name }}</h2>
+            <p>View your practical and theory results in one place, including averages and submission status.</p>
+        </div>
+        <div class="hero-metrics">
+            <div class="metric">
+                <div class="value">{{ overall_avg }}%</div>
+                <div class="label">Overall</div>
+            </div>
+            <div class="metric">
+                <div class="value">{{ practical_avg }}%</div>
+                <div class="label">Practical</div>
+            </div>
+            <div class="metric">
+                <div class="value">{{ theory_avg if theory_avg is not none else '—' }}{% if theory_avg is not none %}%{% endif %}</div>
+                <div class="label">Theory</div>
+            </div>
+        </div>
+    </div>
+
+    <div class="grid-2">
+        <div class="card">
+            <h3>📁 Practical Subject Averages</h3>
+            {% if subject_avgs %}
+            <table>
+                <tr><th>Subject</th><th>Average</th></tr>
+                {% for subject, average in subject_avgs %}
+                <tr>
+                    <td>{{ subject }}</td>
+                    <td><span class="{{ 'score-high' if average >= 60 else ('score-mid' if average >= 40 else 'score-low') }}">{{ average }}%</span></td>
+                </tr>
+                {% endfor %}
+            </table>
+            {% else %}
+            <p class="muted">No practical results yet.</p>
+            {% endif %}
+        </div>
+
+        <div class="card">
+            <h3>📝 Theory Subject Averages</h3>
+            {% if theory_subject_avgs %}
+            <table>
+                <tr><th>Subject</th><th>Average</th></tr>
+                {% for subject, average in theory_subject_avgs %}
+                <tr>
+                    <td>{{ subject }}</td>
+                    <td><span class="{{ 'score-high' if average >= 60 else ('score-mid' if average >= 40 else 'score-low') }}">{{ average }}%</span></td>
+                </tr>
+                {% endfor %}
+            </table>
+            {% else %}
+            <p class="muted">No theory results yet.</p>
+            {% endif %}
+        </div>
+    </div>
+
+    <div class="grid-2">
+        <div class="card">
+            <h3>🏆 Practical Results</h3>
+            {% if practical_results %}
+            <table>
+                <tr><th>Subject</th><th>Task</th><th>Score</th><th>Date</th></tr>
+                {% for subject, task, score, feedback, timestamp in practical_results %}
+                <tr>
+                    <td>{{ subject }}</td>
+                    <td>{{ task }}</td>
+                    <td><span class="{{ 'score-high' if score >= 60 else ('score-mid' if score >= 40 else 'score-low') }}">{{ score }}%</span></td>
+                    <td>{{ timestamp[:16] if timestamp else '—' }}</td>
+                </tr>
+                {% endfor %}
+            </table>
+            {% else %}
+            <p class="muted">No practical submissions yet.</p>
+            {% endif %}
+        </div>
+
+        <div class="card">
+            <h3>📘 Theory Results</h3>
+            {% if theory_results %}
+            <table>
+                <tr><th>Subject</th><th>Item</th><th>Score</th><th>Date</th></tr>
+                {% for title, score, total, percentage, submitted_at, time_spent_seconds, submission_type, subject in theory_results %}
+                <tr>
+                    <td>{{ subject }}</td>
+                    <td>{{ title }}</td>
+                    <td><span class="{{ 'score-high' if percentage >= 60 else ('score-mid' if percentage >= 40 else 'score-low') }}">{{ percentage }}%</span></td>
+                    <td>{{ submitted_at[:16] if submitted_at else '—' }}</td>
+                </tr>
+                {% endfor %}
+            </table>
+            {% else %}
+            <p class="muted">No theory submissions yet.</p>
+            {% endif %}
+        </div>
+    </div>
+
+    <div class="grid-2">
+        <div class="card">
+            <h3>📋 Practical Submission Status</h3>
+            {% if practical_status_rows %}
+            <table>
+                <tr><th>Subject</th><th>Task</th><th>Status</th><th>Score</th></tr>
+                {% for item in practical_status_rows %}
+                <tr>
+                    <td>{{ item.subject }}</td>
+                    <td>{{ item.title }}</td>
+                    <td><span class="badge {{ 'badge-submitted' if item.status == 'Submitted' else 'badge-missing' }}">{{ item.status }}</span></td>
+                    <td>
+                        {% if item.score is not none %}
+                        <span class="{{ 'score-high' if item.score >= 60 else ('score-mid' if item.score >= 40 else 'score-low') }}">{{ item.score }}%</span>
+                        {% else %}
+                        <span class="score-none">—</span>
+                        {% endif %}
+                    </td>
+                </tr>
+                {% endfor %}
+            </table>
+            {% else %}
+            <p class="muted">No practical tasks assigned yet.</p>
+            {% endif %}
+        </div>
+
+        <div class="card">
+            <h3>🧾 Theory Submission Status</h3>
+            {% if theory_status_rows %}
+            <table>
+                <tr><th>Subject</th><th>Item</th><th>Status</th><th>Score</th></tr>
+                {% for item in theory_status_rows %}
+                <tr>
+                    <td>{{ item.subject }}</td>
+                    <td>{{ item.title }}</td>
+                    <td><span class="badge {{ 'badge-submitted' if item.status == 'Submitted' else 'badge-missing' }}">{{ item.status }}</span></td>
+                    <td>
+                        {% if item.score is not none %}
+                        <span class="{{ 'score-high' if item.score >= 60 else ('score-mid' if item.score >= 40 else 'score-low') }}">{{ item.score }}%</span>
+                        {% else %}
+                        <span class="score-none">—</span>
+                        {% endif %}
+                    </td>
+                </tr>
+                {% endfor %}
+            </table>
+            {% else %}
+            <p class="muted">No theory items assigned yet.</p>
+            {% endif %}
+        </div>
+    </div>
+</div>
+</body>
+</html>

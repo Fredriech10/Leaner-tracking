@@ -140,13 +140,25 @@
 
 <div class="card">
     <form method="get" id="groupForm" style="display: flex; gap: 12px; align-items: center;">
+        {% if teacher_options is defined and teacher_options %}
+        <label for="teacherSelect" style="font-weight: bold;">Teacher:</label>
+        <select name="teacher" id="teacherSelect" onchange="this.form.submit()">
+            <option value="">-- Select Teacher --</option>
+            {% for teacher_name in teacher_options %}
+                <option value="{{ teacher_name }}" {% if teacher_name == selected_teacher %}selected{% endif %}>{{ teacher_name }}</option>
+            {% endfor %}
+        </select>
+        {% endif %}
         <label for="groupSelect" style="font-weight: bold;">Select Group:</label>
-        <select name="group" id="groupSelect" onchange="this.form.submit()">
+        <select name="group" id="groupSelect" onchange="this.form.submit()" {% if teacher_options is defined and teacher_options and not selected_teacher %}disabled{% endif %}>
             <option value="">-- Select Group --</option>
             {% for g in groups %}
                 <option value="{{ g }}" {% if g == selected_group %}selected{% endif %}>{{ g }}</option>
             {% endfor %}
         </select>
+        {% if teacher_options is defined and teacher_options and not selected_teacher %}
+        <span style="color:#666; font-size:0.88em;">Select a teacher to load a class.</span>
+        {% endif %}
     </form>
 </div>
 
@@ -159,7 +171,7 @@
             <tr><th>Group</th><th>Students</th><th>Practical</th><th>Theory</th><th>Combined</th></tr>
             {% for item in result_summaries %}
             <tr>
-                <td><a href="/group_results?group={{ item.group }}" class="table-row-link">{{ item.group }}</a></td>
+                <td><a href="/group_results?group={{ item.group }}{% if item.teacher_username %}&teacher={{ item.teacher_username }}{% endif %}" class="table-row-link">{{ item.label or item.group }}</a></td>
                 <td>{{ item.students }}</td>
                 <td>{{ item.practical_avg if item.practical_avg is not none else '—' }}{% if item.practical_avg is not none %}%{% endif %}</td>
                 <td>{{ item.theory_avg if item.theory_avg is not none else '—' }}{% if item.theory_avg is not none %}%{% endif %}</td>
@@ -175,7 +187,7 @@
         <h3>Combined Average Charts</h3>
         {% for item in result_summaries %}
         <div class="bar-row">
-            <span>{{ item.group }}</span>
+            <span>{{ item.label or item.group }}</span>
             <div class="bar-track"><div class="bar-fill" style="width: {{ item.combined_avg }}%;"></div></div>
             <span>{{ item.combined_avg }}%</span>
         </div>
@@ -246,7 +258,7 @@
                     <th class="task-header theory-header">
                         {{ task.title }}
                         <br>
-                        <a href="/response_review?type=theory&group={{ selected_group }}&item={{ task.test_id }}" class="btn-primary" style="display:inline-block; margin-top:4px; margin-right:4px; text-decoration:none; padding:4px 8px; border-radius:4px;">Review</a>
+                        <a href="/response_review?type=theory&group={{ selected_group }}{% if selected_teacher %}&teacher={{ selected_teacher }}{% endif %}&item={{ task.test_id }}" class="btn-primary" style="display:inline-block; margin-top:4px; margin-right:4px; text-decoration:none; padding:4px 8px; border-radius:4px;">Review</a>
                         <button class="btn-danger" onclick="openRemoveModal('theory','','{{ task.title }}','{{ task.test_id }}','all','{{ selected_group }}')">🗑 Remove All</button>
                     </th>
                     {% endfor %}

@@ -14,6 +14,7 @@ from app.helper_attendance import (
 from app.helper_communication import (
     add_communication_message,
     create_communication_thread,
+    get_student_message_threads,
     get_student_unread_message_count,
     get_teacher_quick_action_catalog,
     get_teacher_unread_message_count,
@@ -114,9 +115,10 @@ def register_communication_routes(app):
 
         topic = (request.form.get("topic") or "chat").strip() or "chat"
         message = (request.form.get("message") or "").strip()
+        next_url = request.form.get("next") or url_for("student_dashboard")
         if not message:
             flash("Message cannot be empty.", "error")
-            return redirect(url_for("student_dashboard"))
+            return redirect(next_url)
 
         conn = get_db()
         cursor = conn.cursor()
@@ -132,7 +134,7 @@ def register_communication_routes(app):
         if not row or not row[0]:
             conn.close()
             flash("No teacher is assigned to this learner.", "error")
-            return redirect(url_for("student_dashboard"))
+            return redirect(next_url)
 
         teacher_username = row[0]
         chat_session_id = request.form.get("chat_session_id", "").strip() or session.get("chat_session_id", "")
@@ -173,7 +175,23 @@ def register_communication_routes(app):
         conn.commit()
         conn.close()
         flash("Message sent.", "success")
-        return redirect(url_for("student_dashboard"))
+        return redirect(next_url)
+
+    @app.route("/student_messages")
+    def student_messages():
+        username = session.get("username")
+        if not username:
+            return redirect(url_for("login"))
+        if get_user_role(username) != "student":
+            return "Access denied", 403
+
+        threads = get_student_message_threads(username)
+        mark_student_threads_read(username)
+        return render_template(
+            "student_messages.html",
+            threads=threads,
+            unread_teacher_messages=0,
+        )
 
     @app.route("/communications")
     def communications():

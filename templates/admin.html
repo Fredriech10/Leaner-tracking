@@ -51,6 +51,12 @@
         .action-links a:hover { text-decoration: underline; }
         .table-row-link { color: inherit; text-decoration: none; font-weight: bold; }
         .clickable-row { cursor: pointer; }
+        .editable-cell { position: relative; cursor: pointer; }
+        .editable-cell:hover { background: #f8fbff !important; }
+        .editable-cell.editing { padding: 4px 6px; background: #eef6ff !important; }
+        .inline-editor { width: 100%; min-width: 120px; padding: 6px 8px; border: 1px solid #7aa7d9; border-radius: 6px; font-size: 0.88em; background: white; }
+        .inline-status { font-size: 0.76em; color: #64748b; margin-top: 4px; }
+        .inline-error { color: #A4262C; }
 
         .stats { display: flex; gap: 16px; margin-bottom: 16px; flex-wrap: wrap; }
         .stat-box { background: white; border-radius: 8px; padding: 14px 18px; border: 1px solid #ddd; text-align: center; flex: 1; min-width: 150px; }
@@ -136,6 +142,13 @@
     </form>
 </div>
 
+<script id="adminLookupData" type="application/json">
+{
+  "groups": {{ groups|tojson }},
+  "teachers": {{ all_teachers|tojson }}
+}
+</script>
+
 <!-- Users Table -->
 <div class="card">
     <h3>User Management</h3>
@@ -164,11 +177,17 @@
         </thead>
         <tbody>
         {% for user in users %}
-        <tr class="clickable-row" onclick="window.location.href='/learner_record/{{ user[0] }}'">
+        <tr>
             <td><a href="/learner_record/{{ user[0] }}" class="table-row-link">{{ user[0] }}</a></td>
-            <td>{{ user[1] or "—" }}</td>
-            <td>{{ user[2] or "—" }}</td>
-            <td>{{ user[3] or '—' }}</td>
+            <td class="editable-cell profile-edit-cell" data-username="{{ user[0] }}" data-field="full_name" data-value="{{ user[1] or '' }}" data-profile-url="/learner_record/{{ user[0] }}">
+                <span class="cell-display">{{ user[1] or "—" }}</span>
+            </td>
+            <td class="editable-cell" data-username="{{ user[0] }}" data-field="group_name" data-value="{{ user[2] or '' }}">
+                <span class="cell-display">{{ user[2] or "—" }}</span>
+            </td>
+            <td class="editable-cell" data-username="{{ user[0] }}" data-field="teacher_username" data-value="{{ user[3] or '' }}">
+                <span class="cell-display">{{ user[3] or "—" }}</span>
+            </td>
             <td>
                 {% if user[4] == 'teacher' %}
                     <span class="badge badge-teacher">Teacher</span>
@@ -181,15 +200,14 @@
             <td style="color:#888; font-size:0.85em;">{{ user[5][:16] if user[5] else '—' }}</td>
             <td>
                 <div class="action-links">
-                    <a href="/edit_user/{{ user[0] }}" onclick="event.stopPropagation()">✏️ Edit</a>
-                    <a href="/learner_record/{{ user[0] }}" onclick="event.stopPropagation()">📊 Record</a>
+                    <a href="/edit_user/{{ user[0] }}">✏️ Edit</a>
+                    <a href="/learner_record/{{ user[0] }}">📊 Record</a>
                     {% if user[3] != "teacher" and user[3] != "admin" %}
-                        <a href="/promote/{{ user[0] }}" style="color:#107C10;" onclick="event.stopPropagation()">⬆️ Promote</a>
+                        <a href="/promote/{{ user[0] }}" style="color:#107C10;">⬆️ Promote</a>
                     {% else %}
-                        <a href="/demote/{{ user[0] }}" style="color:#A4262C;" onclick="event.stopPropagation()">⬇️ Demote</a>
+                        <a href="/demote/{{ user[0] }}" style="color:#A4262C;">⬇️ Demote</a>
                     {% endif %}
                     <form method="post" action="/delete_user/{{ user[0] }}" style="display:inline;"
-                          onclick="event.stopPropagation()"
                           onsubmit="return confirm('Delete {{ user[0] }}? This will permanently remove their profile, results, and attendance records.')">
                         <button type="submit" style="background:none; border:none; cursor:pointer; color:#A4262C; font-size:0.85em; padding:0;">🗑️ Delete</button>
                     </form>
@@ -213,6 +231,11 @@ document.addEventListener('DOMContentLoaded', function() {
     const table = document.getElementById('usersTable');
     const tbody = table.querySelector('tbody');
     const userRows = Array.from(tbody.querySelectorAll('tr'));
+    const lookupData = JSON.parse(document.getElementById('adminLookupData').textContent);
+    const groupOptions = lookupData.groups || [];
+    const teacherOptions = lookupData.teachers || [];
+    let activeEditorCell = null;
+    let profileClickTimer = null;
 
     searchInput.addEventListener('input', function() {
         const searchTerm = this.value.toLowerCase().trim();
@@ -248,6 +271,179 @@ document.addEventListener('DOMContentLoaded', function() {
         if (noUsersRow) {
             noUsersRow.parentElement.style.display = hasVisibleRows ? 'none' : '';
         }
+    });
+
+    function getTeacherLabel(username) {
+        if (!username) return '';
+        const match = teacherOptions.find(item => item.username === username);
+        return match ? match.full_name : username;
+    }
+
+    function closeEditor(cell, restoredValue, displayValue) {
+        cell.classList.remove('editing');
+        cell.innerHTML = '<span class="cell-display"></span>';
+        const label = cell.dataset.field === 'teacher_username' ? getTeacherLabel(displayValue) : displayValue;
+        cell.querySelector('.cell-display').textContent = label || '—';
+        cell.dataset.value = restoredValue || '';
+        activeEditorCell = null;
+    }
+
+    function buildSelect(options, currentValue, mode) {
+        const select = document.createElement('select');
+        select.className = 'inline-editor';
+
+        const blankOption = document.createElement('option');
+        blankOption.value = '';
+        blankOption.textContent = '—';
+        select.appendChild(blankOption);
+
+        options.forEach(optionItem => {
+            const option = document.createElement('option');
+            const optionValue = mode === 'teacher' ? optionItem.username : optionItem;
+            const optionLabel = mode === 'teacher' ? optionItem.full_name : optionItem;
+            option.value = optionValue;
+            option.textContent = optionLabel;
+            if (optionValue === currentValue) {
+                option.selected = true;
+            }
+            select.appendChild(option);
+        });
+        if (!currentValue) {
+            select.value = '';
+        }
+        return select;
+    }
+
+    function saveCell(cell, newValue) {
+        const username = cell.dataset.username;
+        const field = cell.dataset.field;
+        const oldValue = cell.dataset.value || '';
+        const status = cell.querySelector('.inline-status');
+
+        if ((newValue || '') === oldValue) {
+            closeEditor(cell, oldValue, oldValue);
+            return;
+        }
+
+        if (status) {
+            status.textContent = 'Saving...';
+            status.classList.remove('inline-error');
+        }
+
+        fetch('/admin/update_user_field', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ username, field, value: newValue })
+        })
+        .then(response => response.json().then(data => ({ ok: response.ok, data })))
+        .then(result => {
+            if (!result.ok || !result.data.ok) {
+                throw new Error(result.data.error || 'Save failed');
+            }
+            closeEditor(cell, result.data.value || '', result.data.value || '');
+        })
+        .catch(error => {
+            if (status) {
+                status.textContent = error.message;
+                status.classList.add('inline-error');
+            }
+        });
+    }
+
+    function openEditor(cell) {
+        if (activeEditorCell && activeEditorCell !== cell) {
+            const previousEditor = activeEditorCell.querySelector('.inline-editor');
+            if (previousEditor) {
+                closeEditor(activeEditorCell, activeEditorCell.dataset.value || '', activeEditorCell.dataset.value || '');
+            }
+        }
+
+        const field = cell.dataset.field;
+        const currentValue = cell.dataset.value || '';
+        cell.classList.add('editing');
+        cell.innerHTML = '';
+
+        let editor;
+        if (field === 'group_name') {
+            editor = buildSelect(groupOptions, currentValue, 'group');
+        } else if (field === 'teacher_username') {
+            editor = buildSelect(teacherOptions, currentValue, 'teacher');
+        } else {
+            editor = document.createElement('input');
+            editor.type = 'text';
+            editor.className = 'inline-editor';
+            editor.value = currentValue;
+            editor.placeholder = 'Enter full name';
+        }
+
+        const status = document.createElement('div');
+        status.className = 'inline-status';
+        status.textContent = 'Press Enter or click away to save';
+
+        cell.appendChild(editor);
+        cell.appendChild(status);
+        activeEditorCell = cell;
+
+        editor.focus();
+        if (editor.select) {
+            editor.select();
+        }
+
+        editor.addEventListener('click', event => event.stopPropagation());
+        editor.addEventListener('keydown', event => {
+            if (event.key === 'Enter') {
+                event.preventDefault();
+                saveCell(cell, editor.value.trim());
+            }
+            if (event.key === 'Escape') {
+                event.preventDefault();
+                closeEditor(cell, currentValue, currentValue);
+            }
+        });
+        editor.addEventListener('blur', () => {
+            window.setTimeout(() => {
+                if (activeEditorCell === cell) {
+                    saveCell(cell, editor.value.trim());
+                }
+            }, 120);
+        });
+        if (editor.tagName === 'SELECT') {
+            editor.addEventListener('change', () => saveCell(cell, editor.value.trim()));
+        }
+    }
+
+    document.querySelectorAll('.editable-cell').forEach(cell => {
+        if (cell.classList.contains('profile-edit-cell')) {
+            cell.addEventListener('click', event => {
+                if (cell.classList.contains('editing')) {
+                    event.stopPropagation();
+                    return;
+                }
+                if (profileClickTimer) {
+                    clearTimeout(profileClickTimer);
+                }
+                const targetUrl = cell.dataset.profileUrl;
+                profileClickTimer = window.setTimeout(() => {
+                    if (targetUrl) {
+                        window.location.href = targetUrl;
+                    }
+                }, 220);
+            });
+        }
+        cell.addEventListener('dblclick', event => {
+            event.preventDefault();
+            event.stopPropagation();
+            if (profileClickTimer) {
+                clearTimeout(profileClickTimer);
+                profileClickTimer = null;
+            }
+            openEditor(cell);
+        });
+        cell.addEventListener('click', event => {
+            if (cell.classList.contains('editing')) {
+                event.stopPropagation();
+            }
+        });
     });
 });
 </script>

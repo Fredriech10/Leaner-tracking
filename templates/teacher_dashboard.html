@@ -138,6 +138,23 @@
 
 <div class="page">
 
+    {% if teacher_options %}
+    <div class="filter-bar">
+        <form method="get" style="display:flex; align-items:center; gap:12px; flex-wrap:wrap;">
+            <label for="teacherSelect">Teacher:</label>
+            <select name="teacher" id="teacherSelect" onchange="this.form.submit()">
+                <option value="">All Teachers</option>
+                {% for teacher_name in teacher_options %}
+                <option value="{{ teacher_name }}" {% if teacher_name == selected_teacher %}selected{% endif %}>{{ teacher_name }}</option>
+                {% endfor %}
+            </select>
+            {% if selected_teacher %}
+            <a href="/teacher_dashboard" class="btn btn-primary btn-sm">Clear Filter</a>
+            {% endif %}
+        </form>
+    </div>
+    {% endif %}
+
     <!-- ── Quick Stats ──────────────────────────────────────────────── -->
     <div class="grid-4 mb section-gap">
         <div class="stat-box">
@@ -181,8 +198,8 @@
                 <div class="go-row">
                     <select id="viewGroupSelect" onchange="goToGroup(this.value)">
                         <option value="">View Group</option>
-                        {% for g in groups %}
-                        <option value="/view_as_student/{{ g }}">{{ g }}</option>
+                        {% for group_option in group_options %}
+                        <option value="{{ group_option.href }}">{{ group_option.label }}</option>
                         {% endfor %}
                     </select>
                 </div>
@@ -221,8 +238,8 @@
             <table>
                 <tr><th>Group</th><th>Students</th><th>Attendance %</th><th>Practical %</th><th>Theory %</th><th>Combined %</th></tr>
                 {% for g in group_att %}
-                <tr class="clickable-row" onclick="window.location.href='/view_as_student/{{ g.group }}'">
-                    <td><a href="/view_as_student/{{ g.group }}" class="table-row-link">{{ g.group }}</a></td>
+                <tr class="clickable-row" onclick="window.location.href='{{ g.view_href }}'">
+                    <td><a href="{{ g.view_href }}" class="table-row-link">{{ g.label or g.group }}</a></td>
                     <td>{{ g.students }}</td>
                     <td>
                         <span class="{{ 'score-high' if g.att_pct >= 80 else ('score-mid' if g.att_pct >= 60 else 'score-low') }}">
@@ -264,11 +281,11 @@
             {% if low_attendance %}
             <table>
                 <tr><th>Name</th><th>Username</th><th>Days Absent</th><th></th></tr>
-                {% for name, username, absent in low_attendance %}
+                {% for name, username, absent, group_label in low_attendance %}
                 <tr class="clickable-row" onclick="window.location.href='/learner_record/{{ username }}'">
                     <td><a href="/learner_record/{{ username }}" class="table-row-link">{{ name }}</a></td>
                     <td>{{ username }}</td>
-                    <td>{{ absent }}</td>
+                    <td>{{ absent }}{% if teacher_options and not selected_teacher %}<div style="color:#888; font-size:0.8em;">{{ group_label }}</div>{% endif %}</td>
                     <td>
                         <span class="badge {{ 'badge-risk' if absent >= 5 else 'badge-warn' }}">
                             {{ 'At Risk' if absent >= 5 else 'Watch' }}
@@ -334,9 +351,9 @@
             {% if top_performers %}
             <table>
                 <tr><th>Name</th><th>Group</th><th>Avg</th></tr>
-                {% for name, grp, avg in top_performers %}
+                {% for learner_username, name, grp, avg in top_performers %}
                 <tr>
-                    <td>{{ name or '—' }}</td>
+                    <td><a href="/learner_record/{{ learner_username }}" class="table-row-link">{{ name or '—' }}</a></td>
                     <td>{{ grp or '—' }}</td>
                     <td><span class="score-high">{{ avg }}%</span></td>
                 </tr>
@@ -353,9 +370,9 @@
             {% if bottom_performers %}
             <table>
                 <tr><th>Name</th><th>Group</th><th>Avg</th></tr>
-                {% for name, grp, avg in bottom_performers %}
+                {% for learner_username, name, grp, avg in bottom_performers %}
                 <tr>
-                    <td>{{ name or '—' }}</td>
+                    <td><a href="/learner_record/{{ learner_username }}" class="table-row-link">{{ name or '—' }}</a></td>
                     <td>{{ grp or '—' }}</td>
                     <td><span class="{{ 'score-mid' if avg >= 40 else 'score-low' }}">{{ avg }}%</span></td>
                 </tr>
@@ -417,11 +434,19 @@
         <div class="card">
             <h3>📤 Recent Submissions</h3>
             {% set combined = [] %}
-            {% for name, grp, subj, task, score, ts in recent_submissions %}
-                {% set _ = combined.append({'name': name, 'grp': grp, 'subj': subj, 'task': task, 'score': score, 'ts': ts, 'type': 'practical'}) %}
+            {% for name, grp, subj, task, score, ts, teacher_name in recent_submissions %}
+                {% set display_group = grp %}
+                {% if teacher_options and not selected_teacher and grp and teacher_name %}
+                    {% set display_group = grp ~ ' (' ~ teacher_name ~ ')' %}
+                {% endif %}
+                {% set _ = combined.append({'name': name, 'grp': display_group, 'subj': subj, 'task': task, 'score': score, 'ts': ts, 'type': 'practical'}) %}
             {% endfor %}
-            {% for name, grp, subj, title, pct, ts in recent_theory_submissions %}
-                {% set _ = combined.append({'name': name, 'grp': grp, 'subj': subj or title, 'task': title, 'score': pct, 'ts': ts, 'type': 'theory'}) %}
+            {% for name, grp, subj, title, pct, ts, teacher_name in recent_theory_submissions %}
+                {% set display_group = grp %}
+                {% if teacher_options and not selected_teacher and grp and teacher_name %}
+                    {% set display_group = grp ~ ' (' ~ teacher_name ~ ')' %}
+                {% endif %}
+                {% set _ = combined.append({'name': name, 'grp': display_group, 'subj': subj or title, 'task': title, 'score': pct, 'ts': ts, 'type': 'theory'}) %}
             {% endfor %}
             {% if combined %}
             {% set sorted_combined = combined | sort(attribute='ts', reverse=True) %}
@@ -469,11 +494,11 @@
         <h3>⏰ Missing Tasks by Group</h3>
         <table>
             <tr><th>Group</th><th>Missing Submissions</th><th></th></tr>
-            {% for grp, cnt in missing_by_group %}
-            <tr class="clickable-row" onclick="window.location.href='/view_as_student/{{ grp }}'">
-                <td><a href="/view_as_student/{{ grp }}" class="table-row-link">{{ grp }}</a></td>
-                <td>{{ cnt }}</td>
-                <td><span class="badge {{ 'badge-risk' if cnt > 10 else 'badge-warn' }}">{{ cnt }} missing</span></td>
+            {% for item in missing_by_group %}
+            <tr class="clickable-row" onclick="window.location.href='{{ item.href }}'">
+                <td><a href="{{ item.href }}" class="table-row-link">{{ item.label }}</a></td>
+                <td>{{ item.count }}</td>
+                <td><span class="badge {{ 'badge-risk' if item.count > 10 else 'badge-warn' }}">{{ item.count }} missing</span></td>
             </tr>
             {% endfor %}
         </table>

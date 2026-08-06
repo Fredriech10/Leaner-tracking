@@ -31,9 +31,9 @@
         .welcome { background: linear-gradient(135deg, #0078D4, #005a9e); color: white; border-radius: 10px; padding: 22px 24px; margin-bottom: 18px; display: flex; justify-content: space-between; align-items: center; }
         .welcome h2 { margin: 0 0 4px 0; font-size: 1.4em; }
         .welcome p { margin: 0; opacity: 0.85; font-size: 0.95em; }
-        .avg-circle { background: rgba(255,255,255,0.2); border-radius: 50%; width: 80px; height: 80px; display: flex; flex-direction: column; align-items: center; justify-content: center; flex-shrink: 0; }
-        .avg-circle .num { font-size: 1.6em; font-weight: bold; line-height: 1; }
-        .avg-circle .lbl { font-size: 0.7em; opacity: 0.85; }
+        .avg-tile { background: rgba(255,255,255,0.18); border: 1px solid rgba(255,255,255,0.18); border-radius: 12px; min-width: 92px; min-height: 82px; padding: 10px 14px; display: flex; flex-direction: column; align-items: center; justify-content: center; flex-shrink: 0; text-align: center; }
+        .avg-tile .num { font-size: 1.55em; font-weight: bold; line-height: 1; }
+        .avg-tile .lbl { font-size: 0.72em; opacity: 0.88; margin-top: 6px; }
 
         /* Stat boxes */
         .stat-row { display: flex; gap: 10px; flex-wrap: wrap; }
@@ -187,18 +187,18 @@
         </div>
         <div style="display:flex; gap:10px; flex-shrink:0;">
             {% if practical_avg %}
-            <div class="avg-circle">
+            <div class="avg-tile">
                 <span class="num">{{ practical_avg }}%</span>
                 <span class="lbl">Practical</span>
             </div>
             {% endif %}
             {% if theory_avg %}
-            <div class="avg-circle">
+            <div class="avg-tile">
                 <span class="num">{{ theory_avg }}%</span>
                 <span class="lbl">Theory</span>
             </div>
             {% endif %}
-            <div class="avg-circle">
+            <div class="avg-tile">
                 <span class="num">{{ overall_avg }}%</span>
                 <span class="lbl">Overall</span>
             </div>
@@ -397,7 +397,7 @@
 
         <!-- Weak Areas -->
         <div class="card">
-            <h3>⚠️ Weak Areas</h3>
+            <h3>⚠️ Weak Areas <a href="/my_weaknesses" style="float:right; font-size:0.82em; color:#0078D4; text-decoration:none;">View all →</a></h3>
             {% if weaknesses %}
             {% set max_c = weaknesses[0][1] %}
             {% for skill, count in weaknesses %}
@@ -410,17 +410,29 @@
             {% else %}
             <p style="color:#107C10; font-size:0.9em;">✔ No weak areas recorded yet.</p>
             {% endif %}
+            {% if theory_module_weaknesses %}
+            <div style="margin-top:16px; padding-top:12px; border-top:1px solid #eef2f7;">
+                <div style="font-size:0.86em; font-weight:bold; color:#0078D4; margin-bottom:8px;">Theory Module Weaknesses</div>
+                {% for item in theory_module_weaknesses %}
+                <div class="skill-bar">
+                    <div class="name">{{ item.module }}</div>
+                    <div class="bg"><div class="fill" style="width:{{ item.wrong_pct }}%;"></div></div>
+                    <div class="cnt">{{ item.wrong_pct }}%</div>
+                </div>
+                {% endfor %}
+            </div>
+            {% endif %}
         </div>
 
         <!-- Recent Feedback -->
         <div class="card">
             <h3>💬 Recent Feedback</h3>
             {% if recent_feedback %}
-            {% for subj, task, feedback, ts in recent_feedback %}
+            {% for item in recent_feedback %}
             <div class="feedback-item">
-                <strong>{{ subj }} — {{ task }}</strong><br>
-                {{ feedback }}
-                <div class="meta">{{ ts[:10] if ts else '' }}</div>
+                <strong>{{ item.title }}</strong><br>
+                {{ item.body }}
+                <div class="meta">{{ item.sender }} • {{ item.timestamp[:16] if item.timestamp else '' }}</div>
             </div>
             {% endfor %}
             {% else %}

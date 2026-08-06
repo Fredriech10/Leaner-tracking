@@ -1,0 +1,122 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>My Weaknesses</title>
+    <style>
+        * { box-sizing: border-box; }
+        body { font-family: Arial, sans-serif; margin: 0; padding: 0; background: #f0f2f5; color: #222; }
+        .topbar { background: #0078D4; color: white; padding: 12px 24px; display: flex; justify-content: space-between; align-items: center; flex-wrap: nowrap; gap: 10px; position: sticky; top: 0; z-index: 999; }
+        .topbar h1 { margin: 0; font-size: 1.05em; white-space: nowrap; }
+        .topbar-links { display: flex; gap: 10px; align-items: center; flex-wrap: nowrap; }
+        .topbar-links a { color: white; text-decoration: none; font-size: 0.82em; opacity: 0.9; white-space: nowrap; }
+        .topbar-links a:hover { opacity: 1; text-decoration: underline; }
+        .topbar-user { color: white; font-size: 0.82em; white-space: nowrap; border-left: 1px solid rgba(255,255,255,0.35); padding-left: 10px; }
+        .topbar-user a { color: white; text-decoration: none; font-weight: bold; }
+        .topbar-user a:hover { text-decoration: underline; }
+        .page { padding: 20px 24px; max-width: 1320px; margin: 0 auto; }
+        .hero { background: linear-gradient(135deg, #0078D4, #005a9e); color: white; border-radius: 12px; padding: 22px 24px; margin-bottom: 18px; }
+        .hero h2 { margin: 0 0 6px 0; font-size: 1.45em; }
+        .hero p { margin: 0; opacity: 0.9; font-size: 0.95em; }
+        .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+        .card { background: white; border-radius: 8px; padding: 18px; border: 1px solid #ddd; }
+        .card h3 { margin: 0 0 14px 0; font-size: 0.95em; color: #0078D4; border-bottom: 2px solid #f0f0f0; padding-bottom: 6px; }
+        .skill-bar { display: flex; align-items: center; gap: 10px; margin-bottom: 8px; }
+        .skill-name { width: 180px; font-size: 0.88em; }
+        .skill-bg { flex: 1; background: #e5e7eb; border-radius: 999px; height: 10px; overflow: hidden; }
+        .skill-fill { height: 100%; background: linear-gradient(90deg, #f59e0b, #dc2626); border-radius: 999px; }
+        .skill-count { width: 42px; text-align: right; font-size: 0.8em; color: #64748b; }
+        table { width: 100%; border-collapse: collapse; font-size: 0.88em; }
+        th { background: #f5f5f5; padding: 8px 10px; text-align: left; font-size: 0.82em; color: #555; }
+        td { padding: 8px 10px; border-bottom: 1px solid #f0f0f0; }
+        tr:last-child td { border-bottom: none; }
+        .score-high { color: #107C10; font-weight: bold; }
+        .score-mid { color: #ff8c00; font-weight: bold; }
+        .score-low { color: #A4262C; font-weight: bold; }
+        .feedback-item { padding: 10px 0; border-bottom: 1px solid #f0f0f0; font-size: 0.88em; }
+        .feedback-item:last-child { border-bottom: none; }
+        .feedback-meta { margin-top: 4px; color: #64748b; font-size: 0.78em; }
+        .muted { color: #888; font-size: 0.9em; }
+        @media (max-width: 860px) {
+            .grid-2 { grid-template-columns: 1fr; }
+        }
+    </style>
+</head>
+<body>
+{% set current_page = 'my_weaknesses' %}
+{% include '_slide_nav.html' %}
+
+<div class="topbar">
+    <h1>🧠 My Weaknesses</h1>
+    <div class="topbar-links">
+        <a href="/student_dashboard">🏠 Dashboard</a>
+        <a href="/my_tasks">📁 Tasks</a>
+        <a href="/lessons">📘 Lessons</a>
+        <a href="/tests">📝 Tests</a>
+        <span class="topbar-user">👤 <a href="/edit_user/{{ session_username }}">{{ session_username }}</a></span>
+        <a href="/logout">Logout</a>
+    </div>
+</div>
+
+<div class="page">
+    <div class="hero">
+        <h2>{{ display_name }}</h2>
+        <p>Review your practical and theory weak areas in one place so you can see what needs attention first.</p>
+    </div>
+
+    <div class="grid-2">
+        <div class="card">
+            <h3>⚠️ Practical Weak Areas</h3>
+            {% if weaknesses %}
+                {% set max_count = weaknesses[0][1] %}
+                {% for skill, count in weaknesses %}
+                <div class="skill-bar">
+                    <div class="skill-name">{{ skill }}</div>
+                    <div class="skill-bg"><div class="skill-fill" style="width: {{ (count / max_count * 100)|int }}%;"></div></div>
+                    <div class="skill-count">{{ count }}×</div>
+                </div>
+                {% endfor %}
+            {% else %}
+                <p class="muted">No practical weaknesses recorded yet.</p>
+            {% endif %}
+        </div>
+
+        <div class="card">
+            <h3>🧪 Theory Module Weaknesses</h3>
+            {% if theory_module_weaknesses %}
+            <table>
+                <tr><th>Module</th><th>Wrong %</th><th>Wrong</th><th>Asked</th><th>Types</th></tr>
+                {% for item in theory_module_weaknesses %}
+                <tr>
+                    <td>{{ item.module }}</td>
+                    <td><span class="{{ 'score-low' if item.wrong_pct >= 60 else ('score-mid' if item.wrong_pct >= 35 else 'score-high') }}">{{ item.wrong_pct }}%</span></td>
+                    <td>{{ item.wrong }}</td>
+                    <td>{{ item.asked }}</td>
+                    <td>{{ item.question_types or '—' }}</td>
+                </tr>
+                {% endfor %}
+            </table>
+            <p style="color:#64748b; font-size:0.8em; margin-top:10px;">Questions without a mapped module appear as <strong>Unmapped</strong>.</p>
+            {% else %}
+            <p class="muted">No theory module weakness data yet.</p>
+            {% endif %}
+        </div>
+    </div>
+
+    <div class="card" style="margin-top:16px;">
+        <h3>💬 Recent Feedback</h3>
+        {% if recent_feedback %}
+            {% for subj, task, feedback, ts in recent_feedback %}
+            <div class="feedback-item">
+                <strong>{{ subj }} — {{ task }}</strong><br>
+                {{ feedback }}
+                <div class="feedback-meta">{{ ts[:16] if ts else '—' }}</div>
+            </div>
+            {% endfor %}
+        {% else %}
+            <p class="muted">No recent feedback available.</p>
+        {% endif %}
+    </div>
+</div>
+</body>
+</html>

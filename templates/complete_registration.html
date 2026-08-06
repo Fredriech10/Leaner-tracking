@@ -1,0 +1,315 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Complete Registration</title>
+    <style>
+        * { box-sizing: border-box; }
+        body {
+            margin: 0;
+            min-height: 100vh;
+            font-family: Arial, sans-serif;
+            background:
+                radial-gradient(circle at top left, rgba(0, 90, 158, 0.18), transparent 34%),
+                radial-gradient(circle at bottom right, rgba(16, 124, 16, 0.14), transparent 28%),
+                linear-gradient(135deg, #eef4fb 0%, #f8fbff 48%, #edf7f1 100%);
+            color: #1f2937;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 32px 16px;
+        }
+
+        .shell {
+            width: 100%;
+            max-width: 980px;
+            display: grid;
+            grid-template-columns: 1.05fr 0.95fr;
+            background: rgba(255,255,255,0.96);
+            border: 1px solid rgba(0,0,0,0.08);
+            border-radius: 24px;
+            overflow: hidden;
+            box-shadow: 0 22px 60px rgba(15, 23, 42, 0.14);
+        }
+
+        .hero {
+            padding: 42px 38px;
+            background: linear-gradient(160deg, #005a9e 0%, #0c7abf 54%, #1c9f8f 100%);
+            color: white;
+            position: relative;
+        }
+
+        .hero::after {
+            content: "";
+            position: absolute;
+            inset: auto -60px -60px auto;
+            width: 220px;
+            height: 220px;
+            border-radius: 50%;
+            background: rgba(255,255,255,0.12);
+        }
+
+        .hero-badge {
+            display: inline-block;
+            padding: 7px 12px;
+            border-radius: 999px;
+            background: rgba(255,255,255,0.16);
+            border: 1px solid rgba(255,255,255,0.22);
+            font-size: 0.78em;
+            font-weight: bold;
+            letter-spacing: 0.03em;
+            margin-bottom: 18px;
+        }
+
+        .hero h1 {
+            margin: 0 0 14px 0;
+            font-size: 2.2em;
+            line-height: 1.05;
+        }
+
+        .hero p {
+            margin: 0 0 18px 0;
+            font-size: 1em;
+            line-height: 1.6;
+            color: rgba(255,255,255,0.92);
+            max-width: 420px;
+        }
+
+        .hero-list {
+            margin: 24px 0 0 0;
+            padding: 0;
+            list-style: none;
+            display: grid;
+            gap: 12px;
+        }
+
+        .hero-list li {
+            padding: 12px 14px;
+            border-radius: 14px;
+            background: rgba(255,255,255,0.12);
+            border: 1px solid rgba(255,255,255,0.12);
+            font-size: 0.93em;
+        }
+
+        .panel {
+            padding: 34px 34px 30px;
+            background: #ffffff;
+        }
+
+        .panel h2 {
+            margin: 0 0 8px 0;
+            color: #0f172a;
+            font-size: 1.45em;
+        }
+
+        .panel-intro {
+            margin: 0 0 22px 0;
+            color: #64748b;
+            font-size: 0.92em;
+            line-height: 1.55;
+        }
+
+        .flash {
+            border-radius: 12px;
+            padding: 12px 14px;
+            margin-bottom: 16px;
+            font-size: 0.9em;
+            border: 1px solid transparent;
+        }
+
+        .flash.error {
+            background: #fff1f2;
+            color: #9f1239;
+            border-color: #fecdd3;
+        }
+
+        .flash.success {
+            background: #ecfdf5;
+            color: #166534;
+            border-color: #bbf7d0;
+        }
+
+        .form-grid {
+            display: grid;
+            gap: 16px;
+        }
+
+        .field {
+            display: grid;
+            gap: 7px;
+        }
+
+        .field-row {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 14px;
+        }
+
+        label {
+            font-size: 0.84em;
+            font-weight: bold;
+            color: #334155;
+        }
+
+        .required {
+            color: #b91c1c;
+        }
+
+        input[type="text"], select {
+            width: 100%;
+            padding: 12px 14px;
+            border-radius: 12px;
+            border: 1px solid #cbd5e1;
+            font-size: 0.95em;
+            background: white;
+            color: #0f172a;
+            outline: none;
+            transition: border-color 0.15s ease, box-shadow 0.15s ease;
+        }
+
+        input[type="text"]:focus, select:focus {
+            border-color: #0c7abf;
+            box-shadow: 0 0 0 4px rgba(12, 122, 191, 0.12);
+        }
+
+        .readonly {
+            background: #f8fafc;
+            color: #475569;
+            font-weight: bold;
+        }
+
+        .hint {
+            font-size: 0.8em;
+            color: #64748b;
+        }
+
+        .submit-row {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 14px;
+            margin-top: 6px;
+        }
+
+        .submit-row p {
+            margin: 0;
+            color: #64748b;
+            font-size: 0.8em;
+            line-height: 1.5;
+        }
+
+        .btn {
+            border: none;
+            border-radius: 12px;
+            background: linear-gradient(135deg, #005a9e 0%, #0c7abf 100%);
+            color: white;
+            font-weight: bold;
+            font-size: 0.94em;
+            padding: 13px 20px;
+            cursor: pointer;
+            min-width: 180px;
+            box-shadow: 0 10px 20px rgba(0, 90, 158, 0.18);
+        }
+
+        .btn:hover {
+            filter: brightness(1.03);
+        }
+
+        @media (max-width: 880px) {
+            .shell {
+                grid-template-columns: 1fr;
+            }
+
+            .hero, .panel {
+                padding: 28px 22px;
+            }
+        }
+
+        @media (max-width: 560px) {
+            .field-row {
+                grid-template-columns: 1fr;
+            }
+
+            .submit-row {
+                flex-direction: column;
+                align-items: stretch;
+            }
+
+            .btn {
+                width: 100%;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="shell">
+        <section class="hero">
+            <div class="hero-badge">FIRST-TIME LEARNER SETUP</div>
+            <h1>Complete Your Profile</h1>
+            <p>Your account was created from an auto-login attempt. Before you can continue, your learner profile needs to be linked to a teacher and class.</p>
+            <ul class="hero-list">
+                <li><strong>Username locked:</strong> your login ID is already assigned and cannot be changed here.</li>
+                <li><strong>Teacher required:</strong> choose only from existing teachers already registered in the system.</li>
+                <li><strong>Group required:</strong> choose only from existing non-empty class groups.</li>
+            </ul>
+        </section>
+
+        <section class="panel">
+            <h2>Learner Registration</h2>
+            <p class="panel-intro">Enter your details exactly once. Your full name will be saved as <strong>SURNAME, NAME</strong>.</p>
+
+            {% with messages = get_flashed_messages(with_categories=true) %}
+            {% if messages %}
+                {% for category, message in messages %}
+                <div class="flash {{ category }}">{{ message }}</div>
+                {% endfor %}
+            {% endif %}
+            {% endwith %}
+
+            <form method="post" class="form-grid">
+                <div class="field">
+                    <label for="username">Username</label>
+                    <input id="username" type="text" class="readonly" value="{{ username }}" readonly>
+                    <div class="hint">This username was supplied by the auto-login process.</div>
+                </div>
+
+                <div class="field-row">
+                    <div class="field">
+                        <label for="first_name">Name <span class="required">*</span></label>
+                        <input id="first_name" name="first_name" type="text" required autocomplete="given-name" value="{{ request.form.get('first_name', '') }}">
+                    </div>
+                    <div class="field">
+                        <label for="surname">Surname <span class="required">*</span></label>
+                        <input id="surname" name="surname" type="text" required autocomplete="family-name" value="{{ request.form.get('surname', '') }}">
+                    </div>
+                </div>
+
+                <div class="field">
+                    <label for="teacher_username">Teacher <span class="required">*</span></label>
+                    <select id="teacher_username" name="teacher_username" required>
+                        <option value="">Select teacher</option>
+                        {% for teacher in teacher_options %}
+                        <option value="{{ teacher.username }}" {% if request.form.get('teacher_username') == teacher.username %}selected{% endif %}>{{ teacher.full_name }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+
+                <div class="field">
+                    <label for="group_name">Group <span class="required">*</span></label>
+                    <select id="group_name" name="group_name" required>
+                        <option value="">Select group</option>
+                        {% for group_name in group_options %}
+                        <option value="{{ group_name }}" {% if request.form.get('group_name') == group_name %}selected{% endif %}>{{ group_name }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+
+                <div class="submit-row">
+                    <p>All fields are required. Once saved, your account will open the learner dashboard.</p>
+                    <button type="submit" class="btn">Save And Continue</button>
+                </div>
+            </form>
+        </section>
+    </div>
+</body>
+</html>

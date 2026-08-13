@@ -3,7 +3,7 @@ from collections import defaultdict
 
 from flask import flash, redirect, render_template, request, session, url_for
 
-from app.database import get_db, get_groups, get_user_role
+from app.database import get_db, get_grades, get_groups, get_user_role
 from app.helper_theory import (
     build_match_review_rows,
     get_fill_in_accepted_answers,
@@ -26,8 +26,10 @@ def register_review_routes(app):
 
         review_type = (request.args.get("type") or "theory").strip()
         selected_group = (request.args.get("group") or "").strip()
+        selected_grade = (request.args.get("grade") or "").strip()
         selected_item = (request.args.get("item") or "").strip()
-        groups = get_groups(username)
+        groups = get_groups(username if role == "teacher" else None, grade=selected_grade)
+        grade_options = get_grades(username if role == "teacher" else None)
 
         conn = get_db()
         conn.row_factory = sqlite3.Row
@@ -46,6 +48,9 @@ def register_review_routes(app):
             if role == "teacher":
                 query += " AND u.teacher_username = ?"
                 params.append(username)
+            if selected_grade:
+                query += " AND u.grade = ?"
+                params.append(selected_grade)
             if selected_group:
                 query += " AND u.group_name = ?"
                 params.append(selected_group)
@@ -82,6 +87,9 @@ def register_review_routes(app):
             if role == "teacher":
                 submission_query += " AND u.teacher_username = ?"
                 submission_params.append(username)
+            if selected_grade:
+                submission_query += " AND u.grade = ?"
+                submission_params.append(selected_grade)
             if selected_group:
                 submission_query += " AND u.group_name = ?"
                 submission_params.append(selected_group)
@@ -237,6 +245,8 @@ def register_review_routes(app):
             "response_review.html",
             review_type=review_type,
             groups=groups,
+            grade_options=grade_options,
+            selected_grade=selected_grade,
             selected_group=selected_group,
             selected_item=selected_item,
             available_items=available_items,
@@ -390,6 +400,7 @@ def register_review_routes(app):
         acceptable_answer = (request.form.get("acceptable_answer") or "").strip()
         submitted_answer = (request.form.get("submitted_answer") or "").strip()
         selected_group = (request.form.get("selected_group") or "").strip()
+        selected_grade = (request.form.get("selected_grade") or "").strip()
         learner_username = (request.form.get("learner_username") or "").strip()
         if not (test_id and question_id):
             flash("Accepted answer could not be added.", "error")
@@ -416,7 +427,7 @@ def register_review_routes(app):
             flash("No learner response was available to add.", "error")
             if learner_username:
                 return redirect(url_for("response_review_learner", learner=learner_username, item=test_id))
-            return redirect(url_for("response_review", type="theory", group=selected_group, item=test_id))
+            return redirect(url_for("response_review", type="theory", grade=selected_grade, group=selected_group, item=test_id))
 
         if q_type == "true_false":
             cursor.execute(
@@ -435,7 +446,7 @@ def register_review_routes(app):
                 flash("That correction is already accepted.", "success")
                 if learner_username:
                     return redirect(url_for("response_review_learner", learner=learner_username, item=test_id))
-                return redirect(url_for("response_review", type="theory", group=selected_group, item=test_id))
+                return redirect(url_for("response_review", type="theory", grade=selected_grade, group=selected_group, item=test_id))
             cursor.execute(
                 """
                 INSERT INTO theory_options (question_id, option_text, is_correct, match_pair)
@@ -460,7 +471,7 @@ def register_review_routes(app):
                 flash("That answer is already accepted.", "success")
                 if learner_username:
                     return redirect(url_for("response_review_learner", learner=learner_username, item=test_id))
-                return redirect(url_for("response_review", type="theory", group=selected_group, item=test_id))
+                return redirect(url_for("response_review", type="theory", grade=selected_grade, group=selected_group, item=test_id))
             cursor.execute(
                 """
                 INSERT INTO theory_options (question_id, option_text, is_correct)
@@ -475,7 +486,7 @@ def register_review_routes(app):
         flash(f"Accepted answer added. {updated} learner answer(s) regraded.", "success")
         if learner_username:
             return redirect(url_for("response_review_learner", learner=learner_username, item=test_id))
-        return redirect(url_for("response_review", type="theory", group=selected_group, item=test_id))
+        return redirect(url_for("response_review", type="theory", grade=selected_grade, group=selected_group, item=test_id))
 
     @app.route("/response_review/accepted_answer_remove", methods=["POST"])
     def response_review_accepted_answer_remove():
@@ -489,6 +500,7 @@ def register_review_routes(app):
         question_id = request.form.get("question_id", type=int)
         remove_answer = (request.form.get("remove_answer") or "").strip()
         selected_group = (request.form.get("selected_group") or "").strip()
+        selected_grade = (request.form.get("selected_grade") or "").strip()
         if not (test_id and question_id and remove_answer):
             flash("Accepted answer could not be removed.", "error")
             return redirect(url_for("response_review"))
@@ -507,4 +519,4 @@ def register_review_routes(app):
 
         updated = regrade_theory_question_answers(test_id, question_id, selected_group or None)
         flash(f"Accepted answer removed. {updated} learner answer(s) regraded.", "success")
-        return redirect(url_for("response_review", type="theory", group=selected_group, item=test_id))
+        return redirect(url_for("response_review", type="theory", grade=selected_grade, group=selected_group, item=test_id))

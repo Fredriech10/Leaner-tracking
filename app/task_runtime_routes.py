@@ -7,6 +7,7 @@ from markupsafe import escape
 
 from app.database import get_db, get_groups, get_teachers, get_user_role, log_activity, save_result, update_weakness
 from app.helper_marking import get_marking_scripts, mark_file
+from app.practical_simulators import get_simulator_catalog, get_simulator_definition, score_simulator_attempt
 from app.runtime import update_active_user
 
 
@@ -22,7 +23,8 @@ def register_task_runtime_routes(app):
         cursor.execute(
             """
             SELECT t.id, t.name, t.assign_date, t.marking_script, t.question_text, t.subject_id,
-                   t.sample_file, t.sample_file_name, t.allow_multiple, t.max_attempts
+                   t.sample_file, t.sample_file_name, t.allow_multiple, t.max_attempts,
+                   t.practical_mode, t.simulator_key
             FROM tasks t
             WHERE t.id = ? AND t.task_type = 'practical'
             """,
@@ -36,16 +38,26 @@ def register_task_runtime_routes(app):
         subject_id = task[5]
         if request.method == "POST":
             assign_date = request.form.get("assign_date")
-            marking_script = request.form.get("marking_script")
+            practical_mode = request.form.get("practical_mode") or "upload"
+            simulator_key = request.form.get("simulator_key") or None
+            marking_script = request.form.get("marking_script") if practical_mode == "upload" else None
             allow_multiple = 1 if request.form.get("allow_multiple") else 0
             max_attempts = int(request.form.get("max_attempts", 1)) if allow_multiple else 1
             groups = request.form.getlist("groups")
             question_text = request.form.get("question_text", "").strip()
+            if practical_mode == "simulator" and simulator_key and not question_text:
+                simulator_definition = get_simulator_definition(simulator_key)
+                if simulator_definition:
+                    question_text = simulator_definition["default_question_html"]
             cursor.execute(
                 """
-                UPDATE tasks SET assign_date = ?, marking_script = ?, question_text = ?, allow_multiple = ?, max_attempts = ? WHERE id = ?
+                UPDATE tasks
+                SET assign_date = ?, marking_script = ?, question_text = ?, allow_multiple = ?, max_attempts = ?,
+                    practical_mode = ?, simulator_key = ?, sample_file = CASE WHEN ? = 'upload' THEN sample_file ELSE NULL END,
+                    sample_file_name = CASE WHEN ? = 'upload' THEN sample_file_name ELSE NULL END
+                WHERE id = ?
                 """,
-                (assign_date, marking_script, question_text, allow_multiple, max_attempts, task_id),
+                (assign_date, marking_script, question_text, allow_multiple, max_attempts, practical_mode, simulator_key if practical_mode == "simulator" else None, practical_mode, practical_mode, task_id),
             )
 
             cursor.execute("DELETE FROM task_groups WHERE task_id = ?", (task_id,))
@@ -60,7 +72,7 @@ def register_task_runtime_routes(app):
                     cursor.execute("INSERT INTO task_teachers (task_id, teacher_username) VALUES (?, ?)", (task_id, t))
 
             sample_file = request.files.get("sample_file")
-            if sample_file and sample_file.filename:
+            if practical_mode == "upload" and sample_file and sample_file.filename:
                 sample_bytes = sample_file.read()
                 sample_filename = sample_file.filename
                 cursor.execute(
@@ -83,6 +95,7 @@ def register_task_runtime_routes(app):
         current_teachers = {row[0] for row in cursor.fetchall()}
         all_groups = get_groups()
         available_scripts = get_marking_scripts()
+        simulator_catalog = get_simulator_catalog()
         teachers = get_teachers()
         conn.close()
 
@@ -101,7 +114,8 @@ def register_task_runtime_routes(app):
             task=task,
             current_groups=current_groups,
             all_groups=all_groups,
-            script_options=script_options,
+            available_scripts=available_scripts,
+            simulator_catalog=simulator_catalog,
             teacher_checkboxes=teacher_checkboxes,
         )
 
@@ -208,14 +222,14 @@ def register_task_runtime_routes(app):
 
         cursor.execute(
             "SELECT name, assign_date, marking_script, question_text, allow_multiple, max_attempts, "
-            "is_active, marking_setup_id FROM tasks WHERE id = ?",
+            "is_active, marking_setup_id, practical_mode, simulator_key FROM tasks WHERE id = ?",
             (task_id,),
         )
         task_row = cursor.fetchone()
         if not task_row:
             conn.close()
             return "Task not found", 404
-        task_name, assign_date, marking_script, question_text, allow_multiple, max_attempts, task_is_active, marking_setup_id = task_row
+        task_name, assign_date, marking_script, question_text, allow_multiple, max_attempts, task_is_active, marking_setup_id, practical_mode, simulator_key = task_row
 
         user_role = get_user_role(username)
         if user_role not in ["teacher", "admin"] and not task_is_active:
@@ -229,6 +243,9 @@ def register_task_runtime_routes(app):
         cursor.execute("SELECT group_name FROM users WHERE username = ?", (username,))
         user_group_row = cursor.fetchone()
         user_group = user_group_row[0] if user_group_row else None
+        cursor.execute("SELECT full_name FROM users WHERE username = ?", (username,))
+        learner_name_row = cursor.fetchone()
+        learner_full_name = (learner_name_row[0] or username) if learner_name_row else username
 
         if user_role not in ["teacher", "admin"]:
             today = datetime.now().date().isoformat()
@@ -259,22 +276,28 @@ def register_task_runtime_routes(app):
                 conn.close()
                 return '<p><a href="/student_dashboard">← Back to Dashboard</a></p><h2>Upload Closed</h2><p style="color:#A4262C;">You have reached the maximum number of submissions for this task.</p>', 403
 
-            file = request.files.get("file")
-            if not file:
-                conn.close()
-                return "No file uploaded", 400
+            if practical_mode == "simulator":
+                result = score_simulator_attempt(simulator_key, request.form)
+                if not result:
+                    conn.close()
+                    return "Simulator task is not configured correctly", 500
+            else:
+                file = request.files.get("file")
+                if not file:
+                    conn.close()
+                    return "No file uploaded", 400
 
-            original_ext = os.path.splitext(file.filename or "")[1] or ".tmp"
-            temp_path = f"temp_{username}{original_ext}"
-            file.save(temp_path)
+                original_ext = os.path.splitext(file.filename or "")[1] or ".tmp"
+                temp_path = f"temp_{username}{original_ext}"
+                file.save(temp_path)
 
-            try:
-                result = mark_file(temp_path, marking_script, marking_setup_id)
-            finally:
-                if os.path.exists(temp_path):
-                    os.remove(temp_path)
+                try:
+                    result = mark_file(temp_path, marking_script, marking_setup_id)
+                finally:
+                    if os.path.exists(temp_path):
+                        os.remove(temp_path)
 
-            if result["error"]:
+            if result.get("error"):
                 conn.close()
                 return f"""
                 <p><a href="/student_dashboard">← Back to Dashboard</a></p>
@@ -320,12 +343,23 @@ def register_task_runtime_routes(app):
             except Exception:
                 pass
 
+        simulator_definition = get_simulator_definition(simulator_key) if practical_mode == "simulator" else None
+        simulator_template = "upload_task.html"
+        if practical_mode == "simulator":
+            simulator_template = (
+                "simulator_html_practical.html"
+                if simulator_definition and simulator_definition.get("shell", {}).get("app") == "html"
+                else "simulator_practical.html"
+            )
+
         return render_template(
-            "upload_task.html",
+            simulator_template,
             subject_name=subject_name,
             task_name=task_name,
             question_text=question_text,
             sample_link_html=sample_link_html,
+            learner_full_name=learner_full_name,
+            simulator_definition=simulator_definition,
         )
 
     @app.route("/subjects/<username>")

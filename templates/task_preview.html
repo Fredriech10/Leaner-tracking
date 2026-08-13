@@ -14,7 +14,7 @@
         .topbar-user { color: white; font-size: 0.82em; white-space: nowrap; border-left: 1px solid rgba(255,255,255,0.35); padding-left: 10px; }
         .topbar-user a { color: white; text-decoration: none; font-weight: bold; }
         .topbar-user a:hover { text-decoration: underline; }
-        .container { max-width: 960px; margin: 0 auto; padding: 24px; }
+        .container { width: 90%; max-width: 90%; margin: 0 auto; padding: 24px; }
         .card { background: white; border: 1px solid #d8dee7; border-radius: 16px; padding: 28px; box-shadow: 0 18px 40px rgba(15, 23, 42, 0.08); }
         h1 { margin-top: 0; font-size: 1.6em; }
         .meta { display: flex; flex-wrap: wrap; gap: 14px; font-size: 0.95em; color: #475569; margin-bottom: 20px; }
@@ -69,10 +69,12 @@
                 {% else %}
                     <div class="question-box empty">No task questions have been added yet.</div>
                 {% endif %}
-                {% if sample_url %}
+                {% if practical_mode == 'simulator' %}
+                    <p class="note">Learners will complete this practical in a simulator inside the portal{% if simulator_title %}: <strong>{{ simulator_title }}</strong>{% endif %}.</p>
+                {% elif sample_url %}
                     <a class="sample-link" href="{{ sample_url }}" target="_blank">📎 Download task sample file</a>
                 {% endif %}
-                <p class="note">This preview shows the task questions exactly as learners will see them in the upload experience.</p>
+                <p class="note">This preview shows the task questions exactly as learners will see them.</p>
             {% endif %}
         </div>
     </div>

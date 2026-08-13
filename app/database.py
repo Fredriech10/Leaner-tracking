@@ -1,9 +1,30 @@
+import re
 import sqlite3
 from datetime import datetime
 
 DB_NAME = "school.db"
 MARKING_DB_NAME = "marking_experiment.db"
 SQLITE_BUSY_TIMEOUT_MS = 30000
+
+
+def infer_grade_from_group(group_name):
+    group_text = (group_name or "").strip().upper()
+    if not group_text:
+        return None
+    match = re.match(r"^(\d{1,2})", group_text)
+    if match:
+        return match.group(1)
+    return None
+
+
+def normalize_grade(value, group_name=None):
+    grade_text = (value or "").strip()
+    if not grade_text:
+        return infer_grade_from_group(group_name)
+    match = re.search(r"(\d{1,2})", grade_text)
+    if match:
+        return match.group(1)
+    return grade_text.upper()
 
 
 def _connect_sqlite(path):
@@ -98,6 +119,30 @@ def save_result(username, subject, task, score, feedback):
     conn.close()
 
 
+def get_grades(username=None, teacher_username=None):
+    conn = get_db()
+    cursor = conn.cursor()
+    params = []
+    query = """
+    SELECT DISTINCT grade
+    FROM users
+    WHERE role = 'student'
+      AND grade IS NOT NULL
+      AND grade != ''
+    """
+    if teacher_username:
+        query += " AND teacher_username = ?"
+        params.append(teacher_username)
+    elif username and get_user_role(username) == "teacher":
+        query += " AND teacher_username = ?"
+        params.append(username)
+    query += " ORDER BY CAST(grade AS INTEGER), grade"
+    cursor.execute(query, params)
+    grades = [row[0] for row in cursor.fetchall()]
+    conn.close()
+    return grades
+
+
 def get_weaknesses(username):
     conn = get_db()
     cursor = conn.cursor()
@@ -153,9 +198,10 @@ def init_marking_db():
     conn.close()
 
 
-def get_groups(username=None):
+def get_groups(username=None, grade=None):
     conn = get_db()
     cursor = conn.cursor()
+    normalized_grade = normalize_grade(grade)
 
     if username:
         role = get_user_role(username)
@@ -163,15 +209,29 @@ def get_groups(username=None):
             group_set = set()
             cursor.execute("SELECT group_name FROM group_teachers WHERE teacher_username = ?", (username,))
             group_set.update(g[0] for g in cursor.fetchall() if g[0])
-            cursor.execute(
-                "SELECT DISTINCT group_name FROM users WHERE role = 'student' AND teacher_username = ? AND group_name IS NOT NULL",
-                (username,),
-            )
+            query = """
+                SELECT DISTINCT group_name
+                FROM users
+                WHERE role = 'student'
+                  AND teacher_username = ?
+                  AND group_name IS NOT NULL
+            """
+            params = [username]
+            if normalized_grade:
+                query += " AND grade = ?"
+                params.append(normalized_grade)
+            cursor.execute(query, params)
             group_set.update(g[0] for g in cursor.fetchall() if g[0])
             conn.close()
             return sorted(group_set)
 
-    cursor.execute("SELECT DISTINCT group_name FROM users WHERE group_name IS NOT NULL")
+    if normalized_grade:
+        cursor.execute(
+            "SELECT DISTINCT group_name FROM users WHERE group_name IS NOT NULL AND grade = ?",
+            (normalized_grade,),
+        )
+    else:
+        cursor.execute("SELECT DISTINCT group_name FROM users WHERE group_name IS NOT NULL")
     groups = [g[0] for g in cursor.fetchall()]
     conn.close()
     return groups
@@ -267,17 +327,19 @@ def import_users_from_excel():
             username = str(row["username"]).strip().upper()
             full_name = str(row["full_name"]).strip()
             group_name = str(row["group"]).strip()
+            grade = normalize_grade(None, group_name)
 
             cursor.execute("SELECT username FROM users WHERE username = ?", (username,))
             existing = cursor.fetchone()
 
             cursor.execute("""
-            INSERT INTO users (username, full_name, group_name, role)
-            VALUES (?, ?, ?, 'student')
+            INSERT INTO users (username, full_name, group_name, grade, role)
+            VALUES (?, ?, ?, ?, 'student')
             ON CONFLICT(username) DO UPDATE SET
                 full_name = excluded.full_name,
-                group_name = excluded.group_name
-            """, (username, full_name, group_name))
+                group_name = excluded.group_name,
+                grade = excluded.grade
+            """, (username, full_name, group_name, grade))
 
             if existing:
                 updated_count += 1
@@ -326,7 +388,8 @@ def init_db():
         last_active TEXT,
         full_name TEXT,
         group_name TEXT,
-        teacher_username TEXT
+        teacher_username TEXT,
+        grade TEXT
     )
     """)
 
@@ -343,8 +406,23 @@ def init_db():
         if "teacher_username" not in user_cols:
             cursor.execute("ALTER TABLE users ADD COLUMN teacher_username TEXT")
             print("Migration: added teacher_username column to users")
+        if "grade" not in user_cols:
+            cursor.execute("ALTER TABLE users ADD COLUMN grade TEXT")
+            print("Migration: added grade column to users")
     except Exception as e:
         print(f"Note: users migration check: {e}")
+
+    try:
+        cursor.execute("SELECT username, group_name, grade FROM users")
+        for learner_username, group_name, grade in cursor.fetchall():
+            normalized_grade = normalize_grade(grade, group_name)
+            if normalized_grade != (grade or None):
+                cursor.execute(
+                    "UPDATE users SET grade = ? WHERE username = ?",
+                    (normalized_grade, learner_username),
+                )
+    except Exception as e:
+        print(f"Note: users grade backfill migration: {e}")
 
     cursor.execute("""
     CREATE TABLE IF NOT EXISTS login_history (
@@ -373,6 +451,7 @@ def init_db():
         topic TEXT NOT NULL,
         subject_line TEXT,
         attendance_date TEXT,
+        theory_test_id INTEGER,
         status TEXT DEFAULT 'open',
         chat_session_id TEXT,
         created_at TEXT,
@@ -389,6 +468,8 @@ def init_db():
             cursor.execute("ALTER TABLE communication_threads ADD COLUMN teacher_read_at TEXT")
         if "student_read_at" not in thread_cols:
             cursor.execute("ALTER TABLE communication_threads ADD COLUMN student_read_at TEXT")
+        if "theory_test_id" not in thread_cols:
+            cursor.execute("ALTER TABLE communication_threads ADD COLUMN theory_test_id INTEGER")
     except Exception as e:
         print(f"Note: communication_threads migration check: {e}")
 
@@ -523,6 +604,8 @@ def init_db():
                 cursor.execute("ALTER TABLE theory_tests ADD COLUMN background_image TEXT")
             if "background_fit" not in cols:
                 cursor.execute("ALTER TABLE theory_tests ADD COLUMN background_fit TEXT DEFAULT 'cover'")
+            if "generated_module_name" not in cols:
+                cursor.execute("ALTER TABLE theory_tests ADD COLUMN generated_module_name TEXT")
     except Exception as e:
         print(f"Note: theory_tests migration: {e}")
 
@@ -533,6 +616,8 @@ def init_db():
             cursor.execute("ALTER TABLE theory_tests ADD COLUMN background_image TEXT")
         if "background_fit" not in cols:
             cursor.execute("ALTER TABLE theory_tests ADD COLUMN background_fit TEXT DEFAULT 'cover'")
+        if "generated_module_name" not in cols:
+            cursor.execute("ALTER TABLE theory_tests ADD COLUMN generated_module_name TEXT")
     except Exception as e:
         print(f"Note: theory_tests background migration: {e}")
 
@@ -733,6 +818,9 @@ def init_db():
         marking_script TEXT,
         theory_test_id INTEGER,
         task_type TEXT DEFAULT 'practical',
+        practical_mode TEXT DEFAULT 'upload',
+        simulator_key TEXT,
+        simulator_config TEXT,
         allow_multiple INTEGER DEFAULT 0,
         max_attempts INTEGER DEFAULT 1,
         is_active INTEGER DEFAULT 1,
@@ -755,6 +843,15 @@ def init_db():
         if "task_type" not in columns:
             cursor.execute("ALTER TABLE tasks ADD COLUMN task_type TEXT DEFAULT 'practical'")
             print("Migration: added task_type column to tasks")
+        if "practical_mode" not in columns:
+            cursor.execute("ALTER TABLE tasks ADD COLUMN practical_mode TEXT DEFAULT 'upload'")
+            print("Migration: added practical_mode column to tasks")
+        if "simulator_key" not in columns:
+            cursor.execute("ALTER TABLE tasks ADD COLUMN simulator_key TEXT")
+            print("Migration: added simulator_key column to tasks")
+        if "simulator_config" not in columns:
+            cursor.execute("ALTER TABLE tasks ADD COLUMN simulator_config TEXT")
+            print("Migration: added simulator_config column to tasks")
         if "allow_multiple" not in columns:
             cursor.execute("ALTER TABLE tasks ADD COLUMN allow_multiple INTEGER DEFAULT 0")
             print("Migration: added allow_multiple column to tasks")
@@ -838,11 +935,28 @@ def init_db():
     )
     """)
 
+    cursor.execute("""
+    CREATE TABLE IF NOT EXISTS class_module_notes (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        note_date TEXT NOT NULL,
+        group_name TEXT NOT NULL,
+        teacher_username TEXT,
+        module_name TEXT NOT NULL,
+        progress_text TEXT,
+        note_text TEXT,
+        module_finished INTEGER DEFAULT 0,
+        generated_test_id INTEGER,
+        created_by TEXT,
+        created_at TEXT
+    )
+    """)
+
     cursor.execute("CREATE INDEX IF NOT EXISTS idx_results_user_subject_task ON results (username, subject, task)")
     cursor.execute("CREATE INDEX IF NOT EXISTS idx_results_user_timestamp ON results (username, timestamp)")
     cursor.execute("CREATE INDEX IF NOT EXISTS idx_login_history_user_date ON login_history (username, date)")
     cursor.execute("CREATE INDEX IF NOT EXISTS idx_login_history_date_user ON login_history (date, username)")
     cursor.execute("CREATE INDEX IF NOT EXISTS idx_attendance_override_user_date ON attendance_override (username, date)")
+    cursor.execute("CREATE INDEX IF NOT EXISTS idx_class_module_notes_scope_date ON class_module_notes (group_name, teacher_username, note_date)")
     cursor.execute("CREATE INDEX IF NOT EXISTS idx_users_role_teacher_group ON users (role, teacher_username, group_name)")
     cursor.execute("CREATE INDEX IF NOT EXISTS idx_users_group_role ON users (group_name, role)")
     cursor.execute("CREATE INDEX IF NOT EXISTS idx_theory_submissions_user_test ON theory_submissions (username, test_id)")
@@ -851,9 +965,11 @@ def init_db():
     cursor.execute("CREATE INDEX IF NOT EXISTS idx_theory_test_groups_group_test ON theory_test_groups (group_name, test_id)")
     cursor.execute("CREATE INDEX IF NOT EXISTS idx_tasks_assign_type ON tasks (assign_date, task_type)")
     cursor.execute("CREATE INDEX IF NOT EXISTS idx_theory_tests_assign_date ON theory_tests (assign_date)")
+    cursor.execute("CREATE INDEX IF NOT EXISTS idx_theory_tests_generated_module_name ON theory_tests (generated_module_name)")
     cursor.execute("CREATE INDEX IF NOT EXISTS idx_excluded_dates_group_date ON excluded_dates (group_name, date)")
     cursor.execute("CREATE INDEX IF NOT EXISTS idx_communication_threads_teacher_updated ON communication_threads (teacher_username, updated_at)")
     cursor.execute("CREATE INDEX IF NOT EXISTS idx_communication_messages_thread_created ON communication_messages (thread_id, created_at)")
+    cursor.execute("CREATE INDEX IF NOT EXISTS idx_communication_threads_student_topic_test ON communication_threads (student_username, topic, theory_test_id)")
 
     cursor.execute("SELECT COUNT(*) FROM subjects")
     if cursor.fetchone()[0] == 0:

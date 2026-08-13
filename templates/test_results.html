@@ -39,6 +39,16 @@
         .btn { padding: 10px 20px; border: none; border-radius: 5px; cursor: pointer; text-decoration: none; font-size: 1em; display: inline-block; margin-right: 8px; }
         .btn-primary { background: #0078D4; color: white; }
         .btn-retry { background: #ff8c00; color: white; }
+        .btn-secondary { background: #475569; color: white; }
+        .action-row { display:flex; gap:8px; align-items:center; flex-wrap:wrap; }
+        .modal-overlay { display:none; position:fixed; inset:0; background:rgba(15, 23, 42, 0.45); z-index:1500; align-items:center; justify-content:center; padding:16px; }
+        .modal-overlay.open { display:flex; }
+        .modal-card { width: 440px; max-width: 100%; background:white; border-radius:14px; border:1px solid #dbe5ef; box-shadow:0 20px 45px rgba(15, 23, 42, 0.22); padding:18px; }
+        .modal-card h3 { margin:0 0 8px 0; color:#005a9e; }
+        .modal-card p { margin:0 0 12px 0; color:#64748b; font-size:0.9em; }
+        .modal-card textarea { width:100%; min-height:90px; resize:vertical; padding:10px 12px; border:1px solid #cbd5e1; border-radius:8px; font-size:0.9em; }
+        .modal-actions { display:flex; justify-content:flex-end; gap:8px; margin-top:12px; flex-wrap:wrap; }
+        .btn-muted { background:#e2e8f0; color:#334155; }
     </style>
 </head>
 <body>
@@ -130,12 +140,42 @@
 {% endif %}
 
 <div style="margin-top: 20px;">
-    <a href="/tests" class="btn btn-primary">← Back to Tests</a>
-    {% if can_retry %}
-        <a href="/take_test/{{ test_id }}" class="btn btn-retry">🔄 Try Again</a>
-    {% endif %}
+    <div class="action-row">
+        <a href="/tests" class="btn btn-primary">← Back to Tests</a>
+        {% if can_retry %}
+            <a href="/take_test/{{ test_id }}" class="btn btn-retry">🔄 Try Again</a>
+        {% endif %}
+        <button type="button" class="btn btn-secondary" onclick="openReviewModal()">Request Review</button>
+    </div>
 </div>
 
 </div>
+<div id="reviewModal" class="modal-overlay" onclick="closeReviewModal(event)">
+    <div class="modal-card" onclick="event.stopPropagation()">
+        <h3>Request Theory Test Review</h3>
+        <p>Optional message for "{{ submission[5] }}".</p>
+        <form method="post" action="/student/theory_review_request">
+            <input type="hidden" name="test_id" value="{{ test_id }}">
+            <input type="hidden" name="next" value="/test_results/{{ submission[0] }}">
+            <textarea name="message" placeholder="Optional message about what should be reviewed."></textarea>
+            <div class="modal-actions">
+                <button type="button" class="btn btn-muted" onclick="closeReviewModal()">Cancel</button>
+                <button type="submit" class="btn btn-secondary">Send Review Request</button>
+            </div>
+        </form>
+    </div>
+</div>
+<script>
+function openReviewModal() {
+    const modal = document.getElementById('reviewModal');
+    if (modal) modal.classList.add('open');
+}
+
+function closeReviewModal(event) {
+    if (event && event.target && event.target !== event.currentTarget) return;
+    const modal = document.getElementById('reviewModal');
+    if (modal) modal.classList.remove('open');
+}
+</script>
 </body>
 </html>

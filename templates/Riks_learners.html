@@ -16,7 +16,7 @@
         .topbar-user a { color: white; text-decoration: none; font-weight: bold; }
         .topbar-user a:hover { text-decoration: underline; }
 
-        .page { padding: 20px 24px; max-width: 1600px; margin: 0 auto; }
+        .page { padding: 20px 24px; width: 90%; max-width: 90%; margin: 0 auto; }
         .card { background: white; border-radius: 8px; padding: 18px; border: 1px solid #ddd; margin-bottom: 16px; }
         .card h3 { margin: 0 0 14px 0; font-size: 0.95em; color: #005a9e; border-bottom: 2px solid #f0f0f0; padding-bottom: 6px; }
         .btn { padding: 8px 16px; border: none; border-radius: 6px; cursor: pointer; font-size: 0.88em; font-weight: bold; }
@@ -29,6 +29,8 @@
         td { padding: 8px; border-bottom: 1px solid #f0f0f0; }
         tr:last-child td { border-bottom: none; }
         tr:hover td { background: #fafafa; }
+        th.sortable { cursor: pointer; user-select: none; white-space: nowrap; }
+        th.sortable:hover { background: #ebf3fb; }
 
         .badge { padding: 4px 10px; border-radius: 10px; font-size: 0.75em; font-weight: bold; }
         .badge-risk { background: #f7c5c5; color: #A4262C; }
@@ -88,22 +90,32 @@
                 {% endfor %}
             </select>
             {% endif %}
+            <label for="gradeSelect">Grade:</label>
+            <select name="grade" id="gradeSelect" onchange="this.form.submit()">
+                <option value="">All Grades</option>
+                {% for grade in grade_options %}
+                <option value="{{ grade }}" {% if grade == selected_grade %}selected{% endif %}>Grade {{ grade }}</option>
+                {% endfor %}
+            </select>
             <label for="groupSelect">Select Group:</label>
             <select name="group" id="groupSelect" onchange="this.form.submit()" {% if teacher_options is defined and teacher_options and not selected_teacher %}disabled{% endif %}>
-                <option value="">-- Select Group --</option>
+                <option value="">Summary</option>
+                <option value="all" {% if selected_group == 'all' %}selected{% endif %}>All Groups</option>
                 {% for g in groups %}
                 <option value="{{ g }}" {% if g == selected_group %}selected{% endif %}>{{ g }}</option>
                 {% endfor %}
             </select>
             {% if selected_group %}
-            <span style="color:#555;">Showing risk scores for <strong>{{ selected_group }}</strong>{% if selected_teacher %} with <strong>{{ selected_teacher }}</strong>{% endif %}.</span>
+            <span style="color:#555;">Showing risk scores for <strong>{{ 'All Groups' if selected_group == 'all' else selected_group }}</strong>{% if selected_teacher %} with <strong>{{ selected_teacher }}</strong>{% endif %}.</span>
+            {% elif selected_grade %}
+            <span style="color:#555;">Showing all learners for <strong>Grade {{ selected_grade }}</strong>{% if selected_teacher %} with <strong>{{ selected_teacher }}</strong>{% endif %}.</span>
             {% elif teacher_options is defined and teacher_options and not selected_teacher %}
             <span style="color:#666; font-size:0.88em;">Select a teacher to load a class.</span>
             {% endif %}
         </form>
     </div>
 
-    {% if not selected_group %}
+    {% if not selected_group and not selected_grade %}
     <div class="summary-layout">
         <div class="card">
             <h3>Group Risk Summary</h3>
@@ -112,7 +124,7 @@
                 <tr><th>Group</th><th>Students</th><th>Attendance</th><th>Combined</th><th>Risk</th></tr>
                 {% for item in group_summaries %}
                 <tr>
-                    <td><a href="/risk_learners?group={{ item.group }}{% if item.teacher_username %}&teacher={{ item.teacher_username }}{% endif %}" class="risk-row-link" style="margin:0; padding:0;">{{ item.label or item.group }}</a></td>
+                    <td><a href="/risk_learners?group={{ item.group }}{% if item.teacher_username %}&teacher={{ item.teacher_username }}{% endif %}{% if selected_grade %}&grade={{ selected_grade }}{% endif %}" class="risk-row-link" style="margin:0; padding:0;">{{ item.label or item.group }}</a></td>
                     <td>{{ item.students }}</td>
                     <td>{{ item.attendance_pct }}%</td>
                     <td>{{ item.avg_combined }}%</td>
@@ -147,40 +159,99 @@
     </div>
     {% endif %}
     <div class="card">
-        <h3>{{ selected_group }} Risk Scores</h3>
+        <h3>{{ ('All Groups - Grade ' ~ selected_grade) if selected_group == 'all' and selected_grade else ('All Groups' if selected_group == 'all' else (selected_group if selected_group else ('Grade ' ~ selected_grade))) }} Risk Scores</h3>
         {% if risk_students %}
-        <table>
+        <table id="riskTable">
             <thead>
                 <tr>
-                    <th>Student</th>
-                    <th>Risk Score</th>
-                    <th>Status</th>
-                    <th>Attendance</th>
-                    <th>Average</th>
-                    <th>Missing %</th>
-                    <th>Reason</th>
+                    <th class="sortable" data-sort-type="text">Full Name</th>
+                    <th class="sortable" data-sort-type="text">Group</th>
+                    <th class="sortable" data-sort-type="number">Risk Score</th>
+                    <th class="sortable" data-sort-type="text">Status</th>
+                    <th class="sortable" data-sort-type="number">Attendance</th>
+                    <th class="sortable" data-sort-type="number">Average</th>
+                    <th class="sortable" data-sort-type="number">Missing %</th>
+                    <th class="sortable" data-sort-type="text">Reason</th>
                 </tr>
             </thead>
             <tbody>
                 {% for student in risk_students %}
                 <tr class="clickable-row" onclick="window.location.href='/learner_record/{{ student.username }}'">
-                    <td><a href="/learner_record/{{ student.username }}" class="risk-row-link">{{ student.name }}</a></td>
-                    <td><span class="{{ 'score-ok' if student.score <= 40 else ('score-medium' if student.score <= 70 else 'score-low') }}">{{ student.score }}%</span></td>
-                    <td><span class="badge {{ 'badge-ok' if student.status == 'Safe' else ('badge-mid' if student.status == 'At Risk' else 'badge-risk') }}">{{ student.status }}</span></td>
-                    <td>{{ student.attendance_pct }}%</td>
-                    <td>{{ student.avg_score }}%</td>
-                    <td>{{ student.missing_pct }}%</td>
-                    <td>{{ student.reason }}</td>
+                    <td data-sort-value="{{ student.name }}"><a href="/learner_record/{{ student.username }}" class="risk-row-link">{{ student.name }}</a></td>
+                    <td data-sort-value="{{ student.group }}">{{ student.group }}</td>
+                    <td data-sort-value="{{ student.score }}"><span class="{{ 'score-ok' if student.score <= 40 else ('score-medium' if student.score <= 70 else 'score-low') }}">{{ student.score }}%</span></td>
+                    <td data-sort-value="{{ student.status }}"><span class="badge {{ 'badge-ok' if student.status == 'Safe' else ('badge-mid' if student.status == 'At Risk' else 'badge-risk') }}">{{ student.status }}</span></td>
+                    <td data-sort-value="{{ student.attendance_pct }}">{{ student.attendance_pct }}%</td>
+                    <td data-sort-value="{{ student.avg_score }}">{{ student.avg_score }}%</td>
+                    <td data-sort-value="{{ student.missing_pct }}">{{ student.missing_pct }}%</td>
+                    <td data-sort-value="{{ student.reason }}">{{ student.reason }}</td>
                 </tr>
                 {% endfor %}
             </tbody>
         </table>
         {% else %}
-        <p style="color:#666;">No students found for this group.</p>
+        <p style="color:#666;">No students found for this selection.</p>
         {% endif %}
     </div>
     {% endif %}
 </div>
+
+<script>
+function initSortableTable(tableId, defaultColumnIndex = 0, defaultDirection = 'asc') {
+    const table = document.getElementById(tableId);
+    if (!table) return;
+    const body = table.tBodies[0];
+    if (!body) return;
+    const headers = Array.from(table.querySelectorAll('th.sortable'));
+    const rows = Array.from(body.rows);
+    if (!rows.length) return;
+
+    const getCellValue = (row, index) => {
+        const cell = row.cells[index];
+        if (!cell) return '';
+        return (cell.dataset.sortValue || cell.textContent || '').trim();
+    };
+
+    const baseHeaderLabels = new Map(headers.map((header) => [header, header.textContent.trim()]));
+    const sortRows = (index, type, direction) => {
+        const multiplier = direction === 'asc' ? 1 : -1;
+        rows.sort((a, b) => {
+            const aVal = getCellValue(a, index);
+            const bVal = getCellValue(b, index);
+            if (type === 'number') {
+                return ((parseFloat(aVal) || 0) - (parseFloat(bVal) || 0)) * multiplier;
+            }
+            return aVal.localeCompare(bVal, undefined, { sensitivity: 'base', numeric: true }) * multiplier;
+        });
+        rows.forEach((row) => body.appendChild(row));
+        headers.forEach((header) => {
+            header.textContent = baseHeaderLabels.get(header);
+            if (parseInt(header.dataset.columnIndex || '-1', 10) === index) {
+                header.textContent += direction === 'asc' ? ' ▲' : ' ▼';
+            }
+        });
+    };
+
+    headers.forEach((header) => {
+        const index = Array.from(header.parentElement.children).indexOf(header);
+        header.dataset.columnIndex = String(index);
+        header.addEventListener('click', () => {
+            const nextDirection = header.dataset.sortDirection === 'asc' ? 'desc' : 'asc';
+            headers.forEach((item) => { item.dataset.sortDirection = ''; });
+            header.dataset.sortDirection = nextDirection;
+            sortRows(index, header.dataset.sortType || 'text', nextDirection);
+        });
+    });
+
+    const defaultHeader = headers.find((header) => parseInt(header.dataset.columnIndex || '-1', 10) === defaultColumnIndex);
+    if (defaultHeader) {
+        defaultHeader.dataset.sortDirection = defaultDirection;
+        sortRows(defaultColumnIndex, defaultHeader.dataset.sortType || 'text', defaultDirection);
+    }
+}
+
+initSortableTable('riskTable', 0, 'asc');
+</script>
 
 </body>
 </html>

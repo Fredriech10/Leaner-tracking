@@ -6,6 +6,11 @@ from markupsafe import escape
 
 from app.database import get_db, get_marking_db, get_teachers, get_user_role, log_activity
 from app.helper_marking import get_marking_scripts
+from app.practical_simulators import (
+    WORD_INSERT_PICTURE_SIMULATOR_KEY,
+    get_simulator_catalog,
+    get_simulator_definition,
+)
 
 
 def register_task_admin_routes(app):
@@ -91,22 +96,41 @@ def register_task_admin_routes(app):
             if action == "create":
                 task_name = request.form.get("task_name")
                 assign_date = request.form.get("assign_date")
-                marking_script = request.form.get("marking_script")
-                marking_setup_id = request.form.get("marking_setup_id") or None
+                practical_mode = request.form.get("practical_mode") or "upload"
+                simulator_key = request.form.get("simulator_key") or None
+                marking_script = request.form.get("marking_script") if practical_mode == "upload" else None
+                marking_setup_id = request.form.get("marking_setup_id") if practical_mode == "upload" else None
                 allow_multiple = 1 if request.form.get("allow_multiple") else 0
                 max_attempts = int(request.form.get("max_attempts", 1)) if allow_multiple else 1
                 groups = request.form.getlist("groups")
                 teachers = request.form.getlist("teachers")
                 if task_name and assign_date:
                     question_text = request.form.get("question_text", "").strip()
+                    if practical_mode == "simulator" and simulator_key and not question_text:
+                        simulator_definition = get_simulator_definition(simulator_key)
+                        if simulator_definition:
+                            question_text = simulator_definition["default_question_html"]
                     cursor.execute(
                         "INSERT INTO tasks (subject_id, name, assign_date, marking_script, marking_setup_id, "
-                        "question_text, task_type, allow_multiple, max_attempts, created_by, created_at) "
-                        "VALUES (?, ?, ?, ?, ?, ?, 'practical', ?, ?, ?, ?)",
-                        (subject_id, task_name, assign_date, marking_script, marking_setup_id, question_text, allow_multiple, max_attempts, username, datetime.now().isoformat()),
+                        "question_text, task_type, practical_mode, simulator_key, allow_multiple, max_attempts, created_by, created_at) "
+                        "VALUES (?, ?, ?, ?, ?, ?, 'practical', ?, ?, ?, ?, ?, ?)",
+                        (
+                            subject_id,
+                            task_name,
+                            assign_date,
+                            marking_script,
+                            marking_setup_id,
+                            question_text,
+                            practical_mode,
+                            simulator_key if practical_mode == "simulator" else None,
+                            allow_multiple,
+                            max_attempts,
+                            username,
+                            datetime.now().isoformat(),
+                        ),
                     )
                     task_id = cursor.lastrowid
-                    if "sample_file" in request.files:
+                    if practical_mode == "upload" and "sample_file" in request.files:
                         file = request.files["sample_file"]
                         if file.filename:
                             file_content = file.read()
@@ -123,23 +147,48 @@ def register_task_admin_routes(app):
                 source_task_id = request.form.get("source_task_id")
                 new_task_name = request.form.get("task_name", "").strip()
                 new_assign_date = request.form.get("assign_date")
-                new_marking_script = request.form.get("marking_script") or None
-                new_marking_setup_id = request.form.get("marking_setup_id") or None
+                new_practical_mode = request.form.get("practical_mode") or "upload"
+                new_simulator_key = request.form.get("simulator_key") or None
+                new_marking_script = (request.form.get("marking_script") or None) if new_practical_mode == "upload" else None
+                new_marking_setup_id = (request.form.get("marking_setup_id") or None) if new_practical_mode == "upload" else None
                 new_allow_multiple = 1 if request.form.get("allow_multiple") else 0
                 new_max_attempts = int(request.form.get("max_attempts", 1)) if new_allow_multiple else 1
                 new_groups = request.form.getlist("groups")
                 new_teachers = request.form.getlist("teachers")
                 if source_task_id and new_task_name and new_assign_date:
-                    cursor.execute("SELECT question_text, sample_file, sample_file_name FROM tasks WHERE id = ?", (source_task_id,))
+                    cursor.execute("SELECT question_text, sample_file, sample_file_name, simulator_key FROM tasks WHERE id = ?", (source_task_id,))
                     src = cursor.fetchone()
                     src_question = src[0] if src else ""
                     src_file = src[1] if src else None
                     src_file_name = src[2] if src else None
+                    src_simulator_key = src[3] if src else None
+                    effective_simulator_key = new_simulator_key if new_practical_mode == "simulator" else None
+                    if new_practical_mode == "simulator" and not effective_simulator_key:
+                        effective_simulator_key = src_simulator_key
+                    if new_practical_mode == "simulator" and not src_question and effective_simulator_key:
+                        simulator_definition = get_simulator_definition(effective_simulator_key)
+                        if simulator_definition:
+                            src_question = simulator_definition["default_question_html"]
                     cursor.execute(
                         "INSERT INTO tasks (subject_id, name, assign_date, marking_script, marking_setup_id, "
-                        "question_text, task_type, allow_multiple, max_attempts, sample_file, sample_file_name, "
-                        "created_by, created_at) VALUES (?, ?, ?, ?, ?, ?, 'practical', ?, ?, ?, ?, ?, ?)",
-                        (subject_id, new_task_name, new_assign_date, new_marking_script, new_marking_setup_id, src_question, new_allow_multiple, new_max_attempts, src_file, src_file_name, username, datetime.now().isoformat()),
+                        "question_text, task_type, practical_mode, simulator_key, allow_multiple, max_attempts, sample_file, sample_file_name, "
+                        "created_by, created_at) VALUES (?, ?, ?, ?, ?, ?, 'practical', ?, ?, ?, ?, ?, ?, ?, ?)",
+                        (
+                            subject_id,
+                            new_task_name,
+                            new_assign_date,
+                            new_marking_script,
+                            new_marking_setup_id,
+                            src_question,
+                            new_practical_mode,
+                            effective_simulator_key,
+                            new_allow_multiple,
+                            new_max_attempts,
+                            src_file if new_practical_mode == "upload" else None,
+                            src_file_name if new_practical_mode == "upload" else None,
+                            username,
+                            datetime.now().isoformat(),
+                        ),
                     )
                     new_task_id = cursor.lastrowid
                     for g in new_groups:
@@ -204,6 +253,7 @@ def register_task_admin_routes(app):
         available_theory_tests = cursor.fetchall()
 
         teachers = get_teachers()
+        simulator_catalog = get_simulator_catalog()
         teacher_checkboxes = "".join(
             f'<label style="display:inline-flex;align-items:center;gap:5px;">'
             f'<input type="checkbox" name="teachers" value="{escape(t[0])}"> {escape(t[1] or t[0])}</label>'
@@ -214,7 +264,7 @@ def register_task_admin_routes(app):
             """
             SELECT t.id, t.name, t.assign_date, t.marking_script, t.task_type, t.theory_test_id,
                    t.allow_multiple, t.max_attempts, t.is_active, t.question_text, t.sample_file_name,
-                   t.marking_setup_id,
+                   t.marking_setup_id, t.practical_mode, t.simulator_key,
                    GROUP_CONCAT(DISTINCT tg.group_name),
                    GROUP_CONCAT(DISTINCT tt.teacher_username)
             FROM tasks t
@@ -230,14 +280,18 @@ def register_task_admin_routes(app):
         conn.close()
 
         task_list = ""
-        for task_id, task_name, assign_date, marking_script, task_type, theory_test_id, allow_multiple, max_attempts, is_active, question_text, sample_file_name, marking_setup_id, group_list, teacher_list in tasks:
+        for task_id, task_name, assign_date, marking_script, task_type, theory_test_id, allow_multiple, max_attempts, is_active, question_text, sample_file_name, marking_setup_id, practical_mode, simulator_key, group_list, teacher_list in tasks:
             if task_type == "theory":
                 type_label = '<span style="background:#0078D4;color:white;padding:2px 6px;border-radius:10px;font-size:0.8em;">📝 Theory</span>'
                 script_label = f"Test ID: {theory_test_id}"
             else:
                 type_label = '<span style="background:#107C10;color:white;padding:2px 6px;border-radius:10px;font-size:0.8em;">📁 Practical</span>'
-                script_label = marking_script if marking_script else '<span style="color:red;">None assigned</span>'
-                if marking_setup_id:
+                if practical_mode == "simulator":
+                    simulator_title = simulator_catalog.get(simulator_key or "", {}).get("title", simulator_key or "Simulator")
+                    script_label = f'<span style="color:#005a9e;">Simulator: {escape(simulator_title)}</span>'
+                else:
+                    script_label = marking_script if marking_script else '<span style="color:red;">None assigned</span>'
+                if practical_mode == "upload" and marking_setup_id:
                     setup_name = next((title for setup_id, title in available_marking_setups if setup_id == marking_setup_id), None)
                     setup_label = escape(setup_name or f"Setup {marking_setup_id}")
                     script_label += f'<br><span style="color:#005a9e;">Setup: {setup_label}</span>'
@@ -245,7 +299,11 @@ def register_task_admin_routes(app):
             status_badge = '<span style="background:#c8f7c5;color:#107C10;padding:2px 8px;border-radius:10px;font-size:0.8em;">Active</span>' if is_active else '<span style="background:#f7c5c5;color:#A4262C;padding:2px 8px;border-radius:10px;font-size:0.8em;">Inactive</span>'
             toggle_label = "⏸ Deactivate" if is_active else "▶ Activate"
             toggle_style = "background:#ff8c00;color:white;" if is_active else "background:#107C10;color:white;"
-            attempts_label = "Single" if task_type == "practical" and not allow_multiple else (f"Multiple ({max_attempts})" if task_type == "practical" else "Theory task")
+            if task_type == "practical":
+                mode_label = "Simulator" if practical_mode == "simulator" else "Upload"
+                attempts_label = f"{mode_label} / " + ("Single" if not allow_multiple else f"Multiple ({max_attempts})")
+            else:
+                attempts_label = "Theory task"
 
             task_list += f"""
             <tr>
@@ -260,7 +318,7 @@ def register_task_admin_routes(app):
                 <td style="white-space:nowrap; vertical-align:middle;">
                     {'<a href="/tasks/' + str(task_id) + '/edit" title="Edit task" class="btn btn-primary">✏️</a>' if task_type == 'practical' else ''}
                     <a href="/tasks/{task_id}/preview" class="icon-btn" title="Preview learner view">👁</a>
-                    {'<button type="button" class="btn btn-success" title="Reuse: copy into a new task" onclick="openReuseTaskModal(' + str(task_id) + ', ' + repr(task_name) + ', ' + repr(marking_script or '') + ', ' + str(allow_multiple) + ', ' + str(max_attempts) + ', ' + repr(marking_setup_id or '') + ')">📋</button>' if task_type == 'practical' else ''}
+                    {'<button type="button" class="btn btn-success" title="Reuse: copy into a new task" onclick="openReuseTaskModal(' + str(task_id) + ', ' + repr(task_name) + ', ' + repr(marking_script or '') + ', ' + str(allow_multiple) + ', ' + str(max_attempts) + ', ' + repr(marking_setup_id or '') + ', ' + repr(practical_mode or 'upload') + ', ' + repr(simulator_key or '') + ')">📋</button>' if task_type == 'practical' else ''}
                     <form method="post" action="/tasks/{task_id}/toggle" style="display:inline-flex; margin:0;">
                         <input type="hidden" name="subject_id" value="{subject_id}">
                         <button type="submit" title="{toggle_label}" class="btn" style="{toggle_style}">{'⏸' if is_active else '▶'}</button>
@@ -291,6 +349,10 @@ def register_task_admin_routes(app):
         for setup_id, setup_title in available_marking_setups:
             marking_setup_options += f'<option value="{setup_id}">{escape(setup_title)}</option>'
 
+        simulator_options = ""
+        for simulator_key, simulator_meta in simulator_catalog.items():
+            simulator_options += f'<option value="{escape(simulator_key)}">{escape(simulator_meta["title"])}</option>'
+
         theory_test_options = '<option value="">-- Select Theory Test --</option>'
         for tt_id, tt_title, tt_subject in available_theory_tests:
             label = f"{tt_title}" + (f" ({tt_subject})" if tt_subject else "")
@@ -301,6 +363,8 @@ def register_task_admin_routes(app):
             subject_name=subject_name,
             script_options=script_options,
             marking_setup_options=marking_setup_options,
+            simulator_options=simulator_options,
+            default_simulator_key=WORD_INSERT_PICTURE_SIMULATOR_KEY,
             group_checkboxes=group_checkboxes,
             teacher_checkboxes=teacher_checkboxes,
             task_list=task_list,
@@ -316,10 +380,12 @@ def register_task_admin_routes(app):
         if role not in ["teacher", "admin"]:
             return "Access denied", 403
 
+        simulator_catalog = get_simulator_catalog()
         conn = get_db()
         cursor = conn.cursor()
         cursor.execute(
-            "SELECT t.name, t.assign_date, t.marking_script, t.question_text, t.task_type, t.theory_test_id, t.sample_file_name, s.name "
+            "SELECT t.name, t.assign_date, t.marking_script, t.question_text, t.task_type, t.theory_test_id, "
+            "t.sample_file_name, s.name, t.practical_mode, t.simulator_key "
             "FROM tasks t JOIN subjects s ON t.subject_id = s.id WHERE t.id = ?",
             (task_id,),
         )
@@ -328,12 +394,15 @@ def register_task_admin_routes(app):
             conn.close()
             return "Task not found", 404
 
-        task_name, assign_date, marking_script, question_text, task_type, theory_test_id, sample_file_name, subject_name = task_row
+        task_name, assign_date, marking_script, question_text, task_type, theory_test_id, sample_file_name, subject_name, practical_mode, simulator_key = task_row
         theory_test_title = None
+        simulator_title = None
         if task_type == "theory" and theory_test_id:
             cursor.execute("SELECT title FROM theory_tests WHERE id = ?", (theory_test_id,))
             test_row = cursor.fetchone()
             theory_test_title = test_row[0] if test_row else None
+        elif task_type == "practical" and practical_mode == "simulator":
+            simulator_title = simulator_catalog.get(simulator_key or "", {}).get("title")
 
         conn.close()
         return render_template(
@@ -346,6 +415,8 @@ def register_task_admin_routes(app):
             question_text=question_text,
             sample_file_name=sample_file_name,
             sample_url=f"/tasks/{task_id}/sample_file" if sample_file_name else None,
+            practical_mode=practical_mode,
+            simulator_title=simulator_title,
             theory_test_title=theory_test_title,
             theory_test_id=theory_test_id,
         )

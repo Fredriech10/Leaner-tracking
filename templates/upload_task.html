@@ -12,7 +12,7 @@
         .topbar-links a { color: white; text-decoration: none; font-size: 0.82em; opacity: 0.9; white-space: nowrap; }
         .topbar-links a:hover { opacity: 1; text-decoration: underline; }
         .topbar-user { color: white; font-size: 0.82em; white-space: nowrap; border-left: 1px solid rgba(255,255,255,0.35); padding-left: 10px; }
-        .page { padding: 20px 24px; max-width: 950px; margin: 0 auto; }
+        .page { padding: 20px 24px; width: 90%; max-width: 90%; margin: 0 auto; }
         a.action-link { color: #0078D4; text-decoration: none; font-weight: 600; }
         a.action-link:hover { text-decoration: underline; }
         .card { background: #ffffff; border: 1px solid #dde2ea; border-radius: 16px; padding: 26px; box-shadow: 0 18px 40px rgba(15, 23, 42, 0.06); }
@@ -52,7 +52,7 @@
 
 <div class="page">
     <div class="card">
-        <h2>Upload - {{ subject_name|upper }} ({{ task_name }})</h2>
+        <h2>{{ subject_name|upper }} ({{ task_name }})</h2>
         <div class="split-panel">
             <div class="left-panel">
                 {% if sample_link_html %}

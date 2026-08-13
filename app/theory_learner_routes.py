@@ -64,7 +64,9 @@ def register_theory_learner_routes(app):
                   OR EXISTS (SELECT 1 FROM theory_test_groups WHERE test_id = t.id AND group_name = ?)
               )
             GROUP BY t.id
-            ORDER BY t.created_at DESC
+            ORDER BY
+                CASE WHEN best.best_percentage IS NULL THEN 0 ELSE 1 END,
+                t.created_at DESC
             """,
             (username, username, username, username, user_group),
         )
@@ -153,7 +155,8 @@ def register_theory_learner_routes(app):
             cursor.execute(
                 """
                 SELECT t.id, t.name, t.assign_date, t.task_type, t.allow_multiple,
-                       t.max_attempts, t.is_active, t.theory_test_id, t.subject_id, s.name
+                       t.max_attempts, t.is_active, t.theory_test_id, t.subject_id, s.name,
+                       COALESCE(t.practical_mode, 'upload')
                 FROM tasks t
                 JOIN subjects s ON t.subject_id = s.id
                 ORDER BY t.assign_date, s.name, t.name
@@ -163,7 +166,8 @@ def register_theory_learner_routes(app):
             cursor.execute(
                 """
                 SELECT t.id, t.name, t.assign_date, t.task_type, t.allow_multiple,
-                       t.max_attempts, t.is_active, t.theory_test_id, t.subject_id, s.name
+                       t.max_attempts, t.is_active, t.theory_test_id, t.subject_id, s.name,
+                       COALESCE(t.practical_mode, 'upload')
                 FROM tasks t
                 JOIN subjects s ON t.subject_id = s.id
                 JOIN task_groups tg ON t.id = tg.task_id
@@ -175,7 +179,7 @@ def register_theory_learner_routes(app):
 
         task_rows = cursor.fetchall()
         tasks = []
-        for task_id, task_name, assign_date, task_type, allow_multiple, max_attempts, is_active, theory_test_id, subject_id, subject_name in task_rows:
+        for task_id, task_name, assign_date, task_type, allow_multiple, max_attempts, is_active, theory_test_id, subject_id, subject_name, practical_mode in task_rows:
             cursor.execute(
                 "SELECT COUNT(*), COALESCE(MAX(score), 0) FROM results WHERE username = ? AND subject = ? AND task = ?",
                 (username, subject_name, task_name),
@@ -193,6 +197,7 @@ def register_theory_learner_routes(app):
                     "theory_test_id": theory_test_id,
                     "subject_id": subject_id,
                     "subject": subject_name,
+                    "practical_mode": practical_mode,
                     "submission_count": submission_count or 0,
                     "best_score": best_score,
                 }

@@ -19,10 +19,12 @@
         .test-info h3 { margin: 0 0 6px 0; display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
         .test-info p { margin: 0; color: #555; font-size: 0.9em; }
         .test-actions { display: flex; flex-direction: column; align-items: flex-end; gap: 6px; white-space: nowrap; }
+        .action-row { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; justify-content: flex-end; }
         .btn { padding: 8px 16px; border: none; border-radius: 4px; cursor: pointer; text-decoration: none; font-size: 0.9em; display: inline-block; }
         .btn-primary { background: #0078D4; color: white; }
         .btn-success { background: #107C10; color: white; }
         .btn-retry { background: #ff8c00; color: white; }
+        .btn-secondary { background: #475569; color: white; }
         .badge { padding: 3px 10px; border-radius: 10px; font-size: 0.82em; font-weight: bold; }
         .badge-best { background: #c8f7c5; color: #107C10; }
         .badge-attempts { background: #f0f0f0; color: #555; font-size: 0.8em; }
@@ -33,6 +35,14 @@
         .progress-track { height: 9px; background: #e5e7eb; border-radius: 99px; overflow: hidden; }
         .progress-fill { height: 100%; background: linear-gradient(90deg, #0078D4, #16a34a); border-radius: 99px; }
         .progress-text { color: #64748b; font-size: 0.78em; margin-top: 4px; text-align: right; }
+        .modal-overlay { display:none; position:fixed; inset:0; background:rgba(15, 23, 42, 0.45); z-index:1500; align-items:center; justify-content:center; padding:16px; }
+        .modal-overlay.open { display:flex; }
+        .modal-card { width: 440px; max-width: 100%; background:white; border-radius:14px; border:1px solid #dbe5ef; box-shadow:0 20px 45px rgba(15, 23, 42, 0.22); padding:18px; }
+        .modal-card h3 { margin:0 0 8px 0; color:#005a9e; }
+        .modal-card p { margin:0 0 12px 0; color:#64748b; font-size:0.9em; }
+        .modal-card textarea { width:100%; min-height:90px; resize:vertical; padding:10px 12px; border:1px solid #cbd5e1; border-radius:8px; font-size:0.9em; }
+        .modal-actions { display:flex; justify-content:flex-end; gap:8px; margin-top:12px; flex-wrap:wrap; }
+        .btn-muted { background:#e2e8f0; color:#334155; }
         @media (max-width: 720px) {
             .topbar {
                 position: static;
@@ -101,10 +111,20 @@
                 <span class="badge badge-attempts {{ 'badge-maxed' if maxed_out else '' }}">
                     {{ t[8] }}/{{ t[7] if t[6] else 1 }} attempt{{ 's' if t[8] != 1 }}
                 </span>
-                <a href="/test_results/{{ t[5] }}" class="btn btn-success">View Results</a>
-                {% if t[6] and not maxed_out %}
-                    <a href="/take_test/{{ t[0] }}" class="btn btn-retry">Try Again</a>
-                {% endif %}
+                <div class="action-row">
+                    <a href="/test_results/{{ t[5] }}" class="btn btn-success">View Results</a>
+                    {% if t[6] and not maxed_out %}
+                        <a href="/take_test/{{ t[0] }}" class="btn btn-retry">Try Again</a>
+                    {% endif %}
+                    <button
+                        type="button"
+                        class="btn btn-secondary"
+                        data-review-test-id="{{ t[0] }}"
+                        data-review-test-title="{{ t[1] }}"
+                        onclick="openReviewModal(this.dataset.reviewTestId, this.dataset.reviewTestTitle, '/tests')">
+                        Request Review
+                    </button>
+                </div>
             {% else %}
                 <a href="/take_test/{{ t[0] }}" class="btn btn-primary">Start Test -></a>
             {% endif %}
@@ -114,5 +134,39 @@
 {% endif %}
 
 </div>
+<div id="reviewModal" class="modal-overlay" onclick="closeReviewModal(event)">
+    <div class="modal-card" onclick="event.stopPropagation()">
+        <h3>Request Theory Test Review</h3>
+        <p id="reviewModalTitle">Optional message for the teacher.</p>
+        <form method="post" action="/student/theory_review_request">
+            <input type="hidden" name="test_id" id="reviewModalTestId">
+            <input type="hidden" name="next" id="reviewModalNext" value="/tests">
+            <textarea name="message" placeholder="Optional message about what should be reviewed."></textarea>
+            <div class="modal-actions">
+                <button type="button" class="btn btn-muted" onclick="closeReviewModal()">Cancel</button>
+                <button type="submit" class="btn btn-secondary">Send Review Request</button>
+            </div>
+        </form>
+    </div>
+</div>
+<script>
+function openReviewModal(testId, testTitle, nextUrl) {
+    const modal = document.getElementById('reviewModal');
+    const testIdInput = document.getElementById('reviewModalTestId');
+    const nextInput = document.getElementById('reviewModalNext');
+    const title = document.getElementById('reviewModalTitle');
+    if (!modal || !testIdInput || !nextInput || !title) return;
+    testIdInput.value = testId || '';
+    nextInput.value = nextUrl || '/tests';
+    title.textContent = testTitle ? `Optional message for "${testTitle}".` : 'Optional message for the teacher.';
+    modal.classList.add('open');
+}
+
+function closeReviewModal(event) {
+    if (event && event.target && event.target !== event.currentTarget) return;
+    const modal = document.getElementById('reviewModal');
+    if (modal) modal.classList.remove('open');
+}
+</script>
 </body>
 </html>

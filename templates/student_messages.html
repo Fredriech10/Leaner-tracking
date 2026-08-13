@@ -1,0 +1,148 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Messages</title>
+    <style>
+        * { box-sizing: border-box; }
+        body { font-family: Arial, sans-serif; margin: 0; padding: 0; background: #f0f2f5; color: #222; }
+        .topbar { background: #0078D4; color: white; padding: 12px 24px; display: flex; justify-content: space-between; align-items: center; flex-wrap: nowrap; gap: 10px; position: sticky; top: 0; z-index: 999; }
+        .topbar h1 { margin: 0; font-size: 1.05em; white-space: nowrap; }
+        .topbar-links { display: flex; gap: 10px; align-items: center; flex-wrap: nowrap; }
+        .topbar-links a { color: white; text-decoration: none; font-size: 0.82em; opacity: 0.9; white-space: nowrap; }
+        .topbar-links a:hover { opacity: 1; text-decoration: underline; }
+        .topbar-user { color: white; font-size: 0.82em; white-space: nowrap; border-left: 1px solid rgba(255,255,255,0.35); padding-left: 10px; }
+        .topbar-user a { color: white; text-decoration: none; font-weight: bold; }
+        .topbar-user a:hover { text-decoration: underline; }
+        .page { padding: 20px 24px; width: 90%; max-width: 90%; margin: 0 auto; }
+        .hero { background: linear-gradient(135deg, #0078D4, #005a9e); color: white; border-radius: 12px; padding: 22px 24px; margin-bottom: 18px; }
+        .hero h2 { margin: 0 0 6px 0; font-size: 1.4em; }
+        .hero p { margin: 0; opacity: 0.92; font-size: 0.95em; }
+        .layout { display: grid; grid-template-columns: 360px 1fr; gap: 16px; }
+        .card { background: white; border-radius: 8px; padding: 18px; border: 1px solid #ddd; }
+        .card h3 { margin: 0 0 14px 0; font-size: 0.95em; color: #0078D4; border-bottom: 2px solid #f0f0f0; padding-bottom: 6px; }
+        .compose-form select, .compose-form textarea { width: 100%; padding: 10px 12px; border: 1px solid #cbd5e1; border-radius: 8px; font-size: 0.9em; }
+        .compose-form textarea { min-height: 110px; resize: vertical; margin-top: 8px; }
+        .btn { padding: 10px 16px; border: none; border-radius: 8px; cursor: pointer; font-size: 0.9em; font-weight: bold; text-decoration: none; display: inline-block; }
+        .btn-primary { background: #0078D4; color: white; }
+        .thread-list { display: grid; gap: 10px; }
+        .thread-card { border: 1px solid #e2e8f0; border-radius: 12px; padding: 12px; background: #fff; }
+        .thread-head { display: flex; justify-content: space-between; gap: 10px; align-items: flex-start; }
+        .thread-topic { font-weight: bold; color: #005a9e; font-size: 0.9em; }
+        .thread-meta { margin-top: 4px; color: #64748b; font-size: 0.78em; }
+        .status-pill { display: inline-flex; align-items: center; border-radius: 999px; padding: 3px 8px; font-size: 0.72em; font-weight: bold; }
+        .status-open { background: #dcfce7; color: #166534; }
+        .status-unread { background: #fee2e2; color: #991b1b; }
+        .message-stream { display: grid; gap: 10px; max-height: 620px; overflow-y: auto; }
+        .message-thread { border: 1px solid #e2e8f0; border-radius: 14px; padding: 14px; background: #f8fbff; }
+        .message-thread h4 { margin: 0 0 10px 0; color: #0f172a; font-size: 0.96em; }
+        .message-bubbles { display: grid; gap: 8px; }
+        .bubble { max-width: 82%; padding: 10px 12px; border-radius: 14px; font-size: 0.88em; line-height: 1.4; }
+        .bubble.student { justify-self: end; background: #dbeafe; color: #1e3a5f; }
+        .bubble.teacher { justify-self: start; background: #dcfce7; color: #166534; }
+        .bubble-meta { margin-top: 5px; font-size: 0.72em; color: #64748b; }
+        .empty { color: #888; font-size: 0.9em; }
+        @media (max-width: 900px) {
+            .layout { grid-template-columns: 1fr; }
+        }
+    </style>
+</head>
+<body>
+{% set current_page = 'student_messages' %}
+{% include '_slide_nav.html' %}
+
+<div class="topbar">
+    <h1>💬 Messages</h1>
+    <div class="topbar-links">
+        <a href="/student_dashboard">🏠 Dashboard</a>
+        <a href="/my_results">📊 Results</a>
+        <a href="/my_weaknesses">🧠 Weaknesses</a>
+        <span class="topbar-user">👤 <a href="/edit_user/{{ session_username }}">{{ session_username }}</a></span>
+        <a href="/logout">Logout</a>
+    </div>
+</div>
+
+<div class="page">
+    {% with messages = get_flashed_messages(with_categories=true) %}
+    {% if messages %}
+        <div style="margin-bottom:16px;">
+        {% for category, message in messages %}
+            <div style="background: {{ '#dcfce7' if category == 'success' else '#fee2e2' }}; color: {{ '#166534' if category == 'success' else '#991b1b' }}; border:1px solid {{ '#bbf7d0' if category == 'success' else '#fca5a5' }}; border-radius:8px; padding:12px 14px; margin-bottom:8px;">
+                {{ message }}
+            </div>
+        {% endfor %}
+        </div>
+    {% endif %}
+    {% endwith %}
+
+    <div class="hero">
+        <h2>Messages And Responses</h2>
+        <p>Send new messages to your teacher and review the full history of replies, attendance review responses, and general communication.</p>
+    </div>
+
+    <div class="layout">
+        <div class="card">
+            <h3>New Message</h3>
+            <form method="post" action="/student/send_message" class="compose-form">
+                <input type="hidden" name="next" value="/student_messages">
+                <input type="hidden" name="chat_session_id" value="{{ session.get('chat_session_id', '') }}">
+                <select name="topic">
+                    <option value="chat">Chat</option>
+                    <option value="general">General</option>
+                    <option value="marks_query">Marks Query</option>
+                </select>
+                <textarea name="message" placeholder="Type your message here..." required></textarea>
+                <button type="submit" class="btn btn-primary" style="margin-top:10px;">Send Message</button>
+            </form>
+
+            <div style="margin-top:18px;">
+                <h3 style="margin-bottom:10px;">Threads</h3>
+                <div class="thread-list">
+                    {% if threads %}
+                        {% for thread in threads %}
+                        <div class="thread-card">
+                            <div class="thread-head">
+                                <div>
+                                    <div class="thread-topic">{{ thread.topic | replace('_', ' ') | title }}</div>
+                                    <div class="thread-meta">{{ thread.subject_line or 'General' }}</div>
+                                </div>
+                                <span class="status-pill {{ 'status-unread' if thread.student_read_at is none else 'status-open' }}">
+                                    {{ 'Unread' if thread.student_read_at is none else 'Read' }}
+                                </span>
+                            </div>
+                            <div class="thread-meta" style="margin-top:8px;">Updated {{ thread.updated_at[:16] if thread.updated_at else '—' }}</div>
+                        </div>
+                        {% endfor %}
+                    {% else %}
+                        <div class="empty">No messages yet.</div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+
+        <div class="card">
+            <h3>Conversation History</h3>
+            <div class="message-stream">
+                {% if threads %}
+                    {% for thread in threads %}
+                    <div class="message-thread">
+                        <h4>{{ thread.topic | replace('_', ' ') | title }}{% if thread.attendance_date %} • {{ thread.attendance_date }}{% endif %}</h4>
+                        <div class="message-bubbles">
+                            {% for message in thread.messages %}
+                            <div class="bubble {{ 'teacher' if message.sender_role in ['teacher', 'admin'] else 'student' }}">
+                                {{ message.message }}
+                                <div class="bubble-meta">{{ message.sender_username }} • {{ message.created_at[:16] if message.created_at else '' }}</div>
+                            </div>
+                            {% endfor %}
+                        </div>
+                    </div>
+                    {% endfor %}
+                {% else %}
+                    <div class="empty">No conversation history available yet.</div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+</body>
+</html>

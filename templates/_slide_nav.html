@@ -180,6 +180,7 @@
     }
     @keyframes globalRestoreSpin { to { transform: rotate(360deg); } }
 </style>
+{% set resolved_current_page = current_page if current_page is defined else default_current_page %}
 {% set nav_items = [] %}
 {% if session_role in ['teacher', 'admin'] %}
     {% set nav_items = [
@@ -187,11 +188,12 @@
         ('attendance', '/attendance', '📅', 'Attendance'),
         ('group_results', '/group_results', '📊', 'Results'),
         ('risk_learners', '/risk_learners', '🚨', 'Learners At Risk'),
+        ('weakness_summary', '/weakness_summary', '🧠', 'Weaknesses'),
         ('manage_subjects', '/manage_subjects', '📁', 'Practical'),
         ('manage_tests', '/manage_tests', '📝', 'Theory Tests'),
         ('manage_lessons', '/manage_lessons', '🧩', 'Lesson Setup'),
         ('response_review', '/response_review', '🧾', 'Review'),
-        ('communications', '/communications', '💬', 'Messages'),
+        ('communications', '/communications', '💬', 'Messages' ~ (' *' if teacher_unread_messages else '')),
         ('marking_setup', '/marking_setup', '⚙️', 'Marking Setup'),
         ('admin', '/admin', '🛠️', 'Admin')
     ] %}
@@ -200,7 +202,7 @@
         ('student_dashboard', '/student_dashboard', '🏠', 'Dashboard'),
         ('my_tasks', '/my_tasks', '📁', 'Practical Tasks'),
         ('my_results', '/my_results', '📊', 'Results'),
-        ('student_messages', '/student_messages', '💬', 'Messages'),
+        ('student_messages', '/student_messages', '💬', 'Messages' ~ (' *' if student_unread_messages else '')),
         ('my_weaknesses', '/my_weaknesses', '🧠', 'Weaknesses'),
         ('lessons', '/lessons', '📘', 'Lessons'),
         ('tests', '/tests', '📝', 'Theory Tests')
@@ -213,16 +215,16 @@
     </div>
     <nav class="slide-nav-list">
         {% for key, href, icon, label in nav_items %}
-        <a href="{{ href }}" class="slide-nav-link{% if current_page == key %} active{% endif %}" data-tooltip="{{ label }}">
+        <a href="{{ href }}" class="slide-nav-link{% if resolved_current_page == key %} active{% endif %}" data-tooltip="{{ label }}">
             <span class="slide-nav-icon">{{ icon }}</span>
             <span class="slide-nav-label">{{ label }}</span>
         </a>
         {% endfor %}
     </nav>
 </aside>
-<a href="#" class="floating-back-btn{% if current_page in ['teacher_dashboard', 'student_dashboard'] %} hidden{% endif %}" id="floatingBackBtn" aria-label="Go back">
+<a href="{{ logical_back_url }}" class="floating-back-btn{% if logical_back_hidden %} hidden{% endif %}" id="floatingBackBtn" aria-label="{{ logical_back_label }}">
     <span>←</span>
-    <span>Back</span>
+    <span>{{ logical_back_label }}</span>
 </a>
 <div class="global-restore-overlay" id="globalRestoreOverlay">
     <div class="global-restore-box">
@@ -230,33 +232,56 @@
         <span>Returning to your previous place...</span>
     </div>
 </div>
+<script id="sharedTopbarConfig" type="application/json">
+{
+  "currentPage": {{ resolved_current_page|tojson }},
+  "backUrl": {{ logical_back_url|tojson }},
+  "backLabel": {{ logical_back_label|tojson }},
+  "backHidden": {{ logical_back_hidden|tojson }},
+  "profileUrl": {{ (url_for('edit_user', username=session_username) if session_username else '')|tojson }},
+  "logoutUrl": "/logout",
+  "headerLinks": {{ header_nav_items|tojson }}
+}
+</script>
 <script>
 (function () {
     document.body.classList.add('with-slide-nav');
     const toggle = document.getElementById('slideNavToggle');
     const backBtn = document.getElementById('floatingBackBtn');
     const restoreOverlay = document.getElementById('globalRestoreOverlay');
+    const topbarConfigEl = document.getElementById('sharedTopbarConfig');
+    const topbarConfig = topbarConfigEl ? JSON.parse(topbarConfigEl.textContent) : null;
     const storageKey = 'learnerTrackingSlideNavExpanded';
-    const scrollKey = 'learnerTrackingGlobalScrollY:' + window.location.pathname;
+    const pathScrollKey = 'learnerTrackingGlobalScrollY:path:' + window.location.pathname;
+    const fullScrollKey = 'learnerTrackingGlobalScrollY:full:' + window.location.pathname + window.location.search;
+    const legacyScrollKey = 'learnerTrackingGlobalScrollY:' + window.location.pathname;
     if (sessionStorage.getItem(storageKey) === '1') {
         document.body.classList.add('slide-nav-expanded');
     }
     function saveScrollPosition() {
-        sessionStorage.setItem(scrollKey, String(window.scrollY || window.pageYOffset || 0));
+        const value = String(window.scrollY || window.pageYOffset || 0);
+        sessionStorage.setItem(pathScrollKey, value);
+        sessionStorage.setItem(fullScrollKey, value);
+        sessionStorage.setItem(legacyScrollKey, value);
     }
     function restoreScrollPosition() {
         if (sessionStorage.getItem('lessonBuilderScrollY') || sessionStorage.getItem('lessonBuilderCardId')) return;
-        const scrollY = sessionStorage.getItem(scrollKey);
+        const scrollY =
+            sessionStorage.getItem(fullScrollKey) ??
+            sessionStorage.getItem(pathScrollKey) ??
+            sessionStorage.getItem(legacyScrollKey);
         if (scrollY === null) return;
         document.documentElement.classList.add('restoring-page');
         if (restoreOverlay) restoreOverlay.classList.add('active');
         requestAnimationFrame(function () {
             window.scrollTo(0, Number(scrollY) || 0);
             setTimeout(function () {
-                sessionStorage.removeItem(scrollKey);
+                sessionStorage.removeItem(fullScrollKey);
+                sessionStorage.removeItem(pathScrollKey);
+                sessionStorage.removeItem(legacyScrollKey);
                 document.documentElement.classList.remove('restoring-page');
                 if (restoreOverlay) restoreOverlay.classList.remove('active');
-            }, 160);
+            }, 220);
         });
     }
 
@@ -267,29 +292,96 @@
         });
     }
 
+    function normalizeTopbars() {
+        if (!topbarConfig) return;
+        document.querySelectorAll('.topbar').forEach(function (topbar) {
+            let title = topbar.querySelector('h1, strong');
+            if (!title) {
+                title = document.createElement('h1');
+                title.textContent = document.title || 'Learner Tracking';
+            } else if (title.parentElement !== topbar) {
+                title = title.cloneNode(true);
+            }
+
+            topbar.innerHTML = '';
+            topbar.appendChild(title);
+
+            const links = document.createElement('div');
+            links.className = 'topbar-links shared-topbar-links';
+
+            if (!topbarConfig.backHidden) {
+                const backLink = document.createElement('a');
+                backLink.href = topbarConfig.backUrl;
+                backLink.textContent = '\u2190 ' + topbarConfig.backLabel;
+                backLink.className = 'shared-topbar-back';
+                links.appendChild(backLink);
+            }
+
+            (topbarConfig.headerLinks || []).forEach(function (item) {
+                const link = document.createElement('a');
+                link.href = item.href;
+                link.textContent = item.label;
+                if (item.key === topbarConfig.currentPage) {
+                    link.className = 'active-topbar-link';
+                }
+                links.appendChild(link);
+            });
+            topbar.appendChild(links);
+
+            const account = document.createElement('div');
+            account.className = 'topbar-links topbar-account';
+
+            if (topbarConfig.profileUrl) {
+                const user = document.createElement('span');
+                user.className = 'topbar-user';
+                const profileLink = document.createElement('a');
+                profileLink.href = topbarConfig.profileUrl;
+                profileLink.textContent = '{{ session_username }}';
+                user.appendChild(document.createTextNode('👤 '));
+                user.appendChild(profileLink);
+                account.appendChild(user);
+            }
+
+            const logoutLink = document.createElement('a');
+            logoutLink.href = topbarConfig.logoutUrl;
+            logoutLink.textContent = 'Logout';
+            account.appendChild(logoutLink);
+            topbar.appendChild(account);
+        });
+    }
+
     if (backBtn) {
         backBtn.addEventListener('click', function (event) {
             event.preventDefault();
-            const fallback = {{ ('"/teacher_dashboard"' if session_role in ['teacher', 'admin'] else '"/student_dashboard"') | safe }};
-            const sameOriginReferrer = document.referrer && document.referrer.indexOf(window.location.origin) === 0;
-            if (sameOriginReferrer && window.history.length > 1) {
-                window.history.back();
-                return;
-            }
-            window.location.href = fallback;
+            window.location.href = topbarConfig && topbarConfig.backUrl ? topbarConfig.backUrl : backBtn.getAttribute('href');
         });
     }
+
+    normalizeTopbars();
 
     document.querySelectorAll('form').forEach(function (form) {
         form.addEventListener('submit', saveScrollPosition);
     });
-    document.querySelectorAll('a.btn, button.btn').forEach(function (element) {
-        element.addEventListener('click', function () {
-            if (element.type !== 'button' || element.closest('form') === null) {
-                saveScrollPosition();
-            }
+    document.querySelectorAll('a[href]').forEach(function (link) {
+        link.addEventListener('click', function (event) {
+            if (event.defaultPrevented) return;
+            if (link.target === '_blank') return;
+            const href = link.getAttribute('href') || '';
+            if (!href || href.startsWith('#') || href.startsWith('javascript:')) return;
+            saveScrollPosition();
         });
     });
+    document.querySelectorAll('button, input[type=\"submit\"], input[type=\"button\"]').forEach(function (element) {
+        element.addEventListener('click', function () {
+            if (element.type === 'button' && !element.closest('form')) return;
+            saveScrollPosition();
+        });
+    });
+    window.addEventListener('beforeunload', saveScrollPosition);
+    document.addEventListener('visibilitychange', function () {
+        if (document.visibilityState === 'hidden') saveScrollPosition();
+    });
+    window.addEventListener('pageshow', restoreScrollPosition);
     window.addEventListener('load', restoreScrollPosition);
 })();
 </script>

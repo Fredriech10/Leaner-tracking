@@ -18,7 +18,7 @@
         .topbar-user a:hover { text-decoration: underline; }
 
         /* Layout */
-        .page { padding: 20px 24px; max-width: 1400px; margin: 0 auto; }
+        .page { padding: 20px 24px; width: 90%; max-width: 90%; margin: 0 auto; }
         .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
         .grid-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 16px; }
         .full { grid-column: 1 / -1; }
@@ -322,74 +322,103 @@
         </div>
     </div>
 
-    <!-- Row 2: Recent Results + Missing Tasks -->
-    <div class="grid-2" style="margin-bottom:16px;">
+    <!-- Row 2: Learning Progress -->
+    <div class="card full" style="margin-bottom:16px;">
+            <h3>📈 Learning Progress</h3>
+            <div class="stat-row" style="margin-bottom:14px;">
+                <div class="stat {{ 'green' if learning_summary.overall_completion >= 80 else ('orange' if learning_summary.overall_completion >= 50 else 'red') }}">
+                    <div class="val">{{ learning_summary.overall_completion }}%</div>
+                    <div class="lbl">Overall Done</div>
+                </div>
+                <div class="stat green">
+                    <div class="val">{{ learning_summary.practical_done }}/{{ learning_summary.practical_total }}</div>
+                    <div class="lbl">Practical</div>
+                </div>
+                <div class="stat green">
+                    <div class="val">{{ learning_summary.theory_done }}/{{ learning_summary.theory_total }}</div>
+                    <div class="lbl">Lessons & Tests</div>
+                </div>
+                <div class="stat orange">
+                    <div class="val">{{ learning_summary.theory_in_progress }}</div>
+                    <div class="lbl">In Progress</div>
+                </div>
+                <div class="stat red">
+                    <div class="val">{{ learning_summary.missing_total }}</div>
+                    <div class="lbl">Missing</div>
+                </div>
+                <div class="stat">
+                    {% set total_minutes = (learning_summary.theory_time_seconds // 60) %}
+                    <div class="val">{{ total_minutes // 60 }}h {{ total_minutes % 60 }}m</div>
+                    <div class="lbl">Lesson/Test Time</div>
+                </div>
+            </div>
 
-        <!-- Recent Results -->
-        <div class="card">
-            <h3>🏆 Recent Results</h3>
-            {% if recent_results or recent_theory_results %}
+            {% if learning_progress %}
             <table>
-                <tr><th>Subject</th><th>Task</th><th>Score</th><th>Type</th></tr>
-                {% for r in recent_results %}
+                <tr><th>Subject</th><th>Item</th><th>Type</th><th>Status</th><th>Progress</th><th>Score</th><th>Attempts</th><th>Time</th><th>Action</th></tr>
+                {% for item in learning_progress %}
                 <tr>
-                    <td>{{ r[0] }}</td>
-                    <td>{{ r[1] }}</td>
-                    <td><span class="{{ 'score-high' if r[2] >= 60 else ('score-mid' if r[2] >= 40 else 'score-low') }}">{{ r[2] }}%</span></td>
-                    <td><span style="font-size:0.78em; background:#e8f5e9; color:#107C10; padding:1px 6px; border-radius:8px;">Practical</span></td>
-                </tr>
-                {% endfor %}
-                {% for subj, title, pct, ts in recent_theory_results %}
-                <tr>
-                    <td>{{ subj or title }}</td>
-                    <td>{{ title }}</td>
-                    <td><span class="{{ 'score-high' if pct >= 60 else ('score-mid' if pct >= 40 else 'score-low') }}">{{ pct }}%</span></td>
-                    <td><span style="font-size:0.78em; background:#e3f2fd; color:#0078D4; padding:1px 6px; border-radius:8px;">Theory</span></td>
+                    <td>{{ item.subject }}</td>
+                    <td>{{ item.title }}</td>
+                    <td><span style="font-size:0.78em; background:{{ '#e0f2fe' if item.kind == 'Lesson' else '#fef3c7' }}; color:{{ '#075985' if item.kind == 'Lesson' else '#92400e' }}; padding:1px 6px; border-radius:8px;">{{ item.kind }}</span></td>
+                    <td>
+                        {% if item.status == 'Completed' %}
+                        <span class="badge" style="background:#c8f7c5;color:#107C10;">Completed</span>
+                        {% elif item.status == 'In progress' %}
+                        <span class="badge" style="background:#fff3cd;color:#856404;">In progress</span>
+                        {% else %}
+                        <span class="badge badge-missing">Not started</span>
+                        {% endif %}
+                    </td>
+                    <td>
+                        <div style="min-width:120px;">
+                            <div style="height:8px; background:#e5e7eb; border-radius:999px; overflow:hidden; margin-bottom:4px;">
+                                <div style="height:100%; width:{{ item.progress_pct }}%; background:linear-gradient(90deg, #0078D4, #16a34a); border-radius:999px;"></div>
+                            </div>
+                            <div style="font-size:0.76em; color:#64748b;">
+                                {{ item.progress_pct }}%
+                                {% if item.total and item.has_progress %} | {{ item.viewed }}/{{ item.total }} slides{% elif item.total %} | 0/--{% endif %}
+                            </div>
+                        </div>
+                    </td>
+                    <td>{% if item.kind == 'Lesson' and item.status == 'Completed' %}100%{% elif item.score is not none %}<span class="{{ 'score-high' if item.score >= 60 else ('score-mid' if item.score >= 40 else 'score-low') }}">{{ item.score }}%</span>{% else %}—{% endif %}</td>
+                    <td>{{ item.attempts }}</td>
+                    <td>{{ item.time_spent // 60 }}m {{ item.time_spent % 60 }}s</td>
+                    <td>
+                        {% if item.status != 'Completed' %}
+                        <a href="/take_test/{{ item.id }}" class="btn btn-primary" style="padding:6px 12px; border-radius:4px; background:#0078D4; color:white; text-decoration:none; font-size:0.82em;">Start →</a>
+                        {% else %}
+                        <span style="color:#888;">—</span>
+                        {% endif %}
+                    </td>
                 </tr>
                 {% endfor %}
             </table>
-            {% else %}
-            <p style="color:#888; font-size:0.9em;">No results yet.</p>
-            {% endif %}
-        </div>
-
-        <!-- Missing / Upcoming Tasks -->
-        <div class="card">
-            <h3>⏰ Missing Tasks</h3>
             {% if missing_assignments %}
-            <table>
-                <tr><th>Type</th><th>Subject</th><th>Activity</th><th>Due</th><th>Action</th></tr>
-                {% for a in missing_assignments %}
-                <tr>
-                    <td>
-                        {% if a.type == 'practical' %}
-                            <span class="badge" style="background:#e8f5e9;color:#107C10;">Practical</span>
-                        {% else %}
-                            <span class="badge" style="background:#e3f2fd;color:#0078D4;">Theory</span>
-                        {% endif %}
-                    </td>
-                    <td>{{ a.subject }}</td>
-                    <td>{{ a.activity }}</td>
-                    <td>
-                        {% if a.due %}
-                            <span class="badge badge-missing">{{ a.due }}</span>
-                        {% else %}
-                            <span style="color:#888;">—</span>
-                        {% endif %}
-                    </td>
-                    <td>
-                        <a href="{{ a.start_url }}" class="btn btn-primary" style="padding:6px 12px;border-radius:4px;background:#0078D4;color:white;text-decoration:none;font-size:0.85em;">
-                            Start →
-                        </a>
-                    </td>
-                </tr>
-                {% endfor %}
-            </table>
-            {% else %}
-            <p style="color:#107C10; font-size:0.9em;">✔ All assigned activities submitted!</p>
+            <div style="margin-top:14px; padding-top:12px; border-top:1px solid #eef2f7;">
+                <strong style="font-size:0.9em;color:#555;">Start outstanding practical tasks:</strong>
+                <div style="display:flex; gap:8px; flex-wrap:wrap; margin-top:8px;">
+                    {% for assignment in missing_assignments if assignment.type == 'practical' and assignment.start_url %}
+                    <a href="{{ assignment.start_url }}" class="btn btn-primary" style="padding:6px 12px; border-radius:4px; background:#0078D4; color:white; text-decoration:none; font-size:0.82em;">
+                        {{ assignment.subject }} — {{ assignment.activity }}
+                    </a>
+                    {% endfor %}
+                </div>
+            </div>
             {% endif %}
-        </div>
-
+            {% if missing_items %}
+            <div style="margin-top:14px;">
+                <strong style="font-size:0.9em;color:#555;">Needs attention:</strong>
+                <div style="display:flex; gap:8px; flex-wrap:wrap; margin-top:8px;">
+                    {% for item in missing_items %}
+                    <span class="badge badge-missing">{{ item.type }}: {{ item.title }}</span>
+                    {% endfor %}
+                </div>
+            </div>
+            {% endif %}
+            {% else %}
+            <p style="color:#888; font-size:0.9em;">No assigned lessons or tests yet.</p>
+            {% endif %}
     </div>
 
     <!-- Row 3: Weak Areas + Recent Feedback -->

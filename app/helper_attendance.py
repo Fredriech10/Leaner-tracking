@@ -633,6 +633,7 @@ def is_attendance_editable(date_str, role="teacher"):
 def get_attendance_data(group, start_date=None, end_date=None, teacher_username=None):
     conn = get_db()
     cursor = conn.cursor()
+    term_days = get_all_term_days()
 
     if not start_date or not end_date:
         term_range = get_active_term_range()
@@ -655,6 +656,9 @@ def get_attendance_data(group, start_date=None, end_date=None, teacher_username=
             if current.weekday() < 5:
                 days.append(current.strftime("%Y-%m-%d"))
             current += timedelta(days=1)
+
+    if term_days:
+        days = [day for day in days if day in term_days]
 
     today_str = datetime.now().date().isoformat()
     days = [day for day in days if day <= today_str]

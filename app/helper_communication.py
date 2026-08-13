@@ -141,7 +141,16 @@ def mark_student_threads_read(username):
     conn.close()
 
 
-def create_communication_thread(cursor, student_username, topic, subject_line="", attendance_date="", initial_message="", chat_session_id=""):
+def create_communication_thread(
+    cursor,
+    student_username,
+    topic,
+    subject_line="",
+    attendance_date="",
+    initial_message="",
+    chat_session_id="",
+    theory_test_id=None,
+):
     created_at = datetime.now().isoformat()
     cursor.execute("SELECT full_name, group_name, teacher_username FROM users WHERE username = ?", (student_username,))
     user_row = cursor.fetchone()
@@ -151,11 +160,22 @@ def create_communication_thread(cursor, student_username, topic, subject_line=""
         """
         INSERT INTO communication_threads (
             student_username, teacher_username, group_name, topic, subject_line,
-            attendance_date, status, chat_session_id, created_at, updated_at
+            attendance_date, theory_test_id, status, chat_session_id, created_at, updated_at
         )
-        VALUES (?, ?, ?, ?, ?, ?, 'open', ?, ?, ?)
+        VALUES (?, ?, ?, ?, ?, ?, ?, 'open', ?, ?, ?)
         """,
-        (student_username, teacher_username, group_name, topic, subject_line, attendance_date, chat_session_id, created_at, created_at),
+        (
+            student_username,
+            teacher_username,
+            group_name,
+            topic,
+            subject_line,
+            attendance_date,
+            theory_test_id,
+            chat_session_id,
+            created_at,
+            created_at,
+        ),
     )
     thread_id = cursor.lastrowid
     if initial_message:

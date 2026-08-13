@@ -5,6 +5,7 @@ from flask import flash, redirect, render_template, request, session, url_for
 from app.database import (
     create_user_if_not_exists,
     get_db,
+    infer_grade_from_group,
     get_groups,
     get_user_role,
     get_teachers,
@@ -15,8 +16,8 @@ from app.database import (
 from app.runtime import active_users, lock
 
 
-def should_record_attendance_login():
-    return True
+def should_record_attendance_login(login_source="remote"):
+    return login_source == "auto_login"
 
 
 def get_user_profile_row(username):
@@ -57,12 +58,13 @@ def register_session_routes(app):
 
             if username and len(username) <= 20 and username.isalnum():
                 session["username"] = username
+                session["login_source"] = "remote"
 
                 create_user_if_not_exists(username)
                 update_last_active(username)
-                if get_user_role(username) == "student" and should_record_attendance_login():
+                if get_user_role(username) == "student" and should_record_attendance_login("remote"):
                     log_login(username)
-                log_activity(username, "logged in")
+                log_activity(username, "logged in via portal")
 
                 with lock:
                     active_users[username] = datetime.now()
@@ -88,12 +90,13 @@ def register_session_routes(app):
 
         if username and len(username) <= 20 and username.isalnum():
             session["username"] = username
+            session["login_source"] = "auto_login"
 
             create_user_if_not_exists(username)
             update_last_active(username)
-            if get_user_role(username) == "student" and should_record_attendance_login():
+            if get_user_role(username) == "student" and should_record_attendance_login("auto_login"):
                 log_login(username)
-            log_activity(username, "logged in")
+            log_activity(username, "logged in via auto-login")
 
             with lock:
                 active_users[username] = datetime.now()
@@ -149,10 +152,10 @@ def register_session_routes(app):
                 cursor.execute(
                     """
                     UPDATE users
-                    SET full_name = ?, teacher_username = ?, group_name = ?
+                    SET full_name = ?, teacher_username = ?, group_name = ?, grade = ?
                     WHERE username = ?
                     """,
-                    (full_name, teacher_username, group_name, username),
+                    (full_name, teacher_username, group_name, infer_grade_from_group(group_name), username),
                 )
                 conn.commit()
                 conn.close()

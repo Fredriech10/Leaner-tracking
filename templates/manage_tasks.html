@@ -15,7 +15,7 @@
         .topbar-user a { color: white; text-decoration: none; font-weight: bold; }
         .topbar-user a:hover { text-decoration: underline; }
 
-        .page { padding: 20px 24px; max-width: 1400px; margin: 0 auto; }
+        .page { padding: 20px 24px; width: 90%; max-width: 90%; margin: 0 auto; }
         .card { background: white; border-radius: 8px; padding: 18px; border: 1px solid #ddd; margin-bottom: 16px; }
         .card h3 { margin: 0 0 14px 0; font-size: 0.95em; color: #005a9e; border-bottom: 2px solid #f0f0f0; padding-bottom: 6px; }
 
@@ -133,6 +133,22 @@
 
                 <div class="form-row" style="margin-bottom: 12px;">
                     <div>
+                        <div class="section-title">Practical Mode</div>
+                        <select name="practical_mode" id="practical_mode" onchange="togglePracticalMode()">
+                            <option value="upload">File Upload</option>
+                            <option value="simulator">Simulator</option>
+                        </select>
+                    </div>
+                    <div id="simulatorKeyPanel" style="display:none;">
+                        <div class="section-title">Simulator Type</div>
+                        <select name="simulator_key" id="simulator_key">
+                            {{ simulator_options | safe }}
+                        </select>
+                    </div>
+                </div>
+
+                <div class="form-row upload-only" style="margin-bottom: 12px;">
+                    <div>
                         <div class="section-title">Marking Script</div>
                         <select name="marking_script">
                             {{ script_options | safe }}
@@ -149,6 +165,10 @@
                         <input type="file" name="sample_file" accept=".xlsx,.xls,.xlsm,.accdb,.mdb,.html,.htm,.ppt,.pptx,.doc,.docx,.docm">
                         <div class="readonly-note" style="margin-top:4px;">Allowed: Excel, Access, HTML, PowerPoint, Word</div>
                     </div>
+                </div>
+
+                <div id="simulatorInfoPanel" style="display:none; margin-bottom:12px; padding:14px 16px; border:1px solid #b6d4fe; border-radius:10px; background:#eef5ff; color:#18477a;">
+                    Learners will complete this practical inside the portal instead of uploading a file. The first simulator example is Word: Insert a Picture.
                 </div>
 
                 <div class="form-row" style="margin-bottom: 12px; width:100%;">
@@ -225,6 +245,15 @@
         document.getElementById('btn_practical').style.background = type === 'practical' ? '#0078D4' : '#ccc';
         document.getElementById('btn_practical').style.color = type === 'practical' ? 'white' : '#333';
     }
+    function togglePracticalMode() {
+        const mode = document.getElementById('practical_mode').value;
+        const showSimulator = mode === 'simulator';
+        document.querySelectorAll('.upload-only').forEach(el => {
+            el.style.display = showSimulator ? 'none' : 'flex';
+        });
+        document.getElementById('simulatorKeyPanel').style.display = showSimulator ? 'block' : 'none';
+        document.getElementById('simulatorInfoPanel').style.display = showSimulator ? 'block' : 'none';
+    }
     function toggleMaxAttempts(checkbox) {
         document.getElementById('maxAttemptsPanel').style.display = checkbox.checked ? 'block' : 'none';
     }
@@ -278,12 +307,25 @@
                 <input type="date" name="assign_date" id="reuse_task_date" required style="width:180px;">
             </div>
             <div class="mform-group">
+                <label>Practical Mode</label>
+                <select name="practical_mode" id="reuse_practical_mode" onchange="toggleReusePracticalMode()">
+                    <option value="upload">File Upload</option>
+                    <option value="simulator">Simulator</option>
+                </select>
+            </div>
+            <div class="mform-group" id="reuseSimulatorPanel" style="display:none;">
+                <label>Simulator Type</label>
+                <select name="simulator_key" id="reuse_simulator_key" style="width:100%;">
+                    {{ simulator_options | safe }}
+                </select>
+            </div>
+            <div class="mform-group reuse-upload-only">
                 <label>Marking Script</label>
                 <select name="marking_script" id="reuse_marking_script" style="width:100%;">
                     {{ script_options | safe }}
                 </select>
             </div>
-            <div class="mform-group">
+            <div class="mform-group reuse-upload-only">
                 <label>Marking Setup</label>
                 <select name="marking_setup_id" id="reuse_marking_setup_id" style="width:100%;">
                     {{ marking_setup_options | safe }}
@@ -321,11 +363,20 @@
 </div>
 
 <script>
-function openReuseTaskModal(taskId, taskName, markingScript, allowMultiple, maxAttempts, markingSetupId) {
+function toggleReusePracticalMode() {
+    const mode = document.getElementById('reuse_practical_mode').value;
+    const showSimulator = mode === 'simulator';
+    document.querySelectorAll('.reuse-upload-only').forEach(el => {
+        el.style.display = showSimulator ? 'none' : 'block';
+    });
+    document.getElementById('reuseSimulatorPanel').style.display = showSimulator ? 'block' : 'none';
+}
+function openReuseTaskModal(taskId, taskName, markingScript, allowMultiple, maxAttempts, markingSetupId, practicalMode, simulatorKey) {
     document.getElementById('reuseTaskForm').action = window.location.pathname;
     document.getElementById('reuse_source_id').value = taskId;
     document.getElementById('reuse_task_name').value = taskName + ' (Copy)';
     document.getElementById('reuse_task_date').value = new Date().toISOString().split('T')[0];
+    document.getElementById('reuse_practical_mode').value = practicalMode || 'upload';
     // Set marking script
     const sel = document.getElementById('reuse_marking_script');
     if (sel) {
@@ -335,9 +386,14 @@ function openReuseTaskModal(taskId, taskName, markingScript, allowMultiple, maxA
     if (setupSel) {
         for (let opt of setupSel.options) { opt.selected = opt.value === String(markingSetupId || ''); }
     }
+    const simulatorSel = document.getElementById('reuse_simulator_key');
+    if (simulatorSel) {
+        for (let opt of simulatorSel.options) { opt.selected = opt.value === String(simulatorKey || ''); }
+    }
     const allowCb = document.getElementById('reuse_task_allow_multiple');
     allowCb.checked = !!allowMultiple;
     toggleReuseTaskAttempts(allowCb);
+    toggleReusePracticalMode();
     document.getElementById('reuse_task_max_attempts').value = maxAttempts || 2;
     // Clear group/teacher checkboxes in modal
     document.querySelectorAll('#reuseTaskModal input[type="checkbox"][name="groups"]').forEach(cb => cb.checked = false);
@@ -354,6 +410,10 @@ function toggleReuseTaskAttempts(checkbox) {
 }
 document.getElementById('reuseTaskModal').addEventListener('click', function(e) {
     if (e.target === this) closeReuseTaskModal();
+});
+document.addEventListener('DOMContentLoaded', () => {
+    togglePracticalMode();
+    toggleReusePracticalMode();
 });
 </script>
 

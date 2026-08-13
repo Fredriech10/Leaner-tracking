@@ -14,7 +14,7 @@
         .topbar-user { color: white; font-size: 0.82em; white-space: nowrap; border-left: 1px solid rgba(255,255,255,0.35); padding-left: 10px; }
         .topbar-user a { color: white; text-decoration: none; font-weight: bold; }
         .topbar-user a:hover { text-decoration: underline; }
-        .page { padding: 20px 24px; max-width: 800px; margin: 0 auto; }
+        .page { padding: 20px 24px; width: 90%; max-width: 90%; margin: 0 auto; }
         .card { background: white; border-radius: 8px; padding: 25px; border: 1px solid #ddd; }
         .info-box { background: #eef4ff; border: 1px solid #b0c4ff; border-radius: 6px; padding: 12px 16px; margin-bottom: 20px; font-size: 0.9em; color: #333; }
         .form-group { margin-bottom: 18px; }
@@ -68,8 +68,24 @@
             <small style="color:#666; display:block; margin-top:4px;">Date from which learners can upload this task.</small>
         </div>
 
-        <!-- Marking Script -->
         <div class="form-group">
+            <div class="section-title">Practical Mode</div>
+            <select name="practical_mode" id="practical_mode" onchange="togglePracticalMode()">
+                <option value="upload" {{ 'selected' if task[10] == 'upload' else '' }}>File Upload</option>
+                <option value="simulator" {{ 'selected' if task[10] == 'simulator' else '' }}>Simulator</option>
+            </select>
+        </div>
+
+        <div class="form-group" id="simulatorPanel" style="display:none;">
+            <div class="section-title">Simulator Type</div>
+            <select name="simulator_key" id="simulator_key">
+                {% for simulator_key, simulator_meta in simulator_catalog.items() %}
+                <option value="{{ simulator_key }}" {{ 'selected' if simulator_key == task[11] else '' }}>{{ simulator_meta.title }}</option>
+                {% endfor %}
+            </select>
+        </div>
+
+        <div class="form-group upload-only">
             <div class="section-title">Marking Script</div>
             <select name="marking_script">
                 <option value="">-- No marking script --</option>
@@ -77,6 +93,25 @@
                 <option value="{{ script }}" {{ 'selected' if script == task[3] else '' }}>{{ script }}</option>
                 {% endfor %}
             </select>
+        </div>
+
+        <div class="form-group upload-only">
+            <div class="section-title">Sample File</div>
+            <p class="readonly-note" style="margin-top:0;">
+                {% if task[6] %}
+                    Current: <a href="/tasks/{{ task[0] }}/sample_file" target="_blank">(download sample file)</a>
+                {% endif %}
+            </p>
+
+            <p style="margin:8px 0 0;">
+                <a href="#" onclick="document.getElementById('replace_sample_{{ task[0] }}').click(); return false;">Replace</a>
+                <span id="sample_name_{{ task[0] }}" class="readonly-note" style="display:inline;">
+                    {% if task[5] %}(current sample loaded){% endif %}
+                </span>
+            </p>
+
+            <input type="file" id="replace_sample_{{ task[0] }}" name="sample_file" accept=".xlsx,.xls,.xlsm,.accdb,.mdb,.html,.htm,.ppt,.pptx,.doc,.docx,.docm" style="display:none;" onchange="updateSampleName('{{ task[0] }}', this);">
+            <input type="hidden" name="task_id" value="{{ task[0] }}">
         </div>
 
         <!-- Task Questions -->
@@ -123,30 +158,6 @@
             <small style="color:#666; display:block; margin-top:8px;">When multiple submissions are allowed, learners can resubmit until this limit is reached.</small>
         </div>
 
-        <!-- Sample File -->
-        <div class="form-group">
-            <div class="section-title">Sample File</div>
-            <p class="readonly-note" style="margin-top:0;">
-                {% if task[6] %}
-                    {# task[6] is stored as BLOB in DB; ensure we treat it safely as bytes/unknown #}
-                        Current: <a href="/tasks/{{ task[0] }}/sample_file" target="_blank">(download sample file)</a>
-                {% endif %}
-
-            </p>
-
-            <p style="margin:8px 0 0;">
-                <a href="#" onclick="document.getElementById('replace_sample_{{ task[0] }}').click(); return false;">Replace</a>
-                <span id="sample_name_{{ task[0] }}" class="readonly-note" style="display:inline;">
-                    {% if task[5] %}(current sample loaded){% endif %}
-                </span>
-            </p>
-
-
-            <input type="file" id="replace_sample_{{ task[0] }}" name="sample_file" accept=".xlsx,.xls,.xlsm,.accdb,.mdb,.html,.htm,.ppt,.pptx,.doc,.docx,.docm" style="display:none;" onchange="updateSampleName('{{ task[0] }}', this);">
-
-            <input type="hidden" name="task_id" value="{{ task[0] }}">
-        </div>
-
         <script>
             function updateSampleName(taskId, input) {
                 const el = document.getElementById('sample_name_' + taskId);
@@ -171,6 +182,14 @@
 </div>
 
 <script>
+    function togglePracticalMode() {
+        const mode = document.getElementById('practical_mode').value;
+        const showSimulator = mode === 'simulator';
+        document.querySelectorAll('.upload-only').forEach(el => {
+            el.style.display = showSimulator ? 'none' : 'block';
+        });
+        document.getElementById('simulatorPanel').style.display = showSimulator ? 'block' : 'none';
+    }
     function toggleMaxAttempts(checkbox) {
         document.getElementById('maxAttemptsPanel').style.display = checkbox.checked ? 'block' : 'none';
     }
@@ -208,6 +227,7 @@
         if (editor && hidden) {
             editor.innerHTML = hidden.value || '';
         }
+        togglePracticalMode();
     });
 </script>
 

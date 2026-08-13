@@ -4,7 +4,8 @@
     <meta charset="UTF-8" />
     <title>Marking Setup</title>
     <style>
-        body { font-family: Arial, sans-serif; margin: 20px; color: #222; }
+        body { font-family: Arial, sans-serif; margin: 0; padding: 20px 24px; color: #222; background: #f0f2f5; }
+        .page { width: 90%; max-width: 90%; margin: 0 auto; }
         .topbar { margin-bottom: 18px; }
         .topbar a, .topbar span { margin-right: 14px; text-decoration: none; color: #005a9e; }
         .topbar-user a { font-weight: bold; }
@@ -58,6 +59,7 @@
             <p id="loadingText">Please wait. Heuristic JSON is generated first; LLM refinement is used if available.</p>
         </div>
     </div>
+    <div class="page">
     <div class="topbar">
         <a href="/teacher_dashboard">← Dashboard</a>
         <a href="/manage_subjects">📁 Practical</a>
@@ -194,6 +196,7 @@
         {% else %}
             <p>No marking setups have been saved yet.</p>
         {% endif %}
+    </div>
     </div>
     <script>
         function showGenerationLoading() {

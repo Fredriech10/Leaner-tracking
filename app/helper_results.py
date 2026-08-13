@@ -99,7 +99,7 @@ def fetch_group_theory_averages(cursor, groups, teacher_username=None):
     return {group: average for group, average in cursor.fetchall()}
 
 
-def fetch_theory_module_weaknesses(cursor, username=None, group_name=None, limit=10):
+def fetch_theory_module_weaknesses(cursor, username=None, group_name=None, teacher_username=None, grade=None, limit=10):
     where_parts = ["latest.rn = 1"]
     params = []
     if username:
@@ -108,6 +108,12 @@ def fetch_theory_module_weaknesses(cursor, username=None, group_name=None, limit
     if group_name:
         where_parts.append("u.group_name = ?")
         params.append(group_name)
+    if teacher_username:
+        where_parts.append("u.teacher_username = ?")
+        params.append(teacher_username)
+    if grade:
+        where_parts.append("u.grade = ?")
+        params.append(grade)
     where_clause = " AND ".join(where_parts)
     cursor.execute(
         f"""

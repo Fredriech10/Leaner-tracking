@@ -177,6 +177,88 @@ def register_communication_routes(app):
         flash("Message sent.", "success")
         return redirect(next_url)
 
+    @app.route("/student/theory_review_request", methods=["POST"])
+    def student_theory_review_request():
+        username = session.get("username")
+        if not username:
+            return redirect(url_for("login"))
+        if get_user_role(username) != "student":
+            return "Access denied", 403
+
+        test_id = request.form.get("test_id", type=int)
+        message = (request.form.get("message") or "").strip()
+        next_url = request.form.get("next") or url_for("learner_tests")
+        if not test_id:
+            flash("Theory test could not be identified.", "error")
+            return redirect(next_url)
+
+        conn = get_db()
+        cursor = conn.cursor()
+        cursor.execute(
+            """
+            SELECT u.teacher_username, tt.title
+            FROM users u
+            JOIN theory_submissions ts ON ts.username = u.username
+            JOIN theory_tests tt ON tt.id = ts.test_id
+            WHERE u.username = ? AND ts.test_id = ?
+            ORDER BY ts.submitted_at DESC, ts.id DESC
+            LIMIT 1
+            """,
+            (username, test_id),
+        )
+        row = cursor.fetchone()
+        if not row:
+            conn.close()
+            flash("You can only request a review for a completed theory test.", "error")
+            return redirect(next_url)
+
+        teacher_username, test_title = row
+        if not teacher_username:
+            conn.close()
+            flash("No teacher is assigned to this learner.", "error")
+            return redirect(next_url)
+
+        cursor.execute(
+            """
+            SELECT id
+            FROM communication_threads
+            WHERE student_username = ?
+              AND topic = 'theory_review'
+              AND theory_test_id = ?
+              AND status = 'open'
+            ORDER BY id DESC
+            LIMIT 1
+            """,
+            (username, test_id),
+        )
+        existing = cursor.fetchone()
+        review_message = message or f"Please review my theory test: {test_title}."
+        if existing:
+            thread_id = existing[0]
+            add_communication_message(cursor, thread_id, username, "student", review_message)
+        else:
+            thread_id = create_communication_thread(
+                cursor,
+                username,
+                "theory_review",
+                subject_line=f"Theory review request: {test_title}",
+                initial_message=review_message,
+                chat_session_id=session.get("chat_session_id", ""),
+                theory_test_id=test_id,
+            )
+        cursor.execute(
+            """
+            UPDATE communication_threads
+            SET teacher_username = ?
+            WHERE id = ?
+            """,
+            (teacher_username, thread_id),
+        )
+        conn.commit()
+        conn.close()
+        flash("Theory review request submitted.", "success")
+        return redirect(next_url)
+
     @app.route("/student_messages")
     def student_messages():
         username = session.get("username")
@@ -281,6 +363,15 @@ def register_communication_routes(app):
                 else:
                     thread["attendance_state_code"] = "-"
                     thread["attendance_state_label"] = "Unknown"
+            if thread.get("topic") == "theory_review" and thread.get("theory_test_id") and thread.get("student_username"):
+                cursor.execute("SELECT title FROM theory_tests WHERE id = ?", (thread["theory_test_id"],))
+                test_row = cursor.fetchone()
+                thread["theory_test_title"] = test_row[0] if test_row else f"Test {thread['theory_test_id']}"
+                thread["theory_review_href"] = url_for(
+                    "response_review_learner",
+                    learner=thread["student_username"],
+                    item=thread["theory_test_id"],
+                )
             threads.append(thread)
 
         conn.close()

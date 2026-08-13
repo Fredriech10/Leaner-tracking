@@ -16,7 +16,7 @@
         .topbar-user a { color: white; text-decoration: none; font-weight: bold; }
         .topbar-user a:hover { text-decoration: underline; }
 
-        .page { padding: 20px 24px; max-width: 1400px; margin: 0 auto; }
+        .page { padding: 20px 24px; width: 90%; max-width: 90%; margin: 0 auto; }
 
         .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
         .grid-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 16px; }
@@ -107,13 +107,33 @@
 
         .section-gap { margin-bottom: 16px; }
 
-        /* Group filter bar */
         .filter-bar { background: white; border: 1px solid #ddd; border-radius: 8px; padding: 12px 18px; margin-bottom: 16px; display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
         .filter-bar label { font-weight: bold; font-size: 0.88em; }
         .table-row-link { color: inherit; text-decoration: none; font-weight: inherit; }
         .clickable-row { cursor: pointer; }
         .toolbar-btn { background: rgba(255,255,255,0.14); color: white; border: 1px solid rgba(255,255,255,0.25); border-radius: 6px; padding: 6px 10px; text-decoration: none; font-size: 0.82em; font-weight: bold; }
         .toolbar-btn:hover { background: rgba(255,255,255,0.22); text-decoration: none; }
+        .flash-wrap { margin-bottom: 16px; display:grid; gap:10px; }
+        .flash-msg { padding: 12px 14px; border-radius: 8px; border: 1px solid; font-size: 0.9em; }
+        .flash-msg.success { background:#e8f5e9; color:#1b5e20; border-color:#a5d6a7; }
+        .flash-msg.error { background:#ffebee; color:#8e2430; border-color:#ef9a9a; }
+        .dashboard-calendar { display:grid; grid-template-columns: repeat(7, 1fr); gap:8px; }
+        .calendar-head { font-size:0.8em; color:#64748b; font-weight:bold; text-align:center; padding-bottom:4px; }
+        .calendar-cell { border:1px solid #d8e2ee; border-radius:10px; min-height:88px; padding:8px; background:#f8fbff; text-decoration:none; color:inherit; display:flex; flex-direction:column; gap:6px; }
+        .calendar-cell:hover { background:#eef6ff; }
+        .calendar-cell.muted { background:#f8fafc; color:#94a3b8; border-style:dashed; }
+        .calendar-cell.selected { border-color:#005a9e; box-shadow: inset 0 0 0 2px rgba(0, 90, 158, 0.18); }
+        .calendar-cell.missed { background:#fff5f5; }
+        .calendar-cell.present { background:#f4fff6; }
+        .calendar-day { font-weight:bold; color:#0f172a; }
+        .calendar-meta { font-size:0.78em; color:#475569; }
+        .calendar-nav { display:flex; justify-content:space-between; align-items:center; margin-bottom:12px; gap:10px; }
+        .calendar-nav .month-label { font-weight:bold; color:#005a9e; font-size:0.96em; }
+        .day-class-list { display:grid; gap:10px; }
+        .day-class-item { border:1px solid #e2e8f0; border-radius:10px; padding:12px 14px; background:#fafcff; }
+        .day-class-top { display:flex; justify-content:space-between; align-items:center; gap:10px; flex-wrap:wrap; margin-bottom:8px; }
+        .note-stack { display:grid; gap:8px; margin-top:10px; }
+        .note-chip { border:1px solid #dbe7f3; border-radius:8px; padding:8px 10px; background:white; }
     </style>
 </head>
 <body>
@@ -137,6 +157,16 @@
 </div>
 
 <div class="page">
+
+    {% with messages = get_flashed_messages(with_categories=true) %}
+    {% if messages %}
+    <div class="flash-wrap">
+        {% for category, message in messages %}
+        <div class="flash-msg {{ 'error' if category == 'error' else 'success' }}">{{ message }}</div>
+        {% endfor %}
+    </div>
+    {% endif %}
+    {% endwith %}
 
     {% if teacher_options %}
     <div class="filter-bar">
@@ -228,6 +258,100 @@
         </form>
     </div>
 
+    <div class="grid-2 mb section-gap">
+        <div class="card">
+            <h3>🗓️ Class Calendar</h3>
+            <div class="calendar-nav">
+                <a href="/teacher_dashboard?month={{ prev_month_value }}{% if selected_teacher %}&teacher={{ selected_teacher }}{% endif %}" class="btn btn-primary btn-sm">← Previous</a>
+                <div class="month-label">{{ dashboard_month_label }}</div>
+                {% if next_month_value %}
+                <a href="/teacher_dashboard?month={{ next_month_value }}{% if selected_teacher %}&teacher={{ selected_teacher }}{% endif %}" class="btn btn-primary btn-sm">Next →</a>
+                {% else %}
+                <span></span>
+                {% endif %}
+            </div>
+            <div class="dashboard-calendar" style="margin-bottom:8px;">
+                <div class="calendar-head">Mon</div>
+                <div class="calendar-head">Tue</div>
+                <div class="calendar-head">Wed</div>
+                <div class="calendar-head">Thu</div>
+                <div class="calendar-head">Fri</div>
+                <div class="calendar-head">Sat</div>
+                <div class="calendar-head">Sun</div>
+            </div>
+            <div class="dashboard-calendar">
+                {% for week in calendar_weeks %}
+                    {% for cell in week %}
+                    {% set summary = cell.summary %}
+                    <a
+                        href="/teacher_dashboard?month={{ dashboard_month }}&selected_date={{ cell.date }}{% if selected_teacher %}&teacher={{ selected_teacher }}{% endif %}"
+                        class="calendar-cell {% if not cell.in_month %}muted{% elif cell.is_selected %}selected{% elif summary and summary.missed_classes > 0 %}missed{% elif summary and summary.present_classes > 0 %}present{% endif %}">
+                        <div class="calendar-day">{{ cell.day }}</div>
+                        {% if cell.in_month and summary %}
+                        <div class="calendar-meta">Present classes: {{ summary.present_classes }}</div>
+                        <div class="calendar-meta">Missed classes: {{ summary.missed_classes }}</div>
+                        {% if summary.noted_classes %}
+                        <div class="calendar-meta">Notes: {{ summary.noted_classes }}</div>
+                        {% endif %}
+                        {% endif %}
+                    </a>
+                    {% endfor %}
+                {% endfor %}
+            </div>
+        </div>
+
+        <div class="card">
+            <h3>📝 {{ selected_date }}</h3>
+            {% if selected_day_rows %}
+            <div class="day-class-list">
+                {% for row in selected_day_rows %}
+                <div class="day-class-item">
+                    <div class="day-class-top">
+                        <div style="font-weight:bold; color:#0f172a;">{{ row.label }}</div>
+                        <div>
+                            <span class="badge {{ 'badge-ok' if row.status == 'present' else 'badge-risk' }}">{{ 'Present' if row.status == 'present' else 'Missed' }}</span>
+                            <button
+                                type="button"
+                                class="btn btn-primary btn-sm"
+                                data-group="{{ row.group }}"
+                                data-scope-teacher="{{ row.teacher_username or '' }}"
+                                data-class-label="{{ row.label }}"
+                                onclick="openDashboardModuleNote(this.dataset.group, this.dataset.scopeTeacher, this.dataset.classLabel)">
+                                Add Note
+                            </button>
+                        </div>
+                    </div>
+                    {% if row.notes %}
+                    <div class="note-stack">
+                        {% for note in row.notes %}
+                        <div class="note-chip">
+                            <div style="display:flex; gap:8px; align-items:center; flex-wrap:wrap; margin-bottom:4px;">
+                                <strong>{{ note[0] }}</strong>
+                                {% if note[3] %}
+                                <span class="badge badge-ok">Module Finished</span>
+                                {% endif %}
+                            </div>
+                            {% if note[1] %}
+                            <div><strong>Progress:</strong> {{ note[1] }}</div>
+                            {% endif %}
+                        </div>
+                        {% endfor %}
+                    </div>
+                    <div style="margin-top:8px;">
+                        <a href="{{ row.view_href }}" class="table-row-link" style="font-weight:bold;">View full class notes</a>
+                    </div>
+                    {% else %}
+                    <div style="color:#64748b; font-size:0.88em;">No notes saved for this class on this day yet.</div>
+                    {% endif %}
+                </div>
+                {% endfor %}
+            </div>
+            {% else %}
+            <p style="color:#888;">No class data available for the selected day.</p>
+            {% endif %}
+        </div>
+    </div>
+
     <!-- ── Attendance Insights ──────────────────────────────────────── -->
     <div class="grid-2 mb section-gap">
 
@@ -277,8 +401,40 @@
 
         <!-- Lowest Attendance -->
         <div class="card">
-            <h3>🔴 Lowest Attendance (Last 21 Days)</h3>
-            {% if low_attendance %}
+            <h3>🔴 Lowest Attendance by Grade (Last 21 Days)</h3>
+            {% set attendance_grades = low_attendance_by_grade.keys() | list %}
+            {% if attendance_grades %}
+            <div class="slideshow-wrap" id="lowAttendanceSlideshow">
+                <div class="slide-nav">
+                    <button onclick="changeNamedSlide('lowAttendanceSlideshow', -1)">&#8592;</button>
+                    <span class="slide-label" data-role="slide-label"></span>
+                    <button onclick="changeNamedSlide('lowAttendanceSlideshow', 1)">&#8594;</button>
+                </div>
+                {% for grade in attendance_grades %}
+                <div class="slide" data-group="Grade {{ grade }}">
+                    <table>
+                        <tr><th>Name</th><th>Username</th><th>Days Absent</th><th></th></tr>
+                        {% for name, username, absent, group_label in low_attendance_by_grade.get(grade, []) %}
+                        <tr class="clickable-row" onclick="window.location.href='/learner_record/{{ username }}'">
+                            <td><a href="/learner_record/{{ username }}" class="table-row-link">{{ name }}</a></td>
+                            <td>{{ username }}</td>
+                            <td>{{ absent }}{% if teacher_options and not selected_teacher %}<div style="color:#888; font-size:0.8em;">{{ group_label }}</div>{% endif %}</td>
+                            <td>
+                                <span class="badge {{ 'badge-risk' if absent >= 5 else 'badge-warn' }}">
+                                    {{ 'At Risk' if absent >= 5 else 'Watch' }}
+                                </span>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                        {% if not low_attendance_by_grade.get(grade) %}
+                        <tr><td colspan="4" style="color:#888;">No attendance concerns.</td></tr>
+                        {% endif %}
+                    </table>
+                </div>
+                {% endfor %}
+                <div class="slide-dots" data-role="slide-dots"></div>
+            </div>
+            {% elif low_attendance %}
             <table>
                 <tr><th>Name</th><th>Username</th><th>Days Absent</th><th></th></tr>
                 {% for name, username, absent, group_label in low_attendance %}
@@ -310,9 +466,9 @@
             {% if slide_groups %}
             <div class="slideshow-wrap" id="classSlideshow">
                 <div class="slide-nav">
-                    <button onclick="changeSlide(-1)">&#8592;</button>
-                    <span class="slide-label" id="slideLabel"></span>
-                    <button onclick="changeSlide(1)">&#8594;</button>
+                    <button onclick="changeNamedSlide('classSlideshow', -1)">&#8592;</button>
+                    <span class="slide-label" data-role="slide-label"></span>
+                    <button onclick="changeNamedSlide('classSlideshow', 1)">&#8594;</button>
                 </div>
                 {% for grp in slide_groups %}
                 <div class="slide" data-group="{{ grp }}">
@@ -338,7 +494,7 @@
                     </table>
                 </div>
                 {% endfor %}
-                <div class="slide-dots" id="slideDots"></div>
+                <div class="slide-dots" data-role="slide-dots"></div>
             </div>
             {% else %}
             <p style="color:#888; font-size:0.9em;">No results yet.</p>
@@ -347,8 +503,35 @@
 
         <!-- Top Performers -->
         <div class="card">
-            <h3>🏆 Top Performers</h3>
-            {% if top_performers %}
+            <h3>🏆 Top Performers by Grade</h3>
+            {% set performer_grades = top_performers_by_grade.keys() | list %}
+            {% if performer_grades %}
+            <div class="slideshow-wrap" id="topPerformersSlideshow">
+                <div class="slide-nav">
+                    <button onclick="changeNamedSlide('topPerformersSlideshow', -1)">&#8592;</button>
+                    <span class="slide-label" data-role="slide-label"></span>
+                    <button onclick="changeNamedSlide('topPerformersSlideshow', 1)">&#8594;</button>
+                </div>
+                {% for grade in performer_grades %}
+                <div class="slide" data-group="Grade {{ grade }}">
+                    <table>
+                        <tr><th>Name</th><th>Group</th><th>Avg</th></tr>
+                        {% for learner_username, name, group_label, avg in top_performers_by_grade.get(grade, []) %}
+                        <tr>
+                            <td><a href="/learner_record/{{ learner_username }}" class="table-row-link">{{ name or '—' }}</a></td>
+                            <td>{{ group_label or '—' }}</td>
+                            <td><span class="score-high">{{ avg }}%</span></td>
+                        </tr>
+                        {% endfor %}
+                        {% if not top_performers_by_grade.get(grade) %}
+                        <tr><td colspan="3" style="color:#888;">No data yet.</td></tr>
+                        {% endif %}
+                    </table>
+                </div>
+                {% endfor %}
+                <div class="slide-dots" data-role="slide-dots"></div>
+            </div>
+            {% elif top_performers %}
             <table>
                 <tr><th>Name</th><th>Group</th><th>Avg</th></tr>
                 {% for learner_username, name, grp, avg in top_performers %}
@@ -366,8 +549,35 @@
 
         <!-- Bottom Performers -->
         <div class="card">
-            <h3>📉 Needs Attention</h3>
-            {% if bottom_performers %}
+            <h3>📉 Needs Attention by Grade</h3>
+            {% set attention_grades = bottom_performers_by_grade.keys() | list %}
+            {% if attention_grades %}
+            <div class="slideshow-wrap" id="bottomPerformersSlideshow">
+                <div class="slide-nav">
+                    <button onclick="changeNamedSlide('bottomPerformersSlideshow', -1)">&#8592;</button>
+                    <span class="slide-label" data-role="slide-label"></span>
+                    <button onclick="changeNamedSlide('bottomPerformersSlideshow', 1)">&#8594;</button>
+                </div>
+                {% for grade in attention_grades %}
+                <div class="slide" data-group="Grade {{ grade }}">
+                    <table>
+                        <tr><th>Name</th><th>Group</th><th>Avg</th></tr>
+                        {% for learner_username, name, group_label, avg in bottom_performers_by_grade.get(grade, []) %}
+                        <tr>
+                            <td><a href="/learner_record/{{ learner_username }}" class="table-row-link">{{ name or '—' }}</a></td>
+                            <td>{{ group_label or '—' }}</td>
+                            <td><span class="{{ 'score-mid' if avg >= 40 else 'score-low' }}">{{ avg }}%</span></td>
+                        </tr>
+                        {% endfor %}
+                        {% if not bottom_performers_by_grade.get(grade) %}
+                        <tr><td colspan="3" style="color:#888;">No data yet.</td></tr>
+                        {% endif %}
+                    </table>
+                </div>
+                {% endfor %}
+                <div class="slide-dots" data-role="slide-dots"></div>
+            </div>
+            {% elif bottom_performers %}
             <table>
                 <tr><th>Name</th><th>Group</th><th>Avg</th></tr>
                 {% for learner_username, name, grp, avg in bottom_performers %}
@@ -389,7 +599,36 @@
 
         <div class="card">
             <h3>🚨 At-Risk Learners <a href="/risk_learners" style="font-size:0.85em; float:right; color:#005a9e; text-decoration:none;">View full list →</a></h3>
-            {% if at_risk_students %}
+            {% set risk_grades = at_risk_by_grade.keys() | list %}
+            {% if risk_grades %}
+            <div class="slideshow-wrap" id="atRiskSlideshow">
+                <div class="slide-nav">
+                    <button onclick="changeNamedSlide('atRiskSlideshow', -1)">&#8592;</button>
+                    <span class="slide-label" data-role="slide-label"></span>
+                    <button onclick="changeNamedSlide('atRiskSlideshow', 1)">&#8594;</button>
+                </div>
+                {% for grade in risk_grades %}
+                <div class="slide" data-group="Grade {{ grade }}">
+                    <table>
+                        <tr><th>Name</th><th>Group</th><th>Risk Score</th><th>Status</th><th>Reason</th></tr>
+                        {% for student in at_risk_by_grade.get(grade, []) %}
+                        <tr class="clickable-row" onclick="window.location.href='/learner_record/{{ student.username }}'">
+                            <td><a href="/learner_record/{{ student.username }}" class="table-row-link">{{ student.name }}</a></td>
+                            <td>{{ student.group }}</td>
+                            <td><span class="{{ 'score-low' if student.score <= 40 else ('score-mid' if student.score <= 70 else 'score-low') }}">{{ student.score }}%</span></td>
+                            <td><span class="badge badge-risk">{{ student.status }}</span></td>
+                            <td>{{ student.reason }}</td>
+                        </tr>
+                        {% endfor %}
+                        {% if not at_risk_by_grade.get(grade) %}
+                        <tr><td colspan="5" style="color:#888;">No learners currently flagged as at risk.</td></tr>
+                        {% endif %}
+                    </table>
+                </div>
+                {% endfor %}
+                <div class="slide-dots" data-role="slide-dots"></div>
+            </div>
+            {% elif at_risk_students %}
             <table>
                 <tr><th>Name</th><th>Group</th><th>Risk Score</th><th>Status</th><th>Reason</th></tr>
                 {% for student in at_risk_students %}
@@ -413,8 +652,8 @@
             <table>
                 <tr><th>Name</th><th>Username</th><th>Status</th><th></th></tr>
                 {% for uname, name in students_without_classes %}
-                <tr class="clickable-row" onclick="window.location.href='/learner_record/{{ uname }}'">
-                    <td><a href="/learner_record/{{ uname }}" class="table-row-link">{{ name or uname }}</a></td>
+                <tr class="clickable-row" onclick="window.location.href='/edit_user/{{ uname }}?next=/teacher_dashboard'">
+                    <td><a href="/edit_user/{{ uname }}?next=/teacher_dashboard" class="table-row-link">{{ name or uname }}</a></td>
                     <td style="color:#888; font-size:0.85em;">{{ uname }}</td>
                     <td><span class="badge badge-warn">Unassigned</span></td>
                     <td><a href="/edit_user/{{ uname }}?next=/teacher_dashboard" class="assign-btn">Assign</a></td>
@@ -507,6 +746,52 @@
 
 </div>
 
+<div id="dashboardModuleNoteModal" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.5); z-index:1200; align-items:center; justify-content:center;">
+    <div class="card" style="max-width:620px; width:100%; margin:20px;">
+        <h3>📝 Class Module Note</h3>
+        <form method="post" action="/teacher_dashboard/module_note" style="display:grid; gap:12px;">
+            <input type="hidden" name="selected_teacher" value="{{ selected_teacher or '' }}">
+            <input type="hidden" name="selected_grade" value="{{ selected_grade or '' }}">
+            <input type="hidden" name="month" value="{{ dashboard_month }}">
+            <input type="hidden" name="date" value="{{ selected_date }}">
+            <input type="hidden" name="group" id="dashboardNoteGroup">
+            <input type="hidden" name="scope_teacher" id="dashboardNoteScopeTeacher">
+
+            <div style="font-weight:bold; color:#0f172a;" id="dashboardNoteClassLabel"></div>
+
+            <div style="display:grid; gap:6px;">
+                <label for="dashboardModuleSelect" style="font-weight:bold;">Module</label>
+                <select name="module_name" id="dashboardModuleSelect" required>
+                    <option value="">Select module</option>
+                    {% for module_name in module_names %}
+                    <option value="{{ module_name }}">{{ module_name }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+
+            <div style="display:grid; gap:6px;">
+                <label for="dashboardProgressText" style="font-weight:bold;">Progress Reached</label>
+                <input type="text" id="dashboardProgressText" name="progress_text" placeholder="Example: Completed formulas and chart formatting" required>
+            </div>
+
+            <div style="display:grid; gap:6px;">
+                <label for="dashboardNoteText" style="font-weight:bold;">Teaching Notes</label>
+                <textarea id="dashboardNoteText" name="note_text" rows="4" style="padding:10px 12px; border:1px solid #ccc; border-radius:6px; font-size:0.9em;" placeholder="What was covered, what learners missed, what to revise next lesson."></textarea>
+            </div>
+
+            <label style="display:inline-flex; align-items:center; gap:8px; font-weight:bold;">
+                <input type="checkbox" name="module_finished" value="1">
+                Module Finished: assign the module class test now
+            </label>
+
+            <div style="display:flex; gap:8px; justify-content:flex-end;">
+                <button type="button" class="btn" style="background:#e5e7eb; color:#334155;" onclick="closeDashboardModuleNote()">Cancel</button>
+                <button type="submit" class="btn btn-primary">OK</button>
+            </div>
+        </form>
+    </div>
+</div>
+
 <script>
 function toggleQuickActionsConfig() {
     const form = document.getElementById('quickActionsConfig');
@@ -539,63 +824,74 @@ function goToGroup(value) {
     if (target) window.location.href = target;
 }
 
-// ── Slideshow ──────────────────────────────────────────────────────────
-const slides = document.querySelectorAll('#classSlideshow .slide');
-const dotsContainer = document.getElementById('slideDots');
-const slideLabel = document.getElementById('slideLabel');
-let currentSlide = 0;
+// ── Slideshows ─────────────────────────────────────────────────────────
+const slideshowStates = {};
 
-let autoSlideTimer = null;
-let manualPauseTimeout = null;
-const autoAdvanceDelay = 5000;
-const manualPauseDelay = 60000;
+function initSlideshow(slideshowId) {
+    const root = document.getElementById(slideshowId);
+    if (!root) return;
+    const slides = Array.from(root.querySelectorAll('.slide'));
+    const dotsContainer = root.querySelector('[data-role="slide-dots"]');
+    const slideLabel = root.querySelector('[data-role="slide-label"]');
+    if (!slides.length || !dotsContainer || !slideLabel) return;
 
-if (slides.length) {
-    // Build dots
+    const state = {
+        root,
+        slides,
+        dotsContainer,
+        slideLabel,
+        currentSlide: 0,
+    };
+    slideshowStates[slideshowId] = state;
+
+    dotsContainer.innerHTML = '';
     slides.forEach((_, i) => {
         const dot = document.createElement('div');
         dot.className = 'slide-dot' + (i === 0 ? ' active' : '');
-        dot.onclick = () => { pauseAutoAdvance(); goToSlide(i); };
+        dot.onclick = () => {
+            pauseNamedAutoAdvance(slideshowId);
+            goToNamedSlide(slideshowId, i);
+        };
         dotsContainer.appendChild(dot);
     });
-    goToSlide(0);
-    startAutoAdvance();
+    goToNamedSlide(slideshowId, 0);
 }
 
-function startAutoAdvance() {
-    stopAutoAdvance();
-    autoSlideTimer = setInterval(() => {
-        goToSlide((currentSlide + 1) % slides.length);
-    }, autoAdvanceDelay);
-}
-
-function stopAutoAdvance() {
-    if (autoSlideTimer) {
-        clearInterval(autoSlideTimer);
-        autoSlideTimer = null;
+function goToNamedSlide(slideshowId, n) {
+    const state = slideshowStates[slideshowId];
+    if (!state || !state.slides.length) return;
+    const dots = state.dotsContainer.querySelectorAll('.slide-dot');
+    state.slides.forEach(s => s.classList.remove('active'));
+    dots.forEach(d => d.classList.remove('active'));
+    state.currentSlide = (n + state.slides.length) % state.slides.length;
+    state.slides[state.currentSlide].classList.add('active');
+    if (dots[state.currentSlide]) {
+        dots[state.currentSlide].classList.add('active');
     }
+    state.slideLabel.textContent = state.slides[state.currentSlide].dataset.group || '';
 }
 
-function pauseAutoAdvance() {
-    stopAutoAdvance();
-    if (manualPauseTimeout) {
-        clearTimeout(manualPauseTimeout);
-    }
-    manualPauseTimeout = setTimeout(startAutoAdvance, manualPauseDelay);
+function changeNamedSlide(slideshowId, dir) {
+    const state = slideshowStates[slideshowId];
+    if (!state) return;
+    goToNamedSlide(slideshowId, state.currentSlide + dir);
 }
 
-function goToSlide(n) {
-    slides.forEach(s => s.classList.remove('active'));
-    document.querySelectorAll('.slide-dot').forEach(d => d.classList.remove('active'));
-    currentSlide = (n + slides.length) % slides.length;
-    slides[currentSlide].classList.add('active');
-    document.querySelectorAll('.slide-dot')[currentSlide].classList.add('active');
-    if (slideLabel) slideLabel.textContent = slides[currentSlide].dataset.group;
+initSlideshow('classSlideshow');
+initSlideshow('topPerformersSlideshow');
+initSlideshow('bottomPerformersSlideshow');
+initSlideshow('lowAttendanceSlideshow');
+initSlideshow('atRiskSlideshow');
+
+function openDashboardModuleNote(groupName, scopeTeacher, classLabel) {
+    document.getElementById('dashboardNoteGroup').value = groupName || '';
+    document.getElementById('dashboardNoteScopeTeacher').value = scopeTeacher || '';
+    document.getElementById('dashboardNoteClassLabel').textContent = classLabel || groupName || '';
+    document.getElementById('dashboardModuleNoteModal').style.display = 'flex';
 }
 
-function changeSlide(dir) {
-    pauseAutoAdvance();
-    goToSlide(currentSlide + dir);
+function closeDashboardModuleNote() {
+    document.getElementById('dashboardModuleNoteModal').style.display = 'none';
 }
 </script>
 

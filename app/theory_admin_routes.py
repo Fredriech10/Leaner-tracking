@@ -10,6 +10,7 @@ from app.helper_common import normalize_question_bank_group_text, parse_module_n
 from app.helper_theory import (
     bank_question_exists,
     clone_bank_question_to_test,
+    cleanup_duplicate_generated_questions,
     create_generated_match_question,
     get_question_bank_counts,
     pick_unique_bank_question_ids,
@@ -535,6 +536,7 @@ def register_theory_admin_routes(app):
                         create_generated_match_question(cursor, selected_match_pairs, test_id, order_index)
                     conn.commit()
                     conn.close()
+                    cleanup_duplicate_generated_questions(test_id=test_id, unsubmitted_only=False)
                     log_activity(username, f"generated theory test '{title}' from question bank")
                     return redirect(url_for("manage_test_questions", test_id=test_id))
 

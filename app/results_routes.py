@@ -3,7 +3,7 @@ from datetime import datetime
 import pandas as pd
 from flask import redirect, render_template, request, send_file, session, url_for
 
-from app.database import get_db, get_groups, get_user_role, log_activity
+from app.database import get_db, get_grades, get_groups, get_user_role, log_activity
 from app.helper_attendance import (
     auto_exclude_empty_attendance_days,
     build_attendance_group_summary,
@@ -28,6 +28,128 @@ from app.helper_results import (
 
 
 def register_results_routes(app):
+    @app.route("/weakness_summary")
+    def weakness_summary():
+        username = session.get("username")
+        if not username:
+            return redirect(url_for("login"))
+
+        role = get_user_role(username)
+        if role not in ["teacher", "admin"]:
+            return redirect(url_for("my_weaknesses"))
+
+        selected_grade = (request.args.get("grade") or "").strip()
+        selected_group_raw = (request.args.get("group") or "").strip()
+        selected_teacher = (request.args.get("teacher") or "").strip() or None
+        teacher_options = []
+
+        conn = get_db()
+        cursor = conn.cursor()
+
+        if role == "teacher":
+            selected_teacher = username
+            grade_options = get_grades(username)
+            groups = get_groups(username, grade=selected_grade)
+        else:
+            cursor.execute(
+                """
+                SELECT DISTINCT teacher_username
+                FROM users
+                WHERE role = 'student'
+                  AND teacher_username IS NOT NULL
+                  AND teacher_username != ''
+                ORDER BY teacher_username
+                """
+            )
+            teacher_options = [row[0] for row in cursor.fetchall()]
+            if selected_teacher and selected_teacher not in teacher_options:
+                selected_teacher = None
+            grade_options = get_grades(teacher_username=selected_teacher) if selected_teacher else get_grades()
+            groups = get_groups(grade=selected_grade)
+
+        if selected_group_raw.lower() == "all":
+            selected_group = None
+            all_groups_selected = True
+        else:
+            selected_group = selected_group_raw if selected_group_raw in groups else None
+            all_groups_selected = False
+
+        practical_query = """
+            SELECT w.skill, SUM(w.count) AS total_count, COUNT(DISTINCT w.username) AS learner_count
+            FROM weaknesses w
+            JOIN users u ON u.username = w.username
+            WHERE u.role = 'student'
+        """
+        practical_params = []
+        if selected_teacher:
+            practical_query += " AND u.teacher_username = ?"
+            practical_params.append(selected_teacher)
+        if selected_grade:
+            practical_query += " AND u.grade = ?"
+            practical_params.append(selected_grade)
+        if selected_group:
+            practical_query += " AND u.group_name = ?"
+            practical_params.append(selected_group)
+        practical_query += " GROUP BY w.skill ORDER BY total_count DESC, learner_count DESC, w.skill ASC"
+        cursor.execute(practical_query, practical_params)
+        practical_weaknesses = [
+            {"skill": skill, "count": count, "learners": learners}
+            for skill, count, learners in cursor.fetchall()
+        ]
+
+        theory_module_weaknesses = fetch_theory_module_weaknesses(
+            cursor,
+            group_name=selected_group,
+            teacher_username=selected_teacher,
+            grade=selected_grade,
+            limit=100,
+        )
+
+        cursor.execute(
+            """
+            SELECT COUNT(*)
+            FROM users u
+            WHERE u.role = 'student'
+            """
+            + (" AND u.teacher_username = ?" if selected_teacher else "")
+            + (" AND u.grade = ?" if selected_grade else "")
+            + (" AND u.group_name = ?" if selected_group else ""),
+            tuple(
+                value
+                for value in [selected_teacher, selected_grade, selected_group]
+                if value
+            ),
+        )
+        learner_count = cursor.fetchone()[0] or 0
+
+        summary_cards = [
+            {"label": "Learners", "value": learner_count, "tone": "info"},
+            {"label": "Practical Weak Areas", "value": len(practical_weaknesses), "tone": "mid"},
+            {"label": "Theory Modules Flagged", "value": len(theory_module_weaknesses), "tone": "risk"},
+            {
+                "label": "Scope",
+                "value": (
+                    selected_group
+                    or ("All Groups" if all_groups_selected or selected_grade or selected_teacher else "All Learners")
+                ),
+                "tone": "info",
+            },
+        ]
+
+        conn.close()
+        return render_template(
+            "weakness_summary.html",
+            groups=groups,
+            grade_options=grade_options,
+            selected_grade=selected_grade,
+            selected_group="all" if all_groups_selected else selected_group,
+            teacher_options=teacher_options,
+            selected_teacher=selected_teacher,
+            practical_weaknesses=practical_weaknesses,
+            theory_module_weaknesses=theory_module_weaknesses,
+            summary_cards=summary_cards,
+        )
+
     @app.route("/learner_record/<username>")
     def learner_record(username):
         admin_user = session.get("username")
@@ -650,14 +772,19 @@ def register_results_routes(app):
             return "Access denied", 403
 
         selected_group = request.args.get("group")
+        selected_group_raw = (selected_group or "").strip().lower()
+        all_groups_selected = selected_group_raw == "all"
+        selected_grade = (request.args.get("grade") or "").strip()
         conn = get_db()
         cursor = conn.cursor()
         selected_teacher = (request.args.get("teacher") or "").strip() or None
         teacher_options = []
+        grade_options = []
         class_scopes = []
 
         if role == "teacher":
-            groups = get_groups(username)
+            grade_options = get_grades(username)
+            groups = get_groups(username, grade=selected_grade)
             selected_teacher = username
         else:
             cursor.execute(
@@ -673,6 +800,7 @@ def register_results_routes(app):
             teacher_options = [row[0] for row in cursor.fetchall()]
             if selected_teacher and selected_teacher not in teacher_options:
                 selected_teacher = None
+            grade_options = get_grades(teacher_username=selected_teacher) if selected_teacher else get_grades()
             if selected_teacher:
                 cursor.execute(
                     """
@@ -682,9 +810,10 @@ def register_results_routes(app):
                       AND teacher_username = ?
                       AND group_name IS NOT NULL
                       AND group_name != ''
+                      AND (? = '' OR grade = ?)
                     ORDER BY group_name
                     """,
-                    (selected_teacher,),
+                    (selected_teacher, selected_grade, selected_grade),
                 )
                 groups = [row[0] for row in cursor.fetchall()]
             else:
@@ -698,15 +827,19 @@ def register_results_routes(app):
                       AND teacher_username != ''
                       AND group_name IS NOT NULL
                       AND group_name != ''
+                      AND (? = '' OR grade = ?)
                     ORDER BY teacher_username, group_name
-                    """
+                    """,
+                    (selected_grade, selected_grade),
                 )
                 class_scopes = [
                     {"teacher_username": row[0], "group": row[1], "label": f"{row[1]} ({row[0]})"}
                     for row in cursor.fetchall()
                 ]
 
-        if selected_group and selected_group not in groups:
+        if all_groups_selected:
+            selected_group = None
+        elif selected_group and selected_group not in groups:
             selected_group = None
 
         if not selected_group:
@@ -783,10 +916,211 @@ def register_results_routes(app):
                         "risk_score": risk_value,
                     }
                 )
+
+            if selected_grade or all_groups_selected:
+                student_query = """
+                    SELECT username, full_name, group_name, teacher_username
+                    FROM users
+                    WHERE role = 'student'
+                """
+                student_params = []
+                if selected_grade:
+                    student_query += " AND grade = ?"
+                    student_params.append(selected_grade)
+                if selected_teacher:
+                    student_query += " AND teacher_username = ?"
+                    student_params.append(selected_teacher)
+                student_query += " ORDER BY group_name, full_name, username"
+                cursor.execute(student_query, student_params)
+                students_raw = cursor.fetchall()
+
+                today = datetime.now().strftime("%Y-%m-%d")
+                risk_students = []
+                scope_days_cache = {}
+                scope_excluded_cache = {}
+                scope_login_cache = {}
+                scope_override_cache = {}
+                scope_late_cache = {}
+                scope_checked_cache = {}
+                scope_task_totals = {}
+
+                for student_username, full_name, group_name, teacher_scope in students_raw:
+                    if not group_name:
+                        continue
+                    scope_key = (group_name, teacher_scope or "")
+                    filtered_days = scope_days_cache.get(scope_key)
+                    if filtered_days is None:
+                        auto_exclude_empty_attendance_days(cursor, [group_name], created_by=username, days=get_current_year_attendance_days())
+                        excluded_days = fetch_group_excluded_dates(cursor, [group_name]).get(group_name, set())
+                        filtered_days = [day for day in get_last_21_days() if day not in excluded_days]
+                        scope_days_cache[scope_key] = filtered_days
+                        scope_excluded_cache[scope_key] = excluded_days
+                        scope_late_cache[scope_key] = fetch_group_late_thresholds(cursor, group_name, filtered_days, teacher_username=teacher_scope)
+                        scope_checked_cache[scope_key] = fetch_class_checked_dates(cursor, group_name, teacher_username=teacher_scope)
+
+                        scope_student_query = """
+                            SELECT username
+                            FROM users
+                            WHERE role = 'student' AND group_name = ?
+                        """
+                        scope_student_params = [group_name]
+                        if teacher_scope:
+                            scope_student_query += " AND teacher_username = ?"
+                            scope_student_params.append(teacher_scope)
+                        cursor.execute(scope_student_query, scope_student_params)
+                        scope_usernames = [row[0] for row in cursor.fetchall()]
+                        scope_login_cache[scope_key] = fetch_first_login_times(cursor, scope_usernames, filtered_days)
+                        scope_override_cache[scope_key] = fetch_attendance_override_statuses(cursor, scope_usernames, filtered_days)
+
+                        cursor.execute(
+                            """
+                            SELECT COUNT(DISTINCT t.id)
+                            FROM task_groups tg
+                            JOIN tasks t ON t.id = tg.task_id
+                            WHERE tg.group_name = ? AND t.assign_date <= ?
+                            """,
+                            (group_name, today),
+                        )
+                        total_assigned = cursor.fetchone()[0] or 0
+                        cursor.execute(
+                            """
+                            SELECT COUNT(DISTINCT tt.id)
+                            FROM theory_tests tt
+                            LEFT JOIN theory_test_groups ttg ON tt.id = ttg.test_id
+                            WHERE (ttg.group_name = ? OR ttg.group_name IS NULL)
+                              AND tt.assign_date <= ?
+                            """,
+                            (group_name, today),
+                        )
+                        total_theory = cursor.fetchone()[0] or 0
+                        scope_task_totals[scope_key] = (total_assigned, total_theory)
+                    else:
+                        excluded_days = scope_excluded_cache[scope_key]
+
+                    practical_avg = practical_avg_map.get(student_username)
+                    theory_avg = theory_avg_map.get(student_username)
+                    if practical_avg is not None and theory_avg is not None:
+                        avg_score = round((practical_avg + theory_avg) / 2, 1)
+                    else:
+                        avg_score = practical_avg if practical_avg is not None else theory_avg
+                    avg_score = avg_score if avg_score is not None else 0
+
+                    history = build_attendance_history(
+                        cursor,
+                        student_username,
+                        group_name,
+                        filtered_days,
+                        login_map=scope_login_cache[scope_key],
+                        override_map=scope_override_cache[scope_key],
+                        late_cutoffs=scope_late_cache[scope_key],
+                        class_checked_dates=scope_checked_cache[scope_key],
+                        excluded_dates=excluded_days,
+                    )
+                    attendance_pct = summarize_attendance_history(history)["attendance_pct"]
+
+                    cursor.execute(
+                        """
+                        SELECT COUNT(DISTINCT t.id)
+                        FROM task_groups tg
+                        JOIN tasks t ON t.id = tg.task_id
+                        JOIN subjects s ON s.id = t.subject_id
+                        WHERE tg.group_name = ?
+                          AND t.assign_date <= ?
+                          AND NOT EXISTS (
+                              SELECT 1 FROM results r
+                              WHERE r.username = ?
+                                AND r.subject = s.name
+                                AND r.task = t.name
+                          )
+                        """,
+                        (group_name, today, student_username),
+                    )
+                    missing_practical = cursor.fetchone()[0] or 0
+
+                    cursor.execute(
+                        """
+                        SELECT COUNT(DISTINCT tt.id)
+                        FROM theory_tests tt
+                        LEFT JOIN theory_test_groups ttg ON tt.id = ttg.test_id
+                        WHERE (ttg.group_name = ? OR ttg.group_name IS NULL)
+                          AND tt.assign_date <= ?
+                          AND NOT EXISTS (
+                              SELECT 1 FROM theory_submissions ts
+                              WHERE ts.username = ?
+                                AND ts.test_id = tt.id
+                          )
+                        """,
+                        (group_name, today, student_username),
+                    )
+                    missing_theory = cursor.fetchone()[0] or 0
+
+                    total_assigned, total_theory = scope_task_totals[scope_key]
+                    total_tasks = total_assigned + total_theory
+                    missing_pct = round((missing_practical + missing_theory) / total_tasks * 100) if total_tasks else 0
+                    risk_score = round((100 - attendance_pct) * 0.4 + (100 - avg_score) * 0.4 + missing_pct * 0.2)
+                    if risk_score <= 40:
+                        status = "Safe"
+                    elif risk_score <= 70:
+                        status = "At Risk"
+                    else:
+                        status = "High Risk"
+
+                    reasons = []
+                    if attendance_pct < 60:
+                        reasons.append(f"A {attendance_pct}%")
+                    if avg_score < 40:
+                        reasons.append(f"AVG{avg_score}%")
+                    if missing_pct > 70:
+                        reasons.append(f"Missing {missing_pct}%")
+                    if not reasons:
+                        reasons.append("balanced risk factors")
+
+                    risk_students.append(
+                        {
+                            "username": student_username,
+                            "name": full_name or student_username,
+                            "group": group_name,
+                            "attendance_pct": attendance_pct,
+                            "avg_score": avg_score,
+                            "missing_pct": missing_pct,
+                            "score": risk_score,
+                            "status": status,
+                            "reason": " + ".join(reasons),
+                        }
+                    )
+
+                safe_count = sum(1 for student in risk_students if student["status"] == "Safe")
+                at_risk_count = sum(1 for student in risk_students if student["status"] == "At Risk")
+                high_risk_count = sum(1 for student in risk_students if student["status"] == "High Risk")
+                avg_attendance = round(sum(student["attendance_pct"] for student in risk_students) / len(risk_students), 1) if risk_students else 0
+                avg_combined = round(sum(student["avg_score"] for student in risk_students) / len(risk_students), 1) if risk_students else 0
+                summary_cards = [
+                    {"label": "Safe", "value": safe_count, "tone": "ok"},
+                    {"label": "At Risk", "value": at_risk_count, "tone": "mid"},
+                    {"label": "High Risk", "value": high_risk_count, "tone": "risk"},
+                    {"label": "Avg Attendance", "value": f"{avg_attendance}%", "tone": "info"},
+                    {"label": "Avg Combined", "value": f"{avg_combined}%", "tone": "info"},
+                ]
+                conn.close()
+                return render_template(
+                    "Riks_learners.html",
+                    groups=groups,
+                    grade_options=grade_options,
+                    selected_grade=selected_grade,
+                    teacher_options=teacher_options,
+                    selected_teacher=selected_teacher,
+                    selected_group="all" if all_groups_selected else None,
+                    risk_students=risk_students,
+                    summary_cards=summary_cards,
+                    group_summaries=[],
+                )
+
             conn.close()
             return render_template(
                 "Riks_learners.html",
                 groups=groups,
+                grade_options=grade_options,
+                selected_grade=selected_grade,
                 teacher_options=teacher_options,
                 selected_teacher=selected_teacher,
                 selected_group=None,
@@ -964,9 +1298,11 @@ def register_results_routes(app):
         return render_template(
             "Riks_learners.html",
             groups=groups,
+            grade_options=grade_options,
+            selected_grade=selected_grade,
             teacher_options=teacher_options,
             selected_teacher=selected_teacher,
-            selected_group=selected_group,
+            selected_group="all" if all_groups_selected else selected_group,
             risk_students=risk_students,
             summary_cards=summary_cards,
             group_summaries=[],
@@ -985,12 +1321,17 @@ def register_results_routes(app):
         conn = get_db()
         cursor = conn.cursor()
         selected_group = request.args.get("group")
+        selected_group_raw = (selected_group or "").strip().lower()
+        all_groups_selected = selected_group_raw == "all"
+        selected_grade = (request.args.get("grade") or "").strip()
         selected_teacher = (request.args.get("teacher") or "").strip() or None
         teacher_options = []
+        grade_options = []
         class_scopes = []
 
         if role == "teacher":
-            groups = get_groups(username)
+            grade_options = get_grades(username)
+            groups = get_groups(username, grade=selected_grade)
             selected_teacher = username
         else:
             cursor.execute(
@@ -1006,6 +1347,7 @@ def register_results_routes(app):
             teacher_options = [row[0] for row in cursor.fetchall()]
             if selected_teacher and selected_teacher not in teacher_options:
                 selected_teacher = None
+            grade_options = get_grades(teacher_username=selected_teacher) if selected_teacher else get_grades()
             if selected_teacher:
                 cursor.execute(
                     """
@@ -1015,9 +1357,10 @@ def register_results_routes(app):
                       AND teacher_username = ?
                       AND group_name IS NOT NULL
                       AND group_name != ''
+                      AND (? = '' OR grade = ?)
                     ORDER BY group_name
                     """,
-                    (selected_teacher,),
+                    (selected_teacher, selected_grade, selected_grade),
                 )
                 groups = [row[0] for row in cursor.fetchall()]
             else:
@@ -1031,18 +1374,22 @@ def register_results_routes(app):
                       AND teacher_username != ''
                       AND group_name IS NOT NULL
                       AND group_name != ''
+                      AND (? = '' OR grade = ?)
                     ORDER BY teacher_username, group_name
-                    """
+                    """,
+                    (selected_grade, selected_grade),
                 )
                 class_scopes = [
                     {"teacher_username": row[0], "group": row[1], "label": f"{row[1]} ({row[0]})"}
                     for row in cursor.fetchall()
                 ]
 
-        if selected_group and selected_group not in groups:
+        if all_groups_selected:
+            selected_group = None
+        elif selected_group and selected_group not in groups:
             selected_group = None
 
-        if not selected_group:
+        if not selected_group and not all_groups_selected:
             result_summaries = []
             if role == "admin" and not selected_teacher:
                 for scope in class_scopes:
@@ -1111,79 +1458,156 @@ def register_results_routes(app):
             return render_template(
                 "group_results.html",
                 groups=groups,
+                grade_options=grade_options,
+                selected_grade=selected_grade,
                 teacher_options=teacher_options,
                 selected_teacher=selected_teacher,
                 selected_group=None,
                 result_summaries=result_summaries,
             )
 
-        if selected_teacher:
-            cursor.execute(
-                """
-                SELECT username, full_name FROM users
-                WHERE group_name = ? AND role = 'student' AND teacher_username = ?
-                ORDER BY full_name
-                """,
-                (selected_group, selected_teacher),
-            )
+        if all_groups_selected:
+            student_query = """
+                SELECT username, full_name, group_name
+                FROM users
+                WHERE role = 'student'
+            """
+            student_params = []
+            if role == "teacher":
+                student_query += " AND teacher_username = ?"
+                student_params.append(username)
+            elif selected_teacher:
+                student_query += " AND teacher_username = ?"
+                student_params.append(selected_teacher)
+            if selected_grade:
+                student_query += " AND grade = ?"
+                student_params.append(selected_grade)
+            student_query += " ORDER BY group_name, full_name, username"
+            cursor.execute(student_query, tuple(student_params))
+            students_raw = cursor.fetchall()
+
+            relevant_groups = sorted({row[2] for row in students_raw if row[2]})
+            practical_tasks = []
+            theory_tasks = []
+            if relevant_groups:
+                placeholders = ",".join("?" for _ in relevant_groups)
+                cursor.execute(
+                    f"""
+                    SELECT DISTINCT s.name as subject, t.name as task_name, t.id
+                    FROM tasks t
+                    JOIN subjects s ON t.subject_id = s.id
+                    JOIN task_groups tg ON t.id = tg.task_id
+                    WHERE tg.group_name IN ({placeholders}) AND t.task_type = 'practical'
+                    ORDER BY s.name, t.name
+                    """,
+                    tuple(relevant_groups),
+                )
+                practical_tasks = [{"subject": row[0], "name": row[1], "id": row[2]} for row in cursor.fetchall()]
+
+                cursor.execute(
+                    f"""
+                    SELECT DISTINCT tt.id, tt.title, tt.subject
+                    FROM theory_tests tt
+                    LEFT JOIN theory_test_groups ttg ON tt.id = ttg.test_id
+                    WHERE ttg.group_name IN ({placeholders}) OR ttg.group_name IS NULL
+                    ORDER BY tt.subject, tt.title
+                    """,
+                    tuple(relevant_groups),
+                )
+                theory_tasks = [{"test_id": row[0], "title": row[1], "subject": row[2]} for row in cursor.fetchall()]
         else:
+            if selected_teacher:
+                cursor.execute(
+                    """
+                    SELECT username, full_name, group_name FROM users
+                    WHERE group_name = ? AND role = 'student' AND teacher_username = ?
+                    ORDER BY full_name
+                    """,
+                    (selected_group, selected_teacher),
+                )
+            else:
+                cursor.execute(
+                    """
+                    SELECT username, full_name, group_name FROM users
+                    WHERE group_name = ? AND role = 'student'
+                    ORDER BY full_name
+                    """,
+                    (selected_group,),
+                )
+            students_raw = cursor.fetchall()
+
             cursor.execute(
                 """
-                SELECT username, full_name FROM users
-                WHERE group_name = ? AND role = 'student'
-                ORDER BY full_name
+                SELECT DISTINCT s.name as subject, t.name as task_name, t.id
+                FROM tasks t
+                JOIN subjects s ON t.subject_id = s.id
+                JOIN task_groups tg ON t.id = tg.task_id
+                WHERE tg.group_name = ? AND t.task_type = 'practical'
+                ORDER BY s.name, t.name
                 """,
                 (selected_group,),
             )
-        students_raw = cursor.fetchall()
+            practical_tasks = [{"subject": row[0], "name": row[1], "id": row[2]} for row in cursor.fetchall()]
 
-        cursor.execute(
-            """
-            SELECT DISTINCT s.name as subject, t.name as task_name, t.id
-            FROM tasks t
-            JOIN subjects s ON t.subject_id = s.id
-            JOIN task_groups tg ON t.id = tg.task_id
-            WHERE tg.group_name = ? AND t.task_type = 'practical'
-            ORDER BY s.name, t.name
-            """,
-            (selected_group,),
-        )
-        practical_tasks = [{"subject": row[0], "name": row[1], "id": row[2]} for row in cursor.fetchall()]
-
-        cursor.execute(
-            """
-            SELECT DISTINCT tt.id, tt.title, tt.subject
-            FROM theory_tests tt
-            LEFT JOIN theory_test_groups ttg ON tt.id = ttg.test_id
-            WHERE (ttg.group_name = ? OR ttg.group_name IS NULL)
-            ORDER BY tt.subject, tt.title
-            """,
-            (selected_group,),
-        )
-        theory_tasks = [{"test_id": row[0], "title": row[1], "subject": row[2]} for row in cursor.fetchall()]
+            cursor.execute(
+                """
+                SELECT DISTINCT tt.id, tt.title, tt.subject
+                FROM theory_tests tt
+                LEFT JOIN theory_test_groups ttg ON tt.id = ttg.test_id
+                WHERE (ttg.group_name = ? OR ttg.group_name IS NULL)
+                ORDER BY tt.subject, tt.title
+                """,
+                (selected_group,),
+            )
+            theory_tasks = [{"test_id": row[0], "title": row[1], "subject": row[2]} for row in cursor.fetchall()]
 
         students = []
         total_averages = []
-        for username, full_name in students_raw:
+        for username, full_name, learner_group in students_raw:
             student = {
                 "username": username,
                 "full_name": full_name,
+                "group_name": learner_group,
                 "practical_results": {},
                 "theory_results": {},
                 "overall_avg": None,
             }
 
             for task in practical_tasks:
-                cursor.execute(
-                    """
-                    SELECT score, timestamp
-                    FROM results
-                    WHERE username = ? AND subject = ? AND task = ?
-                    ORDER BY timestamp DESC
-                    """,
-                    (username, task["subject"], task["name"]),
-                )
-                scores = cursor.fetchall()
+                if all_groups_selected and learner_group:
+                    cursor.execute(
+                        """
+                        SELECT 1
+                        FROM task_groups
+                        WHERE task_id = ? AND group_name = ?
+                        LIMIT 1
+                        """,
+                        (task["id"], learner_group),
+                    )
+                    if not cursor.fetchone():
+                        scores = []
+                    else:
+                        cursor.execute(
+                            """
+                            SELECT score, timestamp
+                            FROM results
+                            WHERE username = ? AND subject = ? AND task = ?
+                            ORDER BY timestamp DESC
+                            """,
+                            (username, task["subject"], task["name"]),
+                        )
+                        scores = cursor.fetchall()
+                else:
+                    cursor.execute(
+                        """
+                        SELECT score, timestamp
+                        FROM results
+                        WHERE username = ? AND subject = ? AND task = ?
+                        ORDER BY timestamp DESC
+                        """,
+                        (username, task["subject"], task["name"]),
+                    )
+                    scores = cursor.fetchall()
                 if scores:
                     all_scores = [s[0] for s in scores]
                     best_score = max(all_scores)
@@ -1194,16 +1618,50 @@ def register_results_routes(app):
                     }
 
             for task in theory_tasks:
-                cursor.execute(
-                    """
-                    SELECT percentage, submitted_at
-                    FROM theory_submissions
-                    WHERE username = ? AND test_id = ?
-                    ORDER BY submitted_at DESC
-                    """,
-                    (username, task["test_id"]),
-                )
-                scores = cursor.fetchall()
+                if all_groups_selected and learner_group:
+                    cursor.execute(
+                        """
+                        SELECT 1
+                        FROM theory_test_groups
+                        WHERE test_id = ? AND group_name = ?
+                        LIMIT 1
+                        """,
+                        (task["test_id"], learner_group),
+                    )
+                    assigned_to_group = cursor.fetchone()
+                    cursor.execute(
+                        """
+                        SELECT COUNT(*)
+                        FROM theory_test_groups
+                        WHERE test_id = ?
+                        """,
+                        (task["test_id"],),
+                    )
+                    assignment_count = cursor.fetchone()[0] or 0
+                    if not assigned_to_group and assignment_count > 0:
+                        scores = []
+                    else:
+                        cursor.execute(
+                            """
+                            SELECT percentage, submitted_at
+                            FROM theory_submissions
+                            WHERE username = ? AND test_id = ?
+                            ORDER BY submitted_at DESC
+                            """,
+                            (username, task["test_id"]),
+                        )
+                        scores = cursor.fetchall()
+                else:
+                    cursor.execute(
+                        """
+                        SELECT percentage, submitted_at
+                        FROM theory_submissions
+                        WHERE username = ? AND test_id = ?
+                        ORDER BY submitted_at DESC
+                        """,
+                        (username, task["test_id"]),
+                    )
+                    scores = cursor.fetchall()
                 if scores:
                     all_scores = [s[0] for s in scores]
                     best_score = max(all_scores)
@@ -1227,9 +1685,11 @@ def register_results_routes(app):
         return render_template(
             "group_results.html",
             groups=groups,
+            grade_options=grade_options,
+            selected_grade=selected_grade,
             teacher_options=teacher_options,
             selected_teacher=selected_teacher,
-            selected_group=selected_group,
+            selected_group="all" if all_groups_selected else selected_group,
             students=students,
             practical_tasks=practical_tasks,
             theory_tasks=theory_tasks,

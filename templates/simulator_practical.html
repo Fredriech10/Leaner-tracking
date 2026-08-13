@@ -1,0 +1,964 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Simulator - {{ subject_name }} {{ task_name }}</title>
+    <style>
+        * { box-sizing: border-box; }
+        body { margin: 0; padding: 0; font-family: "Segoe UI", Arial, sans-serif; background: #d9d9d9; color: #201f1e; }
+        .topbar { background: #0078D4; color: white; padding: 12px 24px; display: flex; justify-content: space-between; align-items: center; flex-wrap: nowrap; gap: 10px; position: sticky; top: 0; z-index: 999; }
+        .topbar h1 { margin: 0; font-size: 1.05em; white-space: nowrap; }
+        .topbar-links { display: flex; gap: 10px; align-items: center; flex-wrap: nowrap; }
+        .topbar-links a { color: white; text-decoration: none; font-size: 0.82em; opacity: 0.9; white-space: nowrap; }
+        .topbar-links a:hover { opacity: 1; text-decoration: underline; }
+        .topbar-user { color: white; font-size: 0.82em; white-space: nowrap; border-left: 1px solid rgba(255,255,255,0.35); padding-left: 10px; }
+
+        .page { width: 100%; max-width: 100%; margin: 0; }
+        .simulator-form { margin: 0; }
+
+        .workspace-shell { min-height: calc(100vh - 52px); background: #f3f2f1; display: flex; flex-direction: column; }
+        .app-titlebar { background: #2b579a; color: white; padding: 0 8px; min-height: 36px; display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+        .app-left, .app-right { display: flex; align-items: center; gap: 8px; }
+        .qa-btn, .window-btn { width: 28px; height: 28px; border: none; background: transparent; color: rgba(255,255,255,0.92); display: inline-flex; align-items: center; justify-content: center; border-radius: 2px; font-size: 0.82rem; }
+        .qa-btn:hover, .window-btn:hover { background: rgba(255,255,255,0.12); }
+        .window-btn.close:hover { background: #c42b1c; }
+        .office-badge { width: 26px; height: 26px; border-radius: 2px; background: rgba(255,255,255,0.15); color: white; display: inline-flex; align-items: center; justify-content: center; font-weight: 700; font-size: 0.82rem; }
+        .app-title { font-size: 0.9rem; font-weight: 500; }
+        .app-search { min-width: 380px; max-width: 28vw; height: 26px; background: rgba(255,255,255,0.84); border: 1px solid rgba(255,255,255,0.08); display: flex; align-items: center; gap: 8px; padding: 0 10px; color: #605e5c; font-size: 0.82rem; }
+        .app-user { display: flex; align-items: center; gap: 10px; font-size: 0.78rem; }
+        .user-avatar { width: 24px; height: 24px; border-radius: 50%; background: #748f3f; display: inline-flex; align-items: center; justify-content: center; font-size: 0.72rem; }
+        .share-btn { height: 28px; padding: 0 10px; border: 1px solid #d2d0ce; background: #f3f2f1; color: #2b579a; display: inline-flex; align-items: center; gap: 6px; font-size: 0.82rem; cursor: pointer; }
+
+        .tab-strip { background: #f3f2f1; border-bottom: 1px solid #d2d0ce; padding: 0 14px; display: flex; align-items: end; gap: 0; flex-wrap: wrap; }
+        .file-tab { padding: 8px 14px 7px; font-size: 0.88rem; color: #323130; }
+        .word-tab { padding: 8px 14px 7px; font-size: 0.88rem; color: #323130; cursor: pointer; border-bottom: 3px solid transparent; }
+        .word-tab:hover { background: rgba(0,0,0,0.03); }
+        .word-tab.active { border-bottom-color: #2b579a; font-weight: 600; }
+
+        .word-ribbon { background: #f3f2f1; border-bottom: 1px solid #d2d0ce; padding: 7px 10px 2px; display: none; flex-wrap: wrap; gap: 0; min-height: 102px; overflow: hidden; align-items: stretch; }
+        .word-ribbon.active { display: flex; }
+        .ribbon-group { min-width: 124px; min-height: 92px; padding: 2px 8px 18px; border-right: 1px solid #d2d0ce; position: relative; display: flex; align-items: flex-start; }
+        .ribbon-group-title { position: absolute; left: 8px; right: 8px; bottom: 2px; text-align: center; font-size: 0.67rem; color: #605e5c; }
+        .ribbon-buttons {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 2px 4px;
+            align-content: flex-start;
+            align-items: flex-start;
+            width: 100%;
+        }
+        .ribbon-btn {
+            width: 52px;
+            min-height: 24px;
+            border: 1px solid transparent;
+            background: transparent;
+            color: #323130;
+            border-radius: 2px;
+            padding: 3px 4px;
+            display: inline-flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            gap: 2px;
+            font-size: 0.76rem;
+            cursor: pointer;
+        }
+        .ribbon-btn:hover { background: rgba(0,0,0,0.03); border-color: #d2d0ce; }
+        .ribbon-btn.primary { font-weight: 400; }
+        .ribbon-btn.active { background: rgba(43, 87, 154, 0.08); border-color: #bfd0e7; color: #0f4fa1; }
+        .ribbon-btn.inactive { color: #a19f9d; cursor: default; }
+        .ribbon-btn.inactive:hover { background: transparent; border-color: transparent; }
+        .ribbon-btn .icon { font-size: 1.01rem; line-height: 1; }
+        .ribbon-btn .label { display: none; }
+        .ribbon-group.group-clipboard { min-width: 116px; }
+        .ribbon-group.group-clipboard .ribbon-buttons {
+            display: grid;
+            grid-template-columns: 56px 42px;
+            grid-template-rows: repeat(3, 24px);
+            gap: 2px 4px;
+            align-items: stretch;
+        }
+        .ribbon-group.group-clipboard .ribbon-btn {
+            width: auto;
+            min-width: 0;
+        }
+        .ribbon-group.group-clipboard .ribbon-btn:nth-child(1) {
+            grid-column: 1;
+            grid-row: 1 / span 3;
+            min-height: 80px;
+            padding: 7px 4px;
+            justify-content: flex-start;
+            gap: 6px;
+        }
+        .ribbon-group.group-clipboard .ribbon-btn:nth-child(1) .icon {
+            font-size: 1.63rem;
+        }
+        .ribbon-group.group-clipboard .ribbon-btn:nth-child(2) {
+            grid-column: 2;
+            grid-row: 1;
+        }
+        .ribbon-group.group-clipboard .ribbon-btn:nth-child(3) {
+            grid-column: 2;
+            grid-row: 2;
+        }
+        .ribbon-group.group-clipboard .ribbon-btn:nth-child(4) {
+            grid-column: 2;
+            grid-row: 3;
+        }
+        .ribbon-group.group-font { min-width: 352px; }
+        .ribbon-group.group-font .ribbon-buttons {
+            display: grid;
+            grid-template-columns: repeat(11, 26px);
+            grid-template-rows: 24px 24px;
+            gap: 3px 4px;
+            align-items: stretch;
+        }
+        .font-select-wrap {
+            position: relative;
+            height: 24px;
+        }
+        .font-select-wrap::after {
+            content: "▼";
+            position: absolute;
+            right: 6px;
+            top: 50%;
+            transform: translateY(-50%);
+            font-size: 0.55rem;
+            color: #605e5c;
+            pointer-events: none;
+        }
+        .font-select-wrap.family { grid-column: 1 / span 3; grid-row: 1; }
+        .font-select-wrap.size { grid-column: 4 / span 2; grid-row: 1; }
+        .font-select {
+            width: 100%;
+            height: 24px;
+            border: 1px solid #c8c6c4;
+            background: #fff;
+            color: #323130;
+            font-size: 0.8rem;
+            padding: 0 16px 0 8px;
+            outline: none;
+            appearance: none;
+            -webkit-appearance: none;
+            -moz-appearance: none;
+        }
+        .ribbon-group.group-font .ribbon-btn {
+            width: auto;
+            min-width: 0;
+            min-height: 25px;
+            padding: 3px 4px;
+            font-size: 0.8rem;
+        }
+        .ribbon-group.group-font .ribbon-btn .icon {
+            font-size: 1rem;
+        }
+        .ribbon-group.group-font button.ribbon-btn:nth-of-type(3),
+        .ribbon-group.group-font button.ribbon-btn:nth-of-type(4),
+        .ribbon-group.group-font button.ribbon-btn:nth-of-type(11),
+        .ribbon-group.group-font button.ribbon-btn:nth-of-type(12),
+        .ribbon-group.group-font button.ribbon-btn:nth-of-type(13) {
+            position: relative;
+        }
+        .ribbon-group.group-font button.ribbon-btn:nth-of-type(3)::after,
+        .ribbon-group.group-font button.ribbon-btn:nth-of-type(11)::after,
+        .ribbon-group.group-font button.ribbon-btn:nth-of-type(12)::after,
+        .ribbon-group.group-font button.ribbon-btn:nth-of-type(13)::after {
+            content: "▼";
+            position: absolute;
+            right: 5px;
+            top: 50%;
+            transform: translateY(-50%);
+            font-size: 0.55rem;
+            color: #605e5c;
+            pointer-events: none;
+        }
+        .ribbon-group.group-font button.ribbon-btn:nth-of-type(1) { grid-column: 6; grid-row: 1; }
+        .ribbon-group.group-font button.ribbon-btn:nth-of-type(2) { grid-column: 7; grid-row: 1; }
+        .ribbon-group.group-font button.ribbon-btn:nth-of-type(3) { grid-column: 8; grid-row: 1; }
+        .ribbon-group.group-font button.ribbon-btn:nth-of-type(4) { grid-column: 9; grid-row: 1; }
+        .ribbon-group.group-font button.ribbon-btn:nth-of-type(5) { grid-column: 1; grid-row: 2; }
+        .ribbon-group.group-font button.ribbon-btn:nth-of-type(6) { grid-column: 2; grid-row: 2; }
+        .ribbon-group.group-font button.ribbon-btn:nth-of-type(7) { grid-column: 3; grid-row: 2; }
+        .ribbon-group.group-font button.ribbon-btn:nth-of-type(8) { grid-column: 4; grid-row: 2; }
+        .ribbon-group.group-font button.ribbon-btn:nth-of-type(9) { grid-column: 5; grid-row: 2; }
+        .ribbon-group.group-font button.ribbon-btn:nth-of-type(10) { grid-column: 6; grid-row: 2; }
+        .ribbon-group.group-font button.ribbon-btn:nth-of-type(11) { grid-column: 7; grid-row: 2; }
+        .ribbon-group.group-font button.ribbon-btn:nth-of-type(12) { grid-column: 8; grid-row: 2; }
+        .ribbon-group.group-font button.ribbon-btn:nth-of-type(13) { grid-column: 9; grid-row: 2; }
+        .ribbon-group.group-paragraph { min-width: 278px; }
+        .ribbon-group.group-paragraph .ribbon-buttons {
+            display: grid;
+            grid-template-columns: repeat(7, 26px);
+            grid-template-rows: 24px 24px;
+            gap: 3px 4px;
+            align-items: stretch;
+        }
+        .ribbon-group.group-paragraph .ribbon-btn {
+            width: auto;
+            min-width: 0;
+            min-height: 25px;
+            padding: 3px 4px;
+            font-size: 0.8rem;
+            position: relative;
+        }
+        .ribbon-group.group-paragraph .ribbon-btn .icon {
+            font-size: 1rem;
+        }
+        .ribbon-group.group-paragraph button.ribbon-btn:nth-of-type(3)::after,
+        .ribbon-group.group-paragraph button.ribbon-btn:nth-of-type(13)::after {
+            content: "▼";
+            position: absolute;
+            right: 5px;
+            top: 50%;
+            transform: translateY(-50%);
+            font-size: 0.55rem;
+            color: #605e5c;
+            pointer-events: none;
+        }
+        .ribbon-group.group-paragraph button.ribbon-btn:nth-of-type(1) { grid-column: 1; grid-row: 1; }
+        .ribbon-group.group-paragraph button.ribbon-btn:nth-of-type(2) { grid-column: 2; grid-row: 1; }
+        .ribbon-group.group-paragraph button.ribbon-btn:nth-of-type(3) { grid-column: 3; grid-row: 1; }
+        .ribbon-group.group-paragraph button.ribbon-btn:nth-of-type(4) { grid-column: 4; grid-row: 1; }
+        .ribbon-group.group-paragraph button.ribbon-btn:nth-of-type(5) { grid-column: 5; grid-row: 1; }
+        .ribbon-group.group-paragraph button.ribbon-btn:nth-of-type(6) { grid-column: 6; grid-row: 1; }
+        .ribbon-group.group-paragraph button.ribbon-btn:nth-of-type(7) { grid-column: 7; grid-row: 1; }
+        .ribbon-group.group-paragraph button.ribbon-btn:nth-of-type(8) { grid-column: 1; grid-row: 2; }
+        .ribbon-group.group-paragraph button.ribbon-btn:nth-of-type(9) { grid-column: 2; grid-row: 2; }
+        .ribbon-group.group-paragraph button.ribbon-btn:nth-of-type(10) { grid-column: 3; grid-row: 2; }
+        .ribbon-group.group-paragraph button.ribbon-btn:nth-of-type(11) { grid-column: 4; grid-row: 2; }
+        .ribbon-group.group-paragraph button.ribbon-btn:nth-of-type(12) { grid-column: 5; grid-row: 2; }
+        .ribbon-group.group-paragraph button.ribbon-btn:nth-of-type(13) { grid-column: 6; grid-row: 2; }
+        .ribbon-group.group-styles { min-width: 340px; }
+        .ribbon-group.group-styles .ribbon-buttons {
+            display: grid;
+            grid-template-columns: repeat(6, 1fr) 16px;
+            grid-template-rows: 58px;
+            gap: 4px;
+            align-items: stretch;
+        }
+        .ribbon-group.group-styles .ribbon-btn {
+            width: auto;
+            min-width: 0;
+            min-height: 58px;
+            padding: 4px 6px 5px;
+            border: 1px solid #d2d0ce;
+            background: linear-gradient(180deg, #ffffff 0%, #faf9f8 100%);
+            align-items: flex-start;
+            justify-content: flex-start;
+            gap: 3px;
+            text-align: left;
+            overflow: hidden;
+            font-size: 0.8rem;
+        }
+        .ribbon-group.group-styles .ribbon-btn:hover {
+            background: #ffffff;
+            border-color: #b9b7b5;
+        }
+        .ribbon-group.group-styles .ribbon-btn .icon {
+            font-size: 0.86rem;
+            line-height: 1.05;
+            color: #4f4f4f;
+            white-space: nowrap;
+        }
+        .ribbon-group.group-styles .ribbon-btn .label {
+            display: block;
+            font-size: 0.76rem;
+            line-height: 1.05;
+            color: #605e5c;
+            white-space: nowrap;
+        }
+        .ribbon-group.group-styles .ribbon-btn:nth-of-type(1) .icon { font-size: 1.15rem; font-family: "Times New Roman", serif; color: #111; }
+        .ribbon-group.group-styles .ribbon-btn:nth-of-type(2) .icon { font-size: 1.03rem; color: #222; }
+        .ribbon-group.group-styles .ribbon-btn:nth-of-type(3) .icon,
+        .ribbon-group.group-styles .ribbon-btn:nth-of-type(4) .icon {
+            font-size: 1.03rem;
+            color: #4d66b3;
+        }
+        .ribbon-group.group-styles .ribbon-btn:nth-of-type(5) .icon {
+            font-size: 2.1rem;
+            line-height: 0.9;
+            font-family: "Times New Roman", serif;
+            color: #111;
+        }
+        .ribbon-group.group-styles .ribbon-btn:nth-of-type(6) .icon {
+            font-size: 0.95rem;
+            letter-spacing: 0.03em;
+            color: #6d6d6d;
+        }
+        .ribbon-group.group-styles::after {
+            content: "▴\A▾";
+            white-space: pre;
+            position: absolute;
+            right: 10px;
+            top: 10px;
+            width: 14px;
+            height: 56px;
+            border-left: 1px solid #d2d0ce;
+            color: #7a7a7a;
+            font-size: 0.72rem;
+            line-height: 1.7;
+            text-align: center;
+            padding-left: 4px;
+            background: linear-gradient(180deg, rgba(243,242,241,0) 0%, rgba(243,242,241,0.96) 24%);
+            pointer-events: none;
+        }
+        .ribbon-group.group-editing { min-width: 112px; }
+        .ribbon-group.group-editing .ribbon-buttons {
+            display: grid;
+            grid-template-columns: 1fr;
+            grid-template-rows: repeat(3, 24px);
+            gap: 3px;
+            align-items: stretch;
+        }
+        .ribbon-group.group-editing .ribbon-btn {
+            width: 100%;
+            min-width: 0;
+            min-height: 25px;
+            padding: 3px 6px;
+            display: inline-flex;
+            flex-direction: row;
+            align-items: center;
+            justify-content: flex-start;
+            gap: 6px;
+            position: relative;
+            font-size: 0.8rem;
+        }
+        .ribbon-group.group-editing .ribbon-btn .icon {
+            font-size: 1rem;
+            width: 14px;
+            text-align: center;
+            flex: 0 0 14px;
+        }
+        .ribbon-group.group-editing .ribbon-btn .label {
+            display: inline;
+            font-size: 0.76rem;
+            line-height: 1;
+            color: #323130;
+        }
+        .ribbon-group.group-editing button.ribbon-btn:nth-of-type(1)::after,
+        .ribbon-group.group-editing button.ribbon-btn:nth-of-type(2)::after,
+        .ribbon-group.group-editing button.ribbon-btn:nth-of-type(3)::after {
+            content: "▼";
+            position: absolute;
+            right: 5px;
+            top: 50%;
+            transform: translateY(-50%);
+            font-size: 0.55rem;
+            color: #605e5c;
+            pointer-events: none;
+        }
+        .ribbon-group.group-acrobat { min-width: 112px; }
+        .ribbon-group.group-pages { min-width: 106px; }
+        .ribbon-group.group-table-mini { min-width: 64px; }
+        .ribbon-group.group-illustrations { min-width: 250px; }
+        .ribbon-group.group-addins { min-width: 136px; }
+        .ribbon-group.group-media { min-width: 82px; }
+        .ribbon-group.group-links { min-width: 128px; }
+        .ribbon-group.group-comments { min-width: 82px; }
+        .ribbon-group.group-header-footer { min-width: 138px; }
+        .ribbon-group.group-text { min-width: 140px; }
+        .ribbon-group.group-symbols { min-width: 94px; }
+        .ribbon-group.group-document-formatting { min-width: 370px; }
+        .ribbon-group.group-page-background { min-width: 168px; }
+        .ribbon-group.group-page-setup { min-width: 216px; }
+        .ribbon-group.group-layout-paragraph { min-width: 224px; }
+        .ribbon-group.group-arrange { min-width: 248px; }
+        .ribbon-group.group-toc { min-width: 136px; }
+        .ribbon-group.group-footnotes { min-width: 144px; }
+        .ribbon-group.group-research { min-width: 78px; }
+        .ribbon-group.group-citations { min-width: 182px; }
+        .ribbon-group.group-captions { min-width: 146px; }
+        .ribbon-group.group-index { min-width: 116px; }
+        .ribbon-group.group-authorities { min-width: 162px; }
+        .ribbon-group.group-mail-create { min-width: 110px; }
+        .ribbon-group.group-mail-start { min-width: 164px; }
+        .ribbon-group.group-mail-fields { min-width: 220px; }
+        .ribbon-group.group-mail-preview { min-width: 176px; }
+        .ribbon-group.group-mail-finish { min-width: 88px; }
+        .ribbon-group.group-review-proofing { min-width: 124px; }
+        .ribbon-group.group-review-speech { min-width: 86px; }
+        .ribbon-group.group-review-accessibility { min-width: 116px; }
+        .ribbon-group.group-review-language { min-width: 128px; }
+        .ribbon-group.group-review-comments { min-width: 174px; }
+        .ribbon-group.group-review-tracking { min-width: 188px; }
+        .ribbon-group.group-review-changes { min-width: 132px; }
+        .ribbon-group.group-review-compare { min-width: 90px; }
+        .ribbon-group.group-review-protect { min-width: 112px; }
+        .ribbon-group.group-review-ink { min-width: 74px; }
+        .ribbon-group.group-view-views { min-width: 152px; }
+        .ribbon-group.group-view-immersive { min-width: 120px; }
+        .ribbon-group.group-view-page-movement { min-width: 124px; }
+        .ribbon-group.group-view-show { min-width: 110px; }
+        .ribbon-group.group-view-zoom { min-width: 162px; }
+        .ribbon-group.group-view-window { min-width: 212px; }
+        .ribbon-group.group-view-macros { min-width: 82px; }
+        .ribbon-group.group-view-sharepoint { min-width: 90px; }
+        .ribbon-group.group-dev-code { min-width: 150px; }
+        .ribbon-group.group-dev-addins { min-width: 126px; }
+        .ribbon-group.group-dev-controls { min-width: 172px; }
+        .ribbon-group.group-dev-mapping { min-width: 100px; }
+        .ribbon-group.group-dev-protect { min-width: 112px; }
+        .ribbon-group.group-dev-templates { min-width: 94px; }
+        .ribbon-group.group-picture-adjust { min-width: 104px; }
+
+        .workspace-main { display: grid; grid-template-columns: minmax(0, 1fr) 300px; flex: 1; }
+        .page-area { background: #d6d6d6; border-right: 1px solid #c8c6c4; padding-bottom: 22px; }
+        .document-meta { width: min(100%, 900px); margin: 10px auto 10px; display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 0 10px; }
+        .meta-chip { padding: 6px 10px; border: 1px solid #c8c6c4; background: rgba(255,255,255,0.78); font-size: 0.76rem; color: #605e5c; }
+        .meta-chip.emphasis { color: #2b579a; font-weight: 600; }
+        .doc-ruler-wrap { position: relative; width: min(100%, 900px); margin: 0 auto; }
+        .top-ruler { height: 28px; background: #f3f2f1; border: 1px solid #c8c6c4; border-bottom: none; margin-left: 22px; display: flex; align-items: end; gap: 10px; padding: 0 68px 4px; color: #605e5c; font-size: 0.68rem; }
+        .left-ruler { position: absolute; left: 0; top: 28px; width: 22px; bottom: 0; background: #f3f2f1; border: 1px solid #c8c6c4; border-right: none; display: flex; flex-direction: column; align-items: center; gap: 28px; padding-top: 48px; color: #605e5c; font-size: 0.65rem; }
+        .ruler-mark { width: 32px; text-align: center; }
+        .page-sheet { width: calc(min(100%, 900px) - 22px); min-height: 760px; margin-left: 22px; background: white; border: 1px solid #c8c6c4; box-shadow: 0 2px 12px rgba(0,0,0,0.08); padding: 58px 68px 60px; }
+        .document-title { font-size: 1.65rem; font-weight: 700; margin: 0 0 18px; color: #1f1f1f; }
+        .document-p { margin: 0 0 14px; line-height: 1.7; color: #323130; font-size: 1rem; }
+        .document-p.heading { font-weight: 700; }
+        .document-p.note { color: #605e5c; font-size: 0.92rem; font-style: italic; }
+
+        .image-drop-zone { min-height: 210px; border: 1px dashed #8a8886; background: #faf9f8; display: flex; align-items: center; justify-content: center; text-align: center; color: #605e5c; margin: 18px 0 16px; position: relative; transition: all 0.18s ease; }
+        .image-drop-zone.ready { border-color: #2b579a; background: #f4f8fd; }
+        .image-drop-zone.filled { background: white; border-style: solid; }
+        .drop-copy { max-width: 320px; line-height: 1.6; padding: 0 18px; font-size: 0.92rem; }
+        .placed-picture { position: relative; background: linear-gradient(135deg, #dbeaff 0%, #f7fbff 100%); border: 1px solid #9fb6d6; display: flex; box-shadow: 0 8px 20px rgba(44, 76, 118, 0.14); cursor: move; user-select: none; }
+        .placed-picture::before { content: ''; position: absolute; inset: 14px; background: linear-gradient(135deg, rgba(41, 124, 231, 0.8), rgba(125, 190, 255, 0.55)); }
+        .picture-label { position: absolute; left: 10px; right: 10px; bottom: 10px; background: rgba(255,255,255,0.94); padding: 6px 8px; font-size: 0.75rem; color: #315074; font-weight: 700; text-align: center; }
+        .picture-handle { position: absolute; width: 9px; height: 9px; background: #2b579a; border: 1px solid white; }
+        .picture-handle.tl { top: -5px; left: -5px; }
+        .picture-handle.tr { top: -5px; right: -5px; }
+        .picture-handle.bl { bottom: -5px; left: -5px; }
+        .picture-handle.br { bottom: -5px; right: -5px; cursor: nwse-resize; }
+        .picture-handle.mid { top: calc(50% - 5px); right: -5px; }
+
+        .inspector { background: #f3f2f1; padding: 18px; }
+        .inspector h3 { margin: 0 0 12px; font-size: 1rem; color: #2b579a; }
+        .inspector-card { border: 1px solid #d2d0ce; background: white; padding: 12px; margin-bottom: 10px; }
+        .inspector-label { font-size: 0.72rem; text-transform: uppercase; color: #605e5c; margin-bottom: 6px; letter-spacing: 0.04em; }
+        .inspector-value { color: #323130; line-height: 1.55; font-size: 0.9rem; }
+        .submit-btn { width: 100%; margin-top: 12px; padding: 13px 16px; border: none; background: #2b579a; color: white; font-size: 0.95rem; font-weight: 700; cursor: pointer; }
+        .submit-btn:hover { background: #21457a; }
+        .mini-note { font-size: 0.84rem; color: #605e5c; line-height: 1.55; }
+
+        .statusbar { display: flex; justify-content: space-between; align-items: center; gap: 18px; padding: 5px 10px; background: #f3f2f1; border-top: 1px solid #d2d0ce; color: #605e5c; font-size: 0.74rem; }
+        .statusbar-left, .statusbar-right { display: flex; align-items: center; gap: 14px; flex-wrap: wrap; }
+
+        .dialog-backdrop { position: fixed; inset: 0; background: rgba(17, 29, 46, 0.38); display: none; align-items: center; justify-content: center; z-index: 1200; padding: 20px; }
+        .dialog-backdrop.open { display: flex; }
+        .dialog { width: min(680px, 100%); background: white; border-radius: 8px; overflow: hidden; box-shadow: 0 30px 70px rgba(8, 19, 38, 0.28); border: 1px solid #d2d0ce; }
+        .dialog-head { background: #f3f2f1; border-bottom: 1px solid #d2d0ce; padding: 14px 16px; display: flex; justify-content: space-between; align-items: center; }
+        .dialog-head h4 { margin: 0; font-size: 0.96rem; color: #323130; }
+        .dialog-close { border: 1px solid #d2d0ce; background: white; width: 30px; height: 30px; cursor: pointer; }
+        .dialog-body { padding: 18px; }
+        .dialog-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 12px; }
+        .image-choice { border: 1px solid #d2d0ce; padding: 12px; background: #fbfbfb; cursor: pointer; transition: all 0.18s ease; }
+        .image-choice:hover { border-color: #2b579a; background: #f4f8fd; }
+        .image-choice.selected { border-color: #2b579a; background: #eaf2fc; box-shadow: inset 0 0 0 1px #2b579a; }
+        .image-thumb { height: 88px; margin-bottom: 10px; background: linear-gradient(135deg, #7dbfff, #2d7de0); position: relative; overflow: hidden; }
+        .image-thumb::after { content: ''; position: absolute; inset: 20px 28px; background: rgba(255,255,255,0.38); }
+        .image-name { font-weight: 600; font-size: 0.84rem; color: #323130; }
+        .dialog-actions { padding: 14px 16px 16px; display: flex; justify-content: flex-end; gap: 10px; }
+        .btn-lite, .btn-strong { border: 1px solid #d2d0ce; padding: 10px 14px; cursor: pointer; font-weight: 600; background: white; }
+        .btn-strong { background: #2b579a; color: white; border-color: #2b579a; }
+
+        .mini-menu { position: absolute; top: calc(100% + 8px); left: 0; min-width: 240px; background: white; border: 1px solid #d2d0ce; box-shadow: 0 16px 36px rgba(17, 29, 46, 0.16); padding: 12px; display: none; z-index: 30; }
+        .mini-menu.open { display: block; }
+        .mini-menu-title { font-weight: 600; color: #323130; margin-bottom: 6px; }
+        .mini-menu-desc { color: #605e5c; font-size: 0.83rem; line-height: 1.5; }
+
+        @media (max-width: 1180px) {
+            .workspace-main { grid-template-columns: 1fr; }
+            .app-search { display: none; }
+            .inspector { border-top: 1px solid #d2d0ce; }
+        }
+    </style>
+</head>
+<body>
+{% set current_page = 'my_tasks' %}
+{% include '_slide_nav.html' %}
+
+<div class="topbar">
+    <h1>📚 Student Portal</h1>
+    <div class="topbar-links">
+        <a href="/student_dashboard">🏠 Dashboard</a>
+        <a href="/my_tasks">📁 Tasks</a>
+        <a href="/tests">📝 Tests</a>
+        <span class="topbar-user">👤 {{ session_username }}</span>
+        <a href="/logout">Logout</a>
+    </div>
+</div>
+
+<div class="page">
+    <form method="post" id="simulatorForm" class="simulator-form">
+        <input type="hidden" name="insert_menu_opened" id="insert_menu_opened" value="0">
+        <input type="hidden" name="selected_image" id="selected_image" value="">
+        <input type="hidden" name="wrap" id="wrap" value="">
+        <input type="hidden" name="alignment" id="alignment" value="">
+        <input type="hidden" name="size" id="size" value="">
+        <input type="hidden" name="placement" id="placement" value="">
+
+        <div class="workspace-shell">
+            <div class="app-titlebar">
+                <div class="app-left">
+                    <span class="office-badge">W</span>
+                    <span class="qa-btn">&#8630;</span>
+                    <span class="qa-btn">&#8631;</span>
+                    <span class="qa-btn">&#128190;</span>
+                    <span class="app-title">Document1 - Word</span>
+                </div>
+                <div class="app-search"><span>⌕</span><span>Search</span></div>
+                <div class="app-right">
+                    <div class="app-user">
+                        <span>{{ learner_full_name or session_username }}</span>
+                        <span class="user-avatar">{{ ((learner_full_name or session_username or 'U')[:1])|upper }}</span>
+                    </div>
+                    <button type="button" class="share-btn">↗ Share</button>
+                    <span class="window-btn">−</span>
+                    <span class="window-btn">&#9723;</span>
+                    <span class="window-btn close">&#10005;</span>
+                </div>
+            </div>
+
+            <div class="tab-strip">
+                <div class="file-tab">File</div>
+                {% for tab in simulator_definition.shell.tabs %}
+                <div
+                    class="word-tab{% if tab.id == simulator_definition.shell.default_tab %} active{% endif %}"
+                    data-tab-id="{{ tab.id }}"
+                    onclick="switchTab('{{ tab.id }}')"
+                >{{ tab.label }}</div>
+                {% endfor %}
+                <div class="word-tab">Help</div>
+                <div class="word-tab">Acrobat</div>
+            </div>
+
+            {% for tab in simulator_definition.shell.tabs %}
+            <div class="word-ribbon{% if tab.id == simulator_definition.shell.default_tab %} active{% endif %}" data-ribbon-tab="{{ tab.id }}">
+                {% for group in tab.groups %}
+                <div class="ribbon-group {{ group.class_name }}">
+                    <div class="ribbon-buttons">
+                        {% for control in group.controls %}
+                        {% set is_active_control = control.id in simulator_definition.shell.active_controls %}
+                        {% set inactive_style = simulator_definition.shell.inactive_controls_style %}
+                        {% if group.class_name == 'group-font' and control.id == 'home.font_family' %}
+                        <div class="font-select-wrap family" title="Font Family">
+                            <select class="font-select" aria-label="Font Family" onclick="event.stopPropagation()">
+                                <option selected>Calibri (Body)</option>
+                                <option>Arial</option>
+                                <option>Times New Roman</option>
+                                <option>Verdana</option>
+                                <option>Tahoma</option>
+                            </select>
+                        </div>
+                        {% elif group.class_name == 'group-font' and control.id == 'home.font_size' %}
+                        <div class="font-select-wrap size" title="Font Size">
+                            <select class="font-select" aria-label="Font Size" onclick="event.stopPropagation()">
+                                <option>7</option>
+                                <option selected>11</option>
+                                <option>12</option>
+                                <option>14</option>
+                                <option>16</option>
+                                <option>18</option>
+                            </select>
+                        </div>
+                        {% else %}
+                        <button
+                            type="button"
+                            id="{{ control.id | replace('.', '_') }}"
+                            class="ribbon-btn{% if is_active_control %} primary{% elif inactive_style == 'enabled' %}{% else %} inactive{% endif %}"
+                            data-control-id="{{ control.id }}"
+                            data-control-action="{{ control.action or '' }}"
+                            data-control-kind="{{ control.kind }}"
+                            title="{{ control.label }}"
+                            onclick="handleControlClick(event, '{{ control.id }}')"
+                            {% if not is_active_control and inactive_style != 'enabled' %}disabled{% endif %}
+                        >
+                            <span class="icon">{{ control.icon }}</span>
+                            <span class="label">{{ control.label }}</span>
+                        </button>
+                        {% endif %}
+                        {% if control.kind == 'menu' %}
+                        <div class="mini-menu" id="menu_{{ control.id | replace('.', '_') }}">
+                            <div class="mini-menu-title">{{ simulator_definition.shell.menus.get(control.id, {}).get('title', control.label) }}</div>
+                            <div class="mini-menu-desc">{{ simulator_definition.shell.menus.get(control.id, {}).get('description', 'This menu is shown for realism in the simulator shell.') }}</div>
+                        </div>
+                        {% endif %}
+                        {% endfor %}
+                    </div>
+                    <div class="ribbon-group-title">{{ group.title }}</div>
+                </div>
+                {% endfor %}
+            </div>
+            {% endfor %}
+
+            <div class="workspace-main">
+                <div class="page-area">
+                    <div class="document-meta">
+                        <span class="meta-chip emphasis">{{ subject_name|upper }}: {{ task_name }}</span>
+                        <span class="meta-chip">Mode: {{ simulator_definition.shell.mode | title }}</span>
+                    </div>
+
+                    <div class="doc-ruler-wrap">
+                        <div class="top-ruler">
+                            <span class="ruler-mark">1</span>
+                            <span class="ruler-mark">2</span>
+                            <span class="ruler-mark">3</span>
+                            <span class="ruler-mark">4</span>
+                            <span class="ruler-mark">5</span>
+                            <span class="ruler-mark">6</span>
+                            <span class="ruler-mark">7</span>
+                            <span class="ruler-mark">8</span>
+                            <span class="ruler-mark">9</span>
+                            <span class="ruler-mark">10</span>
+                            <span class="ruler-mark">11</span>
+                            <span class="ruler-mark">12</span>
+                            <span class="ruler-mark">13</span>
+                            <span class="ruler-mark">14</span>
+                            <span class="ruler-mark">15</span>
+                            <span class="ruler-mark">16</span>
+                            <span class="ruler-mark">17</span>
+                            <span class="ruler-mark">18</span>
+                        </div>
+                        <div class="left-ruler">
+                            <span>1</span>
+                            <span>2</span>
+                            <span>3</span>
+                            <span>4</span>
+                            <span>5</span>
+                            <span>6</span>
+                        </div>
+
+                        <div class="page-sheet">
+                            <h1 class="document-title">Computer Lab Safety Procedures</h1>
+                            <p class="document-p heading">Purpose</p>
+                            <div class="image-drop-zone" id="imageDropZone" onclick="placePictureBelowHeading()">
+                                <div class="drop-copy" id="dropCopy">
+                                    Select a picture from the <strong>Insert</strong> ribbon, then click in this document area to place it below the heading.
+                                </div>
+                            </div>
+                            <p class="document-p">
+                                Learners must keep bags away from walkways, switch off equipment properly, and follow the educator's instructions at all times. Practical tasks should be completed neatly and according to the rubric.
+                            </p>
+                            <p class="document-p note">
+                                This test version keeps the ribbon looking active, while only the question-related controls actually change the document.
+                            </p>
+                        </div>
+                    </div>
+                </div>
+
+                <aside class="inspector">
+                    <h3>Picture Format Panel</h3>
+
+                    <div class="inspector-card">
+                        <div class="inspector-label">Current Picture</div>
+                        <div class="inspector-value" id="currentImageLabel">No picture inserted.</div>
+                    </div>
+
+                    <div class="inspector-card">
+                        <div class="inspector-label">Placement</div>
+                        <div class="inspector-value" id="placementLabel">Not placed below heading.</div>
+                    </div>
+
+                    <div class="inspector-card">
+                        <div class="inspector-label">Formatting</div>
+                        <div class="inspector-value" id="formatLabel">Wrap not set / Alignment not set / Size not set</div>
+                    </div>
+
+                    <div class="inspector-card">
+                        <div class="inspector-label">Task</div>
+                        <div class="mini-note task-summary">
+                            {{ question_text | safe }}
+                        </div>
+                    </div>
+
+                    <button type="submit" class="submit-btn">Submit Simulator Task</button>
+                </aside>
+            </div>
+
+            <div class="statusbar">
+                <div class="statusbar-left">
+                    <span>Page 1 of 1</span>
+                    <span>0 words</span>
+                    <span>English (South Africa)</span>
+                </div>
+                <div class="statusbar-right">
+                    <span>Focus</span>
+                    <span>100%</span>
+                </div>
+            </div>
+        </div>
+    </form>
+</div>
+
+<div class="dialog-backdrop" id="insertDialog">
+    <div class="dialog">
+        <div class="dialog-head">
+            <h4>Insert Picture</h4>
+            <button type="button" class="dialog-close" onclick="closeInsertDialog()">&#10005;</button>
+        </div>
+        <div class="dialog-body">
+            <div class="dialog-grid">
+                {% for option in simulator_definition.image_options %}
+                <div class="image-choice" data-value="{{ option.value }}" onclick="chooseImage('{{ option.value }}', this)">
+                    <div class="image-thumb"></div>
+                    <div class="image-name">{{ option.label }}</div>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+        <div class="dialog-actions">
+            <button type="button" class="btn-lite" onclick="closeInsertDialog()">Cancel</button>
+            <button type="button" class="btn-strong" onclick="confirmInsert()">Insert</button>
+        </div>
+    </div>
+</div>
+
+<script>
+    const shellConfig = {{ simulator_definition.shell | tojson }};
+    const state = {
+        pendingImage: '',
+        image: '',
+        wrap: '',
+        alignment: '',
+        size: '',
+        placement: '',
+        imageWidth: 220,
+        imageHeight: 150,
+        offsetX: 0,
+        offsetY: 0
+    };
+
+    let isDragging = false;
+    let dragStartX = 0;
+    let dragStartY = 0;
+    let dragStartOffsetX = 0;
+    let dragStartOffsetY = 0;
+    let isResizing = false;
+    let resizeStartX = 0;
+    let resizeStartWidth = 0;
+    let resizeStartHeight = 0;
+
+    function setActive(ids, activeId) {
+        ids.forEach(id => {
+            const el = document.getElementById(id);
+            if (!el) return;
+            el.classList.toggle('active', id === activeId);
+        });
+    }
+
+    function closeAllMiniMenus() {
+        document.querySelectorAll('.mini-menu.open').forEach(menu => menu.classList.remove('open'));
+    }
+
+    function switchTab(tabId) {
+        closeAllMiniMenus();
+        document.querySelectorAll('.word-tab[data-tab-id]').forEach(tab => {
+            tab.classList.toggle('active', tab.getAttribute('data-tab-id') === tabId);
+        });
+        document.querySelectorAll('.word-ribbon[data-ribbon-tab]').forEach(ribbon => {
+            ribbon.classList.toggle('active', ribbon.getAttribute('data-ribbon-tab') === tabId);
+        });
+    }
+
+    function openMiniMenu(controlId) {
+        closeAllMiniMenus();
+        const menu = document.getElementById(`menu_${controlId.replaceAll('.', '_')}`);
+        if (menu) menu.classList.add('open');
+    }
+
+    function handleControlClick(event, controlId) {
+        const button = event.currentTarget;
+        if (!button || button.disabled) return;
+        const isActiveControl = shellConfig.active_controls.includes(controlId);
+        const kind = button.getAttribute('data-control-kind') || '';
+        if (!isActiveControl) {
+            if (kind === 'menu') openMiniMenu(controlId);
+            return;
+        }
+        const action = button.getAttribute('data-control-action') || '';
+        if (kind === 'menu') {
+            if (action === 'open_insert_dialog') {
+                openInsertDialog();
+                return;
+            }
+            openMiniMenu(controlId);
+            return;
+        }
+        if (action.startsWith('set_wrap:')) {
+            setWrap(action.split(':')[1]);
+            return;
+        }
+        if (action.startsWith('set_alignment:')) {
+            setAlignment(action.split(':')[1]);
+            return;
+        }
+        if (action.startsWith('set_size:')) {
+            setSize(action.split(':')[1]);
+        }
+    }
+
+    function openInsertDialog() {
+        document.getElementById('insert_menu_opened').value = '1';
+        const insertBtn = document.getElementById('insert_pictures');
+        if (insertBtn) insertBtn.classList.add('active');
+        switchTab('insert');
+        document.getElementById('insertDialog').classList.add('open');
+    }
+
+    function closeInsertDialog() {
+        document.getElementById('insertDialog').classList.remove('open');
+    }
+
+    function chooseImage(value, card) {
+        state.pendingImage = value;
+        document.querySelectorAll('.image-choice').forEach(choice => choice.classList.remove('selected'));
+        card.classList.add('selected');
+    }
+
+    function confirmInsert() {
+        if (!state.pendingImage) return;
+        state.image = state.pendingImage;
+        document.getElementById('selected_image').value = state.image;
+        switchTab(shellConfig.default_context_tab);
+        closeInsertDialog();
+        renderDocument();
+    }
+
+    function placePictureBelowHeading() {
+        if (!state.image) return;
+        state.placement = 'below_heading';
+        document.getElementById('placement').value = state.placement;
+        renderDocument();
+    }
+
+    function setWrap(value) {
+        state.wrap = value;
+        document.getElementById('wrap').value = value;
+        switchTab(shellConfig.default_context_tab);
+        setActive(['picture_format_wrap_inline', 'picture_format_wrap_square', 'picture_format_wrap_tight'], value === 'inline' ? 'picture_format_wrap_inline' : (value === 'square' ? 'picture_format_wrap_square' : 'picture_format_wrap_tight'));
+        renderDocument();
+    }
+
+    function setAlignment(value) {
+        state.alignment = value;
+        document.getElementById('alignment').value = value;
+        switchTab(shellConfig.default_context_tab);
+        setActive(['picture_format_align_left', 'picture_format_align_center', 'picture_format_align_right'], value === 'left' ? 'picture_format_align_left' : (value === 'center' ? 'picture_format_align_center' : 'picture_format_align_right'));
+        renderDocument();
+    }
+
+    function setSize(value) {
+        state.size = value;
+        document.getElementById('size').value = value;
+        if (value === 'small') {
+            state.imageWidth = 170;
+            state.imageHeight = 115;
+        } else if (value === 'medium') {
+            state.imageWidth = 220;
+            state.imageHeight = 150;
+        } else if (value === 'large') {
+            state.imageWidth = 290;
+            state.imageHeight = 195;
+        }
+        switchTab(shellConfig.default_context_tab);
+        setActive(['picture_format_size_small', 'picture_format_size_medium', 'picture_format_size_large'], value === 'small' ? 'picture_format_size_small' : (value === 'medium' ? 'picture_format_size_medium' : 'picture_format_size_large'));
+        renderDocument();
+    }
+
+    function getPictureLeft(containerWidth) {
+        const baseWidth = state.imageWidth;
+        const offset = state.offsetX;
+        if (state.alignment === 'right') return Math.max(0, containerWidth - baseWidth - 14 + offset);
+        if (state.alignment === 'center') return Math.max(0, ((containerWidth - baseWidth) / 2) + offset);
+        return Math.max(0, 14 + offset);
+    }
+
+    function renderDocument() {
+        const zone = document.getElementById('imageDropZone');
+        document.getElementById('currentImageLabel').textContent = state.image || 'No picture inserted.';
+        document.getElementById('placementLabel').textContent = state.placement === 'below_heading' ? 'Placed below heading.' : 'Not placed below heading.';
+        document.getElementById('formatLabel').textContent = `${state.wrap || 'Wrap not set'} / ${state.alignment || 'Alignment not set'} / ${state.size || 'Size not set'}`;
+
+        if (!state.image) {
+            zone.className = 'image-drop-zone';
+            zone.innerHTML = '<div class="drop-copy" id="dropCopy">Select a picture from the <strong>Insert</strong> ribbon, then click in this document area to place it below the heading.</div>';
+            return;
+        }
+
+        if (state.placement !== 'below_heading') {
+            zone.className = 'image-drop-zone ready';
+            zone.innerHTML = `<div class="drop-copy">Picture <strong>${state.image}</strong> is ready. Click here to place it below the heading.</div>`;
+            return;
+        }
+
+        zone.className = 'image-drop-zone filled';
+        const zoneWidth = zone.clientWidth || 520;
+        const left = getPictureLeft(zoneWidth);
+        const top = Math.max(12, 24 + state.offsetY);
+
+        zone.innerHTML = `
+            <div class="placed-picture" id="placedPicture" style="width:${state.imageWidth}px; height:${state.imageHeight}px; position:absolute; left:${left}px; top:${top}px;">
+                <span class="picture-handle tl"></span>
+                <span class="picture-handle tr"></span>
+                <span class="picture-handle bl"></span>
+                <span class="picture-handle mid"></span>
+                <span class="picture-handle br" id="resizeHandle"></span>
+                <div class="picture-label">${state.image}<br>${state.wrap || 'wrap not set'} | ${state.alignment || 'align not set'} | ${state.size || 'size not set'}</div>
+            </div>
+        `;
+
+        const picture = document.getElementById('placedPicture');
+        const resizeHandle = document.getElementById('resizeHandle');
+        if (picture) picture.addEventListener('mousedown', startDrag);
+        if (resizeHandle) resizeHandle.addEventListener('mousedown', startResize);
+    }
+
+    function startDrag(event) {
+        if (event.target && event.target.id === 'resizeHandle') return;
+        isDragging = true;
+        dragStartX = event.clientX;
+        dragStartY = event.clientY;
+        dragStartOffsetX = state.offsetX;
+        dragStartOffsetY = state.offsetY;
+        event.preventDefault();
+    }
+
+    function startResize(event) {
+        isResizing = true;
+        resizeStartX = event.clientX;
+        resizeStartWidth = state.imageWidth;
+        resizeStartHeight = state.imageHeight;
+        event.stopPropagation();
+        event.preventDefault();
+    }
+
+    document.addEventListener('mousemove', function (event) {
+        if (isDragging) {
+            state.offsetX = dragStartOffsetX + (event.clientX - dragStartX);
+            state.offsetY = dragStartOffsetY + (event.clientY - dragStartY);
+            renderDocument();
+        }
+        if (isResizing) {
+            const delta = event.clientX - resizeStartX;
+            state.imageWidth = Math.max(130, resizeStartWidth + delta);
+            state.imageHeight = Math.max(90, resizeStartHeight + Math.round(delta * 0.68));
+            renderDocument();
+        }
+    });
+
+    document.addEventListener('mouseup', function () {
+        isDragging = false;
+        isResizing = false;
+    });
+
+    document.getElementById('insertDialog').addEventListener('click', function (event) {
+        if (event.target === this) closeInsertDialog();
+    });
+
+    document.addEventListener('click', function (event) {
+        if (!event.target.closest('.ribbon-group')) closeAllMiniMenus();
+    });
+
+    switchTab(shellConfig.default_tab);
+</script>
+</body>
+</html>

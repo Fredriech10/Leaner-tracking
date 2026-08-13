@@ -698,6 +698,9 @@ def register_theory_runtime_routes(app):
         if not username:
             return redirect(url_for("login"))
 
+        option_order_key = f"test_order_{test_id}"
+        question_order_key = f"test_question_order_{test_id}"
+
         conn = get_db()
         cursor = conn.cursor()
 
@@ -742,6 +745,17 @@ def register_theory_runtime_routes(app):
             progress_row = cursor.fetchone()
             initial_slide = progress_row[0] if progress_row and is_lesson_only and not progress_row[2] else 0
             max_slide = (len(questions) - 1) if progress_row and is_lesson_only and progress_row[2] else (progress_row[1] if progress_row and is_lesson_only else 0)
+            if not has_content_slides:
+                stored_question_order = session.get(question_order_key, [])
+                question_lookup = {q[0]: q for q in questions}
+                if stored_question_order and set(stored_question_order) == set(question_lookup.keys()):
+                    questions = [question_lookup[q_id] for q_id in stored_question_order if q_id in question_lookup]
+                else:
+                    questions = list(questions)
+                    random.shuffle(questions)
+                    session[question_order_key] = [q[0] for q in questions]
+            else:
+                session.pop(question_order_key, None)
             questions_with_options = []
             session_order = {}
             for q in questions:
@@ -757,7 +771,7 @@ def register_theory_runtime_routes(app):
                     options = [(o[0], display_values[i][1], o[2], o[3]) for i, o in enumerate(options)]
                 session_order[str(q[0])] = [o[0] for o in options]
                 questions_with_options.append({"q": q, "options": options})
-            session[f"test_order_{test_id}"] = session_order
+            session[option_order_key] = session_order
             conn.close()
             return render_template(
                 "take_test.html",
@@ -773,7 +787,14 @@ def register_theory_runtime_routes(app):
                 lesson_completed=is_lesson_only and attempt_count > 0,
             )
 
-        session_order = session.get(f"test_order_{test_id}", {})
+        stored_question_order = session.get(question_order_key, [])
+        if stored_question_order:
+            question_lookup = {q[0]: q for q in questions}
+            ordered_questions = [question_lookup[q_id] for q_id in stored_question_order if q_id in question_lookup]
+            remaining_questions = [q for q in questions if q[0] not in stored_question_order]
+            questions = ordered_questions + remaining_questions
+
+        session_order = session.get(option_order_key, {})
         questions_with_options = []
         for q in questions:
             q_id = q[0]
@@ -829,7 +850,8 @@ def register_theory_runtime_routes(app):
             )
             conn.commit()
             conn.close()
-            session.pop(f"test_order_{test_id}", None)
+            session.pop(option_order_key, None)
+            session.pop(question_order_key, None)
             log_activity(username, f"completed lesson {test_id} — 100%")
             return redirect(url_for("lesson_tests"))
 
@@ -916,7 +938,8 @@ def register_theory_runtime_routes(app):
         )
         conn.commit()
         conn.close()
-        session.pop(f"test_order_{test_id}", None)
+        session.pop(option_order_key, None)
+        session.pop(question_order_key, None)
         log_activity(username, f"completed theory test {test_id} — {percentage}%")
         return redirect(url_for("test_results", submission_id=submission_id))
 

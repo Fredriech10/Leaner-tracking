@@ -15,6 +15,34 @@
     <a href="/tests">📝 Theory</a><br>
     <a href="/teacher_dashboard">Teacher Dashboard</a><br>
     <script>
+        (function () {
+            const pathKey = 'learnerTrackingGlobalScrollY:path:' + window.location.pathname;
+            const fullKey = 'learnerTrackingGlobalScrollY:full:' + window.location.pathname + window.location.search;
+            const legacyKey = 'learnerTrackingGlobalScrollY:' + window.location.pathname;
+            function saveScrollPosition() {
+                const value = String(window.scrollY || window.pageYOffset || 0);
+                sessionStorage.setItem(pathKey, value);
+                sessionStorage.setItem(fullKey, value);
+                sessionStorage.setItem(legacyKey, value);
+            }
+            function restoreScrollPosition() {
+                const value = sessionStorage.getItem(fullKey) ?? sessionStorage.getItem(pathKey) ?? sessionStorage.getItem(legacyKey);
+                if (value === null) return;
+                requestAnimationFrame(function () {
+                    window.scrollTo(0, Number(value) || 0);
+                    setTimeout(function () {
+                        sessionStorage.removeItem(fullKey);
+                        sessionStorage.removeItem(pathKey);
+                        sessionStorage.removeItem(legacyKey);
+                    }, 220);
+                });
+            }
+            document.querySelectorAll('a[href]').forEach(link => link.addEventListener('click', saveScrollPosition));
+            document.querySelectorAll('form').forEach(form => form.addEventListener('submit', saveScrollPosition));
+            window.addEventListener('beforeunload', saveScrollPosition);
+            window.addEventListener('pageshow', restoreScrollPosition);
+            window.addEventListener('load', restoreScrollPosition);
+        })();
         setInterval(function() {
             fetch('/heartbeat/{{ username }}');
         }, 30000);

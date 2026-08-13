@@ -63,7 +63,7 @@
             <p>
                 Subject: {{ task.subject }} &nbsp;|&nbsp; Assigned: {{ task.assign_date }}
                 {% if task.task_type == 'practical' %}
-                    &nbsp;|&nbsp; Practical task
+                    &nbsp;|&nbsp; {{ 'Practical simulator' if task.practical_mode == 'simulator' else 'Practical task' }}
                 {% else %}
                     &nbsp;|&nbsp; Theory task
                 {% endif %}
@@ -84,7 +84,7 @@
 
             {% if task.task_type == 'practical' %}
                 {% if task.is_active %}
-                    <a href="/upload/{{ username }}/{{ task.subject_id }}/{{ task.id }}" class="btn btn-primary">Upload Task →</a>
+                    <a href="/upload/{{ username }}/{{ task.subject_id }}/{{ task.id }}" class="btn btn-primary">{{ 'Start Simulator →' if task.practical_mode == 'simulator' else 'Upload Task →' }}</a>
                 {% else %}
                     <span class="btn badge badge-inactive">Inactive</span>
                 {% endif %}

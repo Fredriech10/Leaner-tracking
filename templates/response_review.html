@@ -8,7 +8,7 @@
         body { font-family: Arial, sans-serif; margin: 0; padding: 0; background: #f0f2f5; color: #222; }
         .topbar { background: #005a9e; color: white; padding: 12px 24px; display: flex; justify-content: space-between; align-items: center; gap: 10px; position: sticky; top: 0; z-index: 999; }
         .topbar h1 { margin: 0; font-size: 1.05em; white-space: nowrap; }
-        .page { padding: 20px 24px; max-width: 1500px; margin: 0 auto; }
+        .page { padding: 20px 24px; width: 90%; max-width: 90%; margin: 0 auto; }
         .card { background: white; border-radius: 8px; padding: 18px; border: 1px solid #ddd; margin-bottom: 16px; }
         .card h3 { margin: 0 0 14px 0; font-size: 0.98em; color: #005a9e; border-bottom: 2px solid #f0f0f0; padding-bottom: 6px; }
         .filter-row { display: flex; gap: 12px; flex-wrap: wrap; align-items: flex-end; }
@@ -79,6 +79,15 @@
                 <select name="type" onchange="this.form.submit()">
                     <option value="theory" {% if review_type == 'theory' %}selected{% endif %}>Theory</option>
                     <option value="practical" {% if review_type == 'practical' %}selected{% endif %}>Practical</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label>Grade</label>
+                <select name="grade" onchange="this.form.submit()">
+                    <option value="">All grades</option>
+                    {% for grade in grade_options %}
+                    <option value="{{ grade }}" {% if grade == selected_grade %}selected{% endif %}>Grade {{ grade }}</option>
+                    {% endfor %}
                 </select>
             </div>
             <div class="form-group">
@@ -153,6 +162,7 @@
                                     <input type="hidden" name="source" value="group">
                                     <input type="hidden" name="test_id" value="{{ selected_item }}">
                                     <input type="hidden" name="question_id" value="{{ question.question_id }}">
+                                    <input type="hidden" name="selected_grade" value="{{ selected_grade or '' }}">
                                     <input type="hidden" name="selected_group" value="{{ selected_group }}">
                                     <input type="hidden" name="acceptable_answer" value="{{ option.acceptable_answer }}">
                                     <input type="hidden" name="submitted_answer" value="{{ option.label }}">
@@ -163,6 +173,7 @@
                                     <input type="hidden" name="source" value="group">
                                     <input type="hidden" name="test_id" value="{{ selected_item }}">
                                     <input type="hidden" name="question_id" value="{{ question.question_id }}">
+                                    <input type="hidden" name="selected_grade" value="{{ selected_grade or '' }}">
                                     <input type="hidden" name="selected_group" value="{{ selected_group }}">
                                     <input type="hidden" name="remove_answer" value="{{ option.remove_answer }}">
                                     <button type="submit" class="btn btn-danger">Remove</button>

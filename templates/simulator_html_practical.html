@@ -1,0 +1,260 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>HTML Simulator - {{ subject_name }} {{ task_name }}</title>
+    <style>
+        * { box-sizing: border-box; }
+        body { margin: 0; font-family: "Segoe UI", Arial, sans-serif; background: #0f172a; color: #e2e8f0; }
+        .workspace { min-height: 100vh; display: grid; grid-template-rows: 56px 1fr; }
+        .topbar {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 0 18px;
+            background: linear-gradient(90deg, #0b1220 0%, #172554 55%, #1d4ed8 100%);
+            border-bottom: 1px solid rgba(148, 163, 184, 0.24);
+        }
+        .brand { display: flex; align-items: center; gap: 12px; font-weight: 700; }
+        .brand-badge {
+            width: 30px;
+            height: 30px;
+            border-radius: 8px;
+            background: #e34c26;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-size: 0.88rem;
+        }
+        .topbar-user { font-size: 0.84rem; color: #cbd5e1; }
+        .main {
+            display: grid;
+            grid-template-columns: 320px minmax(420px, 1fr) minmax(360px, 0.9fr);
+            gap: 0;
+            min-height: 0;
+        }
+        .panel {
+            min-height: 0;
+            border-right: 1px solid rgba(148, 163, 184, 0.2);
+            background: #111827;
+        }
+        .panel:last-child { border-right: none; }
+        .panel-head {
+            padding: 14px 16px;
+            border-bottom: 1px solid rgba(148, 163, 184, 0.16);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 10px;
+            background: rgba(15, 23, 42, 0.88);
+        }
+        .panel-head h2 {
+            margin: 0;
+            font-size: 0.95rem;
+            color: #f8fafc;
+        }
+        .panel-body { padding: 16px; }
+        .instructions {
+            color: #cbd5e1;
+            line-height: 1.6;
+            font-size: 0.92rem;
+        }
+        .instructions strong { color: #fff; }
+        .meta-chip {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            padding: 6px 10px;
+            border-radius: 999px;
+            background: rgba(37, 99, 235, 0.18);
+            color: #bfdbfe;
+            font-size: 0.75rem;
+            margin-bottom: 12px;
+        }
+        .criteria-list {
+            margin: 14px 0 0;
+            padding-left: 18px;
+        }
+        .criteria-list li { margin-bottom: 8px; }
+        .editor-shell {
+            display: grid;
+            grid-template-rows: 38px 1fr 50px;
+            min-height: calc(100vh - 56px);
+            background: #111827;
+        }
+        .editor-tabs {
+            display: flex;
+            align-items: end;
+            padding: 0 12px;
+            background: #0b1220;
+            border-bottom: 1px solid rgba(148, 163, 184, 0.16);
+        }
+        .editor-tab {
+            padding: 10px 14px 9px;
+            border-top-left-radius: 8px;
+            border-top-right-radius: 8px;
+            background: #1f2937;
+            color: #f8fafc;
+            font-size: 0.82rem;
+        }
+        .editor-area-wrap { padding: 0; }
+        .editor-area {
+            width: 100%;
+            height: 100%;
+            min-height: calc(100vh - 56px - 38px - 50px);
+            border: none;
+            outline: none;
+            resize: none;
+            background: #111827;
+            color: #f8fafc;
+            padding: 18px 20px;
+            font: 0.96rem/1.55 Consolas, "Courier New", monospace;
+            tab-size: 4;
+        }
+        .editor-toolbar {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 10px;
+            padding: 10px 14px;
+            border-top: 1px solid rgba(148, 163, 184, 0.16);
+            background: #0b1220;
+        }
+        .toolbar-note { color: #94a3b8; font-size: 0.78rem; }
+        .toolbar-actions { display: flex; gap: 10px; }
+        .btn {
+            border: 1px solid rgba(148, 163, 184, 0.22);
+            background: #1e293b;
+            color: #f8fafc;
+            padding: 10px 14px;
+            font-size: 0.84rem;
+            cursor: pointer;
+            border-radius: 8px;
+        }
+        .btn.primary {
+            background: #e34c26;
+            border-color: #e34c26;
+            color: white;
+            font-weight: 700;
+        }
+        .preview-shell {
+            display: grid;
+            grid-template-rows: 38px 1fr;
+            min-height: calc(100vh - 56px);
+            background: #f8fafc;
+        }
+        .preview-toolbar {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 0 14px;
+            background: #e2e8f0;
+            border-bottom: 1px solid #cbd5e1;
+            color: #334155;
+            font-size: 0.8rem;
+        }
+        .preview-frame {
+            width: 100%;
+            height: 100%;
+            border: none;
+            background: white;
+        }
+        .sample-link {
+            margin-top: 12px;
+            font-size: 0.88rem;
+        }
+        .sample-link a { color: #93c5fd; }
+        @media (max-width: 1200px) {
+            .main { grid-template-columns: 280px 1fr; }
+            .panel.preview-panel { grid-column: 1 / -1; min-height: 420px; }
+            .preview-shell { min-height: 420px; }
+        }
+    </style>
+</head>
+<body>
+    <form method="post">
+        <div class="workspace">
+            <div class="topbar">
+                <div class="brand">
+                    <span class="brand-badge">&lt;/&gt;</span>
+                    <span>{{ task_name }}</span>
+                </div>
+                <div class="topbar-user">{{ learner_full_name }}</div>
+            </div>
+
+            <div class="main">
+                <aside class="panel">
+                    <div class="panel-head">
+                        <h2>Task Brief</h2>
+                    </div>
+                    <div class="panel-body instructions">
+                        <div class="meta-chip">HTML Simulator</div>
+                        {{ question_text | safe }}
+                        <ol class="criteria-list">
+                            {% for criterion in simulator_definition.criteria %}
+                            <li>{{ criterion.label }}</li>
+                            {% endfor %}
+                        </ol>
+                        {% if sample_link_html %}
+                        <div class="sample-link">{{ sample_link_html | safe }}</div>
+                        {% endif %}
+                    </div>
+                </aside>
+
+                <section class="panel">
+                    <div class="editor-shell">
+                        <div class="editor-tabs">
+                            <div class="editor-tab">{{ simulator_definition.shell.editor_title }}</div>
+                        </div>
+                        <div class="editor-area-wrap">
+                            <textarea
+                                id="html_code"
+                                name="html_code"
+                                class="editor-area"
+                                spellcheck="false"
+                            >{{ simulator_definition.starter_code }}</textarea>
+                        </div>
+                        <div class="editor-toolbar">
+                            <div class="toolbar-note">Live preview updates while the learner types.</div>
+                            <div class="toolbar-actions">
+                                <button type="button" class="btn" onclick="resetStarterCode()">Reset Starter</button>
+                                <button type="submit" class="btn primary">Submit HTML Task</button>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+
+                <section class="panel preview-panel">
+                    <div class="preview-shell">
+                        <div class="preview-toolbar">
+                            <span>Live Preview</span>
+                            <span id="previewStatus">index.html</span>
+                        </div>
+                        <iframe id="previewFrame" class="preview-frame" title="HTML Preview"></iframe>
+                    </div>
+                </section>
+            </div>
+        </div>
+    </form>
+
+    <script>
+        const editor = document.getElementById("html_code");
+        const previewFrame = document.getElementById("previewFrame");
+        const starterCode = {{ simulator_definition.starter_code | tojson }};
+
+        function updatePreview() {
+            previewFrame.srcdoc = editor.value;
+        }
+
+        function resetStarterCode() {
+            editor.value = starterCode;
+            updatePreview();
+            editor.focus();
+        }
+
+        editor.addEventListener("input", updatePreview);
+        updatePreview();
+    </script>
+</body>
+</html>

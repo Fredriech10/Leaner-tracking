@@ -14,7 +14,7 @@
         .topbar-user { color: white; font-size: 0.82em; white-space: nowrap; border-left: 1px solid rgba(255,255,255,0.35); padding-left: 10px; }
         .topbar-user a { color: white; text-decoration: none; font-weight: bold; }
         .topbar-user a:hover { text-decoration: underline; }
-        .page { padding: 20px 24px; max-width: 1320px; margin: 0 auto; }
+        .page { padding: 20px 24px; width: 90%; max-width: 90%; margin: 0 auto; }
         .hero { background: linear-gradient(135deg, #0078D4, #005a9e); color: white; border-radius: 12px; padding: 22px 24px; margin-bottom: 18px; }
         .hero h2 { margin: 0 0 6px 0; font-size: 1.45em; }
         .hero p { margin: 0; opacity: 0.9; font-size: 0.95em; }
@@ -106,11 +106,11 @@
     <div class="card" style="margin-top:16px;">
         <h3>💬 Recent Feedback</h3>
         {% if recent_feedback %}
-            {% for subj, task, feedback, ts in recent_feedback %}
+            {% for item in recent_feedback %}
             <div class="feedback-item">
-                <strong>{{ subj }} — {{ task }}</strong><br>
-                {{ feedback }}
-                <div class="feedback-meta">{{ ts[:16] if ts else '—' }}</div>
+                <strong>{{ item.title }}</strong><br>
+                {{ item.body }}
+                <div class="feedback-meta">{{ item.sender }} • {{ item.timestamp[:16] if item.timestamp else '—' }}</div>
             </div>
             {% endfor %}
         {% else %}

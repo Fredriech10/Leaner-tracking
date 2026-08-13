@@ -101,6 +101,21 @@ def build_bank_option_signature(question_type, options):
     return tuple(normalized)
 
 
+def normalize_generated_question_key(question_type, question_text, options=None):
+    if question_type == "match":
+        option_rows = []
+        for option in options or []:
+            option_text = option[0] if len(option) > 0 else ""
+            match_pair = option[2] if len(option) > 2 else ""
+            option_rows.append((
+                normalize_review_text(option_text),
+                normalize_review_text(match_pair),
+            ))
+        option_rows.sort()
+        return question_type, tuple(option_rows)
+    return question_type, normalize_question_bank_group_text(question_text)
+
+
 def bank_question_exists(cursor, question_text, question_type, subject, modules, options):
     normalized_text = normalize_question_bank_group_text(question_text)
     normalized_subject = (subject or "").strip().lower()
@@ -209,7 +224,11 @@ def build_match_review_rows(options, answer_text):
 def pick_unique_bank_question_ids(cursor, question_type, needed, modules=None, subjects=None, used_question_texts=None):
     modules = parse_module_names(",".join(modules or []))
     subjects = [item.strip() for item in (subjects or []) if item and item.strip()]
-    used_question_texts = {item.strip().lower() for item in (used_question_texts or set()) if item}
+    used_question_texts = {
+        normalize_question_bank_group_text(item)
+        for item in (used_question_texts or set())
+        if normalize_question_bank_group_text(item)
+    }
     where_parts = ["question_type = ?"]
     params = [question_type]
     if modules:
@@ -233,7 +252,7 @@ def pick_unique_bank_question_ids(cursor, question_type, needed, modules=None, s
     seen_texts = set(used_question_texts)
     seen_match_pairs = set()
     for bank_question_id, question_text in cursor.fetchall():
-        normalized_text = (question_text or "").strip().lower()
+        normalized_text = normalize_question_bank_group_text(question_text)
         if question_type != "match" and normalized_text in seen_texts:
             continue
         if question_type == "match":
@@ -523,3 +542,121 @@ def regrade_theory_question_answers(test_id, question_id, selected_group=None, l
     conn.commit()
     conn.close()
     return updated
+
+
+def cleanup_duplicate_generated_questions(test_id=None, unsubmitted_only=True, include_submitted=False):
+    conn = get_db()
+    cursor = conn.cursor()
+
+    test_params = []
+    test_where = ""
+    if test_id is not None:
+        test_where = "WHERE id = ?"
+        test_params.append(test_id)
+    elif unsubmitted_only and not include_submitted:
+        test_where = """
+            WHERE NOT EXISTS (
+                SELECT 1 FROM theory_submissions ts
+                WHERE ts.test_id = theory_tests.id
+            )
+        """
+
+    cursor.execute(f"SELECT id FROM theory_tests {test_where} ORDER BY id", test_params)
+    test_ids = [row[0] for row in cursor.fetchall()]
+
+    removed_count = 0
+    cleaned_tests = 0
+    for current_test_id in test_ids:
+        cursor.execute(
+            """
+            SELECT id, question_type, question_text, order_index
+            FROM theory_questions
+            WHERE test_id = ?
+            ORDER BY order_index, id
+            """,
+            (current_test_id,),
+        )
+        question_rows = cursor.fetchall()
+        keep_map = {}
+        duplicate_ids = []
+
+        for question_id, question_type, question_text, _order_index in question_rows:
+            cursor.execute(
+                """
+                SELECT option_text, is_correct, match_pair
+                FROM theory_options
+                WHERE question_id = ?
+                ORDER BY id
+                """,
+                (question_id,),
+            )
+            option_rows = cursor.fetchall()
+            question_key = normalize_generated_question_key(question_type, question_text, option_rows)
+            if question_key in keep_map:
+                duplicate_ids.append(question_id)
+                continue
+            keep_map[question_key] = question_id
+
+        if not duplicate_ids:
+            continue
+
+        placeholders = ",".join("?" for _ in duplicate_ids)
+        cursor.execute(
+            f"""
+            SELECT DISTINCT submission_id
+            FROM theory_answers
+            WHERE question_id IN ({placeholders})
+            """,
+            duplicate_ids,
+        )
+        affected_submission_ids = [row[0] for row in cursor.fetchall()]
+        cursor.execute(f"DELETE FROM theory_answers WHERE question_id IN ({placeholders})", duplicate_ids)
+        cursor.execute(f"DELETE FROM theory_options WHERE question_id IN ({placeholders})", duplicate_ids)
+        cursor.execute(f"DELETE FROM theory_questions WHERE id IN ({placeholders})", duplicate_ids)
+
+        if affected_submission_ids:
+            submission_placeholders = ",".join("?" for _ in affected_submission_ids)
+            cursor.execute(
+                f"""
+                SELECT id, total
+                FROM theory_submissions
+                WHERE id IN ({submission_placeholders})
+                """,
+                affected_submission_ids,
+            )
+            submission_rows = cursor.fetchall()
+            for submission_id, current_total in submission_rows:
+                cursor.execute(
+                    """
+                    SELECT COALESCE(SUM(marks_awarded), 0)
+                    FROM theory_answers
+                    WHERE submission_id = ?
+                    """,
+                    (submission_id,),
+                )
+                score = cursor.fetchone()[0] or 0
+                cursor.execute(
+                    """
+                    SELECT COALESCE(SUM(marks), 0)
+                    FROM theory_questions
+                    WHERE test_id = ?
+                    """,
+                    (current_test_id,),
+                )
+                new_total = cursor.fetchone()[0] or 0
+                percentage = round((score / new_total) * 100) if new_total else 0
+                cursor.execute(
+                    """
+                    UPDATE theory_submissions
+                    SET score = ?, total = ?, percentage = ?
+                    WHERE id = ?
+                    """,
+                    (score, new_total, percentage, submission_id),
+                )
+
+        removed_count += len(duplicate_ids)
+        cleaned_tests += 1
+
+    conn.commit()
+    conn.close()
+    return cleaned_tests, removed_count

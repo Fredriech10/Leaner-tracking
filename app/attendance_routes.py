@@ -1,16 +1,20 @@
 from datetime import datetime, timedelta
 
 import pandas as pd
-from flask import redirect, render_template, request, send_file, session, url_for
+from flask import flash, jsonify, redirect, render_template, request, send_file, session, url_for
 
-from app.database import get_db, get_groups, get_user_role, log_activity
+from app.database import get_db, get_grades, get_groups, get_user_role, log_activity
 from app.helper_attendance import (
     add_learner_note_entry,
     build_attendance_group_summary,
     get_attendance_data,
+    get_all_term_days,
     get_last_21_days,
     get_term_dates,
+    is_attendance_editable,
 )
+from app.helper_common import parse_module_names
+from app.helper_theory import clone_bank_question_to_test, merge_bank_match_rows_into_test
 
 
 def register_attendance_routes(app):
@@ -57,31 +61,76 @@ def register_attendance_routes(app):
             return "Access denied", 403
 
         selected_group = request.args.get("group")
+        selected_grade = (request.args.get("grade") or "").strip()
         selected_teacher = (request.args.get("teacher") or "").strip() or None
-        edit_mode = request.args.get("edit") == "1"
-        range_param = request.args.get("range", "week")
+        today_dt = datetime.now().date()
+        today = today_dt.isoformat()
+        year_start = today_dt.replace(month=1, day=1)
+        term_days = sorted(day for day in get_all_term_days() if day.startswith(str(today_dt.year)))
+        valid_week_starts = []
+        if term_days:
+            valid_week_starts = sorted(
+                {
+                    (
+                        datetime.strptime(day, "%Y-%m-%d").date()
+                        - timedelta(days=datetime.strptime(day, "%Y-%m-%d").date().weekday())
+                    ).isoformat()
+                    for day in term_days
+                    if datetime.strptime(day, "%Y-%m-%d").date() <= today_dt
+                }
+            )
+        week_start_param = (request.args.get("week_start") or "").strip()
+        try:
+            requested_week_start = datetime.strptime(week_start_param, "%Y-%m-%d").date() if week_start_param else today_dt
+        except ValueError:
+            requested_week_start = today_dt
 
-        today = datetime.now().strftime("%Y-%m-%d")
-        if range_param == "week":
-            start_date = (datetime.now() - timedelta(days=7)).strftime("%Y-%m-%d")
-            end_date = today
-        elif range_param == "2weeks":
-            start_date = (datetime.now() - timedelta(days=14)).strftime("%Y-%m-%d")
-            end_date = today
-        elif range_param == "month":
-            start_date = (datetime.now() - timedelta(days=30)).strftime("%Y-%m-%d")
-            end_date = today
+        if requested_week_start.year != today_dt.year:
+            requested_week_start = requested_week_start.replace(year=today_dt.year)
+        requested_week_start = requested_week_start - timedelta(days=requested_week_start.weekday())
+
+        if valid_week_starts:
+            requested_week_start_str = requested_week_start.isoformat()
+            current_index = 0
+            for idx, week_value in enumerate(valid_week_starts):
+                if week_value <= requested_week_start_str:
+                    current_index = idx
+                else:
+                    break
+            start_of_week = datetime.strptime(valid_week_starts[current_index], "%Y-%m-%d").date()
+            prev_week_start_str = valid_week_starts[current_index - 1] if current_index > 0 else None
+            next_week_start_str = valid_week_starts[current_index + 1] if current_index < len(valid_week_starts) - 1 else None
+            has_prev_week = prev_week_start_str is not None
+            has_next_week = next_week_start_str is not None
         else:
-            start_date = (datetime.now() - timedelta(days=7)).strftime("%Y-%m-%d")
-            end_date = today
+            start_of_week = requested_week_start
+            if start_of_week < year_start:
+                start_of_week = year_start
+            if start_of_week > today_dt:
+                start_of_week = today_dt - timedelta(days=today_dt.weekday())
+                if start_of_week < year_start:
+                    start_of_week = year_start
+
+            prev_week_start = start_of_week - timedelta(days=7)
+            next_week_start = start_of_week + timedelta(days=7)
+            has_prev_week = prev_week_start >= year_start
+            has_next_week = next_week_start <= today_dt
+            prev_week_start_str = prev_week_start.isoformat() if has_prev_week else None
+            next_week_start_str = next_week_start.isoformat() if has_next_week else None
+
+        end_of_week = min(start_of_week + timedelta(days=6), today_dt)
+        start_date = start_of_week.isoformat()
+        end_date = end_of_week.isoformat()
 
         conn = get_db()
         cursor = conn.cursor()
         teacher_options = []
+        grade_options = []
         class_scopes = []
 
         if role == "teacher":
-            groups = get_groups(username)
+            grade_options = get_grades(username)
+            groups = get_groups(username, grade=selected_grade)
             selected_teacher = username
         else:
             cursor.execute(
@@ -97,6 +146,7 @@ def register_attendance_routes(app):
             teacher_options = [row[0] for row in cursor.fetchall()]
             if selected_teacher and selected_teacher not in teacher_options:
                 selected_teacher = None
+            grade_options = get_grades(teacher_username=selected_teacher) if selected_teacher else get_grades()
             if selected_teacher:
                 cursor.execute(
                     """
@@ -106,9 +156,10 @@ def register_attendance_routes(app):
                       AND teacher_username = ?
                       AND group_name IS NOT NULL
                       AND group_name != ''
+                      AND (? = '' OR grade = ?)
                     ORDER BY group_name
                     """,
-                    (selected_teacher,),
+                    (selected_teacher, selected_grade, selected_grade),
                 )
                 groups = [row[0] for row in cursor.fetchall()]
             else:
@@ -122,8 +173,10 @@ def register_attendance_routes(app):
                       AND teacher_username != ''
                       AND group_name IS NOT NULL
                       AND group_name != ''
+                      AND (? = '' OR grade = ?)
                     ORDER BY teacher_username, group_name
-                    """
+                    """,
+                    (selected_grade, selected_grade),
                 )
                 class_scopes = [
                     {"teacher_username": row[0], "group": row[1], "label": f"{row[1]} ({row[0]})"}
@@ -197,6 +250,37 @@ def register_attendance_routes(app):
                 """
             )
         excluded_dates = cursor.fetchall()
+        cursor.execute("SELECT modules FROM question_bank_questions WHERE COALESCE(modules, '') != ''")
+        module_names = []
+        for (modules_text,) in cursor.fetchall():
+            module_names.extend(parse_module_names(modules_text))
+        module_names = sorted({item for item in module_names if item}, key=str.lower)
+
+        module_notes = []
+        if selected_group:
+            if selected_teacher:
+                cursor.execute(
+                    """
+                    SELECT id, note_date, module_name, progress_text, note_text, module_finished, generated_test_id, created_at
+                    FROM class_module_notes
+                    WHERE group_name = ? AND teacher_username = ?
+                    ORDER BY note_date DESC, created_at DESC, id DESC
+                    LIMIT 12
+                    """,
+                    (selected_group, selected_teacher),
+                )
+            else:
+                cursor.execute(
+                    """
+                    SELECT id, note_date, module_name, progress_text, note_text, module_finished, generated_test_id, created_at
+                    FROM class_module_notes
+                    WHERE group_name = ? AND teacher_username IS NULL
+                    ORDER BY note_date DESC, created_at DESC, id DESC
+                    LIMIT 12
+                    """,
+                    (selected_group,),
+                )
+            module_notes = cursor.fetchall()
         conn.close()
 
         terms = get_term_dates()
@@ -204,6 +288,8 @@ def register_attendance_routes(app):
         return render_template(
             "attendance.html",
             groups=groups,
+            grade_options=grade_options,
+            selected_grade=selected_grade,
             teacher_options=teacher_options,
             selected_teacher=selected_teacher,
             selected_group=selected_group,
@@ -211,11 +297,18 @@ def register_attendance_routes(app):
             data=data,
             daily_present_counts=daily_present_counts,
             daily_absent_counts=daily_absent_counts,
-            edit_mode=edit_mode,
             today=datetime.now().strftime("%Y-%m-%d"),
+            week_start=start_date,
+            week_end=end_date,
+            prev_week_start=prev_week_start_str,
+            next_week_start=next_week_start_str,
+            has_prev_week=has_prev_week,
+            has_next_week=has_next_week,
             excluded_dates=excluded_dates,
             terms=terms,
             attendance_summary=attendance_summary,
+            module_names=module_names,
+            module_notes=module_notes,
         )
 
     @app.route("/export/attendance")
@@ -491,6 +584,247 @@ def register_attendance_routes(app):
         log_activity(username, f"saved attendance for {group}")
         conn.close()
         return redirect(url_for("attendance", group=group, teacher=selected_teacher))
+
+    @app.route("/attendance/module_note", methods=["POST"])
+    def attendance_module_note():
+        username = session.get("username")
+        if not username:
+            return redirect(url_for("login"))
+
+        role = get_user_role(username)
+        if role not in ["teacher", "admin"]:
+            return "Access denied", 403
+
+        group = (request.form.get("group") or "").strip()
+        selected_teacher = (request.form.get("teacher") or "").strip() or None
+        note_date = (request.form.get("date") or "").strip()
+        module_name = (request.form.get("module_name") or "").strip()
+        progress_text = (request.form.get("progress_text") or "").strip()
+        note_text = (request.form.get("note_text") or "").strip()
+        module_finished = 1 if request.form.get("module_finished") else 0
+        week_start = (request.form.get("week_start") or "").strip()
+
+        redirect_kwargs = {"group": group}
+        if selected_teacher:
+            redirect_kwargs["teacher"] = selected_teacher
+        if week_start:
+            redirect_kwargs["week_start"] = week_start
+
+        if not group or not note_date or not module_name:
+            flash("Date, group, and module are required.", "error")
+            return redirect(url_for("attendance", **redirect_kwargs))
+
+        conn = get_db()
+        cursor = conn.cursor()
+        generated_test_id = None
+
+        if module_finished:
+            cursor.execute(
+                """
+                SELECT id
+                FROM theory_tests
+                WHERE LOWER(COALESCE(generated_module_name, '')) = LOWER(?)
+                ORDER BY id DESC
+                LIMIT 1
+                """,
+                (module_name,),
+            )
+            existing_test = cursor.fetchone()
+            if existing_test:
+                generated_test_id = existing_test[0]
+            else:
+                cursor.execute(
+                    """
+                    SELECT id, question_type, subject, question_text, COALESCE(modules, '')
+                    FROM question_bank_questions
+                    ORDER BY id
+                    """
+                )
+                bank_rows = cursor.fetchall()
+                matching_rows = [
+                    row for row in bank_rows
+                    if module_name.lower() in {item.lower() for item in parse_module_names(row[4] or "")}
+                ]
+                if not matching_rows:
+                    conn.close()
+                    flash(f"No question bank questions found for module '{module_name}'.", "error")
+                    return redirect(url_for("attendance", **redirect_kwargs))
+
+                subjects = [row[2] for row in matching_rows if row[2]]
+                subject_label = subjects[0] if len(set(subjects)) == 1 else (subjects[0] if subjects else "Theory")
+                cursor.execute(
+                    """
+                    INSERT INTO theory_tests
+                        (title, subject, assign_date, time_limit, allow_multiple, max_attempts, show_answers, created_by, created_at, is_active, generated_module_name)
+                    VALUES (?, ?, ?, 0, 0, 1, 1, ?, ?, 1, ?)
+                    """,
+                    (
+                        f"{module_name} Class Test",
+                        subject_label,
+                        note_date,
+                        username,
+                        datetime.now().isoformat(),
+                        module_name,
+                    ),
+                )
+                generated_test_id = cursor.lastrowid
+
+                order_index = 1
+                non_match_rows = [row for row in matching_rows if row[1] != "match"]
+                match_ids = [row[0] for row in matching_rows if row[1] == "match"]
+                for bank_question_id, _question_type, _subject, _question_text, _modules in non_match_rows:
+                    clone_bank_question_to_test(cursor, bank_question_id, generated_test_id, order_index)
+                    order_index += 1
+                if match_ids:
+                    merge_bank_match_rows_into_test(cursor, match_ids, generated_test_id, order_index)
+
+            cursor.execute(
+                """
+                INSERT OR IGNORE INTO theory_test_groups (test_id, group_name) VALUES (?, ?)
+                """,
+                (generated_test_id, group),
+            )
+            if selected_teacher:
+                cursor.execute(
+                    """
+                    INSERT OR IGNORE INTO theory_test_teachers (test_id, teacher_username) VALUES (?, ?)
+                    """,
+                    (generated_test_id, selected_teacher),
+                )
+            cursor.execute(
+                """
+                UPDATE theory_tests
+                SET is_active = 1
+                WHERE id = ?
+                """,
+                (generated_test_id,),
+            )
+
+        cursor.execute(
+            """
+            INSERT INTO class_module_notes
+                (note_date, group_name, teacher_username, module_name, progress_text, note_text, module_finished, generated_test_id, created_by, created_at)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            """,
+            (
+                note_date,
+                group,
+                selected_teacher,
+                module_name,
+                progress_text,
+                note_text,
+                module_finished,
+                generated_test_id,
+                username,
+                datetime.now().isoformat(),
+            ),
+        )
+        conn.commit()
+        conn.close()
+
+        if generated_test_id:
+            flash(f"Module note saved and class test assigned for {module_name}.", "success")
+            log_activity(username, f"finished module {module_name} for {group} and generated theory test {generated_test_id}")
+        else:
+            flash(f"Module note saved for {module_name}.", "success")
+            log_activity(username, f"saved module note for {module_name} in {group}")
+        return redirect(url_for("attendance", **redirect_kwargs))
+
+    @app.route("/attendance/update_cell", methods=["POST"])
+    def update_attendance_cell():
+        username = session.get("username")
+        if not username:
+            return jsonify({"ok": False, "error": "Not logged in"}), 401
+
+        role = get_user_role(username)
+        if role not in ["teacher", "admin"]:
+            return jsonify({"ok": False, "error": "Access denied"}), 403
+
+        payload = request.get_json(silent=True) or {}
+        learner_username = (payload.get("username") or "").strip()
+        date = (payload.get("date") or "").strip()
+        value = (payload.get("value") or "").strip().lower()
+        group = (payload.get("group") or "").strip()
+        selected_teacher = (payload.get("teacher") or "").strip() or None
+
+        if not learner_username or not date or not group:
+            return jsonify({"ok": False, "error": "Missing data"}), 400
+
+        if role != "admin":
+            try:
+                if not is_attendance_editable(date, role=role):
+                    return jsonify({"ok": False, "error": "Attendance is locked for this date"}), 400
+            except Exception:
+                pass
+
+        if value in {"x", "a", "absent"}:
+            status = "absent"
+        elif value in {"l", "late"}:
+            status = "late"
+        elif value in {"p", "present"}:
+            status = "present"
+        else:
+            return jsonify({"ok": False, "error": "Use P, L or X"}), 400
+
+        conn = get_db()
+        cursor = conn.cursor()
+        if selected_teacher:
+            cursor.execute(
+                """
+                SELECT 1
+                FROM users
+                WHERE username = ? AND group_name = ? AND role = 'student' AND teacher_username = ?
+                """,
+                (learner_username, group, selected_teacher),
+            )
+        else:
+            cursor.execute(
+                """
+                SELECT 1
+                FROM users
+                WHERE username = ? AND group_name = ? AND role = 'student'
+                """,
+                (learner_username, group),
+            )
+        if not cursor.fetchone():
+            conn.close()
+            return jsonify({"ok": False, "error": "Learner not found in selected class"}), 404
+
+        cursor.execute("SELECT status FROM attendance_override WHERE username = ? AND date = ?", (learner_username, date))
+        previous = cursor.fetchone()
+        previous_status = previous[0] if previous else None
+        cursor.execute(
+            """
+            INSERT INTO attendance_override (username, date, status)
+            VALUES (?, ?, ?)
+            ON CONFLICT(username, date)
+            DO UPDATE SET status = excluded.status
+            """,
+            (learner_username, date, status),
+        )
+        if previous_status != status:
+            add_learner_note_entry(
+                cursor,
+                learner_username,
+                f"Attendance manually set to {status.upper()} for {date}.",
+                username,
+            )
+        conn.commit()
+        conn.close()
+        log_activity(username, f"updated attendance for {learner_username} on {date} to {status}")
+
+        display = "L" if status == "late" else ("P" if status == "present" else "✖")
+        bg = "#ffe0b2" if status == "late" else ("#c8f7c5" if status == "present" else "#f7c5c5")
+        return jsonify(
+            {
+                "ok": True,
+                "status": status,
+                "display": display,
+                "background": bg,
+                "counts_as_present": status in {"present", "late"},
+                "previous_counts_as_present": (previous_status or "") in {"present", "late"},
+            }
+        )
 
     @app.route("/exclude_date", methods=["POST"])
     def exclude_date():

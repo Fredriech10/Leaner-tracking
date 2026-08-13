@@ -16,7 +16,7 @@
         .topbar-user a { color: white; text-decoration: none; font-weight: bold; }
         .topbar-user a:hover { text-decoration: underline; }
 
-        .page { padding: 20px 24px; max-width: 1400px; margin: 0 auto; }
+        .page { padding: 20px 24px; width: 90%; max-width: 90%; margin: 0 auto; }
 
         .card { background: white; border-radius: 8px; padding: 18px; border: 1px solid #ddd; margin-bottom: 16px; }
         .card h3 { margin: 0 0 14px 0; font-size: 0.95em; color: #005a9e; border-bottom: 2px solid #f0f0f0; padding-bottom: 6px; }
@@ -44,6 +44,11 @@
         .btn-warning:hover { background: #e07b00; }
         .btn-secondary { background: #666; color: white; }
         .btn-secondary:hover { background: #555; }
+        .attendance-cell { text-align:center; position:relative; min-width:42px; }
+        .attendance-cell.editable { cursor:pointer; }
+        .attendance-cell.editable:hover { outline: 2px solid rgba(0, 90, 158, 0.2); outline-offset: -2px; }
+        .attendance-inline-input { width:40px; padding:4px 2px; border:1px solid #7aa7d9; border-radius:4px; text-align:center; font-weight:bold; text-transform:uppercase; }
+        .attendance-hint { margin:0; color:#64748b; font-size:0.82em; }
 
         select { padding: 8px 12px; border: 1px solid #ccc; border-radius: 6px; font-size: 0.9em; }
         input[type="text"], input[type="date"] { padding: 8px 12px; border: 1px solid #ccc; border-radius: 6px; font-size: 0.9em; }
@@ -53,6 +58,8 @@
         td { padding: 8px 10px; border-bottom: 1px solid #f0f0f0; }
         tr:last-child td { border-bottom: none; }
         tr:hover td { background: #fafafa; }
+        th.sortable { cursor: pointer; user-select: none; white-space: nowrap; }
+        th.sortable:hover { background: #ebf3fb; }
 
         .legend { display: flex; gap: 16px; flex-wrap: wrap; margin-bottom: 16px; }
         .legend-item { padding: 8px 14px; border-radius: 6px; font-size: 0.88em; font-weight: bold; }
@@ -71,6 +78,16 @@
         .bar-row { display:grid; grid-template-columns: 120px 1fr 56px; gap:10px; align-items:center; font-size:0.88em; }
         .bar-track { height: 12px; background:#e5e7eb; border-radius:999px; overflow:hidden; }
         .bar-fill { height:100%; background:linear-gradient(90deg, #005a9e, #2f9e44); border-radius:999px; }
+        .flash-wrap { margin-bottom: 16px; display:grid; gap:10px; }
+        .flash-msg { padding: 12px 14px; border-radius: 8px; border: 1px solid; font-size: 0.9em; }
+        .flash-msg.success { background:#e8f5e9; color:#1b5e20; border-color:#a5d6a7; }
+        .flash-msg.error { background:#ffebee; color:#8e2430; border-color:#ef9a9a; }
+        .flash-msg.info { background:#e3f2fd; color:#0d47a1; border-color:#90caf9; }
+        .module-note-list { display:grid; gap:10px; margin-top:12px; }
+        .module-note-item { border:1px solid #e2e8f0; border-radius:10px; padding:12px 14px; background:#fafcff; }
+        .module-note-meta { display:flex; gap:10px; flex-wrap:wrap; align-items:center; margin-bottom:6px; }
+        .module-pill { background:#e8f4ff; color:#005a9e; border-radius:999px; padding:3px 10px; font-size:0.8em; font-weight:bold; }
+        .done-pill { background:#e8f5e9; color:#1b5e20; border-radius:999px; padding:3px 10px; font-size:0.8em; font-weight:bold; }
     </style>
 </head>
 <body>
@@ -92,6 +109,16 @@
 
 <div class="page">
 
+{% with messages = get_flashed_messages(with_categories=true) %}
+{% if messages %}
+<div class="flash-wrap">
+    {% for category, message in messages %}
+    <div class="flash-msg {{ 'error' if category == 'error' else ('success' if category == 'success' else 'info') }}">{{ message }}</div>
+    {% endfor %}
+</div>
+{% endif %}
+{% endwith %}
+
 <div class="card">
     <div style="display: flex; gap: 16px; align-items: center; justify-content: space-between; flex-wrap: wrap;">
         <!-- Left: Group Selection -->
@@ -105,6 +132,13 @@
                 {% endfor %}
             </select>
             {% endif %}
+            <label for="gradeSelect" style="font-weight: bold;">Grade:</label>
+            <select name="grade" id="gradeSelect" onchange="this.form.submit()">
+                <option value="">All Grades</option>
+                {% for grade in grade_options %}
+                    <option value="{{ grade }}" {% if grade == selected_grade %}selected{% endif %}>Grade {{ grade }}</option>
+                {% endfor %}
+            </select>
             <label for="groupSelect" style="font-weight: bold;">Group:</label>
             <select name="group" id="groupSelect" onchange="this.form.submit()" {% if teacher_options is defined and teacher_options and not selected_teacher %}disabled{% endif %}>
                 <option value="">-- Select Group --</option>
@@ -114,9 +148,6 @@
                     </option>
                 {% endfor %}
             </select>
-            {% if edit_mode %}
-                <input type="hidden" name="edit" value="1">
-            {% endif %}
             {% if teacher_options is defined and teacher_options and not selected_teacher %}
             <span style="color:#666; font-size:0.88em;">Select a teacher to load a class.</span>
             {% endif %}
@@ -125,20 +156,26 @@
         {% if selected_group %}
         <!-- Right: Date Range & Actions -->
         <div style="display: flex; gap: 12px; align-items: center; flex-wrap: wrap;">
-            <form method="get" action="/attendance" style="display: flex; gap: 8px; align-items: center;">
+            <form method="get" action="/attendance" style="display: flex; gap: 8px; align-items: center; flex-wrap:wrap;">
                 <input type="hidden" name="group" value="{{ selected_group }}">
+                <input type="hidden" name="grade" value="{{ selected_grade or '' }}">
                 {% if selected_teacher %}
                 <input type="hidden" name="teacher" value="{{ selected_teacher }}">
                 {% endif %}
-                {% if edit_mode %}
-                <input type="hidden" name="edit" value="1">
+                <label style="font-weight: bold;">Week:</label>
+                {% if has_prev_week %}
+                <button type="submit" name="week_start" value="{{ prev_week_start }}" class="btn btn-secondary" style="padding:6px 12px;">← Previous</button>
+                {% else %}
+                <button type="button" class="btn btn-secondary" style="padding:6px 12px; opacity:0.45; cursor:not-allowed;" disabled>← Previous</button>
                 {% endif %}
-                <label for="dateRangeSelect" style="font-weight: bold;">Date Range:</label>
-                <select name="range" id="dateRangeSelect" onchange="this.form.submit()">
-                    <option value="week" {% if request.args.get('range', 'week') == 'week' %}selected{% endif %}>Last 7 Days</option>
-                    <option value="2weeks" {% if request.args.get('range') == '2weeks' %}selected{% endif %}>Last 2 Weeks</option>
-                    <option value="month" {% if request.args.get('range') == 'month' %}selected{% endif %}>Last Month</option>
-                </select>
+                <div style="min-width: 170px; text-align:center; font-weight:bold; color:#005a9e;">
+                    {{ week_start }} to {{ week_end }}
+                </div>
+                {% if has_next_week %}
+                <button type="submit" name="week_start" value="{{ next_week_start }}" class="btn btn-secondary" style="padding:6px 12px;">Next →</button>
+                {% else %}
+                <button type="button" class="btn btn-secondary" style="padding:6px 12px; opacity:0.45; cursor:not-allowed;" disabled>Next →</button>
+                {% endif %}
             </form>
             
             <div style="border-left: 2px solid #ddd; height: 30px; margin: 0 4px;"></div>
@@ -169,6 +206,11 @@
                 onclick="showExcludeModal()">
                 🚫
             </button>
+            <button type="button" class="btn btn-primary" style="padding: 6px 12px;"
+                title="Add module progress note for selected date"
+                onclick="showModuleNoteModal()">
+                📝
+            </button>
             <p style="margin-top:10px; font-size:0.9em; color:#666;">Note: Attendance data is locked 10 days after the date and cannot be modified.</p>
         </div>
         {% endif %}
@@ -188,7 +230,7 @@
                 <tr><th>Group</th><th>Students</th><th>Attendance</th><th>Absent</th><th>Late</th></tr>
                 {% for item in attendance_summary %}
                 <tr>
-                    <td><a href="/attendance?group={{ item.group }}{% if item.teacher_username %}&teacher={{ item.teacher_username }}{% endif %}">{{ item.label or item.group }}</a></td>
+                    <td><a href="/attendance?group={{ item.group }}{% if item.teacher_username %}&teacher={{ item.teacher_username }}{% endif %}{% if selected_grade %}&grade={{ selected_grade }}{% endif %}">{{ item.label or item.group }}</a></td>
                     <td>{{ item.students }}</td>
                     <td>{{ item.attendance_pct }}%</td>
                     <td>{{ item.absent_days }}</td>
@@ -228,7 +270,7 @@
         <p style="margin:0; font-size:0.95em;">
             📅 <strong>Outside term dates</strong> — today ({{ today }}) does not fall within any configured term.
             Attendance is only tracked during term dates.
-            <a href="/attendance?group={{ selected_group }}{% if selected_teacher %}&teacher={{ selected_teacher }}{% endif %}" style="color:#005a9e; margin-left:8px;">Configure term dates ↑</a>
+            <a href="/attendance?group={{ selected_group }}{% if selected_teacher %}&teacher={{ selected_teacher }}{% endif %}{% if selected_grade %}&grade={{ selected_grade }}{% endif %}" style="color:#005a9e; margin-left:8px;">Configure term dates ↑</a>
         </p>
     </div>
     {% else %}
@@ -266,28 +308,69 @@
 
 <!-- Action Bar -->
 <div class="action-bar">
-    {% if not edit_mode %}
-        <a href="/attendance?group={{ selected_group }}{% if selected_teacher %}&teacher={{ selected_teacher }}{% endif %}&edit=1" class="btn btn-primary">✏️ Edit Attendance</a>
-    {% else %}
-        <a href="/attendance?group={{ selected_group }}{% if selected_teacher %}&teacher={{ selected_teacher }}{% endif %}" class="btn btn-primary">🔍 View Attendance</a>
-    {% endif %}
+    <p class="attendance-hint">Double-click an attendance cell to edit it. Use <strong>P</strong>, <strong>L</strong>, or <strong>X</strong>. Save happens when you click away.</p>
+</div>
+
+<div id="moduleNoteModal" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.5); z-index:1000; align-items:center; justify-content:center;">
+    <div class="card" style="max-width:620px; width:100%; margin:20px;">
+        <h3>📝 Class Module Note</h3>
+        <form method="POST" action="/attendance/module_note" style="display:grid; gap:12px;">
+            <input type="hidden" name="group" value="{{ selected_group }}">
+            <input type="hidden" name="teacher" value="{{ selected_teacher or '' }}">
+            <input type="hidden" name="week_start" value="{{ week_start }}">
+            <input type="hidden" name="date" id="moduleNoteDate">
+
+            <div style="display:grid; gap:6px;">
+                <label for="moduleNameSelect" style="font-weight:bold;">Module</label>
+                <select name="module_name" id="moduleNameSelect" required>
+                    <option value="">Select module</option>
+                    {% for module_name in module_names %}
+                    <option value="{{ module_name }}">{{ module_name }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+
+            <div style="display:grid; gap:6px;">
+                <label for="progressText" style="font-weight:bold;">Progress Reached</label>
+                <input type="text" id="progressText" name="progress_text" placeholder="Example: Completed up to formulas and formatting" required>
+            </div>
+
+            <div style="display:grid; gap:6px;">
+                <label for="moduleNoteText" style="font-weight:bold;">Teaching Notes</label>
+                <textarea id="moduleNoteText" name="note_text" rows="4" style="padding:10px 12px; border:1px solid #ccc; border-radius:6px; font-size:0.9em;" placeholder="What was covered, what needs revision, learner issues, etc."></textarea>
+            </div>
+
+            <label style="display:inline-flex; align-items:center; gap:8px; font-weight:bold;">
+                <input type="checkbox" name="module_finished" value="1">
+                Module Finished: assign the module class test now
+            </label>
+
+            <div style="display:flex; gap:8px; justify-content:flex-end;">
+                <button type="button" class="btn btn-secondary" onclick="hideModuleNoteModal()">Cancel</button>
+                <button type="submit" class="btn btn-primary" onclick="return setModuleNoteDate()">OK</button>
+            </div>
+        </form>
+    </div>
 </div>
 
 <!-- Hidden Forms for Quick Actions -->
 <form id="presentForm" method="POST" action="/mark_all_present" style="display:none;">
     <input type="hidden" name="group" value="{{ selected_group }}">
+    <input type="hidden" name="grade" value="{{ selected_grade or '' }}">
     <input type="hidden" name="teacher" value="{{ selected_teacher or '' }}">
     <input type="hidden" name="date" id="presentDate">
 </form>
 
 <form id="absentForm" method="POST" action="/mark_all_absent" style="display:none;">
     <input type="hidden" name="group" value="{{ selected_group }}">
+    <input type="hidden" name="grade" value="{{ selected_grade or '' }}">
     <input type="hidden" name="teacher" value="{{ selected_teacher or '' }}">
     <input type="hidden" name="date" id="absentDate">
 </form>
 
 <form id="resetForm" method="POST" action="/reset_attendance" style="display:none;">
     <input type="hidden" name="group" value="{{ selected_group }}">
+    <input type="hidden" name="grade" value="{{ selected_grade or '' }}">
     <input type="hidden" name="teacher" value="{{ selected_teacher or '' }}">
     <input type="hidden" name="date" id="resetDate">
 </form>
@@ -298,6 +381,7 @@
         <h3>🚫 Exclude Date from Attendance</h3>
         <form method="POST" action="/exclude_date" style="display: flex; flex-direction: column; gap: 12px;">
             <input type="hidden" name="selected_group" value="{{ selected_group }}">
+            <input type="hidden" name="selected_grade" value="{{ selected_grade or '' }}">
             <input type="hidden" name="selected_teacher" value="{{ selected_teacher or '' }}">
             <input type="hidden" name="date" id="excludeDate">
             
@@ -396,6 +480,7 @@
                     </div>
                     <form method="POST" action="/include_date" style="display:inline;">
                         <input type="hidden" name="selected_group" value="{{ selected_group }}">
+                        <input type="hidden" name="selected_grade" value="{{ selected_grade or '' }}">
                         <input type="hidden" name="selected_teacher" value="{{ selected_teacher or '' }}">
                         <input type="hidden" name="group" value="{{ date_info[1] }}">
                         <input type="hidden" name="date" value="{{ date_info[0] }}">
@@ -413,84 +498,99 @@
     </div>
 </div>
 
-<!-- Save Attendance Form -->
+<div class="card">
+    <h3>📚 Recent Module Progress For This Class</h3>
+    {% if module_notes %}
+    <div class="module-note-list">
+        {% for note in module_notes %}
+        <div class="module-note-item">
+            <div class="module-note-meta">
+                <span class="module-pill">{{ note[2] }}</span>
+                <span style="font-weight:bold; color:#334155;">{{ note[1] }}</span>
+                {% if note[5] %}
+                <span class="done-pill">Module Finished</span>
+                {% endif %}
+                {% if note[6] %}
+                <a href="/manage_tests/{{ note[6] }}/questions" style="color:#005a9e; text-decoration:none; font-weight:bold;">View Assigned Test</a>
+                {% endif %}
+            </div>
+            {% if note[3] %}
+            <div style="margin-bottom:4px;"><strong>Progress:</strong> {{ note[3] }}</div>
+            {% endif %}
+            {% if note[4] %}
+            <div style="color:#475569;">{{ note[4] }}</div>
+            {% endif %}
+        </div>
+        {% endfor %}
+    </div>
+    {% else %}
+    <p style="color:#888;">No module notes saved for this class yet.</p>
+    {% endif %}
+</div>
+
 <div class="card">
     <h3>📊 Attendance Table</h3>
-    <form method="POST" action="/save_attendance">
-        <input type="hidden" name="group" value="{{ selected_group }}">
-        <input type="hidden" name="teacher" value="{{ selected_teacher or '' }}">
-        <table id="attendanceTable">
+    <table id="attendanceTable">
+        <thead>
+            <tr>
+                <th class="sortable" data-sort-type="text">Username</th>
+                <th class="sortable" data-sort-type="text">Full Name</th>
+                <th class="sortable" data-sort-type="text">Group</th>
+                <th class="sortable" data-sort-type="number">Total Absent</th>
 
-<tr>
-    <th>Username</th>
-    <th>Name</th>
-    <th>Group</th>
-    <th>Total Absent</th>
+                {% for day in days %}
+                    <th>{{ day[5:] }}</th>
+                {% endfor %}
+            </tr>
+        </thead>
+        <tbody>
+            {% for row in data %}
+            <tr>
+                <td data-sort-value="{{ row.username }}"><a href="/learner_record/{{ row.username }}" style="color:inherit; text-decoration:none; font-weight:bold;">{{ row.username }}</a></td>
+                <td data-sort-value="{{ row.name or row.username }}"><a href="/learner_record/{{ row.username }}" style="color:inherit; text-decoration:none;">{{ row.name or row.username }}</a></td>
+                <td data-sort-value="{{ row.group or '-' }}">{{ row.group or "-" }}</td>
+                <td data-sort-value="{{ row.absent_days }}">{{ row.absent_days }}</td>
 
-    {% for day in days %}
-        <th>{{ day[5:] }}</th>
-    {% endfor %}
-</tr>
+                {% for day in days %}
+                    {% set value = row.days.get(day) %}
+                    {% if value and value.late %}{% set bg = "#ffe0b2" %}{% elif value %}{% set bg = "#c8f7c5" %}{% else %}{% set bg = "#f7c5c5" %}{% endif %}
+                    {% set cell_status = 'late' if value and value.late else ('present' if value else 'absent') %}
+                    <td
+                        class="attendance-cell editable"
+                        style="background-color:{{ bg }};"
+                        data-username="{{ row.username }}"
+                        data-date="{{ day }}"
+                        data-group="{{ selected_group }}"
+                        data-teacher="{{ selected_teacher or '' }}"
+                        data-status="{{ cell_status }}">
+                        {% if value %}
+                            {{ 'L' if value.late else 'P' }}
+                        {% else %}
+                            ✖
+                        {% endif %}
+                    </td>
+                {% endfor %}
+            </tr>
+            {% endfor %}
+        </tbody>
+        <tfoot>
+            <tr>
+                <td colspan="4" style="background:#f5f5f5;"><strong>Daily present</strong></td>
 
+                {% for day in days %}
+                    <td id="present-count-{{ day }}" style="text-align:center; font-weight:bold; background:#e8f5e9;">{{ daily_present_counts[day] }}</td>
+                {% endfor %}
+            </tr>
 
-{% for row in data %}
-<tr>
-    <td>{{ row.username }}</td>
-    <td>{{ row.name or row.username }}</td>
-    <td>{{ row.group or "-" }}</td>
-    <td>{{ row.absent_days }}</td>
+            <tr>
+                <td colspan="4" style="background:#f5f5f5;"><strong>Daily absent</strong></td>
 
-    {% for day in days %}
-        {% set value = row.days.get(day) %}
-        {% if value and value.late %}{% set bg = "#ffe0b2" %}{% elif value %}{% set bg = "#c8f7c5" %}{% else %}{% set bg = "#f7c5c5" %}{% endif %}
-        <td style="text-align:center; background-color:{{ bg }};">
-
-
-        {% if edit_mode %}
-            <!-- EDIT MODE -->
-            <input type="text"
-                   name="att_{{ row.username }}|{{ day }}"
-                   value="{% if value and value.late %}L{% elif value %}P{% else %}x{% endif %}"
-                   placeholder="(P, L or x)"
-                   style="width:40px; text-align:center;">
-        {% else %}
-            <!-- VIEW MODE -->
-            {% if value %}
-                {{ 'L' if value.late else 'P' }}
-            {% else %}
-                ✖
-            {% endif %}
-        {% endif %}
-
-        </td>
-    {% endfor %}
-</tr>
-{% endfor %}
-
-
-<tr>
-    <td colspan="4" style="background:#f5f5f5;"><strong>Daily present</strong></td>
-
-    {% for day in days %}
-        <td style="text-align:center; font-weight:bold; background:#e8f5e9;">{{ daily_present_counts[day] }}</td>
-    {% endfor %}
-</tr>
-
-<tr>
-    <td colspan="4" style="background:#f5f5f5;"><strong>Daily absent</strong></td>
-
-    {% for day in days %}
-        <td style="text-align:center; font-weight:bold; background:#f7c5c5;">{{ daily_absent_counts[day] }}</td>
-    {% endfor %}
-</tr>
-
-
-        </table>
-        <br>
-        {% if edit_mode %}
-            <button type="submit" class="btn btn-primary">💾 Save Attendance</button>
-        {% endif %}
-    </form>
+                {% for day in days %}
+                    <td id="absent-count-{{ day }}" style="text-align:center; font-weight:bold; background:#f7c5c5;">{{ daily_absent_counts[day] }}</td>
+                {% endfor %}
+            </tr>
+        </tfoot>
+    </table>
 </div>
 
 {% endif %}
@@ -498,6 +598,61 @@
 </div>
 
 <script>
+
+function initSortableTable(tableId, defaultColumnIndex = 0, defaultDirection = 'asc') {
+    const table = document.getElementById(tableId);
+    if (!table) return;
+    const body = table.tBodies[0];
+    const headerRow = table.tHead ? table.tHead.rows[0] : null;
+    if (!body || !headerRow) return;
+
+    const dataRows = Array.from(body.rows);
+    if (!dataRows.length) return;
+
+    const headers = Array.from(headerRow.querySelectorAll('th.sortable'));
+    const getCellValue = (row, index) => {
+        const cell = row.children[index];
+        if (!cell) return '';
+        return (cell.dataset.sortValue || cell.textContent || '').trim();
+    };
+    const sortRows = (index, type, direction) => {
+        const multiplier = direction === 'asc' ? 1 : -1;
+        dataRows.sort((a, b) => {
+            const aVal = getCellValue(a, index);
+            const bVal = getCellValue(b, index);
+            if (type === 'number') {
+                return ((parseFloat(aVal) || 0) - (parseFloat(bVal) || 0)) * multiplier;
+            }
+            return aVal.localeCompare(bVal, undefined, { sensitivity: 'base', numeric: true }) * multiplier;
+        });
+        dataRows.forEach((row) => body.appendChild(row));
+        headers.forEach((header) => {
+            const arrow = header.dataset.sortArrow || '';
+            header.textContent = header.textContent.replace(/\s[▲▼]$/, '');
+            if (parseInt(header.dataset.columnIndex || '-1', 10) === index) {
+                header.textContent = `${header.textContent} ${arrow || (direction === 'asc' ? '▲' : '▼')}`;
+            }
+        });
+    };
+
+    headers.forEach((header) => {
+        const index = Array.from(header.parentElement.children).indexOf(header);
+        header.dataset.columnIndex = String(index);
+        header.dataset.sortArrow = '';
+        header.addEventListener('click', () => {
+            const nextDirection = header.dataset.sortDirection === 'asc' ? 'desc' : 'asc';
+            headers.forEach((item) => { item.dataset.sortDirection = ''; });
+            header.dataset.sortDirection = nextDirection;
+            sortRows(index, header.dataset.sortType || 'text', nextDirection);
+        });
+    });
+
+    const defaultHeader = headerRow.children[defaultColumnIndex];
+    if (defaultHeader && defaultHeader.classList.contains('sortable')) {
+        defaultHeader.dataset.sortDirection = defaultDirection;
+        sortRows(defaultColumnIndex, defaultHeader.dataset.sortType || 'text', defaultDirection);
+    }
+}
 
 function setDate(hiddenFieldId) {
     const selectedDate = document.getElementById('actionDate').value;
@@ -532,6 +687,142 @@ function quickAction(action, dateFieldId, confirmMsg) {
         document.getElementById(formId).submit();
     }
 }
+
+initSortableTable('attendanceTable', 1, 'asc');
+
+function setModuleNoteDate() {
+    const selectedDate = document.getElementById('actionDate').value;
+    if (!selectedDate) {
+        alert('Please select a date first');
+        return false;
+    }
+    document.getElementById('moduleNoteDate').value = selectedDate;
+    return true;
+}
+
+function showModuleNoteModal() {
+    if (!setModuleNoteDate()) {
+        return;
+    }
+    document.getElementById('moduleNoteModal').style.display = 'flex';
+}
+
+function hideModuleNoteModal() {
+    document.getElementById('moduleNoteModal').style.display = 'none';
+}
+
+function attendanceDisplayForStatus(status) {
+    if (status === 'late') return 'L';
+    if (status === 'present') return 'P';
+    return '✖';
+}
+
+function attendanceCellBackground(status) {
+    if (status === 'late') return '#ffe0b2';
+    if (status === 'present') return '#c8f7c5';
+    return '#f7c5c5';
+}
+
+function attendanceCountsAsPresent(status) {
+    return status === 'present' || status === 'late';
+}
+
+function updateAttendanceTotals(day, oldStatus, newStatus) {
+    if (oldStatus === newStatus) return;
+    const presentCell = document.getElementById(`present-count-${day}`);
+    const absentCell = document.getElementById(`absent-count-${day}`);
+    if (!presentCell || !absentCell) return;
+
+    let presentCount = parseInt(presentCell.textContent || '0', 10);
+    let absentCount = parseInt(absentCell.textContent || '0', 10);
+    const oldPresent = attendanceCountsAsPresent(oldStatus);
+    const newPresent = attendanceCountsAsPresent(newStatus);
+
+    if (oldPresent && !newPresent) {
+        presentCount -= 1;
+        absentCount += 1;
+    } else if (!oldPresent && newPresent) {
+        presentCount += 1;
+        absentCount -= 1;
+    }
+
+    presentCell.textContent = String(Math.max(0, presentCount));
+    absentCell.textContent = String(Math.max(0, absentCount));
+}
+
+function closeAttendanceEditor(cell, status) {
+    cell.dataset.status = status;
+    cell.style.backgroundColor = attendanceCellBackground(status);
+    cell.textContent = attendanceDisplayForStatus(status);
+    cell.classList.remove('editing');
+}
+
+function saveAttendanceCell(cell, input, originalStatus) {
+    const rawValue = (input.value || '').trim().toLowerCase();
+    const requestedStatus = rawValue === 'l' || rawValue === 'late'
+        ? 'late'
+        : (rawValue === 'p' || rawValue === 'present' ? 'present' : 'absent');
+
+    fetch('/attendance/update_cell', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+            username: cell.dataset.username,
+            date: cell.dataset.date,
+            group: cell.dataset.group,
+            teacher: cell.dataset.teacher,
+            value: requestedStatus
+        })
+    })
+    .then(response => response.json().then(data => ({ ok: response.ok, data })))
+    .then(result => {
+        if (!result.ok || !result.data.ok) {
+            throw new Error(result.data.error || 'Save failed');
+        }
+        updateAttendanceTotals(cell.dataset.date, originalStatus, result.data.status);
+        closeAttendanceEditor(cell, result.data.status);
+    })
+    .catch(error => {
+        alert(error.message || 'Could not save attendance');
+        closeAttendanceEditor(cell, originalStatus);
+    });
+}
+
+function openAttendanceEditor(cell) {
+    if (cell.classList.contains('editing')) return;
+    const originalStatus = cell.dataset.status || 'absent';
+    const input = document.createElement('input');
+    input.type = 'text';
+    input.maxLength = 1;
+    input.className = 'attendance-inline-input';
+    input.value = originalStatus === 'late' ? 'L' : (originalStatus === 'present' ? 'P' : 'X');
+
+    cell.classList.add('editing');
+    cell.textContent = '';
+    cell.appendChild(input);
+    input.focus();
+    input.select();
+
+    input.addEventListener('keydown', function (event) {
+        if (event.key === 'Enter') {
+            event.preventDefault();
+            input.blur();
+        }
+        if (event.key === 'Escape') {
+            event.preventDefault();
+            closeAttendanceEditor(cell, originalStatus);
+        }
+    });
+    input.addEventListener('blur', function () {
+        saveAttendanceCell(cell, input, originalStatus);
+    });
+}
+
+document.querySelectorAll('.attendance-cell.editable').forEach(function (cell) {
+    cell.addEventListener('dblclick', function () {
+        openAttendanceEditor(cell);
+    });
+});
 
 function toggleTermDates() {
     const body = document.getElementById('termBody');

@@ -12,7 +12,7 @@
         .topbar a { color: white; text-decoration: none; font-size: 0.88em; opacity: 0.85; }
         .topbar a:hover { opacity: 1; }
 
-        .page { padding: 20px 24px; max-width: 1100px; margin: 0 auto; }
+        .page { padding: 20px 24px; width: 90%; max-width: 90%; margin: 0 auto; }
         .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
         .grid-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 16px; }
         .mb { margin-bottom: 16px; }
@@ -75,6 +75,10 @@
         .chip:hover { background: #dce8ff; }
 
         .note { background: #fffbe6; border: 1px solid #ffe58f; border-radius: 6px; padding: 10px 14px; font-size: 0.85em; color: #555; margin-bottom: 12px; }
+        .class-note-card { border: 1px solid #e2e8f0; border-radius: 10px; padding: 12px 14px; background: #f8fafc; margin-bottom: 10px; }
+        .class-note-meta { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; margin-bottom: 6px; }
+        .class-note-date { font-size: 0.82em; color: #475569; font-weight: bold; }
+        .class-note-text { color: #334155; font-size: 0.86em; line-height: 1.45; margin-top: 8px; white-space: pre-wrap; }
     </style>
 </head>
 <body>
@@ -310,6 +314,34 @@
             <p style="color:#888; font-size:0.9em;">No theory tests completed yet.</p>
             {% endif %}
         </div>
+    </div>
+
+    <div class="card mb">
+        <h3>🗒️ Class Notes</h3>
+        {% if class_module_notes %}
+            {% for note_date, module_name, progress_text, note_text, module_finished, generated_test_id, created_at in class_module_notes %}
+            <div class="class-note-card">
+                <div class="class-note-meta">
+                    <span class="class-note-date">{{ note_date }}</span>
+                    <span class="badge badge-ok">{{ module_name }}</span>
+                    {% if progress_text %}
+                    <span><strong>Progress:</strong> {{ progress_text }}</span>
+                    {% endif %}
+                    {% if module_finished %}
+                    <span class="badge badge-ok">Module Finished</span>
+                    {% endif %}
+                    {% if generated_test_id %}
+                    <a href="/manage_tests/{{ generated_test_id }}/questions" style="color:#005a9e; font-weight:bold; text-decoration:none;">View linked test</a>
+                    {% endif %}
+                </div>
+                {% if note_text %}
+                <div class="class-note-text">{{ note_text }}</div>
+                {% endif %}
+            </div>
+            {% endfor %}
+        {% else %}
+        <p style="color:#888; font-size:0.9em;">No class notes recorded yet.</p>
+        {% endif %}
     </div>
 
     <!-- Students in Group -->

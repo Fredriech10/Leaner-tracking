@@ -3,7 +3,7 @@ from io import BytesIO
 import pandas as pd
 from flask import flash, jsonify, redirect, render_template, request, send_file, session, url_for
 
-from app.database import get_db, get_groups, get_teachers, get_user_role, log_activity
+from app.database import get_db, get_grades, get_groups, get_teachers, get_user_role, infer_grade_from_group, log_activity, normalize_grade
 
 
 def register_admin_routes(app):
@@ -99,12 +99,15 @@ def register_admin_routes(app):
 
         search = request.args.get("search", "").strip()
         group = request.args.get("group", "").strip()
+        selected_grade = request.args.get("grade", "").strip()
+        selected_teacher = request.args.get("teacher", "").strip()
         sort = request.args.get("sort", "last_active").strip()
         order = request.args.get("order", "desc").lower()
 
         valid_sorts = {
             "username": "username",
             "full_name": "full_name",
+            "grade": "grade",
             "group_name": "group_name",
             "teacher_username": "teacher_username",
             "role": "role",
@@ -120,7 +123,7 @@ def register_admin_routes(app):
         cursor = conn.cursor()
 
         query = """
-        SELECT username, full_name, group_name, teacher_username, role, last_active
+        SELECT username, full_name, grade, group_name, teacher_username, role, last_active
         FROM users
         WHERE 1=1
         """
@@ -129,10 +132,16 @@ def register_admin_routes(app):
         if role == "teacher":
             query += " AND (teacher_username = ? OR username = ?)"
             params.extend([username, username])
+        elif selected_teacher:
+            query += " AND teacher_username = ?"
+            params.append(selected_teacher)
 
         if group:
             query += " AND group_name = ?"
             params.append(group)
+        if selected_grade:
+            query += " AND grade = ?"
+            params.append(selected_grade)
 
         query += f" ORDER BY {valid_sorts[sort]} {order.upper()}"
         cursor.execute(query, params)
@@ -140,9 +149,55 @@ def register_admin_routes(app):
 
         if role == "teacher":
             groups = get_groups(username)
+            grade_options = get_grades(username)
         else:
-            cursor.execute("SELECT DISTINCT group_name FROM users WHERE group_name IS NOT NULL")
+            grade_options = get_grades(teacher_username=selected_teacher) if selected_teacher else get_grades()
+            if selected_teacher:
+                cursor.execute(
+                    """
+                    SELECT DISTINCT group_name
+                    FROM users
+                    WHERE group_name IS NOT NULL
+                      AND group_name != ''
+                      AND teacher_username = ?
+                      AND (? = '' OR grade = ?)
+                    ORDER BY group_name
+                    """,
+                    (selected_teacher, selected_grade, selected_grade),
+                )
+            else:
+                cursor.execute(
+                    """
+                    SELECT DISTINCT group_name
+                    FROM users
+                    WHERE group_name IS NOT NULL
+                      AND group_name != ''
+                      AND (? = '' OR grade = ?)
+                    ORDER BY group_name
+                    """,
+                    (selected_grade, selected_grade),
+                )
             groups = [g[0] for g in cursor.fetchall()]
+
+        if role == "admin":
+            cursor.execute(
+                """
+                SELECT teacher_username, group_name
+                FROM users
+                WHERE role = 'student'
+                  AND teacher_username IS NOT NULL
+                  AND teacher_username != ''
+                  AND group_name IS NOT NULL
+                  AND group_name != ''
+                  AND (? = '' OR grade = ?)
+                GROUP BY teacher_username, group_name
+                ORDER BY teacher_username, group_name
+                """,
+                (selected_grade, selected_grade),
+            )
+            teacher_group_pairs = cursor.fetchall()
+        else:
+            teacher_group_pairs = [(username, group_name) for group_name in groups if group_name]
 
         conn.close()
         teacher_options = [
@@ -153,9 +208,14 @@ def register_admin_routes(app):
             "admin.html",
             users=users,
             groups=groups,
+            grade_options=grade_options,
             all_teachers=teacher_options,
+            teacher_group_pairs=teacher_group_pairs,
             search=search,
             selected_group=group,
+            selected_grade=selected_grade,
+            selected_teacher=selected_teacher if role == "admin" else username,
+            is_admin_view=(role == "admin"),
             sort=sort,
             order=order,
         )
@@ -175,20 +235,20 @@ def register_admin_routes(app):
         field = (payload.get("field") or "").strip()
         value = payload.get("value")
 
-        allowed_fields = {"full_name", "group_name", "teacher_username"}
+        allowed_fields = {"full_name", "grade", "group_name", "teacher_username"}
         if not username or field not in allowed_fields:
             return jsonify({"ok": False, "error": "Invalid request"}), 400
 
         if value is None:
             value = ""
         value = str(value).strip()
-        if field in {"group_name", "teacher_username"} and value == "":
+        if field in {"grade", "group_name", "teacher_username"} and value == "":
             value = None
 
         conn = get_db()
         cursor = conn.cursor()
         cursor.execute(
-            "SELECT username, full_name, group_name, teacher_username, role FROM users WHERE username = ?",
+            "SELECT username, full_name, grade, group_name, teacher_username, role FROM users WHERE username = ?",
             (username,),
         )
         user = cursor.fetchone()
@@ -197,7 +257,7 @@ def register_admin_routes(app):
             return jsonify({"ok": False, "error": "User not found"}), 404
 
         if admin_role == "teacher":
-            assigned_teacher = user[3] or ""
+            assigned_teacher = user[4] or ""
             if assigned_teacher and assigned_teacher != admin_user:
                 conn.close()
                 return jsonify({"ok": False, "error": "Access denied"}), 403
@@ -211,11 +271,29 @@ def register_admin_routes(app):
                 conn.close()
                 return jsonify({"ok": False, "error": "Teacher not found"}), 400
 
+        if field == "grade" and value is not None:
+            value = normalize_grade(value)
+            if not value:
+                conn.close()
+                return jsonify({"ok": False, "error": "Invalid grade"}), 400
+
         if field == "group_name" and value is not None:
             existing_groups = set(get_groups())
             if value not in existing_groups:
                 conn.close()
                 return jsonify({"ok": False, "error": "Group not found"}), 400
+            cursor.execute(
+                """
+                UPDATE users
+                SET group_name = ?, grade = COALESCE(NULLIF(grade, ''), ?)
+                WHERE username = ?
+                """,
+                (value, infer_grade_from_group(value), username),
+            )
+            conn.commit()
+            conn.close()
+            log_activity(admin_user, f"updated {field} for {username}")
+            return jsonify({"ok": True, "value": value or ""})
 
         cursor.execute(f"UPDATE users SET {field} = ? WHERE username = ?", (value, username))
         conn.commit()
@@ -260,12 +338,14 @@ def register_admin_routes(app):
             imported_count = 0
             updated_count = 0
             teacher_username_present = "teacher_username" in df.columns
+            grade_present = "grade" in df.columns
             role_present = "role" in df.columns
 
             for _, row in df.iterrows():
                 username_val = str(row["username"]).strip().upper()
                 full_name = str(row["full_name"]).strip()
                 group_name = str(row["group"]).strip()
+                grade = normalize_grade(str(row["grade"]).strip() if grade_present else None, group_name)
 
                 teacher_username = str(row["teacher_username"]).strip() if teacher_username_present else None
                 if teacher_username == "":
@@ -278,9 +358,9 @@ def register_admin_routes(app):
                 cursor.execute("SELECT username FROM users WHERE username = ?", (username_val,))
                 existing = cursor.fetchone()
 
-                columns = ["username", "full_name", "group_name", "teacher_username", "role"]
-                values = [username_val, full_name, group_name, teacher_username, role_value]
-                update_parts = ["full_name = excluded.full_name", "group_name = excluded.group_name"]
+                columns = ["username", "full_name", "grade", "group_name", "teacher_username", "role"]
+                values = [username_val, full_name, grade, group_name, teacher_username, role_value]
+                update_parts = ["full_name = excluded.full_name", "grade = excluded.grade", "group_name = excluded.group_name"]
 
                 if teacher_username_present:
                     update_parts.append("teacher_username = excluded.teacher_username")
@@ -327,6 +407,7 @@ def register_admin_routes(app):
         sample_data = {
             "username": ["STUDENT001", "STUDENT002", "STUDENT003"],
             "full_name": ["Smith, John", "Doe, Jane", "Johnson, Bob"],
+            "grade": ["12", "12", "12"],
             "group": ["12A", "12A", "12B"],
             "teacher_username": ["TEACHER1", "TEACHER1", "TEACHER2"],
             "role": ["student", "student", "student"],
@@ -384,7 +465,10 @@ def register_admin_routes(app):
         if not admin_user:
             return redirect(url_for("login"))
 
-        if get_user_role(admin_user) not in ["teacher", "admin"]:
+        admin_role = get_user_role(admin_user)
+        if admin_role not in ["teacher", "admin", "student"]:
+            return "Access denied", 403
+        if admin_role == "student" and username != admin_user:
             return "Access denied", 403
 
         next_url = request.args.get("next") or request.form.get("next")
@@ -392,7 +476,7 @@ def register_admin_routes(app):
         cursor = conn.cursor()
 
         cursor.execute(
-            "SELECT username, full_name, group_name, teacher_username, role FROM users WHERE username = ?",
+            "SELECT username, full_name, grade, group_name, teacher_username, role FROM users WHERE username = ?",
             (username,),
         )
         user = cursor.fetchone()
@@ -400,31 +484,51 @@ def register_admin_routes(app):
             conn.close()
             return "User not found", 404
 
-        if get_user_role(admin_user) == "teacher":
-            assigned_teacher = user[3] or ""
-            if assigned_teacher and assigned_teacher != admin_user:
-                conn.close()
-                return "Access denied", 403
-            if not assigned_teacher and user[4] != "student":
-                conn.close()
-                return "Access denied", 403
+        if admin_role == "teacher":
+            if username == admin_user:
+                pass
+            else:
+                assigned_teacher = user[4] or ""
+                if assigned_teacher and assigned_teacher != admin_user:
+                    conn.close()
+                    return "Access denied", 403
+                if not assigned_teacher and user[5] != "student":
+                    conn.close()
+                    return "Access denied", 403
 
         if request.method == "POST":
             full_name = request.form.get("full_name")
+            if admin_role == "student":
+                cursor.execute(
+                    """
+                    UPDATE users
+                    SET full_name = ?
+                    WHERE username = ?
+                    """,
+                    (full_name, username),
+                )
+                conn.commit()
+                log_activity(admin_user, f"updated own profile {username}")
+                conn.close()
+                if next_url:
+                    return redirect(next_url)
+                return redirect(url_for("student_dashboard"))
+
+            grade = normalize_grade(request.form.get("grade"), request.form.get("group_name"))
             group_name = request.form.get("group_name")
             teacher_username = request.form.get("teacher_username") or None
             role_value = request.form.get("role") or "student"
 
-            if role_value == "admin" and get_user_role(admin_user) != "admin":
+            if role_value == "admin" and admin_role != "admin":
                 return "Access denied", 403
 
             cursor.execute(
                 """
                 UPDATE users
-                SET full_name = ?, group_name = ?, teacher_username = ?, role = ?
+                SET full_name = ?, grade = ?, group_name = ?, teacher_username = ?, role = ?
                 WHERE username = ?
                 """,
-                (full_name, group_name, teacher_username, role_value, username),
+                (full_name, grade, group_name, teacher_username, role_value, username),
             )
             conn.commit()
             log_activity(admin_user, f"edited user {username}")
@@ -434,6 +538,6 @@ def register_admin_routes(app):
             return redirect(url_for("admin_panel"))
 
         all_teachers = get_teachers()
-        current_role = get_user_role(admin_user)
+        current_role = admin_role
         conn.close()
         return render_template("edit_user.html", user=user, next_url=next_url, all_teachers=all_teachers, current_role=current_role)

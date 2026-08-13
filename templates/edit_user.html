@@ -16,7 +16,7 @@
         .topbar-user a { color: white; text-decoration: none; font-weight: bold; }
         .topbar-user a:hover { text-decoration: underline; }
 
-        .page { padding: 20px 24px; max-width: 800px; margin: 0 auto; }
+        .page { padding: 20px 24px; width: 90%; max-width: 90%; margin: 0 auto; }
 
         .card { background: white; border-radius: 8px; padding: 24px; border: 1px solid #ddd; margin-bottom: 16px; }
         .card h3 { margin: 0 0 18px 0; font-size: 1.1em; color: #005a9e; border-bottom: 2px solid #f0f0f0; padding-bottom: 8px; }
@@ -44,10 +44,18 @@
 <div class="topbar">
     <h1>✏️ Edit User</h1>
     <div class="topbar-links">
+        {% if current_role == 'student' %}
+        <a href="/student_dashboard">🏠 Dashboard</a>
+        <a href="/my_tasks">📁 Tasks</a>
+        <a href="/lessons">📘 Lessons</a>
+        <a href="/tests">📝 Tests</a>
+        <span class="topbar-user">👤 {{ session_username }}</span>
+        {% else %}
         <a href="/learner_record/{{ user[0] }}">← Learner Record</a>
         <a href="/admin">👥 Admin</a>
         <a href="/teacher_dashboard">🏠 Dashboard</a>
         <span class="topbar-user">👤 <a href="/edit_user/{{ session_username }}">{{ session_username }}</a></span>
+        {% endif %}
         <a href="/logout">Logout</a>
     </div>
 </div>
@@ -68,10 +76,16 @@
             <label for="full_name">Full Name</label>
             <input type="text" id="full_name" name="full_name" value="{{ user[1] or '' }}" placeholder="Enter full name">
         </div>
-        
+
+        {% if current_role != 'student' %}
+        <div class="form-group">
+            <label for="grade">Grade</label>
+            <input type="text" id="grade" name="grade" value="{{ user[2] or '' }}" placeholder="Enter grade, for example 10">
+        </div>
+
         <div class="form-group">
             <label for="group_name">Group</label>
-            <input type="text" id="group_name" name="group_name" value="{{ user[2] or '' }}" placeholder="Enter group name">
+            <input type="text" id="group_name" name="group_name" value="{{ user[3] or '' }}" placeholder="Enter group name">
         </div>
 
         <div class="form-group">
@@ -79,7 +93,7 @@
             <select id="teacher_username" name="teacher_username">
                 <option value="">-- No teacher assigned --</option>
                 {% for teacher in all_teachers %}
-                <option value="{{ teacher[0] }}" {{ 'selected' if teacher[0] == user[3] else '' }}>{{ teacher[1] or teacher[0] }}</option>
+                <option value="{{ teacher[0] }}" {{ 'selected' if teacher[0] == user[4] else '' }}>{{ teacher[1] or teacher[0] }}</option>
                 {% endfor %}
             </select>
         </div>
@@ -87,17 +101,18 @@
         <div class="form-group">
             <label for="role">Role</label>
             <select id="role" name="role">
-                <option value="student" {% if user[4] == 'student' %}selected{% endif %}>Student</option>
-                <option value="teacher" {% if user[4] == 'teacher' %}selected{% endif %}>Teacher</option>
+                <option value="student" {% if user[5] == 'student' %}selected{% endif %}>Student</option>
+                <option value="teacher" {% if user[5] == 'teacher' %}selected{% endif %}>Teacher</option>
                 {% if current_role == 'admin' %}
-                <option value="admin" {% if user[4] == 'admin' %}selected{% endif %}>Admin</option>
+                <option value="admin" {% if user[5] == 'admin' %}selected{% endif %}>Admin</option>
                 {% endif %}
             </select>
         </div>
+        {% endif %}
         
         <div style="display: flex; gap: 8px;">
             <button type="submit" class="btn btn-primary">💾 Save Changes</button>
-            <a href="{{ next_url or '/admin' }}" class="btn btn-secondary">Cancel</a>
+            <a href="{{ next_url or ('/student_dashboard' if current_role == 'student' else '/admin') }}" class="btn btn-secondary">Cancel</a>
         </div>
     </form>
 </div>

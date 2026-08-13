@@ -16,7 +16,7 @@
         .topbar-user a { color: white; text-decoration: none; font-weight: bold; }
         .topbar-user a:hover { text-decoration: underline; }
 
-        .page { padding: 20px 24px; max-width: 1400px; margin: 0 auto; }
+        .page { padding: 20px 24px; width: 90%; max-width: 90%; margin: 0 auto; }
 
         .card { background: white; border-radius: 8px; padding: 18px; border: 1px solid #ddd; margin-bottom: 16px; }
         .card h3 { margin: 0 0 14px 0; font-size: 0.95em; color: #005a9e; border-bottom: 2px solid #f0f0f0; padding-bottom: 6px; }
@@ -107,17 +107,21 @@
         <div class="lbl">Total Users</div>
     </div>
     <div class="stat-box">
-        <div class="val">{{ users | selectattr('3', 'equalto', 'student') | list | length }}</div>
+        <div class="val">{{ users | selectattr('4', 'equalto', 'student') | list | length }}</div>
         <div class="lbl">Students</div>
     </div>
     <div class="stat-box">
-        <div class="val">{{ users | selectattr('3', 'equalto', 'teacher') | list | length }}</div>
+        <div class="val">{{ users | selectattr('4', 'equalto', 'teacher') | list | length }}</div>
         <div class="lbl">Teachers</div>
     </div>
-    <div class="stat-box">
-        <div class="val">{{ groups | length }}</div>
-        <div class="lbl">Groups</div>
-    </div>
+        <div class="stat-box">
+            <div class="val">{{ groups | length }}</div>
+            <div class="lbl">Groups</div>
+        </div>
+        <div class="stat-box">
+            <div class="val">{{ grade_options | length }}</div>
+            <div class="lbl">Grades</div>
+        </div>
 </div>
 
 <!-- Filters -->
@@ -125,12 +129,30 @@
     <form method="get" action="/admin" class="filter-bar">
         <label for="searchInput">Search:</label>
         <input type="search" id="searchInput" name="search" value="{{ search or '' }}" placeholder="username, name, group, role" style="min-width: 250px;">
+
+        {% if is_admin_view %}
+        <label for="teacherFilter">Teacher:</label>
+        <select name="teacher" id="teacherFilter">
+            <option value="">All Teachers</option>
+            {% for teacher in all_teachers %}
+                <option value="{{ teacher.username }}" {% if teacher.username == selected_teacher %}selected{% endif %}>{{ teacher.full_name }}</option>
+            {% endfor %}
+        </select>
+        {% endif %}
         
         <label for="groupFilter">Group:</label>
         <select name="group" id="groupFilter">
             <option value="">All Groups</option>
             {% for group_name in groups %}
                 <option value="{{ group_name }}" {% if group_name == selected_group %}selected{% endif %}>{{ group_name }}</option>
+            {% endfor %}
+        </select>
+
+        <label for="gradeFilter">Grade:</label>
+        <select name="grade" id="gradeFilter">
+            <option value="">All Grades</option>
+            {% for grade in grade_options %}
+                <option value="{{ grade }}" {% if grade == selected_grade %}selected{% endif %}>Grade {{ grade }}</option>
             {% endfor %}
         </select>
         
@@ -145,7 +167,9 @@
 <script id="adminLookupData" type="application/json">
 {
   "groups": {{ groups|tojson }},
-  "teachers": {{ all_teachers|tojson }}
+  "grades": {{ grade_options|tojson }},
+  "teachers": {{ all_teachers|tojson }},
+  "teacherGroups": {{ teacher_group_pairs|tojson }}
 }
 </script>
 
@@ -161,48 +185,52 @@
             <input type="file" name="excel_file" accept=".xlsx,.xls" required style="margin-right: 8px;">
             <button type="submit" class="btn btn-primary">📥 Import Users from Excel</button>
         </form>
-        <span style="font-size: 0.85em; color: #666;">Upload an Excel file with username, full_name, and group columns</span>
+        <span style="font-size: 0.85em; color: #666;">Upload an Excel file with username, full_name, grade, and group columns.</span>
     </div>
     <table id="usersTable">
         <thead>
             <tr>
-                <th><a href="/admin?sort=username&order={% if sort == 'username' and order == 'asc' %}desc{% else %}asc{% endif %}{% if search %}&search={{ search }}{% endif %}{% if selected_group %}&group={{ selected_group }}{% endif %}">Username{% if sort == 'username' %} {{ '↑' if order == 'asc' else '↓' }}{% endif %}</a></th>
-                <th><a href="/admin?sort=full_name&order={% if sort == 'full_name' and order == 'asc' %}desc{% else %}asc{% endif %}{% if search %}&search={{ search }}{% endif %}{% if selected_group %}&group={{ selected_group }}{% endif %}">Full Name{% if sort == 'full_name' %} {{ '↑' if order == 'asc' else '↓' }}{% endif %}</a></th>
-                <th><a href="/admin?sort=group_name&order={% if sort == 'group_name' and order == 'asc' %}desc{% else %}asc{% endif %}{% if search %}&search={{ search }}{% endif %}{% if selected_group %}&group={{ selected_group }}{% endif %}">Group{% if sort == 'group_name' %} {{ '↑' if order == 'asc' else '↓' }}{% endif %}</a></th>
-                <th><a href="/admin?sort=teacher_username&order={% if sort == 'teacher_username' and order == 'asc' %}desc{% else %}asc{% endif %}{% if search %}&search={{ search }}{% endif %}{% if selected_group %}&group={{ selected_group }}{% endif %}">Teacher{% if sort == 'teacher_username' %} {{ '↑' if order == 'asc' else '↓' }}{% endif %}</a></th>
-                <th><a href="/admin?sort=role&order={% if sort == 'role' and order == 'asc' %}desc{% else %}asc{% endif %}{% if search %}&search={{ search }}{% endif %}{% if selected_group %}&group={{ selected_group }}{% endif %}">Role{% if sort == 'role' %} {{ '↑' if order == 'asc' else '↓' }}{% endif %}</a></th>
-                <th><a href="/admin?sort=last_active&order={% if sort == 'last_active' and order == 'asc' %}desc{% else %}asc{% endif %}{% if search %}&search={{ search }}{% endif %}{% if selected_group %}&group={{ selected_group }}{% endif %}">Last Active{% if sort == 'last_active' %} {{ '↑' if order == 'asc' else '↓' }}{% endif %}</a></th>
+                <th><a href="/admin?sort=username&order={% if sort == 'username' and order == 'asc' %}desc{% else %}asc{% endif %}{% if search %}&search={{ search }}{% endif %}{% if selected_teacher %}&teacher={{ selected_teacher }}{% endif %}{% if selected_group %}&group={{ selected_group }}{% endif %}{% if selected_grade %}&grade={{ selected_grade }}{% endif %}">Username{% if sort == 'username' %} {{ '↑' if order == 'asc' else '↓' }}{% endif %}</a></th>
+                <th><a href="/admin?sort=full_name&order={% if sort == 'full_name' and order == 'asc' %}desc{% else %}asc{% endif %}{% if search %}&search={{ search }}{% endif %}{% if selected_teacher %}&teacher={{ selected_teacher }}{% endif %}{% if selected_group %}&group={{ selected_group }}{% endif %}{% if selected_grade %}&grade={{ selected_grade }}{% endif %}">Full Name{% if sort == 'full_name' %} {{ '↑' if order == 'asc' else '↓' }}{% endif %}</a></th>
+                <th><a href="/admin?sort=grade&order={% if sort == 'grade' and order == 'asc' %}desc{% else %}asc{% endif %}{% if search %}&search={{ search }}{% endif %}{% if selected_teacher %}&teacher={{ selected_teacher }}{% endif %}{% if selected_group %}&group={{ selected_group }}{% endif %}{% if selected_grade %}&grade={{ selected_grade }}{% endif %}">Grade{% if sort == 'grade' %} {{ '↑' if order == 'asc' else '↓' }}{% endif %}</a></th>
+                <th><a href="/admin?sort=group_name&order={% if sort == 'group_name' and order == 'asc' %}desc{% else %}asc{% endif %}{% if search %}&search={{ search }}{% endif %}{% if selected_teacher %}&teacher={{ selected_teacher }}{% endif %}{% if selected_group %}&group={{ selected_group }}{% endif %}{% if selected_grade %}&grade={{ selected_grade }}{% endif %}">Group{% if sort == 'group_name' %} {{ '↑' if order == 'asc' else '↓' }}{% endif %}</a></th>
+                <th><a href="/admin?sort=teacher_username&order={% if sort == 'teacher_username' and order == 'asc' %}desc{% else %}asc{% endif %}{% if search %}&search={{ search }}{% endif %}{% if selected_teacher %}&teacher={{ selected_teacher }}{% endif %}{% if selected_group %}&group={{ selected_group }}{% endif %}{% if selected_grade %}&grade={{ selected_grade }}{% endif %}">Teacher{% if sort == 'teacher_username' %} {{ '↑' if order == 'asc' else '↓' }}{% endif %}</a></th>
+                <th><a href="/admin?sort=role&order={% if sort == 'role' and order == 'asc' %}desc{% else %}asc{% endif %}{% if search %}&search={{ search }}{% endif %}{% if selected_teacher %}&teacher={{ selected_teacher }}{% endif %}{% if selected_group %}&group={{ selected_group }}{% endif %}{% if selected_grade %}&grade={{ selected_grade }}{% endif %}">Role{% if sort == 'role' %} {{ '↑' if order == 'asc' else '↓' }}{% endif %}</a></th>
+                <th><a href="/admin?sort=last_active&order={% if sort == 'last_active' and order == 'asc' %}desc{% else %}asc{% endif %}{% if search %}&search={{ search }}{% endif %}{% if selected_teacher %}&teacher={{ selected_teacher }}{% endif %}{% if selected_group %}&group={{ selected_group }}{% endif %}{% if selected_grade %}&grade={{ selected_grade }}{% endif %}">Last Active{% if sort == 'last_active' %} {{ '↑' if order == 'asc' else '↓' }}{% endif %}</a></th>
                 <th>Actions</th>
             </tr>
         </thead>
         <tbody>
         {% for user in users %}
         <tr>
-            <td><a href="/learner_record/{{ user[0] }}" class="table-row-link">{{ user[0] }}</a></td>
-            <td class="editable-cell profile-edit-cell" data-username="{{ user[0] }}" data-field="full_name" data-value="{{ user[1] or '' }}" data-profile-url="/learner_record/{{ user[0] }}">
+            <td><a href="{{ '/learner_record/' ~ user[0] if user[5] == 'student' else '/edit_user/' ~ user[0] }}" class="table-row-link">{{ user[0] }}</a></td>
+            <td class="editable-cell profile-edit-cell" data-username="{{ user[0] }}" data-field="full_name" data-value="{{ user[1] or '' }}" data-profile-url="{{ '/learner_record/' ~ user[0] if user[5] == 'student' else '/edit_user/' ~ user[0] }}">
                 <span class="cell-display">{{ user[1] or "—" }}</span>
             </td>
-            <td class="editable-cell" data-username="{{ user[0] }}" data-field="group_name" data-value="{{ user[2] or '' }}">
+            <td class="editable-cell" data-username="{{ user[0] }}" data-field="grade" data-value="{{ user[2] or '' }}">
                 <span class="cell-display">{{ user[2] or "—" }}</span>
             </td>
-            <td class="editable-cell" data-username="{{ user[0] }}" data-field="teacher_username" data-value="{{ user[3] or '' }}">
+            <td class="editable-cell" data-username="{{ user[0] }}" data-field="group_name" data-value="{{ user[3] or '' }}">
                 <span class="cell-display">{{ user[3] or "—" }}</span>
             </td>
+            <td class="editable-cell" data-username="{{ user[0] }}" data-field="teacher_username" data-value="{{ user[4] or '' }}">
+                <span class="cell-display">{{ user[4] or "—" }}</span>
+            </td>
             <td>
-                {% if user[4] == 'teacher' %}
+                {% if user[5] == 'teacher' %}
                     <span class="badge badge-teacher">Teacher</span>
-                {% elif user[4] == 'admin' %}
+                {% elif user[5] == 'admin' %}
                     <span class="badge badge-admin">Admin</span>
                 {% else %}
                     <span class="badge badge-student">Student</span>
                 {% endif %}
             </td>
-            <td style="color:#888; font-size:0.85em;">{{ user[5][:16] if user[5] else '—' }}</td>
+            <td style="color:#888; font-size:0.85em;">{{ user[6][:16] if user[6] else '—' }}</td>
             <td>
                 <div class="action-links">
                     <a href="/edit_user/{{ user[0] }}">✏️ Edit</a>
-                    <a href="/learner_record/{{ user[0] }}">📊 Record</a>
-                    {% if user[3] != "teacher" and user[3] != "admin" %}
+                    <a href="{{ '/learner_record/' ~ user[0] if user[5] == 'student' else '/edit_user/' ~ user[0] }}">📊 Record</a>
+                    {% if user[5] != "teacher" and user[5] != "admin" %}
                         <a href="/promote/{{ user[0] }}" style="color:#107C10;">⬆️ Promote</a>
                     {% else %}
                         <a href="/demote/{{ user[0] }}" style="color:#A4262C;">⬇️ Demote</a>
@@ -216,7 +244,7 @@
         </tr>
         {% else %}
         <tr>
-            <td colspan="6" style="text-align:center; color:#888;">No users found.</td>
+            <td colspan="8" style="text-align:center; color:#888;">No users found.</td>
         </tr>
         {% endfor %}
         </tbody>
@@ -234,8 +262,50 @@ document.addEventListener('DOMContentLoaded', function() {
     const lookupData = JSON.parse(document.getElementById('adminLookupData').textContent);
     const groupOptions = lookupData.groups || [];
     const teacherOptions = lookupData.teachers || [];
+    const gradeOptions = lookupData.grades || [];
+    const teacherGroups = lookupData.teacherGroups || [];
+    const groupFilter = document.getElementById('groupFilter');
+    const teacherFilter = document.getElementById('teacherFilter');
     let activeEditorCell = null;
     let profileClickTimer = null;
+
+    function buildGroupFilterOptions() {
+        if (!groupFilter) {
+            return;
+        }
+
+        const currentValue = groupFilter.value;
+        const selectedTeacher = teacherFilter ? teacherFilter.value : '';
+        const filteredGroups = selectedTeacher
+            ? teacherGroups.filter(item => item[0] === selectedTeacher).map(item => item[1])
+            : groupOptions;
+        const uniqueGroups = Array.from(new Set(filteredGroups)).sort((a, b) => a.localeCompare(b));
+
+        groupFilter.innerHTML = '';
+        const emptyOption = document.createElement('option');
+        emptyOption.value = '';
+        emptyOption.textContent = 'All Groups';
+        groupFilter.appendChild(emptyOption);
+
+        uniqueGroups.forEach(groupName => {
+            const option = document.createElement('option');
+            option.value = groupName;
+            option.textContent = groupName;
+            if (groupName === currentValue) {
+                option.selected = true;
+            }
+            groupFilter.appendChild(option);
+        });
+
+        if (currentValue && !uniqueGroups.includes(currentValue)) {
+            groupFilter.value = '';
+        }
+    }
+
+    if (teacherFilter) {
+        teacherFilter.addEventListener('change', buildGroupFilterOptions);
+        buildGroupFilterOptions();
+    }
 
     searchInput.addEventListener('input', function() {
         const searchTerm = this.value.toLowerCase().trim();
@@ -250,11 +320,13 @@ document.addEventListener('DOMContentLoaded', function() {
 
             const username = cells[0].textContent.toLowerCase();
             const fullName = cells[1].textContent.toLowerCase();
-            const group = cells[2].textContent.toLowerCase();
-            const role = cells[3].textContent.toLowerCase();
+            const grade = cells[2].textContent.toLowerCase();
+            const group = cells[3].textContent.toLowerCase();
+            const role = cells[5].textContent.toLowerCase();
 
             const matches = username.includes(searchTerm) ||
                             fullName.includes(searchTerm) ||
+                            grade.includes(searchTerm) ||
                             group.includes(searchTerm) ||
                             role.includes(searchTerm);
 
@@ -267,7 +339,7 @@ document.addEventListener('DOMContentLoaded', function() {
         });
 
         // Handle the "No users found" row
-        const noUsersRow = tbody.querySelector('tr td[colspan="6"]');
+        const noUsersRow = tbody.querySelector('tr td[colspan="8"]');
         if (noUsersRow) {
             noUsersRow.parentElement.style.display = hasVisibleRows ? 'none' : '';
         }
@@ -282,7 +354,9 @@ document.addEventListener('DOMContentLoaded', function() {
     function closeEditor(cell, restoredValue, displayValue) {
         cell.classList.remove('editing');
         cell.innerHTML = '<span class="cell-display"></span>';
-        const label = cell.dataset.field === 'teacher_username' ? getTeacherLabel(displayValue) : displayValue;
+        const label = cell.dataset.field === 'teacher_username'
+            ? getTeacherLabel(displayValue)
+            : (cell.dataset.field === 'grade' && displayValue ? 'Grade ' + displayValue : displayValue);
         cell.querySelector('.cell-display').textContent = label || '—';
         cell.dataset.value = restoredValue || '';
         activeEditorCell = null;
@@ -366,6 +440,8 @@ document.addEventListener('DOMContentLoaded', function() {
         let editor;
         if (field === 'group_name') {
             editor = buildSelect(groupOptions, currentValue, 'group');
+        } else if (field === 'grade') {
+            editor = buildSelect(gradeOptions, currentValue, 'grade');
         } else if (field === 'teacher_username') {
             editor = buildSelect(teacherOptions, currentValue, 'teacher');
         } else {

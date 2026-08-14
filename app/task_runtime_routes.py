@@ -347,6 +347,12 @@ def register_task_runtime_routes(app):
         simulator_template = "upload_task.html"
         if practical_mode == "simulator":
             simulator_template = (
+                "simulator_access_practical.html"
+                if simulator_definition and simulator_definition.get("shell", {}).get("app") == "access"
+                else
+                "simulator_excel_practical.html"
+                if simulator_definition and simulator_definition.get("shell", {}).get("app") == "excel"
+                else
                 "simulator_html_practical.html"
                 if simulator_definition and simulator_definition.get("shell", {}).get("app") == "html"
                 else "simulator_practical.html"

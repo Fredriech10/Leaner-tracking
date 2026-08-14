@@ -6,8 +6,14 @@
     <style>
         * { box-sizing: border-box; }
         body { margin: 0; font-family: "Segoe UI", Arial, sans-serif; background: #0f172a; color: #e2e8f0; }
-        .workspace { min-height: 100vh; display: grid; grid-template-rows: 56px 1fr; }
-        .topbar {
+        .topbar { background: #0078D4; color: white; padding: 12px 24px; display: flex; justify-content: space-between; align-items: center; flex-wrap: nowrap; gap: 10px; position: sticky; top: 0; z-index: 999; }
+        .topbar h1 { margin: 0; font-size: 1.05em; white-space: nowrap; }
+        .topbar-links { display: flex; gap: 10px; align-items: center; flex-wrap: nowrap; }
+        .topbar-links a { color: white; text-decoration: none; font-size: 0.82em; opacity: 0.9; white-space: nowrap; }
+        .topbar-links a:hover { opacity: 1; text-decoration: underline; }
+        .topbar-user { color: white; font-size: 0.82em; white-space: nowrap; border-left: 1px solid rgba(255,255,255,0.35); padding-left: 10px; }
+        .workspace { min-height: calc(100vh - 56px); display: grid; grid-template-rows: 1fr; }
+        .sim-topbar {
             display: flex;
             align-items: center;
             justify-content: space-between;
@@ -173,9 +179,23 @@
     </style>
 </head>
 <body>
+{% set current_page = 'my_tasks' %}
+{% include '_slide_nav.html' %}
+
+<div class="topbar">
+    <h1>📚 Student Portal</h1>
+    <div class="topbar-links">
+        <a href="/student_dashboard">🏠 Dashboard</a>
+        <a href="/my_tasks">📁 Tasks</a>
+        <a href="/tests">📝 Tests</a>
+        <span class="topbar-user">👤 {{ learner_full_name }}</span>
+        <a href="/logout">Logout</a>
+    </div>
+</div>
+
     <form method="post">
         <div class="workspace">
-            <div class="topbar">
+            <div class="sim-topbar">
                 <div class="brand">
                     <span class="brand-badge">&lt;/&gt;</span>
                     <span>{{ task_name }}</span>

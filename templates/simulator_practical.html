@@ -401,8 +401,19 @@
         .ribbon-group.group-dev-templates { min-width: 94px; }
         .ribbon-group.group-picture-adjust { min-width: 104px; }
 
-        .workspace-main { display: grid; grid-template-columns: minmax(0, 1fr) 300px; flex: 1; }
-        .page-area { background: #d6d6d6; border-right: 1px solid #c8c6c4; padding-bottom: 22px; }
+        .workspace-main {
+            display: grid;
+            grid-template-columns: 300px minmax(0, 1fr);
+            grid-template-areas: "inspector page";
+            flex: 1;
+        }
+        .page-area {
+            grid-area: page;
+            background: #d6d6d6;
+            border-left: 1px solid #c8c6c4;
+            padding-bottom: 22px;
+            min-width: 0;
+        }
         .document-meta { width: min(100%, 900px); margin: 10px auto 10px; display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 0 10px; }
         .meta-chip { padding: 6px 10px; border: 1px solid #c8c6c4; background: rgba(255,255,255,0.78); font-size: 0.76rem; color: #605e5c; }
         .meta-chip.emphasis { color: #2b579a; font-weight: 600; }
@@ -430,7 +441,12 @@
         .picture-handle.br { bottom: -5px; right: -5px; cursor: nwse-resize; }
         .picture-handle.mid { top: calc(50% - 5px); right: -5px; }
 
-        .inspector { background: #f3f2f1; padding: 18px; }
+        .inspector {
+            grid-area: inspector;
+            background: #f3f2f1;
+            padding: 18px;
+            border-right: 1px solid #c8c6c4;
+        }
         .inspector h3 { margin: 0 0 12px; font-size: 1rem; color: #2b579a; }
         .inspector-card { border: 1px solid #d2d0ce; background: white; padding: 12px; margin-bottom: 10px; }
         .inspector-label { font-size: 0.72rem; text-transform: uppercase; color: #605e5c; margin-bottom: 6px; letter-spacing: 0.04em; }
@@ -466,9 +482,15 @@
         .mini-menu-desc { color: #605e5c; font-size: 0.83rem; line-height: 1.5; }
 
         @media (max-width: 1180px) {
-            .workspace-main { grid-template-columns: 1fr; }
+            .workspace-main {
+                grid-template-columns: 1fr;
+                grid-template-areas:
+                    "page"
+                    "inspector";
+            }
             .app-search { display: none; }
-            .inspector { border-top: 1px solid #d2d0ce; }
+            .page-area { border-left: none; }
+            .inspector { border-top: 1px solid #d2d0ce; border-right: none; }
         }
     </style>
 </head>

@@ -1,0 +1,908 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Access Simulator - {{ subject_name }} {{ task_name }}</title>
+    <style>
+        * { box-sizing: border-box; }
+        body { margin: 0; font-family: "Segoe UI", Arial, sans-serif; background: #f3f3f3; color: #1f2937; }
+        .topbar { background: #0078D4; color: white; padding: 12px 24px; display: flex; justify-content: space-between; align-items: center; flex-wrap: nowrap; gap: 10px; position: sticky; top: 0; z-index: 999; }
+        .topbar h1 { margin: 0; font-size: 1.05em; white-space: nowrap; }
+        .topbar-links { display: flex; gap: 10px; align-items: center; flex-wrap: nowrap; }
+        .topbar-links a { color: white; text-decoration: none; font-size: 0.82em; opacity: 0.9; white-space: nowrap; }
+        .topbar-links a:hover { opacity: 1; text-decoration: underline; }
+        .topbar-user { color: white; font-size: 0.82em; white-space: nowrap; border-left: 1px solid rgba(255,255,255,0.35); padding-left: 10px; }
+        .shell { min-height: calc(100vh - 56px); }
+        .main { display: grid; grid-template-columns: 300px 1fr; min-height: 0; }
+        .sidebar { background: #f5f6f7; color: #334155; padding: 16px; border-right: 1px solid #d9d9d9; }
+        .sidebar h2 { margin: 0 0 14px; font-size: 0.96rem; color: #7d1f28; }
+        .sidebar .task-copy { line-height: 1.6; font-size: 0.89rem; }
+        .sidebar ol { padding-left: 18px; }
+        .workspace { padding: 0; }
+        .access-window {
+            background: white;
+            min-height: 100vh;
+            display: grid;
+            grid-template-rows: 96px 28px 1fr 46px;
+        }
+        .access-ribbon {
+            background: linear-gradient(180deg, #ffffff 0%, #f6f6f6 100%);
+            border-bottom: 1px solid #cfcfcf;
+            display: grid;
+            grid-template-rows: 26px 1fr;
+        }
+        .ribbon-tabs {
+            display: flex;
+            align-items: end;
+            gap: 0;
+            padding-left: 8px;
+            font-size: 0.84rem;
+            color: #333;
+        }
+        .ribbon-tab {
+            padding: 4px 12px 5px;
+            border-bottom: 2px solid transparent;
+        }
+        .ribbon-tab.active {
+            color: #a4373a;
+            border-bottom-color: #a4373a;
+            font-weight: 600;
+        }
+        .ribbon-groups {
+            display: flex;
+            align-items: stretch;
+            gap: 0;
+            padding: 4px 10px 6px;
+        }
+        .ribbon-group {
+            min-width: 96px;
+            border-right: 1px solid #d6d6d6;
+            padding: 0 10px 14px;
+            position: relative;
+        }
+        .ribbon-group-title {
+            position: absolute;
+            left: 6px;
+            right: 6px;
+            bottom: 0;
+            text-align: center;
+            font-size: 0.66rem;
+            color: #666;
+        }
+        .ribbon-icons {
+            display: flex;
+            align-items: flex-start;
+            gap: 8px;
+            height: 100%;
+        }
+        .ribbon-icon-card {
+            width: 46px;
+            min-height: 52px;
+            border: 1px solid #cfcfcf;
+            background: #f2f2f2;
+            display: inline-flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            gap: 4px;
+            color: #333;
+            font-size: 0.76rem;
+            text-align: center;
+            padding: 4px;
+        }
+        .ribbon-icon-card .ico {
+            font-size: 1.25rem;
+            line-height: 1;
+        }
+        .ribbon-icon-stack {
+            display: grid;
+            gap: 3px;
+            font-size: 0.76rem;
+            color: #333;
+            padding-top: 2px;
+        }
+        .ribbon-icon-stack span {
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+            white-space: nowrap;
+        }
+        .object-tabs {
+            display: flex;
+            align-items: end;
+            background: #f3f3f3;
+            border-bottom: 1px solid #cfcfcf;
+            padding-left: 210px;
+        }
+        .object-tab {
+            background: #ffffff;
+            border: 1px solid #cfcfcf;
+            border-bottom: none;
+            padding: 5px 12px 4px;
+            font-size: 0.82rem;
+            color: #333;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .object-tab .close {
+            color: #666;
+            font-size: 0.9rem;
+        }
+        .designer { padding: 0; background: #fff; overflow: auto; }
+        .caption { margin: 0 0 14px; font-size: 1rem; font-weight: 700; color: #7d1f28; }
+        .grid-table { width: 100%; border-collapse: collapse; font-size: 0.9rem; }
+        .grid-table th, .grid-table td { border: 1px solid #ccd5df; padding: 0; text-align: left; }
+        .grid-table th { background: #e9edf2; color: #374151; font-weight: 400; height: 22px; padding: 2px 8px; }
+        .grid-table input[type="text"], .grid-table select, .form-grid input[type="text"], .form-grid select {
+            width: 100%;
+            border: none;
+            padding: 4px 6px;
+            font-size: 0.88rem;
+            background: white;
+            height: 26px;
+        }
+        .form-grid {
+            display: grid;
+            grid-template-columns: 180px minmax(240px, 420px);
+            gap: 12px 14px;
+            align-items: center;
+        }
+        .check-grid { display: grid; gap: 10px; margin-top: 12px; }
+        .check-card {
+            border: 1px solid #dbe2ea;
+            background: #f8fafc;
+            padding: 12px 14px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        .mock-form, .mock-report {
+            border: 1px solid #cbd5e1;
+            background: #f8fafc;
+            padding: 18px;
+            margin-top: 18px;
+        }
+        .mock-form-title, .mock-report-title {
+            font-size: 1.1rem;
+            font-weight: 700;
+            color: #7d1f28;
+            margin-bottom: 14px;
+        }
+        .mock-fields { display: grid; gap: 10px; max-width: 420px; }
+        .mock-row { display: grid; grid-template-columns: 120px 1fr; gap: 10px; align-items: center; }
+        .mock-box { height: 32px; border: 1px solid #cbd5e1; background: white; }
+        .mock-report-band {
+            border: 1px dashed #cbd5e1;
+            padding: 12px;
+            margin-top: 10px;
+            background: white;
+        }
+        .footerbar {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 0 16px;
+            border-top: 1px solid #dbe2ea;
+            background: #f8fafc;
+        }
+        .footerbar .note { color: #64748b; font-size: 0.8rem; }
+        .actions { display: flex; gap: 10px; }
+        .btn {
+            border: 1px solid #cbd5e1;
+            background: white;
+            color: #334155;
+            padding: 10px 14px;
+            font-size: 0.84rem;
+            cursor: pointer;
+        }
+        .btn.primary {
+            background: #a4373a;
+            border-color: #a4373a;
+            color: white;
+            font-weight: 700;
+        }
+        .access-table-layout {
+            display: grid;
+            grid-template-columns: 210px 1fr;
+            min-height: calc(100vh - 96px - 28px - 46px);
+        }
+        .access-nav {
+            border-right: 1px solid #cfcfcf;
+            background: #f7f7f7;
+        }
+        .nav-head {
+            padding: 8px 10px 4px;
+            font-size: 0.82rem;
+            color: #a4373a;
+            border-bottom: 1px solid #d8d8d8;
+        }
+        .nav-section-title {
+            padding: 8px 10px 4px;
+            font-size: 0.75rem;
+            font-weight: 700;
+            color: #333;
+        }
+        .nav-item {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 4px 10px;
+            font-size: 0.8rem;
+            color: #333;
+        }
+        .nav-item.active {
+            background: #f3c7cb;
+            color: #7d1f28;
+        }
+        .nav-icon {
+            width: 14px;
+            height: 14px;
+            border: 1px solid #8ba7c6;
+            background: #dbeafe;
+        }
+        .access-table-work {
+            display: grid;
+            grid-template-rows: 1fr 138px;
+            min-width: 0;
+        }
+        .table-design-pane {
+            padding: 0;
+            background: #fff;
+        }
+        .table-name-bar {
+            display: none;
+        }
+        .design-grid-wrap {
+            padding: 0;
+        }
+        .row-marker {
+            width: 24px;
+            text-align: center;
+            background: #f6e585;
+            color: #444;
+            font-size: 0.74rem;
+        }
+        .grid-table .field-header {
+            background: #ffd95c;
+        }
+        .grid-table .field-cell input,
+        .grid-table .field-cell select {
+            background: #fff;
+        }
+        .properties-pane {
+            border-top: 1px solid #cfcfcf;
+            background: #fbfbfb;
+            display: grid;
+            grid-template-rows: 26px 1fr;
+        }
+        .properties-tabs {
+            display: flex;
+            align-items: end;
+            gap: 0;
+            padding-left: 12px;
+            border-bottom: 1px solid #d8d8d8;
+        }
+        .properties-tab {
+            font-size: 0.74rem;
+            padding: 5px 8px 4px;
+            border: 1px solid #cfcfcf;
+            border-bottom: none;
+            background: #ffffff;
+            margin-right: 3px;
+        }
+        .properties-grid {
+            padding: 6px 10px;
+        }
+        .properties-title {
+            text-align: center;
+            font-size: 0.75rem;
+            color: #666;
+            margin-bottom: 4px;
+        }
+        .properties-table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 0.78rem;
+        }
+        .properties-table td {
+            border: 1px solid #d6d6d6;
+            padding: 2px 6px;
+            height: 18px;
+        }
+        .properties-help {
+            position: absolute;
+            right: 12px;
+            bottom: 12px;
+            width: 180px;
+            font-size: 0.74rem;
+            color: #555;
+            text-align: center;
+            line-height: 1.35;
+        }
+        .access-form-layout {
+            display: grid;
+            grid-template-columns: 210px 1fr;
+            min-height: calc(100vh - 96px - 28px - 46px);
+        }
+        .access-form-work {
+            background: #ffffff;
+            position: relative;
+            overflow: auto;
+        }
+        .form-ruler {
+            height: 24px;
+            border-bottom: 1px solid #cfcfcf;
+            background:
+                repeating-linear-gradient(to right, #ffffff 0, #ffffff 37px, #e5e7eb 37px, #e5e7eb 38px);
+            display: flex;
+            align-items: end;
+            padding-left: 20px;
+            gap: 26px;
+            font-size: 0.68rem;
+            color: #444;
+        }
+        .form-design-surface {
+            display: grid;
+            grid-template-columns: 20px 1fr;
+            min-height: calc(100% - 24px);
+        }
+        .form-ruler-vertical {
+            background:
+                repeating-linear-gradient(to bottom, #ffffff 0, #ffffff 18px, #e5e7eb 18px, #e5e7eb 19px);
+            border-right: 1px solid #cfcfcf;
+            font-size: 0.66rem;
+            color: #444;
+            padding-top: 48px;
+            text-align: center;
+            line-height: 38px;
+        }
+        .form-grid-canvas {
+            position: relative;
+            min-height: 760px;
+            background:
+                repeating-linear-gradient(to right, #ffffff 0, #ffffff 37px, #d8dde6 37px, #d8dde6 38px),
+                repeating-linear-gradient(to bottom, rgba(0,0,0,0) 0, rgba(0,0,0,0) 19px, #d8dde6 19px, #d8dde6 20px);
+        }
+        .form-band {
+            position: relative;
+            border-bottom: 1px solid #8a8a8a;
+            background: rgba(255,255,255,0.95);
+        }
+        .form-band.header {
+            height: 86px;
+            background: #cfe0f5;
+        }
+        .form-band.detail {
+            min-height: 500px;
+        }
+        .band-label {
+            position: absolute;
+            left: 8px;
+            top: 3px;
+            font-size: 0.74rem;
+            color: #333;
+            background: rgba(255,255,255,0.9);
+            padding: 0 4px;
+        }
+        .form-title-box {
+            position: absolute;
+            left: 36px;
+            top: 14px;
+            width: 188px;
+            height: 48px;
+            border: 1px solid #7f9db9;
+            background: rgba(255,255,255,0.2);
+            font-size: 1.05rem;
+            padding: 10px 12px;
+            color: #111;
+        }
+        .form-control-row {
+            position: absolute;
+            left: 24px;
+            display: grid;
+            grid-template-columns: 168px 146px;
+            gap: 6px;
+            align-items: center;
+        }
+        .form-label-box,
+        .form-input-box,
+        .form-check-box {
+            height: 24px;
+            border: 1px solid #b8bcc2;
+            background: #ffffff;
+            display: flex;
+            align-items: center;
+            padding: 0 6px;
+            font-size: 0.82rem;
+            color: #111;
+        }
+        .form-check-box {
+            width: 24px;
+            justify-content: center;
+            padding: 0;
+            font-size: 0.9rem;
+        }
+        .form-input-box.short {
+            width: 122px;
+        }
+        .form-input-box.medium {
+            width: 162px;
+        }
+        .form-input-box.long {
+            width: 244px;
+        }
+        .ribbon-select {
+            width: 98px;
+            height: 24px;
+            border: 1px solid #cfcfcf;
+            background: white;
+            font-size: 0.8rem;
+            color: #333;
+            padding: 0 6px;
+        }
+        @media (max-width: 1100px) {
+            .main { grid-template-columns: 1fr; }
+        }
+    </style>
+</head>
+<body>
+{% set current_page = 'my_tasks' %}
+{% include '_slide_nav.html' %}
+
+<div class="topbar">
+    <h1>📚 Student Portal</h1>
+    <div class="topbar-links">
+        <a href="/student_dashboard">🏠 Dashboard</a>
+        <a href="/my_tasks">📁 Tasks</a>
+        <a href="/tests">📝 Tests</a>
+        <span class="topbar-user">👤 {{ learner_full_name }}</span>
+        <a href="/logout">Logout</a>
+    </div>
+</div>
+
+    <form method="post">
+        <div class="shell">
+            <div class="main">
+                <aside class="sidebar">
+                    <h2>Task Brief</h2>
+                    <div class="task-copy">
+                        {{ question_text | safe }}
+                        <ol>
+                            {% for criterion in simulator_definition.criteria %}
+                            <li>{{ criterion.label }}</li>
+                            {% endfor %}
+                        </ol>
+                    </div>
+                </aside>
+
+                <div class="workspace">
+                    <div class="access-window">
+                        <div class="access-ribbon">
+                            <div class="ribbon-tabs">
+                                <span class="ribbon-tab">File</span>
+                                <span class="ribbon-tab">Home</span>
+                                <span class="ribbon-tab">Create</span>
+                                <span class="ribbon-tab">External Data</span>
+                                <span class="ribbon-tab">Database Tools</span>
+                                <span class="ribbon-tab">Help</span>
+                                {% if mode == 'table' %}
+                                <span class="ribbon-tab active">Table Design</span>
+                                {% elif mode == 'form' %}
+                                <span class="ribbon-tab active">Form Design</span>
+                                <span class="ribbon-tab active" style="margin-left:4px;">Arrange</span>
+                                <span class="ribbon-tab active" style="margin-left:4px;">Format</span>
+                                {% elif mode == 'query' %}
+                                <span class="ribbon-tab active">Query Design</span>
+                                {% elif mode == 'report' %}
+                                <span class="ribbon-tab active">Report Design</span>
+                                {% endif %}
+                            </div>
+                            <div class="ribbon-groups">
+                                {% if mode == 'table' %}
+                                <div class="ribbon-group">
+                                    <div class="ribbon-icons">
+                                        <div class="ribbon-icon-card"><span class="ico">▦</span><span>View</span></div>
+                                    </div>
+                                    <div class="ribbon-group-title">Views</div>
+                                </div>
+                                <div class="ribbon-group">
+                                    <div class="ribbon-icons">
+                                        <div class="ribbon-icon-card"><span class="ico">🔑</span><span>Primary Key</span></div>
+                                        <div class="ribbon-icon-stack">
+                                            <span>✦ Builder</span>
+                                            <span>🧪 Test Validation Rules</span>
+                                        </div>
+                                    </div>
+                                    <div class="ribbon-group-title">Tools</div>
+                                </div>
+                                <div class="ribbon-group">
+                                    <div class="ribbon-icons">
+                                        <div class="ribbon-icon-stack">
+                                            <span>☰ Insert Rows</span>
+                                            <span>🗑 Delete Rows</span>
+                                            <span>🧾 Modify Lookups</span>
+                                        </div>
+                                    </div>
+                                    <div class="ribbon-group-title">Field Template</div>
+                                </div>
+                                <div class="ribbon-group">
+                                    <div class="ribbon-icons">
+                                        <div class="ribbon-icon-stack">
+                                            <span>▤ Property Sheet</span>
+                                            <span>⚡ Indexes</span>
+                                        </div>
+                                    </div>
+                                    <div class="ribbon-group-title">Show/Hide</div>
+                                </div>
+                                {% elif mode == 'form' %}
+                                <div class="ribbon-group">
+                                    <div class="ribbon-icons">
+                                        <select class="ribbon-select">
+                                            <option selected>Form</option>
+                                        </select>
+                                        <div class="ribbon-icon-stack">
+                                            <span>⇱ Select All</span>
+                                        </div>
+                                    </div>
+                                    <div class="ribbon-group-title">Selection</div>
+                                </div>
+                                <div class="ribbon-group">
+                                    <div class="ribbon-icons">
+                                        <div class="ribbon-icon-stack">
+                                            <span>B</span>
+                                            <span><em>I</em></span>
+                                            <span><u>U</u></span>
+                                            <span>A▁</span>
+                                        </div>
+                                    </div>
+                                    <div class="ribbon-group-title">Font</div>
+                                </div>
+                                <div class="ribbon-group">
+                                    <div class="ribbon-icons">
+                                        <div class="ribbon-icon-stack">
+                                            <span>◫ Background Image</span>
+                                            <span>▦ Alternate Row Color</span>
+                                        </div>
+                                    </div>
+                                    <div class="ribbon-group-title">Background</div>
+                                </div>
+                                <div class="ribbon-group">
+                                    <div class="ribbon-icons">
+                                        <div class="ribbon-icon-stack">
+                                            <span>◻ Quick Styles</span>
+                                            <span>◯ Change Shape</span>
+                                            <span>▥ Conditional Formatting</span>
+                                        </div>
+                                    </div>
+                                    <div class="ribbon-group-title">Control Formatting</div>
+                                </div>
+                                {% else %}
+                                <div class="ribbon-group">
+                                    <div class="ribbon-icons">
+                                        <div class="ribbon-icon-card"><span class="ico">▦</span><span>View</span></div>
+                                    </div>
+                                    <div class="ribbon-group-title">Views</div>
+                                </div>
+                                <div class="ribbon-group">
+                                    <div class="ribbon-icons">
+                                        <div class="ribbon-icon-stack">
+                                            <span>✎ Design Tools</span>
+                                            <span>☷ Layout</span>
+                                        </div>
+                                    </div>
+                                    <div class="ribbon-group-title">Tools</div>
+                                </div>
+                                {% endif %}
+                            </div>
+                        </div>
+                        <div class="object-tabs">
+                            <div class="object-tab"><span>▥</span><span>Client Details</span><span class="close">×</span></div>
+                            {% if mode == 'form' %}
+                            <div class="object-tab" style="background:#fefefe; font-weight:600;"><span>▤</span><span>Client Form</span><span class="close">×</span></div>
+                            {% endif %}
+                        </div>
+
+                        <div class="designer">
+                            {% set mode = simulator_definition.shell.simulator_type %}
+
+                            {% if mode == 'table' %}
+                            <div class="access-table-layout">
+                                <div class="access-nav">
+                                    <div class="nav-head">All Access Objects</div>
+                                    <div class="nav-section-title">Tables</div>
+                                    <div class="nav-item active"><span class="nav-icon"></span><span>Client Details</span></div>
+                                    <div class="nav-section-title">Forms</div>
+                                    <div class="nav-item"><span class="nav-icon"></span><span>Client Form</span></div>
+                                </div>
+                                <div class="access-table-work">
+                                    <div class="table-design-pane">
+                                        <input type="hidden" id="table_name" name="table_name" value="Learners">
+                                        <div class="design-grid-wrap">
+                                            <table class="grid-table">
+                                                <thead>
+                                                    <tr>
+                                                        <th style="width:24px;"></th>
+                                                        <th class="field-header" style="width:32%;">Field Name</th>
+                                                        <th style="width:20%;">Data Type</th>
+                                                        <th>Description (Optional)</th>
+                                                    </tr>
+                                                </thead>
+                                                <tbody>
+                                                    {% for idx in [1,2,3] %}
+                                                    <tr>
+                                                        <td class="row-marker">{% if idx == 1 %}▶{% endif %}</td>
+                                                        <td class="field-cell"><input type="text" id="field_name_{{ idx }}" name="field_name_{{ idx }}" value="{{ ['LearnerID','Surname','Grade'][idx-1] }}"></td>
+                                                        <td class="field-cell">
+                                                            <select id="field_type_{{ idx }}" name="field_type_{{ idx }}">
+                                                                <option {% if idx == 1 %}selected{% endif %}>AutoNumber</option>
+                                                                <option {% if idx == 2 %}selected{% endif %}>Short Text</option>
+                                                                <option {% if idx == 3 %}selected{% endif %}>Number</option>
+                                                            </select>
+                                                        </td>
+                                                        <td class="field-cell"><input type="text" value="{{ ['', 'Learner surname', 'Learner grade'][idx-1] }}"></td>
+                                                    </tr>
+                                                    {% endfor %}
+                                                    {% for idx in [4,5,6,7,8] %}
+                                                    <tr>
+                                                        <td class="row-marker"></td>
+                                                        <td class="field-cell"><input type="text" value=""></td>
+                                                        <td class="field-cell"><input type="text" value=""></td>
+                                                        <td class="field-cell"><input type="text" value=""></td>
+                                                    </tr>
+                                                    {% endfor %}
+                                                </tbody>
+                                            </table>
+                                        </div>
+                                    </div>
+                                    <div class="properties-pane" style="position:relative;">
+                                        <div class="properties-tabs">
+                                            <div class="properties-tab">General</div>
+                                            <div class="properties-tab">Lookup</div>
+                                        </div>
+                                        <div class="properties-grid">
+                                            <div class="properties-title">Field Properties</div>
+                                            <table class="properties-table">
+                                                <tr>
+                                                    <td style="width:140px;">Field Size</td>
+                                                    <td>
+                                                        <select id="field_size_active" style="width:180px; border:none; background:white; font-size:0.78rem;">
+                                                            <option>Long Integer</option>
+                                                            <option>Byte</option>
+                                                            <option>Integer</option>
+                                                        </select>
+                                                    </td>
+                                                </tr>
+                                                <tr><td>New Values</td><td>Increment</td></tr>
+                                                <tr><td>Format</td><td></td></tr>
+                                                <tr><td>Caption</td><td></td></tr>
+                                                <tr>
+                                                    <td>Indexed</td>
+                                                    <td>
+                                                        <label style="display:inline-flex; align-items:center; gap:6px;">
+                                                            <input type="radio" name="primary_key_field" value="1" checked>
+                                                            Yes (No Duplicates)
+                                                        </label>
+                                                    </td>
+                                                </tr>
+                                                <tr>
+                                                    <td>Required</td>
+                                                    <td>
+                                                        <label style="display:inline-flex; align-items:center; gap:6px;">
+                                                            <input type="checkbox" id="required_active">
+                                                            Yes
+                                                        </label>
+                                                    </td>
+                                                </tr>
+                                                <tr><td>Text Align</td><td>General</td></tr>
+                                            </table>
+                                            <div style="display:none;">
+                                                <input type="radio" name="primary_key_field" value="2">
+                                                <input type="radio" name="primary_key_field" value="3">
+                                                <input type="checkbox" id="required_1" name="required_1">
+                                                <input type="checkbox" id="required_2" name="required_2" checked>
+                                                <input type="checkbox" id="required_3" name="required_3">
+                                                <select id="field_size_1" name="field_size_1"><option selected>Long Integer</option><option>Byte</option><option>Integer</option></select>
+                                                <select id="field_size_2" name="field_size_2"><option selected></option><option>Byte</option><option>Integer</option></select>
+                                                <select id="field_size_3" name="field_size_3"><option>Long Integer</option><option selected>Byte</option><option>Integer</option></select>
+                                            </div>
+                                            <div class="properties-help">
+                                                A field name can be up to 64 characters long,<br>
+                                                including spaces. Press F1 for help on field names.
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            {% elif mode == 'query' %}
+                            <p class="caption">Query Design</p>
+                            <div class="form-grid">
+                                <label for="query_name">Query Name</label>
+                                <input type="text" id="query_name" name="query_name" value="Grade10Learners">
+                                <label for="source_table">Source Table</label>
+                                <select id="source_table" name="source_table">
+                                    <option selected>Learners</option>
+                                    <option>Classes</option>
+                                    <option>Marks</option>
+                                </select>
+                                <label>Display Fields</label>
+                                <div class="check-grid">
+                                    <label class="check-card"><input type="checkbox" name="query_fields" value="Surname" checked> Surname</label>
+                                    <label class="check-card"><input type="checkbox" name="query_fields" value="Grade" checked> Grade</label>
+                                    <label class="check-card"><input type="checkbox" name="query_fields" value="Name"> Name</label>
+                                </div>
+                                <label for="criteria_field">Criteria Field</label>
+                                <select id="criteria_field" name="criteria_field">
+                                    <option>Surname</option>
+                                    <option selected>Grade</option>
+                                    <option>Name</option>
+                                </select>
+                                <label for="criteria_value">Criteria Value</label>
+                                <input type="text" id="criteria_value" name="criteria_value" value="10">
+                                <label for="sort_field">Sort Field</label>
+                                <select id="sort_field" name="sort_field">
+                                    <option selected>Surname</option>
+                                    <option>Grade</option>
+                                </select>
+                                <label for="sort_order">Sort Order</label>
+                                <select id="sort_order" name="sort_order">
+                                    <option selected>Ascending</option>
+                                    <option>Descending</option>
+                                </select>
+                            </div>
+                            {% elif mode == 'form' %}
+                            <div class="access-form-layout">
+                                <div class="access-nav">
+                                    <div class="nav-head">All Access Objects</div>
+                                    <div class="nav-section-title">Tables</div>
+                                    <div class="nav-item"><span class="nav-icon"></span><span>Client Details</span></div>
+                                    <div class="nav-section-title">Forms</div>
+                                    <div class="nav-item active"><span class="nav-icon"></span><span>Client Form</span></div>
+                                </div>
+                                <div class="access-form-work">
+                                    <input type="hidden" id="form_name" name="form_name" value="frmLearners">
+                                    <input type="hidden" id="form_source" name="form_source" value="Learners">
+                                    <input type="hidden" id="form_title" name="form_title" value="Learner Details">
+                                    <input type="hidden" id="form_layout" name="form_layout" value="Stacked">
+                                    <input type="hidden" name="form_controls" value="Surname">
+                                    <input type="hidden" name="form_controls" value="Name">
+                                    <input type="hidden" name="form_controls" value="Grade">
+
+                                    <div class="form-ruler">
+                                        {% for i in range(1, 22) %}
+                                        <span>{{ i }}</span>
+                                        {% endfor %}
+                                    </div>
+                                    <div class="form-design-surface">
+                                        <div class="form-ruler-vertical">1<br>2<br>3<br>4<br>5<br>6<br>7<br>8</div>
+                                        <div class="form-grid-canvas">
+                                            <div class="form-band header">
+                                                <div class="band-label">Form Header</div>
+                                                <div class="form-title-box">Client Form</div>
+                                            </div>
+                                            <div class="form-band detail">
+                                                <div class="band-label">Detail</div>
+                                                <div class="form-control-row" style="top:22px;">
+                                                    <div class="form-label-box">Surname</div>
+                                                    <div class="form-input-box medium">Surname</div>
+                                                </div>
+                                                <div class="form-control-row" style="top:48px;">
+                                                    <div class="form-label-box">Name</div>
+                                                    <div class="form-input-box medium">Name</div>
+                                                </div>
+                                                <div class="form-control-row" style="top:74px;">
+                                                    <div class="form-label-box">Grade</div>
+                                                    <div class="form-input-box short">Grade</div>
+                                                </div>
+                                                <div class="form-control-row" style="top:100px;">
+                                                    <div class="form-label-box">Address</div>
+                                                    <div class="form-input-box long">Address</div>
+                                                </div>
+                                                <div class="form-control-row" style="top:126px;">
+                                                    <div class="form-label-box">Email</div>
+                                                    <div class="form-input-box long">Email</div>
+                                                </div>
+                                                <div class="form-control-row" style="top:152px;">
+                                                    <div class="form-label-box">Active</div>
+                                                    <div class="form-check-box">✓</div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            {% elif mode == 'report' %}
+                            <p class="caption">Report Design</p>
+                            <div class="form-grid">
+                                <label for="report_name">Report Name</label>
+                                <input type="text" id="report_name" name="report_name" value="rptLearnersByGrade">
+                                <label for="report_source">Record Source</label>
+                                <select id="report_source" name="report_source">
+                                    <option selected>Learners</option>
+                                    <option>Classes</option>
+                                </select>
+                                <label for="group_by">Group By</label>
+                                <select id="group_by" name="group_by">
+                                    <option selected>Grade</option>
+                                    <option>Surname</option>
+                                </select>
+                                <label for="footer_total">Footer Total</label>
+                                <select id="footer_total" name="footer_total">
+                                    <option selected>Record Count</option>
+                                    <option>Sum</option>
+                                </select>
+                                <label>Detail Fields</label>
+                                <div class="check-grid">
+                                    <label class="check-card"><input type="checkbox" name="report_fields" value="Surname" checked> Surname</label>
+                                    <label class="check-card"><input type="checkbox" name="report_fields" value="Grade" checked> Grade</label>
+                                    <label class="check-card"><input type="checkbox" name="report_fields" value="Name"> Name</label>
+                                </div>
+                            </div>
+                            <div class="mock-report">
+                                <div class="mock-report-title">Learners by Grade</div>
+                                <div class="mock-report-band"><strong>Group Header:</strong> Grade</div>
+                                <div class="mock-report-band"><strong>Detail:</strong> Surname | Grade</div>
+                                <div class="mock-report-band"><strong>Footer:</strong> Record Count</div>
+                            </div>
+                            {% endif %}
+                        </div>
+
+                        <div class="footerbar">
+                            <div class="note">Proof of concept: Access simulator inside the portal.</div>
+                            <div class="actions">
+                                <button type="submit" class="btn primary">Submit Access Task</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </form>
+    <script>
+        const tableRows = [1, 2, 3];
+        let activeFieldIndex = 1;
+
+        function syncFieldPropertiesPanel() {
+            const sizeSource = document.getElementById(`field_size_${activeFieldIndex}`);
+            const sizeActive = document.getElementById("field_size_active");
+            const requiredActive = document.getElementById("required_active");
+            const requiredSource = document.getElementById(`required_${activeFieldIndex}`);
+            if (sizeSource && sizeActive) sizeActive.value = sizeSource.value;
+            if (requiredSource && requiredActive) requiredActive.checked = requiredSource.checked;
+        }
+
+        function setActiveField(index) {
+            activeFieldIndex = index;
+            document.querySelectorAll(".row-marker").forEach(marker => marker.textContent = "");
+            const markers = document.querySelectorAll(".row-marker");
+            if (markers[index - 1]) markers[index - 1].textContent = "▶";
+            syncFieldPropertiesPanel();
+        }
+
+        tableRows.forEach(index => {
+            const fieldInput = document.getElementById(`field_name_${index}`);
+            const fieldType = document.getElementById(`field_type_${index}`);
+            if (fieldInput) fieldInput.addEventListener("focus", () => setActiveField(index));
+            if (fieldType) fieldType.addEventListener("focus", () => setActiveField(index));
+        });
+
+        const sizeActive = document.getElementById("field_size_active");
+        if (sizeActive) {
+            sizeActive.addEventListener("change", () => {
+                const target = document.getElementById(`field_size_${activeFieldIndex}`);
+                if (target) target.value = sizeActive.value;
+            });
+        }
+
+        const requiredActive = document.getElementById("required_active");
+        if (requiredActive) {
+            requiredActive.addEventListener("change", () => {
+                const target = document.getElementById(`required_${activeFieldIndex}`);
+                if (target) target.checked = requiredActive.checked;
+            });
+        }
+
+        setActiveField(1);
+    </script>
+</body>
+</html>

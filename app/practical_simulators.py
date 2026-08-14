@@ -3,6 +3,12 @@ import re
 
 WORD_INSERT_PICTURE_SIMULATOR_KEY = "word_insert_picture"
 HTML_BASIC_PAGE_SIMULATOR_KEY = "html_basic_page"
+EXCEL_DATA_FORMULA_SIMULATOR_KEY = "excel_data_formula"
+EXCEL_CHART_CAPTION_SIMULATOR_KEY = "excel_chart_caption"
+ACCESS_TABLE_SIMULATOR_KEY = "access_table_design"
+ACCESS_QUERY_SIMULATOR_KEY = "access_query_design"
+ACCESS_FORM_SIMULATOR_KEY = "access_form_design"
+ACCESS_REPORT_SIMULATOR_KEY = "access_report_design"
 
 
 def build_word_shell(task_title, active_tabs, active_controls, shell_mode="test", inactive_controls_style=None):
@@ -402,6 +408,26 @@ def build_html_shell(task_title, shell_mode="test"):
     }
 
 
+def build_access_shell(task_title, simulator_type, shell_mode="test"):
+    return {
+        "app": "access",
+        "mode": shell_mode,
+        "title": task_title,
+        "simulator_type": simulator_type,
+        "accent": "#a4373a",
+    }
+
+
+def build_excel_shell(task_title, simulator_type, shell_mode="test"):
+    return {
+        "app": "excel",
+        "mode": shell_mode,
+        "title": task_title,
+        "simulator_type": simulator_type,
+        "accent": "#217346",
+    }
+
+
 def get_simulator_catalog():
     return {
         WORD_INSERT_PICTURE_SIMULATOR_KEY: {
@@ -496,6 +522,135 @@ def get_simulator_catalog():
                 "</ol>"
             ),
         },
+        EXCEL_DATA_FORMULA_SIMULATOR_KEY: {
+            "title": "Excel: Data Entry and Formula",
+            "description": "Capture tabular data and create a formula using Excel-style autocomplete.",
+            "shell": build_excel_shell("School Fees Register", "sheet_formula", shell_mode="test"),
+            "criteria": [
+                {"key": "headers", "label": "Enter the three headers: Name, Grade, Total money paid to school"},
+                {"key": "ten_rows", "label": "Complete 10 rows of learner data"},
+                {"key": "numeric_totals", "label": "Enter numeric amounts in the total paid column"},
+                {"key": "selected_range", "label": "Select the amount cells before building the formula"},
+                {"key": "sum_formula", "label": "Create a SUM formula for the selected amount range"},
+            ],
+            "default_question_html": (
+                "<p><strong>Task:</strong> Complete the spreadsheet and calculate the total fees paid.</p>"
+                "<ol>"
+                "<li>Fill the first row with the headings <strong>Name</strong>, <strong>Grade</strong> and <strong>Total money paid to school</strong>.</li>"
+                "<li>Capture <strong>10 rows</strong> of learner data underneath the headings.</li>"
+                "<li>Select the payment cells in the third column.</li>"
+                "<li>In the total row, start the formula with <strong>=</strong>, choose a formula from the suggestions, and calculate the overall total.</li>"
+                "</ol>"
+            ),
+            "formula_suggestions": ["SUM", "AVERAGE", "MAX", "MIN", "COUNT", "IF"],
+        },
+        EXCEL_CHART_CAPTION_SIMULATOR_KEY: {
+            "title": "Excel: Insert Chart and Edit Caption",
+            "description": "Insert a chart from worksheet data and edit the chart caption.",
+            "shell": build_excel_shell("Learner Payments Chart", "chart_caption", shell_mode="test"),
+            "criteria": [
+                {"key": "selected_chart_range", "label": "Select the learner names and payment amounts"},
+                {"key": "chart_inserted", "label": "Insert a chart into the worksheet"},
+                {"key": "caption_updated", "label": "Edit the chart caption to School Fees by Learner"},
+            ],
+            "default_question_html": (
+                "<p><strong>Task:</strong> Insert a chart and update its caption.</p>"
+                "<ol>"
+                "<li>Select the learner names and payment amounts in the worksheet.</li>"
+                "<li>Insert a chart from the selected data.</li>"
+                "<li>Change the chart caption to <strong>School Fees by Learner</strong>.</li>"
+                "</ol>"
+            ),
+            "chart_rows": [
+                ("Aiden", 1250),
+                ("Bianca", 980),
+                ("Caleb", 1430),
+                ("Dineo", 1100),
+                ("Ethan", 1560),
+            ],
+        },
+        ACCESS_TABLE_SIMULATOR_KEY: {
+            "title": "Access: Create Table Design",
+            "description": "Create a table structure with correct field properties.",
+            "shell": build_access_shell("Learners Table", "table", shell_mode="test"),
+            "criteria": [
+                {"key": "table_name", "label": "Name the table Learners"},
+                {"key": "field_learnerid", "label": "Add LearnerID as AutoNumber primary key"},
+                {"key": "field_surname", "label": "Add Surname as Short Text and set Required to Yes"},
+                {"key": "field_grade", "label": "Add Grade as Number with field size Byte"},
+            ],
+            "default_question_html": (
+                "<p><strong>Task:</strong> Create a table called <strong>Learners</strong>.</p>"
+                "<ol>"
+                "<li>Add <strong>LearnerID</strong> as <strong>AutoNumber</strong> and make it the <strong>Primary Key</strong>.</li>"
+                "<li>Add <strong>Surname</strong> as <strong>Short Text</strong> and set <strong>Required</strong> to <strong>Yes</strong>.</li>"
+                "<li>Add <strong>Grade</strong> as <strong>Number</strong> with field size <strong>Byte</strong>.</li>"
+                "</ol>"
+            ),
+        },
+        ACCESS_QUERY_SIMULATOR_KEY: {
+            "title": "Access: Build Select Query",
+            "description": "Build a filtered and sorted select query.",
+            "shell": build_access_shell("Grade 10 Learners Query", "query", shell_mode="test"),
+            "criteria": [
+                {"key": "query_name", "label": "Name the query Grade10Learners"},
+                {"key": "source_table", "label": "Use Learners as the source table"},
+                {"key": "fields", "label": "Select Surname and Grade fields"},
+                {"key": "criteria", "label": "Filter records where Grade = 10"},
+                {"key": "sort", "label": "Sort Surname in ascending order"},
+            ],
+            "default_question_html": (
+                "<p><strong>Task:</strong> Create a select query called <strong>Grade10Learners</strong>.</p>"
+                "<ol>"
+                "<li>Use the <strong>Learners</strong> table.</li>"
+                "<li>Display only <strong>Surname</strong> and <strong>Grade</strong>.</li>"
+                "<li>Show only records where <strong>Grade = 10</strong>.</li>"
+                "<li>Sort <strong>Surname</strong> in <strong>Ascending</strong> order.</li>"
+                "</ol>"
+            ),
+        },
+        ACCESS_FORM_SIMULATOR_KEY: {
+            "title": "Access: Create Data Entry Form",
+            "description": "Build a simple bound form layout.",
+            "shell": build_access_shell("Learner Entry Form", "form", shell_mode="test"),
+            "criteria": [
+                {"key": "form_name", "label": "Name the form frmLearners"},
+                {"key": "record_source", "label": "Use Learners as the record source"},
+                {"key": "controls", "label": "Add controls for Surname, Name and Grade"},
+                {"key": "title", "label": "Set the form heading to Learner Details"},
+                {"key": "layout", "label": "Use a stacked layout"},
+            ],
+            "default_question_html": (
+                "<p><strong>Task:</strong> Create a form called <strong>frmLearners</strong>.</p>"
+                "<ol>"
+                "<li>Use the <strong>Learners</strong> table as the record source.</li>"
+                "<li>Add fields for <strong>Surname</strong>, <strong>Name</strong> and <strong>Grade</strong>.</li>"
+                "<li>Set the heading to <strong>Learner Details</strong>.</li>"
+                "<li>Use a <strong>Stacked</strong> layout.</li>"
+                "</ol>"
+            ),
+        },
+        ACCESS_REPORT_SIMULATOR_KEY: {
+            "title": "Access: Create Summary Report",
+            "description": "Build a grouped report layout with totals.",
+            "shell": build_access_shell("Learners by Grade Report", "report", shell_mode="test"),
+            "criteria": [
+                {"key": "report_name", "label": "Name the report rptLearnersByGrade"},
+                {"key": "record_source", "label": "Use Learners as the report source"},
+                {"key": "grouping", "label": "Group the report by Grade"},
+                {"key": "fields", "label": "Show Surname and Grade in the detail section"},
+                {"key": "total", "label": "Add a record count in the report footer"},
+            ],
+            "default_question_html": (
+                "<p><strong>Task:</strong> Create a report called <strong>rptLearnersByGrade</strong>.</p>"
+                "<ol>"
+                "<li>Use the <strong>Learners</strong> table as the source.</li>"
+                "<li>Group the report by <strong>Grade</strong>.</li>"
+                "<li>Show <strong>Surname</strong> and <strong>Grade</strong> in the detail section.</li>"
+                "<li>Add a <strong>record count</strong> in the footer.</li>"
+                "</ol>"
+            ),
+        },
     }
 
 
@@ -550,6 +705,119 @@ def score_simulator_attempt(simulator_key, form_data):
             "percentage": percentage,
             "results": results,
             "state": {"html_code": html_code},
+            "definition": definition,
+        }
+
+    if simulator_key == EXCEL_DATA_FORMULA_SIMULATOR_KEY:
+        headers = [
+            (form_data.get("cell_A1") or "").strip().lower(),
+            (form_data.get("cell_B1") or "").strip().lower(),
+            (form_data.get("cell_C1") or "").strip().lower(),
+        ]
+        rows = []
+        for row in range(2, 12):
+            rows.append(
+                {
+                    "name": (form_data.get(f"cell_A{row}") or "").strip(),
+                    "grade": (form_data.get(f"cell_B{row}") or "").strip(),
+                    "amount": (form_data.get(f"cell_C{row}") or "").strip(),
+                }
+            )
+        formula_text = (form_data.get("formula_input") or "").strip().upper().replace(" ", "")
+        selected_range = (form_data.get("selected_range") or "").strip().upper()
+        filled_rows = [row for row in rows if row["name"] and row["grade"] and row["amount"]]
+        numeric_amounts = all(row["amount"].replace(".", "", 1).isdigit() for row in filled_rows) and len(filled_rows) == 10
+        checks = [
+            ("headers", headers == ["name", "grade", "total money paid to school"]),
+            ("ten_rows", len(filled_rows) == 10),
+            ("numeric_totals", numeric_amounts),
+            ("selected_range", selected_range == "C2:C11"),
+            ("sum_formula", formula_text in {"=SUM(C2:C11)", "=SUM(C2:C11"} or formula_text.startswith("=SUM(")),
+        ]
+    elif simulator_key == EXCEL_CHART_CAPTION_SIMULATOR_KEY:
+        selected_range = (form_data.get("selected_chart_range") or "").strip().upper()
+        chart_inserted = (form_data.get("chart_inserted") or "").strip() == "1"
+        caption = (form_data.get("chart_caption") or "").strip().lower()
+        checks = [
+            ("selected_chart_range", selected_range == "A2:B6"),
+            ("chart_inserted", chart_inserted),
+            ("caption_updated", caption == "school fees by learner"),
+        ]
+    else:
+        checks = None
+
+    if checks is None and simulator_key == ACCESS_TABLE_SIMULATOR_KEY:
+        table_name = (form_data.get("table_name") or "").strip().lower()
+        fields = []
+        for idx in range(1, 4):
+            fields.append(
+                {
+                    "name": (form_data.get(f"field_name_{idx}") or "").strip().lower(),
+                    "type": (form_data.get(f"field_type_{idx}") or "").strip().lower(),
+                    "pk": form_data.get("primary_key_field") == str(idx),
+                    "required": form_data.get(f"required_{idx}") == "on",
+                    "size": (form_data.get(f"field_size_{idx}") or "").strip().lower(),
+                }
+            )
+        checks = [
+            ("table_name", table_name == "learners"),
+            ("field_learnerid", any(f["name"] == "learnerid" and f["type"] == "autonumber" and f["pk"] for f in fields)),
+            ("field_surname", any(f["name"] == "surname" and f["type"] == "short text" and f["required"] for f in fields)),
+            ("field_grade", any(f["name"] == "grade" and f["type"] == "number" and f["size"] == "byte" for f in fields)),
+        ]
+    elif simulator_key == ACCESS_QUERY_SIMULATOR_KEY:
+        selected_fields = {value.lower() for value in form_data.getlist("query_fields")}
+        checks = [
+            ("query_name", (form_data.get("query_name") or "").strip().lower() == "grade10learners"),
+            ("source_table", (form_data.get("source_table") or "").strip().lower() == "learners"),
+            ("fields", selected_fields == {"surname", "grade"}),
+            ("criteria", (form_data.get("criteria_field") or "").strip().lower() == "grade" and (form_data.get("criteria_value") or "").strip() == "10"),
+            ("sort", (form_data.get("sort_field") or "").strip().lower() == "surname" and (form_data.get("sort_order") or "").strip().lower() == "ascending"),
+        ]
+    elif simulator_key == ACCESS_FORM_SIMULATOR_KEY:
+        controls = {value.lower() for value in form_data.getlist("form_controls")}
+        checks = [
+            ("form_name", (form_data.get("form_name") or "").strip().lower() == "frmlearners"),
+            ("record_source", (form_data.get("form_source") or "").strip().lower() == "learners"),
+            ("controls", controls == {"surname", "name", "grade"}),
+            ("title", (form_data.get("form_title") or "").strip().lower() == "learner details"),
+            ("layout", (form_data.get("form_layout") or "").strip().lower() == "stacked"),
+        ]
+    elif simulator_key == ACCESS_REPORT_SIMULATOR_KEY:
+        detail_fields = {value.lower() for value in form_data.getlist("report_fields")}
+        checks = [
+            ("report_name", (form_data.get("report_name") or "").strip().lower() == "rptlearnersbygrade"),
+            ("record_source", (form_data.get("report_source") or "").strip().lower() == "learners"),
+            ("grouping", (form_data.get("group_by") or "").strip().lower() == "grade"),
+            ("fields", detail_fields == {"surname", "grade"}),
+            ("total", (form_data.get("footer_total") or "").strip().lower() == "record count"),
+        ]
+    elif checks is None:
+        checks = None
+
+    if checks is not None:
+        results = []
+        score = 0
+        for key, passed in checks:
+            criterion = next(item for item in definition["criteria"] if item["key"] == key)
+            if passed:
+                score += 1
+            results.append(
+                {
+                    "question": criterion["label"],
+                    "passed": passed,
+                    "marks_awarded": 1 if passed else 0,
+                    "marks_available": 1,
+                }
+            )
+        total = len(results)
+        percentage = round((score / total) * 100) if total else 0
+        return {
+            "score": score,
+            "total": total,
+            "percentage": percentage,
+            "results": results,
+            "state": dict(form_data),
             "definition": definition,
         }
 

@@ -1,0 +1,685 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Excel Simulator - {{ subject_name }} {{ task_name }}</title>
+    <style>
+        * { box-sizing: border-box; }
+        body { margin: 0; font-family: "Segoe UI", Arial, sans-serif; background: #eef3ef; color: #1f2937; }
+        .topbar { background: #0078D4; color: white; padding: 12px 24px; display: flex; justify-content: space-between; align-items: center; flex-wrap: nowrap; gap: 10px; position: sticky; top: 0; z-index: 999; }
+        .topbar h1 { margin: 0; font-size: 1.05em; white-space: nowrap; }
+        .topbar-links { display: flex; gap: 10px; align-items: center; flex-wrap: nowrap; }
+        .topbar-links a { color: white; text-decoration: none; font-size: 0.82em; opacity: 0.9; white-space: nowrap; }
+        .topbar-links a:hover { opacity: 1; text-decoration: underline; }
+        .topbar-user { color: white; font-size: 0.82em; white-space: nowrap; border-left: 1px solid rgba(255,255,255,0.35); padding-left: 10px; }
+
+        .workspace { min-height: calc(100vh - 56px); display: grid; grid-template-columns: 320px 1fr; }
+        .task-panel {
+            background: linear-gradient(180deg, #f7fbf7 0%, #eef6ee 100%);
+            border-right: 1px solid #d6e5d7;
+            padding: 18px;
+        }
+        .task-panel h2 { margin: 0 0 12px; font-size: 1rem; color: #217346; }
+        .task-panel .meta-chip {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            padding: 6px 10px;
+            border-radius: 999px;
+            background: #dff3e5;
+            color: #166534;
+            font-size: 0.75rem;
+            margin-bottom: 12px;
+        }
+        .task-panel .copy { font-size: 0.91rem; line-height: 1.6; color: #334155; }
+        .task-panel ol { padding-left: 18px; }
+        .excel-shell { display: grid; grid-template-rows: 30px 28px 90px 36px 1fr 28px; min-width: 0; background: #ffffff; border-left: 1px solid #d9e1d9; }
+        .excel-titlebar {
+            background: #ffffff;
+            color: #334155;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 0 10px 0 8px;
+            font-size: 0.8rem;
+            border-bottom: 1px solid #dfe6df;
+        }
+        .excel-titlebar .title-left,
+        .excel-titlebar .title-right { display: flex; align-items: center; gap: 10px; }
+        .excel-badge {
+            width: 18px;
+            height: 18px;
+            border-radius: 3px;
+            background: #217346;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 700;
+            color: white;
+            font-size: 0.68rem;
+        }
+        .excel-tabs {
+            display: flex;
+            align-items: end;
+            gap: 0;
+            padding-left: 6px;
+            background: #ffffff;
+            border-bottom: 1px solid #dfe6df;
+            color: #334155;
+            font-size: 0.82rem;
+        }
+        .excel-tab { padding: 5px 12px 4px; border-bottom: 2px solid transparent; }
+        .excel-tab.active { color: #217346; border-bottom-color: #217346; font-weight: 700; background: #f8fbf8; }
+        .formula-bar {
+            display: grid;
+            grid-template-columns: 76px 26px 26px 30px 1fr;
+            gap: 6px;
+            align-items: center;
+            padding: 4px 6px;
+            border-bottom: 1px solid #dfe6df;
+            background: #fbfcfb;
+        }
+        .name-box, .formula-input {
+            height: 24px;
+            border: 1px solid #cfd8cf;
+            background: white;
+            display: flex;
+            align-items: center;
+            padding: 0 8px;
+            font-size: 0.8rem;
+            color: #334155;
+        }
+        .formula-btn {
+            height: 24px;
+            border: 1px solid #cfd8cf;
+            background: linear-gradient(180deg, #ffffff 0%, #f4f6f4 100%);
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            color: #9aa5b1;
+            font-size: 0.78rem;
+        }
+        .fx-badge {
+            height: 24px;
+            border: 1px solid #cfd8cf;
+            background: #f4f7f4;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            color: #6b7280;
+            font-style: italic;
+            font-weight: 600;
+            font-size: 0.8rem;
+        }
+        .formula-wrap { position: relative; }
+        .formula-field {
+            width: 100%;
+            height: 24px;
+            border: 1px solid #cfd8cf;
+            background: white;
+            padding: 0 8px;
+            font-size: 0.8rem;
+            color: #111827;
+        }
+        .formula-suggestions {
+            position: absolute;
+            top: calc(100% + 2px);
+            left: 0;
+            width: 240px;
+            background: white;
+            border: 1px solid #cfd8cf;
+            box-shadow: 0 14px 28px rgba(15, 23, 42, 0.14);
+            display: none;
+            z-index: 20;
+        }
+        .formula-suggestions.open { display: block; }
+        .formula-suggestion {
+            padding: 8px 10px;
+            font-size: 0.82rem;
+            color: #334155;
+            cursor: pointer;
+            border-bottom: 1px solid #edf2ed;
+        }
+        .formula-suggestion:last-child { border-bottom: none; }
+        .formula-suggestion:hover { background: #eaf6ed; color: #166534; }
+        .excel-ribbon {
+            display: flex;
+            align-items: stretch;
+            gap: 0;
+            padding: 6px 6px 2px;
+            background: linear-gradient(180deg, #ffffff 0%, #f7f8f7 100%);
+            border-bottom: 1px solid #dfe6df;
+        }
+        .ribbon-group {
+            min-width: 118px;
+            padding: 0 10px 14px;
+            border-right: 1px solid #dde5dd;
+            position: relative;
+        }
+        .ribbon-group-title {
+            position: absolute;
+            left: 6px;
+            right: 6px;
+            bottom: 0;
+            text-align: center;
+            font-size: 0.66rem;
+            color: #64748b;
+        }
+        .ribbon-stack { display: grid; gap: 4px; font-size: 0.76rem; color: #334155; }
+        .ribbon-stack span { white-space: nowrap; }
+        .ribbon-inline { display: flex; align-items: flex-start; gap: 8px; }
+        .ribbon-big {
+            width: 44px;
+            min-height: 50px;
+            border: 1px solid #d3dbd3;
+            background: linear-gradient(180deg, #ffffff 0%, #f2f4f2 100%);
+            display: inline-flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            gap: 4px;
+            font-size: 0.74rem;
+            color: #374151;
+            text-align: center;
+            padding: 4px 2px;
+        }
+        .ribbon-big .ico { font-size: 1.18rem; line-height: 1; }
+        .ribbon-grid-three { display: grid; grid-template-columns: repeat(3, minmax(24px, auto)); gap: 4px 10px; align-content: start; }
+        .ribbon-mini { display: inline-flex; align-items: center; gap: 4px; white-space: nowrap; }
+        .ribbon-dropdown {
+            height: 24px;
+            border: 1px solid #cfd8cf;
+            background: white;
+            padding: 0 20px 0 8px;
+            font-size: 0.78rem;
+            color: #334155;
+            position: relative;
+            display: inline-flex;
+            align-items: center;
+        }
+        .ribbon-dropdown::after {
+            content: "▼";
+            position: absolute;
+            right: 6px;
+            top: 50%;
+            transform: translateY(-50%);
+            font-size: 0.55rem;
+            color: #64748b;
+        }
+        .grid-area { overflow: auto; background: white; }
+        .sheet {
+            width: 100%;
+            border-collapse: collapse;
+            table-layout: fixed;
+            font-size: 0.82rem;
+        }
+        .sheet th, .sheet td {
+            border: 1px solid #d9dde3;
+            height: 20px;
+            padding: 0;
+            position: relative;
+        }
+        .sheet th {
+            background: #f3f3f3;
+            color: #475569;
+            font-weight: 400;
+            text-align: center;
+        }
+        .row-head { width: 24px; background: #f3f3f3; text-align: center; color: #475569; font-size: 0.76rem; }
+        .cell-input {
+            width: 100%;
+            height: 100%;
+            border: none;
+            padding: 0 6px;
+            font-size: 0.8rem;
+            color: #111827;
+            background: transparent;
+        }
+        .cell-input:focus {
+            outline: 2px solid #217346;
+            outline-offset: -2px;
+            background: #f4fbf5;
+        }
+        .selected-cell {
+            outline: 2px solid #217346;
+            outline-offset: -2px;
+            background: #eff8f1;
+        }
+        .chart-preview-wrap {
+            margin: 18px 12px 0;
+            border: 1px solid #cfd8cf;
+            background: #fafdfa;
+            padding: 16px;
+            display: none;
+        }
+        .chart-preview-wrap.visible { display: block; }
+        .chart-caption {
+            width: 320px;
+            max-width: 100%;
+            border: 1px solid #cfd8cf;
+            padding: 7px 8px;
+            font-size: 0.9rem;
+            margin-bottom: 14px;
+        }
+        .chart-bars {
+            display: flex;
+            align-items: end;
+            gap: 18px;
+            height: 220px;
+            padding: 0 8px;
+            border-left: 1px solid #cfd8cf;
+            border-bottom: 1px solid #cfd8cf;
+        }
+        .chart-bar-item { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: end; gap: 8px; }
+        .chart-bar {
+            width: 44px;
+            background: linear-gradient(180deg, #5db27b 0%, #217346 100%);
+            border: 1px solid #1b603a;
+        }
+        .chart-label { font-size: 0.74rem; color: #334155; text-align: center; }
+        .statusbar {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 0 6px;
+            border-top: 1px solid #d9e1d9;
+            background: #f1f1f1;
+            color: #64748b;
+            font-size: 0.76rem;
+        }
+        .sheet-tabs { display: flex; align-items: center; gap: 2px; }
+        .sheet-nav { color: #9aa5b1; padding: 0 6px; }
+        .sheet-tab {
+            min-width: 80px;
+            height: 100%;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            border-right: 1px solid #d6d6d6;
+            border-left: 1px solid #d6d6d6;
+            background: #f5f5f5;
+            color: #475569;
+            font-size: 0.8rem;
+        }
+        .sheet-tab.active {
+            background: #ffffff;
+            color: #217346;
+            font-weight: 700;
+            border-bottom: 2px solid #217346;
+        }
+        .status-controls { display: flex; align-items: center; gap: 10px; }
+        .toolbar-actions { display: flex; gap: 10px; }
+        .btn {
+            border: 1px solid #cfd8cf;
+            background: white;
+            color: #334155;
+            padding: 6px 12px;
+            font-size: 0.8rem;
+            cursor: pointer;
+            border-radius: 4px;
+        }
+        .btn.primary {
+            background: #217346;
+            border-color: #217346;
+            color: white;
+            font-weight: 700;
+        }
+        @media (max-width: 1200px) {
+            .workspace { grid-template-columns: 1fr; }
+            .task-panel { border-right: none; border-bottom: 1px solid #d6e5d7; }
+        }
+    </style>
+</head>
+<body>
+{% set current_page = 'my_tasks' %}
+{% include '_slide_nav.html' %}
+
+<div class="topbar">
+    <h1>📚 Student Portal</h1>
+    <div class="topbar-links">
+        <a href="/student_dashboard">🏠 Dashboard</a>
+        <a href="/my_tasks">📁 Tasks</a>
+        <a href="/tests">📝 Tests</a>
+        <span class="topbar-user">👤 {{ learner_full_name }}</span>
+        <a href="/logout">Logout</a>
+    </div>
+</div>
+
+<form method="post">
+    <input type="hidden" name="selected_range" id="selected_range" value="">
+    <input type="hidden" name="selected_chart_range" id="selected_chart_range" value="">
+    <input type="hidden" name="chart_inserted" id="chart_inserted" value="0">
+    <div class="workspace">
+        <aside class="task-panel">
+            <h2>Task Brief</h2>
+            <div class="meta-chip">Excel Simulator</div>
+            <div class="copy">
+                {{ question_text | safe }}
+                <ol>
+                    {% for criterion in simulator_definition.criteria %}
+                    <li>{{ criterion.label }}</li>
+                    {% endfor %}
+                </ol>
+            </div>
+        </aside>
+
+        <section class="excel-shell">
+            <div class="excel-titlebar">
+                <div class="title-left">
+                    <span class="excel-badge">X</span>
+                    <span>AutoSave Off</span>
+                    <span>{{ task_name }}</span>
+                </div>
+                <div class="title-right">
+                    <span>{{ learner_full_name }}</span>
+                    <span class="btn" style="padding:4px 10px; font-size:0.76rem;">Share</span>
+                </div>
+            </div>
+
+            <div class="excel-tabs">
+                <span class="excel-tab">File</span>
+                <span class="excel-tab active">Home</span>
+                <span class="excel-tab">Insert</span>
+                <span class="excel-tab">Page Layout</span>
+                <span class="excel-tab">Formulas</span>
+                <span class="excel-tab">Data</span>
+            </div>
+
+            <div class="formula-bar">
+                <div class="name-box" id="name_box">A1</div>
+                <div class="formula-btn">✕</div>
+                <div class="formula-btn">✓</div>
+                <div class="fx-badge">fx</div>
+                <div class="formula-wrap">
+                    <input type="text" id="formula_input" name="formula_input" class="formula-field" placeholder="Enter a formula">
+                    <div class="formula-suggestions" id="formula_suggestions">
+                        {% for formula_name in simulator_definition.formula_suggestions or [] %}
+                        <div class="formula-suggestion" data-formula="{{ formula_name }}">{{ formula_name }}</div>
+                        {% endfor %}
+                    </div>
+                </div>
+            </div>
+
+            <div class="excel-ribbon">
+                <div class="ribbon-group">
+                    <div class="ribbon-inline">
+                        <div class="ribbon-big"><span class="ico">📋</span><span>Paste</span></div>
+                        <div class="ribbon-stack">
+                            <span>✂ Cut</span>
+                            <span>⧉ Copy</span>
+                            <span>🖌 Painter</span>
+                        </div>
+                    </div>
+                    <div class="ribbon-group-title">Clipboard</div>
+                </div>
+                <div class="ribbon-group">
+                    <div class="ribbon-stack">
+                        <div class="ribbon-inline">
+                            <span class="ribbon-dropdown" style="width:86px;">Calibri</span>
+                            <span class="ribbon-dropdown" style="width:42px;">11</span>
+                        </div>
+                        <div class="ribbon-grid-three">
+                            <span class="ribbon-mini">B</span>
+                            <span class="ribbon-mini"><em>I</em></span>
+                            <span class="ribbon-mini"><u>U</u></span>
+                            <span class="ribbon-mini">▦</span>
+                            <span class="ribbon-mini">🖍</span>
+                            <span class="ribbon-mini">A▁</span>
+                        </div>
+                    </div>
+                    <div class="ribbon-group-title">Font</div>
+                </div>
+                <div class="ribbon-group">
+                    <div class="ribbon-stack">
+                        <div class="ribbon-grid-three">
+                            <span class="ribbon-mini">☰</span>
+                            <span class="ribbon-mini">≡</span>
+                            <span class="ribbon-mini">☷</span>
+                            <span class="ribbon-mini">ab↩</span>
+                            <span class="ribbon-mini">↔</span>
+                            <span class="ribbon-mini">↕</span>
+                        </div>
+                        <div class="ribbon-inline">
+                            <span class="ribbon-mini">☑ Wrap Text</span>
+                            <span class="ribbon-mini">⊞ Merge &amp; Center</span>
+                        </div>
+                    </div>
+                    <div class="ribbon-group-title">Alignment</div>
+                </div>
+                <div class="ribbon-group">
+                    <div class="ribbon-stack">
+                        <span class="ribbon-dropdown" style="width:148px;">General</span>
+                        <div class="ribbon-grid-three">
+                            <span class="ribbon-mini">¤</span>
+                            <span class="ribbon-mini">%</span>
+                            <span class="ribbon-mini">,</span>
+                            <span class="ribbon-mini">.0</span>
+                            <span class="ribbon-mini">.00</span>
+                            <span class="ribbon-mini">↘</span>
+                        </div>
+                    </div>
+                    <div class="ribbon-group-title">Number</div>
+                </div>
+                <div class="ribbon-group">
+                    <div class="ribbon-stack">
+                        <span>▦ Conditional Formatting</span>
+                        <span>🖌 Format as Table</span>
+                        <span>▤ Cell Styles</span>
+                    </div>
+                    <div class="ribbon-group-title">Styles</div>
+                </div>
+                <div class="ribbon-group">
+                    <div class="ribbon-stack">
+                        <span id="insert_chart_action">📊 Insert Chart</span>
+                        <span>⊟ Delete</span>
+                        <span>▣ Format</span>
+                    </div>
+                    <div class="ribbon-group-title">Cells</div>
+                </div>
+                <div class="ribbon-group">
+                    <div class="ribbon-stack">
+                        <span>⇅ Sort &amp; Filter</span>
+                        <span>⌕ Find &amp; Select</span>
+                        <span>📄 Create a PDF</span>
+                    </div>
+                    <div class="ribbon-group-title">Editing</div>
+                </div>
+            </div>
+
+            <div class="grid-area">
+                {% set mode = simulator_definition.shell.simulator_type %}
+                {% if mode == 'sheet_formula' %}
+                <table class="sheet" id="sheet_formula">
+                    <thead>
+                        <tr>
+                            <th class="row-head"></th>
+                            <th>A</th>
+                            <th>B</th>
+                            <th>C</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for row in range(1, 13) %}
+                        <tr>
+                            <td class="row-head">{{ row }}</td>
+                            {% for col in ['A', 'B', 'C'] %}
+                            <td data-cell="{{ col }}{{ row }}">
+                                <input
+                                    type="text"
+                                    class="cell-input"
+                                    id="cell_{{ col }}{{ row }}"
+                                    name="cell_{{ col }}{{ row }}"
+                                    value="{% if row == 1 and col == 'A' %}Name{% elif row == 1 and col == 'B' %}Grade{% elif row == 1 and col == 'C' %}Total money paid to school{% endif %}"
+                                >
+                            </td>
+                            {% endfor %}
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+                {% elif mode == 'chart_caption' %}
+                <table class="sheet" id="sheet_chart">
+                    <thead>
+                        <tr>
+                            <th class="row-head"></th>
+                            <th>A</th>
+                            <th>B</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td class="row-head">1</td>
+                            <td><input type="text" class="cell-input" value="Learner" readonly></td>
+                            <td><input type="text" class="cell-input" value="Amount Paid" readonly></td>
+                        </tr>
+                        {% for row in simulator_definition.chart_rows %}
+                        <tr>
+                            <td class="row-head">{{ loop.index + 1 }}</td>
+                            <td data-cell="A{{ loop.index + 1 }}"><input type="text" class="cell-input" value="{{ row[0] }}" readonly></td>
+                            <td data-cell="B{{ loop.index + 1 }}"><input type="text" class="cell-input" value="{{ row[1] }}" readonly></td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+
+                <div class="chart-preview-wrap" id="chart_preview_wrap">
+                    <input type="text" id="chart_caption" name="chart_caption" class="chart-caption" value="Chart Title">
+                    <div class="chart-bars">
+                        {% for row in simulator_definition.chart_rows %}
+                        <div class="chart-bar-item">
+                            <div class="chart-bar" style="height: {{ (row[1] / 8)|int }}px;"></div>
+                            <div class="chart-label">{{ row[0] }}</div>
+                        </div>
+                        {% endfor %}
+                    </div>
+                </div>
+                {% endif %}
+            </div>
+
+            <div class="statusbar">
+                <div class="sheet-tabs">
+                    <span class="sheet-nav">◀</span>
+                    <span class="sheet-nav">▶</span>
+                    <span class="sheet-tab">Summary</span>
+                    <span class="sheet-tab active">Sheet1</span>
+                    <span class="sheet-nav">＋</span>
+                </div>
+                <div class="status-controls">
+                    <span>{% if mode == 'sheet_formula' %}Ready{% else %}Chart Mode{% endif %}</span>
+                    <div class="toolbar-actions">
+                    {% if mode == 'chart_caption' %}
+                    <button type="button" class="btn" id="insert_chart_btn">Insert Chart</button>
+                    {% endif %}
+                    <button type="submit" class="btn primary">Submit Excel Task</button>
+                    </div>
+                </div>
+            </div>
+        </section>
+    </div>
+</form>
+
+<script>
+    const mode = {{ simulator_definition.shell.simulator_type | tojson }};
+    const formulaSuggestions = {{ (simulator_definition.formula_suggestions or []) | tojson }};
+    const formulaInput = document.getElementById("formula_input");
+    const suggestionBox = document.getElementById("formula_suggestions");
+    const selectedRangeInput = document.getElementById("selected_range");
+    const selectedChartRangeInput = document.getElementById("selected_chart_range");
+    const chartInsertedInput = document.getElementById("chart_inserted");
+    const nameBox = document.getElementById("name_box");
+    let selectedCells = [];
+
+    document.querySelector('[data-cell="A1"]')?.classList.add("selected-cell");
+
+    function updateFormulaSuggestions() {
+        if (!formulaInput || !suggestionBox) return;
+        const raw = formulaInput.value || "";
+        if (!raw.startsWith("=")) {
+            suggestionBox.classList.remove("open");
+            return;
+        }
+        const term = raw.slice(1).toUpperCase();
+        const filtered = formulaSuggestions.filter(item => item.startsWith(term));
+        suggestionBox.innerHTML = filtered.map(item => `<div class="formula-suggestion" data-formula="${item}">${item}</div>`).join("");
+        suggestionBox.classList.toggle("open", filtered.length > 0);
+        suggestionBox.querySelectorAll(".formula-suggestion").forEach(item => {
+            item.addEventListener("dblclick", () => {
+                formulaInput.value = "=" + item.dataset.formula + "(";
+                suggestionBox.classList.remove("open");
+                formulaInput.focus();
+            });
+        });
+    }
+
+    function clearSelection() {
+        document.querySelectorAll(".selected-cell").forEach(cell => cell.classList.remove("selected-cell"));
+        selectedCells = [];
+    }
+
+    function applySelection(rangeString, targetInput) {
+        targetInput.value = rangeString;
+    }
+
+    if (mode === "sheet_formula") {
+        document.querySelectorAll("#sheet_formula td[data-cell]").forEach(cell => {
+            cell.addEventListener("click", () => {
+                const cellRef = cell.dataset.cell;
+                nameBox.textContent = cellRef;
+            });
+        });
+
+        const rangeStart = "C2";
+        const rangeEnd = "C11";
+        document.querySelectorAll("#sheet_formula td[data-cell]").forEach(cell => {
+            if (/^C([2-9]|10|11)$/.test(cell.dataset.cell)) {
+                cell.addEventListener("dblclick", () => {
+                    clearSelection();
+                    document.querySelectorAll("#sheet_formula td[data-cell]").forEach(candidate => {
+                        if (/^C([2-9]|10|11)$/.test(candidate.dataset.cell)) {
+                            candidate.classList.add("selected-cell");
+                            selectedCells.push(candidate.dataset.cell);
+                        }
+                    });
+                    applySelection(`${rangeStart}:${rangeEnd}`, selectedRangeInput);
+                    nameBox.textContent = `${rangeStart}:${rangeEnd}`;
+                });
+            }
+        });
+    }
+
+    if (mode === "chart_caption") {
+        document.querySelectorAll("#sheet_chart td[data-cell]").forEach(cell => {
+            if (/^[AB][2-6]$/.test(cell.dataset.cell)) {
+                cell.addEventListener("dblclick", () => {
+                    clearSelection();
+                    document.querySelectorAll("#sheet_chart td[data-cell]").forEach(candidate => {
+                        if (/^[AB][2-6]$/.test(candidate.dataset.cell)) {
+                            candidate.classList.add("selected-cell");
+                        }
+                    });
+                    applySelection("A2:B6", selectedChartRangeInput);
+                    nameBox.textContent = "A2:B6";
+                });
+            }
+        });
+
+        const insertChart = () => {
+            if (selectedChartRangeInput.value === "A2:B6") {
+                document.getElementById("chart_preview_wrap").classList.add("visible");
+                chartInsertedInput.value = "1";
+            }
+        };
+
+        document.getElementById("insert_chart_btn")?.addEventListener("click", insertChart);
+        document.getElementById("insert_chart_action")?.addEventListener("dblclick", insertChart);
+    }
+
+    formulaInput?.addEventListener("input", updateFormulaSuggestions);
+    document.addEventListener("click", (event) => {
+        if (suggestionBox && !suggestionBox.contains(event.target) && event.target !== formulaInput) {
+            suggestionBox.classList.remove("open");
+        }
+    });
+</script>
+</body>
+</html>

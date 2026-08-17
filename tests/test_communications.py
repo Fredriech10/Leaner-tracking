@@ -1,16 +1,30 @@
 import os
+import shutil
 import tempfile
 import unittest
+import importlib.util
 
-import app as app_module
+
+def load_entry_app():
+    spec = importlib.util.spec_from_file_location(
+        "learner_tracking_entry_app",
+        os.path.join(os.path.dirname(__file__), "..", "app.py"),
+    )
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    return module
+
+
+app_module = load_entry_app()
+database_module = importlib.import_module("app.database")
 
 
 class CommunicationsRouteTests(unittest.TestCase):
     def setUp(self):
-        self.temp_db = tempfile.NamedTemporaryFile(suffix=".db", delete=False)
-        self.temp_db.close()
-        self.original_db_name = app_module.DB_NAME
-        app_module.DB_NAME = self.temp_db.name
+        self.temp_dir = tempfile.mkdtemp(prefix="learner-tracking-test-")
+        self.temp_db_path = os.path.join(self.temp_dir, "test_school.db")
+        self.original_db_name = database_module.DB_NAME
+        database_module.DB_NAME = self.temp_db_path
         app_module.init_db()
 
         self.client = app_module.app.test_client()
@@ -31,15 +45,42 @@ class CommunicationsRouteTests(unittest.TestCase):
         conn.close()
 
     def tearDown(self):
-        app_module.DB_NAME = self.original_db_name
-        if os.path.exists(self.temp_db.name):
-            os.remove(self.temp_db.name)
+        database_module.DB_NAME = self.original_db_name
+        shutil.rmtree(self.temp_dir, ignore_errors=True)
 
     def test_reply_creates_thread_and_message(self):
+        conn = app_module.get_db()
+        cursor = conn.cursor()
+        cursor.execute(
+            """
+            INSERT INTO communication_threads (
+                student_username, teacher_username, group_name, topic, subject_line,
+                attendance_date, theory_test_id, status, chat_session_id, created_at, updated_at
+            )
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            """,
+            (
+                "student1",
+                "teacher1",
+                "Grade 10",
+                "chat",
+                "Chat",
+                "",
+                None,
+                "open",
+                "session-1",
+                "2026-08-17T09:00:00",
+                "2026-08-17T09:00:00",
+            ),
+        )
+        thread_id = cursor.lastrowid
+        conn.commit()
+        conn.close()
+
         response = self.client.post(
             "/communications/reply",
             data={
-                "student_username": "student1",
+                "thread_id": thread_id,
                 "message": "Please review my marks",
             },
             follow_redirects=False,

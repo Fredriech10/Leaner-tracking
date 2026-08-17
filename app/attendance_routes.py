@@ -2,6 +2,7 @@ from datetime import datetime, timedelta
 
 import pandas as pd
 from flask import flash, jsonify, redirect, render_template, request, send_file, session, url_for
+from openpyxl.styles import Alignment, Font, PatternFill
 
 from app.database import get_db, get_grades, get_groups, get_user_role, log_activity
 from app.helper_attendance import (
@@ -18,6 +19,43 @@ from app.helper_theory import clone_bank_question_to_test, merge_bank_match_rows
 
 
 def register_attendance_routes(app):
+    def format_export_day_label(day):
+        return datetime.strptime(day, "%Y-%m-%d").strftime("%m/%d")
+
+    def style_attendance_sheet(worksheet):
+        header_fill = PatternFill(fill_type="solid", fgColor="D9EAF7")
+        present_fill = PatternFill(fill_type="solid", fgColor="C6EFCE")
+        absent_fill = PatternFill(fill_type="solid", fgColor="FFC7CE")
+        late_fill = PatternFill(fill_type="solid", fgColor="FCE4D6")
+        center_alignment = Alignment(horizontal="center", vertical="center")
+
+        for cell in worksheet[1]:
+            cell.font = Font(bold=True)
+            cell.fill = header_fill
+            cell.alignment = center_alignment
+
+        worksheet.freeze_panes = "F2"
+
+        for row in worksheet.iter_rows(min_row=2):
+            for index, cell in enumerate(row, start=1):
+                cell.alignment = center_alignment if index >= 4 else Alignment(vertical="center")
+                if index == 1:
+                    worksheet.column_dimensions[cell.column_letter].width = 18
+                elif index == 2:
+                    worksheet.column_dimensions[cell.column_letter].width = 24
+                elif index == 3:
+                    worksheet.column_dimensions[cell.column_letter].width = 14
+                elif index == 4:
+                    worksheet.column_dimensions[cell.column_letter].width = 14
+                else:
+                    worksheet.column_dimensions[cell.column_letter].width = 12
+                    if cell.value == "P":
+                        cell.fill = present_fill
+                    elif cell.value == "A":
+                        cell.fill = absent_fill
+                    elif cell.value == "L":
+                        cell.fill = late_fill
+
     @app.route("/term_dates", methods=["GET", "POST"])
     def term_dates():
         username = session.get("username")
@@ -331,19 +369,22 @@ def register_attendance_routes(app):
                 "Username": row["username"],
                 "Name": row["name"],
                 "Group": row["group"],
-                "Attendance %": row["attendance_pct"],
+                "Total Days Absent": row["absent_days"],
+                "Total Days Late": row["late_days"],
             }
             for day in days:
                 val = row["days"].get(day)
                 if not val:
-                    base[day] = "A"
+                    base[format_export_day_label(day)] = "A"
                 else:
-                    base[day] = "L" if val.get("late") else "P"
+                    base[format_export_day_label(day)] = "L" if val.get("late") else "P"
             rows.append(base)
 
         df = pd.DataFrame(rows)
         file_path = "attendance_export.xlsx"
-        df.to_excel(file_path, index=False)
+        with pd.ExcelWriter(file_path, engine="openpyxl") as writer:
+            df.to_excel(writer, sheet_name="Attendance", index=False)
+            style_attendance_sheet(writer.sheets["Attendance"])
         log_activity(username, "exported attendance")
         conn.close()
         return send_file(file_path, as_attachment=True)
@@ -377,6 +418,8 @@ def register_attendance_routes(app):
 
         if not start_date or not end_date:
             return "Date range is required", 400
+        if start_date > end_date:
+            return "Start date must be before end date", 400
 
         conn = get_db()
         file_path = "multi_group_attendance_export.xlsx"
@@ -389,25 +432,27 @@ def register_attendance_routes(app):
                     end_date,
                     teacher_username=username if role == "teacher" else None,
                 )
-                filtered_days = [day for day in days if start_date <= day <= end_date]
+                attendance_days = set(days)
                 rows = []
                 for row in data:
                     base = {
                         "Username": row["username"],
                         "Name": row["name"],
                         "Group": row["group"],
-                        "Attendance %": row["attendance_pct"],
+                        "Total Days Absent": row["absent_days"],
+                        "Total Days Late": row["late_days"],
                     }
-                    for day in filtered_days:
+                    for day in days:
                         val = row["days"].get(day)
                         if not val:
-                            base[day] = "A"
+                            base[format_export_day_label(day)] = "A"
                         else:
-                            base[day] = "L" if val.get("late") else "P"
+                            base[format_export_day_label(day)] = "L" if val.get("late") else "P"
                     rows.append(base)
                 df = pd.DataFrame(rows)
                 sheet_name = group.replace("/", "_").replace("\\", "_")[:31]
                 df.to_excel(writer, sheet_name=sheet_name, index=False)
+                style_attendance_sheet(writer.sheets[sheet_name])
 
         log_activity(username, "exported attendance by group")
         conn.close()

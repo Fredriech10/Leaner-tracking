@@ -79,7 +79,7 @@
 
             <div style="display:flex; gap:10px; justify-content:flex-end;">
                 <a href="/teacher_dashboard" class="btn btn-secondary">Cancel</a>
-                <button type="submit" class="btn btn-primary">📥 Export to Excel</button>
+                <button type="submit" class="btn btn-primary" id="exportButton">📥 Export to Excel</button>
             </div>
         </form>
     </div>
@@ -87,7 +87,11 @@
 
 <script>
 document.getElementById('exportForm').addEventListener('submit', function() {
-    setTimeout(function() { window.location.href = '/teacher_dashboard'; }, 1000);
+    var button = document.getElementById('exportButton');
+    if (button) {
+        button.disabled = true;
+        button.textContent = 'Preparing export...';
+    }
 });
 </script>
 

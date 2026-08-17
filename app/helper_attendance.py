@@ -634,6 +634,7 @@ def get_attendance_data(group, start_date=None, end_date=None, teacher_username=
     conn = get_db()
     cursor = conn.cursor()
     term_days = get_all_term_days()
+    explicit_range = bool(start_date and end_date)
 
     if not start_date or not end_date:
         term_range = get_active_term_range()
@@ -657,7 +658,7 @@ def get_attendance_data(group, start_date=None, end_date=None, teacher_username=
                 days.append(current.strftime("%Y-%m-%d"))
             current += timedelta(days=1)
 
-    if term_days:
+    if term_days and not explicit_range:
         days = [day for day in days if day in term_days]
 
     today_str = datetime.now().date().isoformat()

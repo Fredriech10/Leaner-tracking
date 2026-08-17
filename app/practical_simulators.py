@@ -344,6 +344,21 @@ def build_word_shell(task_title, active_tabs, active_controls, shell_mode="test"
                 {"id": "developer.document_template", "label": "Template", "icon": "W", "kind": "button"},
             ]},
         ]},
+        {"id": "help", "label": "Help", "groups": [
+            {"title": "Help", "class_name": "group-review-language", "controls": [
+                {"id": "help.search", "label": "Search", "icon": "⌕", "kind": "menu"},
+                {"id": "help.training", "label": "Training", "icon": "▶", "kind": "button"},
+            ]},
+            {"title": "Support", "class_name": "group-review-accessibility", "controls": [
+                {"id": "help.contact_support", "label": "Support", "icon": "💬", "kind": "button"},
+            ]},
+        ]},
+        {"id": "acrobat", "label": "Acrobat", "groups": [
+            {"title": "Adobe Acrobat", "class_name": "group-acrobat", "controls": [
+                {"id": "acrobat.create_pdf", "label": "Create a PDF", "icon": "PDF", "kind": "button"},
+                {"id": "acrobat.request_signatures", "label": "Request", "icon": "✍", "kind": "button"},
+            ]},
+        ]},
         {"id": "picture_format", "label": "Picture Format", "groups": [
             {"title": "Adjust", "class_name": "group-picture-adjust", "controls": [
                 {"id": "picture_format.remove_bg", "label": "Remove BG", "icon": "⌫", "kind": "button"},

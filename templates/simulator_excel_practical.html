@@ -33,7 +33,14 @@
         }
         .task-panel .copy { font-size: 0.91rem; line-height: 1.6; color: #334155; }
         .task-panel ol { padding-left: 18px; }
-        .excel-shell { display: grid; grid-template-rows: 30px 28px 90px 36px 1fr 28px; min-width: 0; background: #ffffff; border-left: 1px solid #d9e1d9; }
+        .excel-shell {
+            display: grid;
+            grid-template-rows: 32px 30px 108px 36px minmax(0, 1fr) 30px;
+            min-width: 0;
+            height: calc(100vh - 56px);
+            background: #ffffff;
+            border-left: 1px solid #d9e1d9;
+        }
         .excel-titlebar {
             background: #ffffff;
             color: #334155;
@@ -62,13 +69,13 @@
             display: flex;
             align-items: end;
             gap: 0;
-            padding-left: 6px;
+            padding-left: 8px;
             background: #ffffff;
             border-bottom: 1px solid #dfe6df;
             color: #334155;
             font-size: 0.82rem;
         }
-        .excel-tab { padding: 5px 12px 4px; border-bottom: 2px solid transparent; }
+        .excel-tab { padding: 6px 12px 5px; border-bottom: 2px solid transparent; cursor: pointer; }
         .excel-tab.active { color: #217346; border-bottom-color: #217346; font-weight: 700; background: #f8fbf8; }
         .formula-bar {
             display: grid;
@@ -77,7 +84,7 @@
             align-items: center;
             padding: 4px 6px;
             border-bottom: 1px solid #dfe6df;
-            background: #fbfcfb;
+            background: #ffffff;
         }
         .name-box, .formula-input {
             height: 24px;
@@ -146,15 +153,22 @@
             display: flex;
             align-items: stretch;
             gap: 0;
-            padding: 6px 6px 2px;
+            padding: 6px 8px 4px;
             background: linear-gradient(180deg, #ffffff 0%, #f7f8f7 100%);
             border-bottom: 1px solid #dfe6df;
+            height: 108px;
+            overflow-x: auto;
+            overflow-y: hidden;
         }
+        .excel-ribbon-panel { display: none; }
+        .excel-ribbon-panel.active { display: flex; }
         .ribbon-group {
-            min-width: 118px;
+            min-width: 132px;
+            height: 98px;
             padding: 0 10px 14px;
             border-right: 1px solid #dde5dd;
             position: relative;
+            flex: 0 0 auto;
         }
         .ribbon-group-title {
             position: absolute;
@@ -206,16 +220,18 @@
             font-size: 0.55rem;
             color: #64748b;
         }
-        .grid-area { overflow: auto; background: white; }
+        .grid-area { overflow: auto; min-height: 0; background: white; }
         .sheet {
             width: 100%;
+            min-width: 1320px;
             border-collapse: collapse;
             table-layout: fixed;
             font-size: 0.82rem;
         }
         .sheet th, .sheet td {
             border: 1px solid #d9dde3;
-            height: 20px;
+            width: 64px;
+            height: 28px;
             padding: 0;
             position: relative;
         }
@@ -225,7 +241,7 @@
             font-weight: 400;
             text-align: center;
         }
-        .row-head { width: 24px; background: #f3f3f3; text-align: center; color: #475569; font-size: 0.76rem; }
+        .row-head { width: 36px; background: #f3f3f3; text-align: center; color: #475569; font-size: 0.76rem; }
         .cell-input {
             width: 100%;
             height: 100%;
@@ -235,6 +251,7 @@
             color: #111827;
             background: transparent;
         }
+        .cell-input[readonly] { background: #ffffff; }
         .cell-input:focus {
             outline: 2px solid #217346;
             outline-offset: -2px;
@@ -377,30 +394,19 @@
             </div>
 
             <div class="excel-tabs">
-                <span class="excel-tab">File</span>
-                <span class="excel-tab active">Home</span>
-                <span class="excel-tab">Insert</span>
-                <span class="excel-tab">Page Layout</span>
-                <span class="excel-tab">Formulas</span>
-                <span class="excel-tab">Data</span>
+                <span class="excel-tab" data-tab-id="file" onclick="switchExcelTab('file')">File</span>
+                <span class="excel-tab active" data-tab-id="home" onclick="switchExcelTab('home')">Home</span>
+                <span class="excel-tab" data-tab-id="insert" onclick="switchExcelTab('insert')">Insert</span>
+                <span class="excel-tab" data-tab-id="page_layout" onclick="switchExcelTab('page_layout')">Page Layout</span>
+                <span class="excel-tab" data-tab-id="formulas" onclick="switchExcelTab('formulas')">Formulas</span>
+                <span class="excel-tab" data-tab-id="data" onclick="switchExcelTab('data')">Data</span>
+                <span class="excel-tab" data-tab-id="review" onclick="switchExcelTab('review')">Review</span>
+                <span class="excel-tab" data-tab-id="view" onclick="switchExcelTab('view')">View</span>
+                <span class="excel-tab" data-tab-id="help" onclick="switchExcelTab('help')">Help</span>
+                <span class="excel-tab" data-tab-id="acrobat" onclick="switchExcelTab('acrobat')">Acrobat</span>
             </div>
 
-            <div class="formula-bar">
-                <div class="name-box" id="name_box">A1</div>
-                <div class="formula-btn">✕</div>
-                <div class="formula-btn">✓</div>
-                <div class="fx-badge">fx</div>
-                <div class="formula-wrap">
-                    <input type="text" id="formula_input" name="formula_input" class="formula-field" placeholder="Enter a formula">
-                    <div class="formula-suggestions" id="formula_suggestions">
-                        {% for formula_name in simulator_definition.formula_suggestions or [] %}
-                        <div class="formula-suggestion" data-formula="{{ formula_name }}">{{ formula_name }}</div>
-                        {% endfor %}
-                    </div>
-                </div>
-            </div>
-
-            <div class="excel-ribbon">
+            <div class="excel-ribbon excel-ribbon-panel active" data-ribbon-tab="home">
                 <div class="ribbon-group">
                     <div class="ribbon-inline">
                         <div class="ribbon-big"><span class="ico">📋</span><span>Paste</span></div>
@@ -486,23 +492,218 @@
                 </div>
             </div>
 
+            <div class="excel-ribbon excel-ribbon-panel" data-ribbon-tab="file">
+                <div class="ribbon-group">
+                    <div class="ribbon-stack">
+                        <span>🗎 New Workbook</span>
+                        <span>📂 Open</span>
+                        <span>💾 Save</span>
+                    </div>
+                    <div class="ribbon-group-title">Workbook</div>
+                </div>
+                <div class="ribbon-group">
+                    <div class="ribbon-stack">
+                        <span>↗ Share</span>
+                        <span>🖨 Print</span>
+                        <span>📄 Export PDF</span>
+                    </div>
+                    <div class="ribbon-group-title">Share</div>
+                </div>
+            </div>
+
+            <div class="excel-ribbon excel-ribbon-panel" data-ribbon-tab="insert">
+                <div class="ribbon-group">
+                    <div class="ribbon-stack">
+                        <span>▦ PivotTable</span>
+                        <span>▤ Table</span>
+                        <span>🖼 Pictures</span>
+                    </div>
+                    <div class="ribbon-group-title">Tables</div>
+                </div>
+                <div class="ribbon-group">
+                    <div class="ribbon-stack">
+                        <span data-chart-insert="1">📊 Insert Chart</span>
+                        <span>🧭 Recommended Charts</span>
+                        <span>📈 Sparklines</span>
+                    </div>
+                    <div class="ribbon-group-title">Charts</div>
+                </div>
+                <div class="ribbon-group">
+                    <div class="ribbon-stack">
+                        <span>✎ Text Box</span>
+                        <span>🔗 Link</span>
+                        <span>Ω Symbol</span>
+                    </div>
+                    <div class="ribbon-group-title">Text</div>
+                </div>
+            </div>
+
+            <div class="excel-ribbon excel-ribbon-panel" data-ribbon-tab="page_layout">
+                <div class="ribbon-group">
+                    <div class="ribbon-stack">
+                        <span>🎨 Themes</span>
+                        <span>🎨 Colors</span>
+                        <span>A Fonts</span>
+                    </div>
+                    <div class="ribbon-group-title">Themes</div>
+                </div>
+                <div class="ribbon-group">
+                    <div class="ribbon-stack">
+                        <span>↔ Margins</span>
+                        <span>↻ Orientation</span>
+                        <span>▭ Size</span>
+                    </div>
+                    <div class="ribbon-group-title">Page Setup</div>
+                </div>
+                <div class="ribbon-group">
+                    <div class="ribbon-stack">
+                        <span>🖶 Print Area</span>
+                        <span>⏎ Breaks</span>
+                        <span>▥ Background</span>
+                    </div>
+                    <div class="ribbon-group-title">Page Layout</div>
+                </div>
+            </div>
+
+            <div class="excel-ribbon excel-ribbon-panel" data-ribbon-tab="formulas">
+                <div class="ribbon-group">
+                    <div class="ribbon-stack">
+                        <span>fx Insert Function</span>
+                        <span>∑ AutoSum</span>
+                        <span>⋯ Recently Used</span>
+                    </div>
+                    <div class="ribbon-group-title">Function Library</div>
+                </div>
+                <div class="ribbon-group">
+                    <div class="ribbon-stack">
+                        <span>🔍 Trace Precedents</span>
+                        <span>🔎 Evaluate Formula</span>
+                        <span>⚠ Error Checking</span>
+                    </div>
+                    <div class="ribbon-group-title">Formula Auditing</div>
+                </div>
+            </div>
+
+            <div class="excel-ribbon excel-ribbon-panel" data-ribbon-tab="data">
+                <div class="ribbon-group">
+                    <div class="ribbon-stack">
+                        <span>⇅ Sort A-Z</span>
+                        <span>⏷ Filter</span>
+                        <span>⌕ Advanced</span>
+                    </div>
+                    <div class="ribbon-group-title">Sort &amp; Filter</div>
+                </div>
+                <div class="ribbon-group">
+                    <div class="ribbon-stack">
+                        <span>🧹 Remove Duplicates</span>
+                        <span>✅ Data Validation</span>
+                        <span>▦ Text to Columns</span>
+                    </div>
+                    <div class="ribbon-group-title">Data Tools</div>
+                </div>
+            </div>
+
+            <div class="excel-ribbon excel-ribbon-panel" data-ribbon-tab="review">
+                <div class="ribbon-group">
+                    <div class="ribbon-stack">
+                        <span>abc Spelling</span>
+                        <span>💬 Comments</span>
+                        <span>📝 Notes</span>
+                    </div>
+                    <div class="ribbon-group-title">Proofing</div>
+                </div>
+                <div class="ribbon-group">
+                    <div class="ribbon-stack">
+                        <span>🔒 Protect Sheet</span>
+                        <span>🔐 Protect Workbook</span>
+                        <span>👥 Allow Edit Ranges</span>
+                    </div>
+                    <div class="ribbon-group-title">Protect</div>
+                </div>
+            </div>
+
+            <div class="excel-ribbon excel-ribbon-panel" data-ribbon-tab="view">
+                <div class="ribbon-group">
+                    <div class="ribbon-stack">
+                        <span>☷ Normal</span>
+                        <span>📄 Page Break Preview</span>
+                        <span>📘 Page Layout</span>
+                    </div>
+                    <div class="ribbon-group-title">Workbook Views</div>
+                </div>
+                <div class="ribbon-group">
+                    <div class="ribbon-stack">
+                        <span>☑ Gridlines</span>
+                        <span>☑ Headings</span>
+                        <span>☑ Formula Bar</span>
+                    </div>
+                    <div class="ribbon-group-title">Show</div>
+                </div>
+                <div class="ribbon-group">
+                    <div class="ribbon-stack">
+                        <span>100% Zoom</span>
+                        <span>↔ Zoom to Selection</span>
+                        <span>🪟 New Window</span>
+                    </div>
+                    <div class="ribbon-group-title">Window</div>
+                </div>
+            </div>
+
+            <div class="excel-ribbon excel-ribbon-panel" data-ribbon-tab="help">
+                <div class="ribbon-group">
+                    <div class="ribbon-stack">
+                        <span>⌕ Search Help</span>
+                        <span>▶ Training</span>
+                        <span>💬 Contact Support</span>
+                    </div>
+                    <div class="ribbon-group-title">Help</div>
+                </div>
+            </div>
+
+            <div class="excel-ribbon excel-ribbon-panel" data-ribbon-tab="acrobat">
+                <div class="ribbon-group">
+                    <div class="ribbon-stack">
+                        <span>📄 Create a PDF</span>
+                        <span>✍ Request Signatures</span>
+                        <span>🗂 Combine Files</span>
+                    </div>
+                    <div class="ribbon-group-title">Adobe Acrobat</div>
+                </div>
+            </div>
+
+            <div class="formula-bar">
+                <div class="name-box" id="name_box">A1</div>
+                <div class="formula-btn">✕</div>
+                <div class="formula-btn">✓</div>
+                <div class="fx-badge">fx</div>
+                <div class="formula-wrap">
+                    <input type="text" id="formula_input" name="formula_input" class="formula-field" placeholder="Enter a formula">
+                    <div class="formula-suggestions" id="formula_suggestions">
+                        {% for formula_name in simulator_definition.formula_suggestions or [] %}
+                        <div class="formula-suggestion" data-formula="{{ formula_name }}">{{ formula_name }}</div>
+                        {% endfor %}
+                    </div>
+                </div>
+            </div>
+
             <div class="grid-area">
+                {% set excel_columns = ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J', 'K', 'L', 'M', 'N', 'O', 'P', 'Q', 'R', 'S', 'T', 'U'] %}
                 {% set mode = simulator_definition.shell.simulator_type %}
                 {% if mode == 'sheet_formula' %}
                 <table class="sheet" id="sheet_formula">
                     <thead>
                         <tr>
                             <th class="row-head"></th>
-                            <th>A</th>
-                            <th>B</th>
-                            <th>C</th>
+                            {% for col in excel_columns %}
+                            <th>{{ col }}</th>
+                            {% endfor %}
                         </tr>
                     </thead>
                     <tbody>
-                        {% for row in range(1, 13) %}
+                        {% for row in range(1, 23) %}
                         <tr>
                             <td class="row-head">{{ row }}</td>
-                            {% for col in ['A', 'B', 'C'] %}
+                            {% for col in excel_columns %}
                             <td data-cell="{{ col }}{{ row }}">
                                 <input
                                     type="text"
@@ -522,8 +723,9 @@
                     <thead>
                         <tr>
                             <th class="row-head"></th>
-                            <th>A</th>
-                            <th>B</th>
+                            {% for col in excel_columns %}
+                            <th>{{ col }}</th>
+                            {% endfor %}
                         </tr>
                     </thead>
                     <tbody>
@@ -531,12 +733,26 @@
                             <td class="row-head">1</td>
                             <td><input type="text" class="cell-input" value="Learner" readonly></td>
                             <td><input type="text" class="cell-input" value="Amount Paid" readonly></td>
+                            {% for _ in range(19) %}
+                            <td><input type="text" class="cell-input" value="" readonly></td>
+                            {% endfor %}
                         </tr>
                         {% for row in simulator_definition.chart_rows %}
                         <tr>
                             <td class="row-head">{{ loop.index + 1 }}</td>
                             <td data-cell="A{{ loop.index + 1 }}"><input type="text" class="cell-input" value="{{ row[0] }}" readonly></td>
                             <td data-cell="B{{ loop.index + 1 }}"><input type="text" class="cell-input" value="{{ row[1] }}" readonly></td>
+                            {% for _ in range(19) %}
+                            <td><input type="text" class="cell-input" value="" readonly></td>
+                            {% endfor %}
+                        </tr>
+                        {% endfor %}
+                        {% for row in range((simulator_definition.chart_rows|length) + 2, 23) %}
+                        <tr>
+                            <td class="row-head">{{ row }}</td>
+                            {% for _ in excel_columns %}
+                            <td><input type="text" class="cell-input" value="" readonly></td>
+                            {% endfor %}
                         </tr>
                         {% endfor %}
                     </tbody>
@@ -588,6 +804,15 @@
     const chartInsertedInput = document.getElementById("chart_inserted");
     const nameBox = document.getElementById("name_box");
     let selectedCells = [];
+
+    function switchExcelTab(tabId) {
+        document.querySelectorAll(".excel-tab[data-tab-id]").forEach(tab => {
+            tab.classList.toggle("active", tab.dataset.tabId === tabId);
+        });
+        document.querySelectorAll(".excel-ribbon-panel[data-ribbon-tab]").forEach(panel => {
+            panel.classList.toggle("active", panel.dataset.ribbonTab === tabId);
+        });
+    }
 
     document.querySelector('[data-cell="A1"]')?.classList.add("selected-cell");
 
@@ -671,7 +896,10 @@
         };
 
         document.getElementById("insert_chart_btn")?.addEventListener("click", insertChart);
-        document.getElementById("insert_chart_action")?.addEventListener("dblclick", insertChart);
+        document.querySelectorAll("[data-chart-insert]").forEach(item => {
+            item.addEventListener("dblclick", insertChart);
+            item.addEventListener("click", () => switchExcelTab("insert"));
+        });
     }
 
     formulaInput?.addEventListener("input", updateFormulaSuggestions);
@@ -680,6 +908,8 @@
             suggestionBox.classList.remove("open");
         }
     });
+
+    switchExcelTab("home");
 </script>
 </body>
 </html>

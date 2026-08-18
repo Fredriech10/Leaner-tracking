@@ -5,12 +5,13 @@ from flask import flash, redirect, render_template, request, session, url_for
 from app.database import (
     create_user_if_not_exists,
     get_db,
-    infer_grade_from_group,
     get_groups,
     get_user_role,
     get_teachers,
+    infer_grade_from_group,
     log_activity,
     log_login,
+    verify_user_password,
     update_last_active,
 )
 from app.runtime import active_users, lock
@@ -55,12 +56,16 @@ def register_session_routes(app):
     def login():
         if request.method == "POST":
             username = request.form.get("username", "").strip().upper()
+            password = request.form.get("password", "")
 
             if username and len(username) <= 20 and username.isalnum():
+                create_user_if_not_exists(username)
+                if not verify_user_password(username, password):
+                    flash("Invalid username or password.", "error")
+                    return render_template("login.html"), 401
+
                 session["username"] = username
                 session["login_source"] = "remote"
-
-                create_user_if_not_exists(username)
                 update_last_active(username)
                 if get_user_role(username) == "student" and should_record_attendance_login("remote"):
                     log_login(username)

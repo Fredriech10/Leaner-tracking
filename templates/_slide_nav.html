@@ -130,12 +130,8 @@
         text-overflow: ellipsis;
     }
     body.slide-nav-expanded .slide-nav-label { display: inline; }
-    .slide-nav-link[data-tooltip]:not(.active)::after {
-        content: attr(data-tooltip);
-        position: absolute;
-        left: calc(100% + 10px);
-        top: 50%;
-        transform: translateY(-50%);
+    .slide-nav-tooltip {
+        position: fixed;
         background: #0f172a;
         color: white;
         padding: 6px 10px;
@@ -144,9 +140,10 @@
         opacity: 0;
         pointer-events: none;
         transition: opacity 120ms ease;
+        z-index: 1400;
+        white-space: nowrap;
     }
-    body:not(.slide-nav-expanded) .slide-nav-link:hover::after { opacity: 1; }
-    body.slide-nav-expanded .slide-nav-link::after { display: none; }
+    .slide-nav-tooltip.visible { opacity: 1; }
     @media (max-width: 900px) {
         body.with-slide-nav { margin-left: 0; }
         body.with-slide-nav.slide-nav-expanded { margin-left: 0; }
@@ -309,6 +306,7 @@
         <span>Returning to your previous place...</span>
     </div>
 </div>
+<div class="slide-nav-tooltip" id="slideNavTooltip" aria-hidden="true"></div>
 <script id="sharedTopbarConfig" type="application/json">
 {
   "currentPage": {{ resolved_current_page|tojson }},
@@ -326,6 +324,7 @@
     const toggle = document.getElementById('slideNavToggle');
     const backBtn = document.getElementById('floatingBackBtn');
     const restoreOverlay = document.getElementById('globalRestoreOverlay');
+    const tooltip = document.getElementById('slideNavTooltip');
     const topbarConfigEl = document.getElementById('sharedTopbarConfig');
     const topbarConfig = topbarConfigEl ? JSON.parse(topbarConfigEl.textContent) : null;
     const storageKey = 'learnerTrackingSlideNavExpanded';
@@ -419,6 +418,38 @@
             }
         });
     });
+
+    function hideTooltip() {
+        if (!tooltip) return;
+        tooltip.classList.remove('visible');
+        tooltip.textContent = '';
+    }
+
+    function showTooltip(link) {
+        if (!tooltip || document.body.classList.contains('slide-nav-expanded')) return;
+        const label = link.getAttribute('data-tooltip');
+        if (!label) return;
+        tooltip.textContent = label;
+        const rect = link.getBoundingClientRect();
+        tooltip.style.left = (rect.right + 10) + 'px';
+        tooltip.style.top = (rect.top + (rect.height / 2)) + 'px';
+        tooltip.style.transform = 'translateY(-50%)';
+        tooltip.classList.add('visible');
+    }
+
+    document.querySelectorAll('.slide-nav-link[data-tooltip]').forEach(function (link) {
+        link.addEventListener('mouseenter', function () {
+            showTooltip(link);
+        });
+        link.addEventListener('mouseleave', hideTooltip);
+        link.addEventListener('focus', function () {
+            showTooltip(link);
+        });
+        link.addEventListener('blur', hideTooltip);
+    });
+
+    window.addEventListener('scroll', hideTooltip, { passive: true });
+    window.addEventListener('resize', hideTooltip);
 
     function normalizeTopbars() {
         if (!topbarConfig) return;

@@ -14,36 +14,44 @@
         .topbar-user { color: white; font-size: 0.82em; white-space: nowrap; border-left: 1px solid rgba(255,255,255,0.35); padding-left: 10px; }
         .topbar-user a { color: white; text-decoration: none; font-weight: bold; }
         .topbar-user a:hover { text-decoration: underline; }
-        .page { padding: 20px 24px; width: 90%; max-width: 90%; margin: 0 auto; }
-        .hero { background: linear-gradient(135deg, #0078D4, #005a9e); color: white; border-radius: 12px; padding: 22px 24px; margin-bottom: 18px; }
+        .page { padding: 20px 24px; width: 90%; max-width: 1200px; margin: 0 auto; }
+        .hero { background: linear-gradient(135deg, #0078D4, #005a9e); color: white; border-radius: 16px; padding: 24px 26px; margin-bottom: 18px; box-shadow: 0 16px 40px rgba(0, 90, 158, 0.18); }
         .hero h2 { margin: 0 0 6px 0; font-size: 1.4em; }
         .hero p { margin: 0; opacity: 0.92; font-size: 0.95em; }
-        .layout { display: grid; grid-template-columns: 360px 1fr; gap: 16px; }
-        .card { background: white; border-radius: 8px; padding: 18px; border: 1px solid #ddd; }
+        .layout { display: grid; grid-template-columns: 340px 1fr; gap: 18px; align-items: start; }
+        .card { background: white; border-radius: 16px; padding: 20px; border: 1px solid #d8e2ec; box-shadow: 0 12px 32px rgba(15, 23, 42, 0.05); }
         .card h3 { margin: 0 0 14px 0; font-size: 0.95em; color: #0078D4; border-bottom: 2px solid #f0f0f0; padding-bottom: 6px; }
         .compose-form select, .compose-form textarea { width: 100%; padding: 10px 12px; border: 1px solid #cbd5e1; border-radius: 8px; font-size: 0.9em; }
         .compose-form textarea { min-height: 110px; resize: vertical; margin-top: 8px; }
         .btn { padding: 10px 16px; border: none; border-radius: 8px; cursor: pointer; font-size: 0.9em; font-weight: bold; text-decoration: none; display: inline-block; }
         .btn-primary { background: #0078D4; color: white; }
+        .composer-card { position: sticky; top: 84px; }
+        .thread-summary { margin-top: 18px; padding-top: 14px; border-top: 1px solid #edf2f7; }
         .thread-list { display: grid; gap: 10px; }
-        .thread-card { border: 1px solid #e2e8f0; border-radius: 12px; padding: 12px; background: #fff; }
+        .thread-card { border: 1px solid #dbe7f3; border-radius: 14px; padding: 12px 13px; background: linear-gradient(180deg, #ffffff 0%, #f8fbff 100%); box-shadow: 0 6px 18px rgba(15, 23, 42, 0.04); }
         .thread-head { display: flex; justify-content: space-between; gap: 10px; align-items: flex-start; }
         .thread-topic { font-weight: bold; color: #005a9e; font-size: 0.9em; }
         .thread-meta { margin-top: 4px; color: #64748b; font-size: 0.78em; }
         .status-pill { display: inline-flex; align-items: center; border-radius: 999px; padding: 3px 8px; font-size: 0.72em; font-weight: bold; }
         .status-open { background: #dcfce7; color: #166534; }
         .status-unread { background: #fee2e2; color: #991b1b; }
-        .message-stream { display: grid; gap: 10px; max-height: 620px; overflow-y: auto; }
-        .message-thread { border: 1px solid #e2e8f0; border-radius: 14px; padding: 14px; background: #f8fbff; }
-        .message-thread h4 { margin: 0 0 10px 0; color: #0f172a; font-size: 0.96em; }
+        .message-stream { display: grid; gap: 14px; }
+        .message-thread { border: 1px solid #dbe7f3; border-radius: 16px; padding: 16px; background: linear-gradient(180deg, #f8fbff 0%, #ffffff 100%); }
+        .message-thread h4 { margin: 0 0 10px 0; color: #0f172a; font-size: 0.98em; }
+        .message-thread-header { display:flex; justify-content:space-between; align-items:flex-start; gap:12px; margin-bottom:12px; padding-bottom:10px; border-bottom:1px solid #e8eef5; }
+        .message-thread-meta { color:#64748b; font-size:0.78em; }
         .message-bubbles { display: grid; gap: 8px; }
         .bubble { max-width: 82%; padding: 10px 12px; border-radius: 14px; font-size: 0.88em; line-height: 1.4; }
         .bubble.student { justify-self: end; background: #dbeafe; color: #1e3a5f; }
         .bubble.teacher { justify-self: start; background: #dcfce7; color: #166534; }
         .bubble-meta { margin-top: 5px; font-size: 0.72em; color: #64748b; }
         .empty { color: #888; font-size: 0.9em; }
+        .section-label { display:inline-flex; align-items:center; gap:8px; padding:5px 10px; border-radius:999px; background:#eef6ff; color:#005a9e; font-size:0.76em; font-weight:bold; }
         @media (max-width: 900px) {
+            .page { width: 100%; padding: 16px; }
             .layout { grid-template-columns: 1fr; }
+            .bubble { max-width: 100%; }
+            .composer-card { position: static; }
         }
     </style>
 </head>
@@ -53,13 +61,6 @@
 
 <div class="topbar">
     <h1>💬 Messages</h1>
-    <div class="topbar-links">
-        <a href="/student_dashboard">🏠 Dashboard</a>
-        <a href="/my_results">📊 Results</a>
-        <a href="/my_weaknesses">🧠 Weaknesses</a>
-        <span class="topbar-user">👤 <a href="/edit_user/{{ session_username }}">{{ session_username }}</a></span>
-        <a href="/logout">Logout</a>
-    </div>
 </div>
 
 <div class="page">
@@ -81,7 +82,7 @@
     </div>
 
     <div class="layout">
-        <div class="card">
+        <div class="card composer-card">
             <h3>New Message</h3>
             <form method="post" action="/student/send_message" class="compose-form">
                 <input type="hidden" name="next" value="/student_messages">
@@ -95,7 +96,7 @@
                 <button type="submit" class="btn btn-primary" style="margin-top:10px;">Send Message</button>
             </form>
 
-            <div style="margin-top:18px;">
+            <div class="thread-summary">
                 <h3 style="margin-bottom:10px;">Threads</h3>
                 <div class="thread-list">
                     {% if threads %}
@@ -126,7 +127,13 @@
                 {% if threads %}
                     {% for thread in threads %}
                     <div class="message-thread">
-                        <h4>{{ thread.topic | replace('_', ' ') | title }}{% if thread.attendance_date %} • {{ thread.attendance_date }}{% endif %}</h4>
+                        <div class="message-thread-header">
+                            <div>
+                                <h4>{{ thread.topic | replace('_', ' ') | title }}{% if thread.attendance_date %} • {{ thread.attendance_date }}{% endif %}</h4>
+                                <div class="message-thread-meta">{{ thread.subject_line or 'General thread' }}</div>
+                            </div>
+                            <span class="section-label">{{ thread.updated_at[:16] if thread.updated_at else 'No updates yet' }}</span>
+                        </div>
                         <div class="message-bubbles">
                             {% for message in thread.messages %}
                             <div class="bubble {{ 'teacher' if message.sender_role in ['teacher', 'admin'] else 'student' }}">

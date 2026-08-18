@@ -2,8 +2,9 @@ from io import BytesIO
 
 import pandas as pd
 from flask import flash, jsonify, redirect, render_template, request, send_file, session, url_for
+from werkzeug.security import generate_password_hash
 
-from app.database import get_db, get_grades, get_groups, get_teachers, get_user_role, infer_grade_from_group, log_activity, normalize_grade
+from app.database import get_db, get_grades, get_groups, get_teachers, get_user_role, infer_grade_from_group, log_activity, normalize_grade, set_user_password
 
 
 def register_admin_routes(app):
@@ -378,8 +379,8 @@ def register_admin_routes(app):
                 cursor.execute("SELECT username FROM users WHERE username = ?", (username_val,))
                 existing = cursor.fetchone()
 
-                columns = ["username", "full_name", "grade", "group_name", "teacher_username", "role"]
-                values = [username_val, full_name, grade, group_name, teacher_username, role_value]
+                columns = ["username", "full_name", "grade", "group_name", "teacher_username", "role", "password_hash"]
+                values = [username_val, full_name, grade, group_name, teacher_username, role_value, generate_password_hash(username_val)]
                 update_parts = ["full_name = excluded.full_name", "grade = excluded.grade", "group_name = excluded.group_name"]
 
                 if teacher_username_present:
@@ -519,6 +520,17 @@ def register_admin_routes(app):
 
         if request.method == "POST":
             full_name = request.form.get("full_name")
+            new_password = (request.form.get("new_password") or "").strip()
+            confirm_password = (request.form.get("confirm_password") or "").strip()
+            if new_password or confirm_password:
+                if new_password != confirm_password:
+                    conn.close()
+                    flash("Passwords do not match.", "error")
+                    return redirect(request.url)
+                if len(new_password) < 3:
+                    conn.close()
+                    flash("Password must be at least 3 characters.", "error")
+                    return redirect(request.url)
             if admin_role == "student":
                 cursor.execute(
                     """
@@ -531,6 +543,9 @@ def register_admin_routes(app):
                 conn.commit()
                 log_activity(admin_user, f"updated own profile {username}")
                 conn.close()
+                if new_password:
+                    set_user_password(username, new_password)
+                    log_activity(admin_user, "changed own password")
                 if next_url:
                     return redirect(next_url)
                 return redirect(url_for("student_dashboard"))
@@ -554,6 +569,9 @@ def register_admin_routes(app):
             conn.commit()
             log_activity(admin_user, f"edited user {username}")
             conn.close()
+            if new_password:
+                set_user_password(username, new_password)
+                log_activity(admin_user, f"updated password for {username}")
             if next_url:
                 return redirect(next_url)
             return redirect(url_for("admin_panel"))

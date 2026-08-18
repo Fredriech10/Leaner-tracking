@@ -1,6 +1,7 @@
 import re
 import sqlite3
 from datetime import datetime
+from werkzeug.security import check_password_hash, generate_password_hash
 
 DB_NAME = "school.db"
 MARKING_DB_NAME = "marking_experiment.db"
@@ -79,12 +80,40 @@ def create_user_if_not_exists(username):
     conn = get_db()
     cursor = conn.cursor()
     cursor.execute("""
-    INSERT INTO users (username, role, last_active)
-    VALUES (?, 'student', ?)
+    INSERT INTO users (username, role, last_active, password_hash)
+    VALUES (?, 'student', ?, ?)
     ON CONFLICT(username) DO NOTHING
-    """, (username, str(datetime.now())))
+    """, (username, str(datetime.now()), generate_password_hash(username)))
     conn.commit()
     conn.close()
+
+
+def set_user_password(username, password):
+    conn = get_db()
+    cursor = conn.cursor()
+    cursor.execute(
+        "UPDATE users SET password_hash = ? WHERE username = ?",
+        (generate_password_hash(password), username),
+    )
+    conn.commit()
+    conn.close()
+
+
+def verify_user_password(username, password):
+    conn = get_db()
+    cursor = conn.cursor()
+    cursor.execute("SELECT password_hash FROM users WHERE username = ?", (username,))
+    row = cursor.fetchone()
+    conn.close()
+    if not row:
+        return False
+    password_hash = row[0] or ""
+    if not password_hash:
+        return password == username
+    try:
+        return check_password_hash(password_hash, password)
+    except ValueError:
+        return False
 
 
 def update_last_active(username):
@@ -389,7 +418,8 @@ def init_db():
         full_name TEXT,
         group_name TEXT,
         teacher_username TEXT,
-        grade TEXT
+        grade TEXT,
+        password_hash TEXT
     )
     """)
 
@@ -409,8 +439,22 @@ def init_db():
         if "grade" not in user_cols:
             cursor.execute("ALTER TABLE users ADD COLUMN grade TEXT")
             print("Migration: added grade column to users")
+        if "password_hash" not in user_cols:
+            cursor.execute("ALTER TABLE users ADD COLUMN password_hash TEXT")
+            print("Migration: added password_hash column to users")
     except Exception as e:
         print(f"Note: users migration check: {e}")
+
+    try:
+        cursor.execute("SELECT username, password_hash FROM users")
+        for existing_username, password_hash in cursor.fetchall():
+            if not password_hash:
+                cursor.execute(
+                    "UPDATE users SET password_hash = ? WHERE username = ?",
+                    (generate_password_hash(existing_username), existing_username),
+                )
+    except Exception as e:
+        print(f"Note: users password backfill migration: {e}")
 
     try:
         cursor.execute("SELECT username, group_name, grade FROM users")

@@ -8,8 +8,11 @@
         body { font-family: Arial, sans-serif; margin: 0; padding: 0; background: #f0f2f5; color: #222; }
         .topbar { background: #005a9e; color: white; padding: 12px 24px; display: flex; justify-content: space-between; align-items: center; gap: 10px; position: sticky; top: 0; z-index: 999; }
         .topbar h1 { margin: 0; font-size: 1.05em; white-space: nowrap; }
-        .page { padding: 20px 24px; width: 90%; max-width: 90%; margin: 0 auto; }
-        .card { background: white; border-radius: 8px; padding: 18px; border: 1px solid #ddd; margin-bottom: 16px; }
+        .page { padding: 20px 24px; width: 90%; max-width: 1200px; margin: 0 auto; }
+        .hero { background: linear-gradient(135deg, #005a9e, #0f4c81); color: white; border-radius: 16px; padding: 24px 26px; margin-bottom: 18px; box-shadow: 0 16px 40px rgba(0, 90, 158, 0.16); }
+        .hero h2 { margin: 0 0 6px 0; font-size: 1.35em; }
+        .hero p { margin: 0; opacity: 0.92; font-size: 0.94em; }
+        .card { background: white; border-radius: 16px; padding: 18px; border: 1px solid #d8e2ec; margin-bottom: 16px; box-shadow: 0 10px 30px rgba(15, 23, 42, 0.04); }
         .card h3 { margin: 0 0 14px 0; font-size: 0.98em; color: #005a9e; border-bottom: 2px solid #f0f0f0; padding-bottom: 6px; }
         .filters { display: flex; gap: 12px; flex-wrap: wrap; align-items: flex-end; }
         .form-group { display: flex; flex-direction: column; gap: 4px; min-width: 180px; }
@@ -21,26 +24,28 @@
         .btn-warning { background: #ff8c00; }
         .btn-danger { background: #a4262c; }
         .thread-list { display: grid; gap: 16px; }
-        .thread-card { border: 1px solid #dbe5ef; border-radius: 10px; background: #fbfdff; overflow: hidden; }
+        .thread-card { border: 1px solid #dbe5ef; border-radius: 16px; background: #fbfdff; overflow: hidden; box-shadow: 0 8px 24px rgba(15, 23, 42, 0.05); }
         .thread-card.unread { border-color: #f59e0b; background: #fffaf0; }
         .thread-card.read { border-color: #dbe5ef; background: #fbfdff; }
-        .thread-toggle { width: 100%; border: 0; background: transparent; padding: 14px 16px; text-align: left; cursor: pointer; display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+        .thread-toggle { width: 100%; border: 0; background: transparent; padding: 16px 18px; text-align: left; cursor: pointer; display: flex; align-items: center; justify-content: space-between; gap: 12px; }
         .thread-card.unread .thread-toggle { background: rgba(245, 158, 11, 0.08); }
         .thread-card.read .thread-toggle { background: rgba(0, 120, 212, 0.03); }
         .thread-toggle-left { display: flex; flex-direction: column; gap: 6px; min-width: 0; }
         .thread-toggle-right { display: flex; align-items: center; gap: 10px; flex-shrink: 0; }
-        .thread-preview { color: #64748b; font-size: 0.8em; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 640px; }
-        .thread-title { font-weight: bold; color: #1e3a5f; }
+        .thread-preview { color: #64748b; font-size: 0.82em; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 640px; }
+        .thread-title { font-weight: bold; color: #1e3a5f; font-size: 0.98em; }
         .meta-line { display: flex; gap: 8px; flex-wrap: wrap; color: #64748b; font-size: 0.8em; }
         .tag { display: inline-flex; align-items: center; padding: 3px 8px; border-radius: 999px; background: #eef6ff; color: #005a9e; font-size: 0.78em; font-weight: bold; }
         .tag-unread { background: #fff3cd; color: #9a3412; }
         .tag-read { background: #eef6ff; color: #005a9e; }
         .thread-chevron { font-size: 0.95rem; color: #64748b; transition: transform 160ms ease; }
         .thread-card.open .thread-chevron { transform: rotate(180deg); }
-        .thread-body { display: none; padding: 0 16px 16px; border-top: 1px solid rgba(0,0,0,0.06); }
+        .thread-body { display: none; padding: 0 18px 18px; border-top: 1px solid rgba(0,0,0,0.06); }
         .thread-card.open .thread-body { display: block; }
-        .message { padding: 10px 12px; border-radius: 10px; margin-bottom: 8px; background: #eef6ff; }
-        .message.teacher { background: #f2fdf4; }
+        .message-stack { display: grid; gap: 10px; margin-top: 12px; }
+        .message { max-width: 82%; padding: 10px 12px; border-radius: 14px; background: #eef6ff; margin-bottom: 0; }
+        .message.student { justify-self: start; background: #eef6ff; color: #1e3a5f; }
+        .message.teacher { justify-self: end; background: #dcfce7; color: #166534; }
         .message-meta { font-size: 0.75em; color: #64748b; margin-top: 4px; }
         .action-row { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 10px; }
         .reply-box { margin-top: 12px; display: grid; gap: 8px; }
@@ -54,6 +59,15 @@
         .flash.success { background: #dcfce7; color: #166534; border: 1px solid #86efac; }
         .flash.error { background: #fee2e2; color: #991b1b; border: 1px solid #fca5a5; }
         .muted { color: #64748b; }
+        .filters-card { position: sticky; top: 84px; z-index: 5; }
+        .section-label { display:inline-flex; align-items:center; gap:8px; padding:5px 10px; border-radius:999px; background:#eef6ff; color:#005a9e; font-size:0.76em; font-weight:bold; }
+        @media (max-width: 900px) {
+            .page { width: 100%; padding: 16px; }
+            .thread-toggle { align-items: flex-start; }
+            .thread-toggle-right { flex-wrap: wrap; justify-content: flex-end; }
+            .message { max-width: 100%; }
+            .filters-card { position: static; }
+        }
     </style>
 </head>
 <body>
@@ -61,9 +75,6 @@
 {% include '_slide_nav.html' %}
 <div class="topbar">
     <h1>💬 Communications</h1>
-    <div class="topbar-links"></div>
-    <span class="topbar-user">👤 <a href="/edit_user/{{ session_username }}">{{ session_username }}</a></span>
-    <a href="/logout">Logout</a>
 </div>
 
 <div class="page">
@@ -75,7 +86,12 @@
     {% endif %}
     {% endwith %}
 
-    <div class="card">
+    <div class="hero">
+        <h2>Teacher Communications</h2>
+        <p>Review learner messages, attendance queries, and theory review requests in one place.</p>
+    </div>
+
+    <div class="card filters-card">
         <form method="get" class="filters">
             <div class="form-group">
                 <label>Group</label>
@@ -134,14 +150,17 @@
                     <div class="meta-line" style="margin:12px 0 10px;">
                         <span>{{ thread.status|title }}</span>
                         {% if thread.teacher_username %}<span>Teacher: {{ thread.teacher_username }}</span>{% endif %}
+                        <span class="section-label">{{ (thread.updated_at or thread.created_at)[:16] }}</span>
                     </div>
 
-                    {% for message in thread.messages %}
-                    <div class="message {{ 'teacher' if message.sender_role in ['teacher', 'admin'] else 'student' }}">
-                        {{ message.message }}
-                        <div class="message-meta">{{ message.sender_username }} • {{ message.created_at[:16] if message.created_at else '' }}</div>
+                    <div class="message-stack">
+                        {% for message in thread.messages %}
+                        <div class="message {{ 'teacher' if message.sender_role in ['teacher', 'admin'] else 'student' }}">
+                            {{ message.message }}
+                            <div class="message-meta">{{ message.sender_username }} • {{ message.created_at[:16] if message.created_at else '' }}</div>
+                        </div>
+                        {% endfor %}
                     </div>
-                    {% endfor %}
 
                     {% if thread.topic == 'attendance_review' and thread.attendance_date %}
                     {% set state_code = thread.attendance_state_code or '-' %}

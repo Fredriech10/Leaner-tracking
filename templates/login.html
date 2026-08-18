@@ -3,8 +3,16 @@
 <head><title>Learner Login</title></head>
 <body>
     <h2>Enter Username</h2>
+    {% with messages = get_flashed_messages(with_categories=true) %}
+    {% if messages %}
+        {% for category, message in messages %}
+        <div style="margin-bottom:10px; color:{{ '#b91c1c' if category == 'error' else '#166534' }};">{{ message }}</div>
+        {% endfor %}
+    {% endif %}
+    {% endwith %}
     <form method="post">
         <input type="text" name="username" required placeholder="Username (alnum, max 20 chars)">
+        <input type="password" name="password" required placeholder="Password">
         <button type="submit">Enter</button>
     </form>
 </body>

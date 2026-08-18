@@ -85,6 +85,17 @@
         .feedback-item { padding: 8px 0; border-bottom: 1px solid #f0f0f0; font-size: 0.88em; }
         .feedback-item:last-child { border-bottom: none; }
         .feedback-item .meta { color: #888; font-size: 0.8em; margin-top: 2px; }
+        .progress-section { margin-top: 14px; }
+        .progress-section:first-of-type { margin-top: 0; }
+        .progress-section-header { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-bottom: 10px; }
+        .progress-section-header h4 { margin: 0; font-size: 0.9em; color: #1e3a5f; }
+        .progress-empty { color: #64748b; font-size: 0.88em; padding: 10px 0; }
+        .progress-collapse { margin-top: 14px; border: 1px solid #dbe7f3; border-radius: 10px; background: #f8fbff; overflow: hidden; }
+        .progress-collapse summary { list-style: none; cursor: pointer; display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 12px 14px; font-weight: bold; color: #005a9e; }
+        .progress-collapse summary::-webkit-details-marker { display: none; }
+        .progress-collapse summary::after { content: '▼'; font-size: 0.78em; transition: transform 0.16s ease; }
+        .progress-collapse[open] summary::after { transform: rotate(180deg); }
+        .progress-collapse-body { padding: 0 14px 14px; background: white; border-top: 1px solid #dbe7f3; }
 
         .calendar-controls { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-bottom: 10px; }
         .calendar-controls button { border: 1px solid #cbd5e1; background: #fff; color: #0f172a; border-radius: 6px; padding: 7px 12px; cursor: pointer; font-weight: bold; }
@@ -349,46 +360,98 @@
             </div>
 
             {% if learning_progress %}
-            <table>
-                <tr><th>Subject</th><th>Item</th><th>Type</th><th>Status</th><th>Progress</th><th>Score</th><th>Attempts</th><th>Time</th><th>Action</th></tr>
-                {% for item in learning_progress %}
-                <tr>
-                    <td>{{ item.subject }}</td>
-                    <td>{{ item.title }}</td>
-                    <td><span style="font-size:0.78em; background:{{ '#e0f2fe' if item.kind == 'Lesson' else '#fef3c7' }}; color:{{ '#075985' if item.kind == 'Lesson' else '#92400e' }}; padding:1px 6px; border-radius:8px;">{{ item.kind }}</span></td>
-                    <td>
-                        {% if item.status == 'Completed' %}
-                        <span class="badge" style="background:#c8f7c5;color:#107C10;">Completed</span>
-                        {% elif item.status == 'In progress' %}
-                        <span class="badge" style="background:#fff3cd;color:#856404;">In progress</span>
-                        {% else %}
-                        <span class="badge badge-missing">Not started</span>
-                        {% endif %}
-                    </td>
-                    <td>
-                        <div style="min-width:120px;">
-                            <div style="height:8px; background:#e5e7eb; border-radius:999px; overflow:hidden; margin-bottom:4px;">
-                                <div style="height:100%; width:{{ item.progress_pct }}%; background:linear-gradient(90deg, #0078D4, #16a34a); border-radius:999px;"></div>
+            {% set progress_ns = namespace(active=[], completed=[]) %}
+            {% for item in learning_progress %}
+                {% if item.status == 'Completed' %}
+                    {% set progress_ns.completed = progress_ns.completed + [item] %}
+                {% else %}
+                    {% set progress_ns.active = progress_ns.active + [item] %}
+                {% endif %}
+            {% endfor %}
+
+            <div class="progress-section">
+                <div class="progress-section-header">
+                    <h4>Current Tasks</h4>
+                    <span class="badge" style="background:#e0ecff;color:#005a9e;">{{ progress_ns.active|length }} showing</span>
+                </div>
+                {% if progress_ns.active %}
+                <table>
+                    <tr><th>Subject</th><th>Item</th><th>Type</th><th>Status</th><th>Progress</th><th>Score</th><th>Attempts</th><th>Time</th><th>Action</th></tr>
+                    {% for item in progress_ns.active %}
+                    <tr>
+                        <td>{{ item.subject }}</td>
+                        <td>{{ item.title }}</td>
+                        <td><span style="font-size:0.78em; background:{{ '#e0f2fe' if item.kind == 'Lesson' else '#fef3c7' }}; color:{{ '#075985' if item.kind == 'Lesson' else '#92400e' }}; padding:1px 6px; border-radius:8px;">{{ item.kind }}</span></td>
+                        <td>
+                            {% if item.status == 'In progress' %}
+                            <span class="badge" style="background:#fff3cd;color:#856404;">In progress</span>
+                            {% else %}
+                            <span class="badge badge-missing">Not started</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            <div style="min-width:120px;">
+                                <div style="height:8px; background:#e5e7eb; border-radius:999px; overflow:hidden; margin-bottom:4px;">
+                                    <div style="height:100%; width:{{ item.progress_pct }}%; background:linear-gradient(90deg, #0078D4, #16a34a); border-radius:999px;"></div>
+                                </div>
+                                <div style="font-size:0.76em; color:#64748b;">
+                                    {{ item.progress_pct }}%
+                                    {% if item.total and item.has_progress %} | {{ item.viewed }}/{{ item.total }} slides{% elif item.total %} | 0/--{% endif %}
+                                </div>
                             </div>
-                            <div style="font-size:0.76em; color:#64748b;">
-                                {{ item.progress_pct }}%
-                                {% if item.total and item.has_progress %} | {{ item.viewed }}/{{ item.total }} slides{% elif item.total %} | 0/--{% endif %}
-                            </div>
-                        </div>
-                    </td>
-                    <td>{% if item.kind == 'Lesson' and item.status == 'Completed' %}100%{% elif item.score is not none %}<span class="{{ 'score-high' if item.score >= 60 else ('score-mid' if item.score >= 40 else 'score-low') }}">{{ item.score }}%</span>{% else %}—{% endif %}</td>
-                    <td>{{ item.attempts }}</td>
-                    <td>{{ item.time_spent // 60 }}m {{ item.time_spent % 60 }}s</td>
-                    <td>
-                        {% if item.status != 'Completed' %}
-                        <a href="/take_test/{{ item.id }}" class="btn btn-primary" style="padding:6px 12px; border-radius:4px; background:#0078D4; color:white; text-decoration:none; font-size:0.82em;">Start →</a>
-                        {% else %}
-                        <span style="color:#888;">—</span>
-                        {% endif %}
-                    </td>
-                </tr>
-                {% endfor %}
-            </table>
+                        </td>
+                        <td>{% if item.score is not none %}<span class="{{ 'score-high' if item.score >= 60 else ('score-mid' if item.score >= 40 else 'score-low') }}">{{ item.score }}%</span>{% else %}—{% endif %}</td>
+                        <td>{{ item.attempts }}</td>
+                        <td>{{ item.time_spent // 60 }}m {{ item.time_spent % 60 }}s</td>
+                        <td>
+                            <a href="/take_test/{{ item.id }}" class="btn btn-primary" style="padding:6px 12px; border-radius:4px; background:#0078D4; color:white; text-decoration:none; font-size:0.82em;">Start →</a>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </table>
+                {% else %}
+                <div class="progress-empty">No outstanding lessons or tests. Expand completed tasks to review finished work.</div>
+                {% endif %}
+            </div>
+
+            <details class="progress-collapse">
+                <summary>
+                    <span>Completed Tasks</span>
+                    <span class="badge" style="background:#dcfce7;color:#166534;">{{ progress_ns.completed|length }} completed</span>
+                </summary>
+                <div class="progress-collapse-body">
+                    {% if progress_ns.completed %}
+                    <table>
+                        <tr><th>Subject</th><th>Item</th><th>Type</th><th>Status</th><th>Progress</th><th>Score</th><th>Attempts</th><th>Time</th><th>Action</th></tr>
+                        {% for item in progress_ns.completed %}
+                        <tr>
+                            <td>{{ item.subject }}</td>
+                            <td>{{ item.title }}</td>
+                            <td><span style="font-size:0.78em; background:{{ '#e0f2fe' if item.kind == 'Lesson' else '#fef3c7' }}; color:{{ '#075985' if item.kind == 'Lesson' else '#92400e' }}; padding:1px 6px; border-radius:8px;">{{ item.kind }}</span></td>
+                            <td><span class="badge" style="background:#c8f7c5;color:#107C10;">Completed</span></td>
+                            <td>
+                                <div style="min-width:120px;">
+                                    <div style="height:8px; background:#e5e7eb; border-radius:999px; overflow:hidden; margin-bottom:4px;">
+                                        <div style="height:100%; width:{{ item.progress_pct }}%; background:linear-gradient(90deg, #0078D4, #16a34a); border-radius:999px;"></div>
+                                    </div>
+                                    <div style="font-size:0.76em; color:#64748b;">
+                                        {{ item.progress_pct }}%
+                                        {% if item.total and item.has_progress %} | {{ item.viewed }}/{{ item.total }} slides{% elif item.total %} | 0/--{% endif %}
+                                    </div>
+                                </div>
+                            </td>
+                            <td>{% if item.kind == 'Lesson' and item.status == 'Completed' %}100%{% elif item.score is not none %}<span class="{{ 'score-high' if item.score >= 60 else ('score-mid' if item.score >= 40 else 'score-low') }}">{{ item.score }}%</span>{% else %}—{% endif %}</td>
+                            <td>{{ item.attempts }}</td>
+                            <td>{{ item.time_spent // 60 }}m {{ item.time_spent % 60 }}s</td>
+                            <td><span style="color:#888;">—</span></td>
+                        </tr>
+                        {% endfor %}
+                    </table>
+                    {% else %}
+                    <div class="progress-empty">No completed tasks yet.</div>
+                    {% endif %}
+                </div>
+            </details>
             {% if missing_assignments %}
             <div style="margin-top:14px; padding-top:12px; border-top:1px solid #eef2f7;">
                 <strong style="font-size:0.9em;color:#555;">Start outstanding practical tasks:</strong>

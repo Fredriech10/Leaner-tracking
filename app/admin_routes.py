@@ -327,7 +327,10 @@ def register_admin_routes(app):
 
         try:
             df = pd.read_excel(file)
-            required_columns = ["username", "full_name", "group"]
+            has_split_name = "surname" in df.columns and "name" in df.columns
+            required_columns = ["username", "group"]
+            if not has_split_name and "full_name" not in df.columns:
+                required_columns.append("full_name")
             missing_columns = [col for col in required_columns if col not in df.columns]
             if missing_columns:
                 flash(f"Missing required columns: {', '.join(missing_columns)}", "error")
@@ -343,9 +346,26 @@ def register_admin_routes(app):
 
             for _, row in df.iterrows():
                 username_val = str(row["username"]).strip().upper()
-                full_name = str(row["full_name"]).strip()
                 group_name = str(row["group"]).strip()
                 grade = normalize_grade(str(row["grade"]).strip() if grade_present else None, group_name)
+
+                if has_split_name:
+                    surname = str(row["surname"]).strip()
+                    name = str(row["name"]).strip()
+                    if surname.lower() == "nan":
+                        surname = ""
+                    if name.lower() == "nan":
+                        name = ""
+                    if surname and name:
+                        full_name = f"{surname.upper()},{name.upper()}"
+                    elif surname:
+                        full_name = surname.upper()
+                    else:
+                        full_name = name.upper()
+                else:
+                    full_name = str(row["full_name"]).strip()
+                    if full_name.lower() == "nan":
+                        full_name = ""
 
                 teacher_username = str(row["teacher_username"]).strip() if teacher_username_present else None
                 if teacher_username == "":
@@ -406,7 +426,8 @@ def register_admin_routes(app):
 
         sample_data = {
             "username": ["STUDENT001", "STUDENT002", "STUDENT003"],
-            "full_name": ["Smith, John", "Doe, Jane", "Johnson, Bob"],
+            "surname": ["SMITH", "DOE", "JOHNSON"],
+            "name": ["JOHN", "JANE", "BOB"],
             "grade": ["12", "12", "12"],
             "group": ["12A", "12A", "12B"],
             "teacher_username": ["TEACHER1", "TEACHER1", "TEACHER2"],

@@ -160,14 +160,6 @@
 <!-- Top bar -->
 <div class="topbar">
     <h1>📚 Student Portal</h1>
-    <div class="topbar-links">
-        <a href="/student_dashboard">🏠 Dashboard</a>
-        <a href="/my_tasks">📁 Tasks</a>
-        <a href="/lessons">📘 Lessons</a>
-        <a href="/tests">📝 Tests</a>
-        <span class="topbar-user">👤 <a href="/edit_user/{{ session_username }}">{{ session_username }}</a></span>
-        <a href="/logout">Logout</a>
-    </div>
 </div>
 
 <div class="page">
@@ -217,6 +209,9 @@
             </a>
             <a href="/tests" class="action-btn">
                 <span class="icon">📝</span>Theory Tests
+            </a>
+            <a href="/student/screen_share" class="action-btn">
+                <span class="icon">🖥</span>Live Share
             </a>
         </div>
     </div>

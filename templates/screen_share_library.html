@@ -1,0 +1,89 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Screen Share Library</title>
+    <style>
+        * { box-sizing: border-box; }
+        body { font-family: Arial, sans-serif; margin: 0; background: #f0f2f5; color: #222; }
+        .topbar { background: #005a9e; color: white; padding: 12px 24px; display:flex; justify-content:space-between; align-items:center; }
+        .topbar a { color: white; text-decoration:none; }
+        .page { width: 92%; max-width: 1100px; margin: 20px auto; }
+        .card { background:white; border:1px solid #ddd; border-radius:10px; padding:18px; }
+        .grid { display:grid; gap:12px; }
+        .toolbar { display:flex; gap:10px; align-items:center; justify-content:space-between; flex-wrap:wrap; margin-bottom:14px; }
+        .toolbar input { padding:10px 12px; border:1px solid #cbd5e1; border-radius:8px; min-width:280px; }
+        .item { border:1px solid #e2e8f0; border-radius:10px; padding:12px; background:#fafcff; display:grid; grid-template-columns: 180px 1fr; gap:12px; }
+        .meta { font-size:0.82em; color:#64748b; margin-top:6px; }
+        .thumb { width:100%; height:102px; object-fit:cover; border-radius:8px; background:#0f172a; }
+        .actions { display:flex; gap:8px; flex-wrap:wrap; margin-top:10px; }
+        .rename-form { display:flex; gap:8px; flex-wrap:wrap; margin-top:10px; }
+        .rename-form input { padding:8px 10px; border:1px solid #cbd5e1; border-radius:8px; min-width:220px; flex:1; }
+        .rename-form button, .actions button { border:none; border-radius:8px; padding:8px 12px; font-weight:bold; cursor:pointer; }
+        .btn-danger { background:#b42318; color:white; }
+        .btn-secondary { background:#e2e8f0; color:#1e293b; }
+        @media (max-width: 800px) { .item { grid-template-columns: 1fr; } .toolbar input { min-width:100%; } }
+    </style>
+</head>
+<body>
+{% set current_page = 'video_library' %}
+{% include '_slide_nav.html' %}
+<div class="topbar">
+    <h1>Screen Share Library</h1>
+</div>
+<div class="page">
+    <div class="card">
+        <div class="toolbar">
+            <strong>{{ 'Your recordings' if role in ['teacher', 'admin'] else 'Available recordings' }}</strong>
+            <input type="text" id="recordingSearch" placeholder="Search by title...">
+        </div>
+        <div class="grid">
+            {% if recordings %}
+                {% for recording in recordings %}
+                <div class="item recording-card" data-title="{{ recording.title|lower }}">
+                    {% if recording.poster_href %}
+                    <img class="thumb" src="{{ recording.poster_href }}" alt="{{ recording.title }} poster">
+                    {% else %}
+                    <div class="thumb"></div>
+                    {% endif %}
+                    <div>
+                        <div style="font-weight:bold;">{{ recording.title }}</div>
+                        <div class="meta">{{ recording.created_at }} | {{ recording.file_name }}</div>
+                        <div class="actions">
+                            <a href="{{ recording.watch_href }}">Watch</a>
+                            <a href="{{ recording.stream_href }}" target="_blank">Raw File</a>
+                        </div>
+                        {% if role in ['teacher', 'admin'] %}
+                        <form method="post" action="/screen_share/recordings/{{ recording.id }}/rename" class="rename-form">
+                            <input type="hidden" name="next" value="/screen_share/recordings">
+                            <input type="text" name="title" value="{{ recording.title }}" maxlength="200" required>
+                            <button type="submit" class="btn-secondary">Rename</button>
+                        </form>
+                        <form method="post" action="/screen_share/recordings/{{ recording.id }}/delete" style="margin-top:8px;" onsubmit="return confirm('Delete this recording?');">
+                            <input type="hidden" name="next" value="/screen_share/recordings">
+                            <button type="submit" class="btn-danger">Delete</button>
+                        </form>
+                        {% endif %}
+                    </div>
+                </div>
+                {% endfor %}
+            {% else %}
+                <div class="item">No recordings available.</div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+<script>
+const searchInput = document.getElementById('recordingSearch');
+if (searchInput) {
+    searchInput.addEventListener('input', function () {
+        const term = this.value.trim().toLowerCase();
+        document.querySelectorAll('.recording-card').forEach((card) => {
+            const match = card.dataset.title.includes(term);
+            card.style.display = match ? '' : 'none';
+        });
+    });
+}
+</script>
+</body>
+</html>

@@ -137,23 +137,12 @@
     </style>
 </head>
 <body>
+{% set current_page = 'teacher_dashboard' %}
+{% include '_slide_nav.html' %}
 
 <!-- Top bar -->
 <div class="topbar">
     <h1>🏫 Teacher Dashboard</h1>
-    <div class="topbar-links">
-        <a href="/group_results">📊 Results</a>
-        <a href="/manage_subjects">📁 Practical</a>
-        <a href="/manage_lessons">🧩 Lesson Setup</a>
-        <a href="/manage_tests">📝 Theory Tests</a>
-        <a href="/response_review">🧾 Review</a>
-        <a href="/communications">💬 Messages</a>
-        <a href="/admin">👥 Admin</a>
-        <a href="/attendance">📅 Attendance</a>
-        <a href="/recent_activity" class="toolbar-btn">🕐 Activity</a>
-        <span class="topbar-user">👤 <a href="/edit_user/{{ session_username }}">{{ session_username }}</a></span>
-        <a href="/logout">Logout</a>
-    </div>
 </div>
 
 <div class="page">
@@ -236,6 +225,7 @@
             </div>
                 {% endif %}
             {% endfor %}
+            <a href="/screen_share" class="action-btn"><span class="icon">🖥</span>Live Share</a>
         </div>
         <div style="margin-top:12px;">
             <button type="button" class="btn btn-primary" id="quickActionsToggleBtn" onclick="toggleQuickActionsConfig()">Edit Quick Actions</button>

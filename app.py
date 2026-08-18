@@ -26,6 +26,7 @@ from app.theory_admin_routes import register_theory_admin_routes
 from app.theory_learner_routes import register_theory_learner_routes
 from app.theory_runtime_routes import register_theory_runtime_routes
 from app.review_routes import register_review_routes
+from app.screen_share_routes import register_screen_share_routes
 from app.runtime import cleanup_thread
 
 app = Flask(__name__)
@@ -44,6 +45,7 @@ register_theory_admin_routes(app)
 register_theory_learner_routes(app)
 register_theory_runtime_routes(app)
 register_review_routes(app)
+register_screen_share_routes(app)
 
 @app.after_request
 def inject_global_mobile_css(response):
@@ -144,22 +146,27 @@ def inject_session_user():
         endpoint = request.endpoint or ""
         teacher_map = {
             "teacher_dashboard": "teacher_dashboard",
-            "attendance": "attendance",
-            "group_results": "group_results",
-            "risk_learners": "risk_learners",
+            "attendance": "classroom",
+            "group_results": "classroom",
+            "risk_learners": "classroom",
+            "export_attendance_form": "export",
+            "export_attendance": "export",
+            "export_results": "export",
             "weakness_summary": "weakness_summary",
-            "manage_subjects": "manage_subjects",
-            "manage_tasks": "manage_subjects",
-            "edit_task": "manage_subjects",
-            "task_preview": "manage_subjects",
-            "manage_tests": "manage_tests",
-            "manage_test_questions": "manage_tests",
-            "edit_test": "manage_tests",
-            "generate_theory_test": "manage_tests",
-            "question_bank": "manage_tests",
-            "manage_lessons": "manage_lessons",
-            "manage_lesson_questions": "manage_lessons",
-            "edit_lesson": "manage_lessons",
+            "manage_subjects": "tasks",
+            "manage_tasks": "tasks",
+            "edit_task": "tasks",
+            "task_preview": "tasks",
+            "manage_tests": "tasks",
+            "manage_test_questions": "tasks",
+            "edit_test": "tasks",
+            "generate_theory_test": "tasks",
+            "question_bank": "tasks",
+            "manage_lessons": "tasks",
+            "manage_lesson_questions": "tasks",
+            "edit_lesson": "tasks",
+            "screen_share_recordings": "video_library",
+            "screen_share_recording_watch": "video_library",
             "response_review": "response_review",
             "response_review_learner": "response_review",
             "communications": "communications",
@@ -173,17 +180,19 @@ def inject_session_user():
         }
         student_map = {
             "student_dashboard": "student_dashboard",
-            "learner_tasks": "my_tasks",
+            "learner_tasks": "tasks",
             "my_results": "my_results",
             "student_messages": "student_messages",
             "my_weaknesses": "my_weaknesses",
-            "learner_lessons": "lessons",
-            "lesson_tests": "lessons",
-            "lesson_view": "lessons",
-            "learner_tests": "tests",
-            "preview_test": "tests",
-            "take_test": "tests",
-            "test_results": "tests",
+            "learner_lessons": "tasks",
+            "lesson_tests": "tasks",
+            "lesson_view": "tasks",
+            "learner_tests": "tasks",
+            "preview_test": "tasks",
+            "take_test": "tasks",
+            "test_results": "tasks",
+            "screen_share_recordings": "video_library",
+            "screen_share_recording_watch": "video_library",
         }
         page_map = teacher_map if role in ["teacher", "admin"] else student_map
         return page_map.get(endpoint, "")
@@ -273,13 +282,37 @@ def inject_session_user():
     elif role in ["teacher", "admin"]:
         header_nav_items = [
             {"key": "teacher_dashboard", "href": url_for("teacher_dashboard"), "label": "Dashboard"},
-            {"key": "attendance", "href": url_for("attendance"), "label": "Attendance"},
-            {"key": "group_results", "href": url_for("group_results"), "label": "Results"},
-            {"key": "risk_learners", "href": url_for("risk_learners"), "label": "Learners At Risk"},
+            {
+                "key": "classroom",
+                "href": url_for("attendance"),
+                "label": "Classroom",
+                "children": [
+                    {"key": "attendance", "href": url_for("attendance"), "label": "Attendance"},
+                    {"key": "group_results", "href": url_for("group_results"), "label": "Results"},
+                    {"key": "risk_learners", "href": url_for("risk_learners"), "label": "Learners At Risk"},
+                ],
+            },
             {"key": "weakness_summary", "href": url_for("weakness_summary"), "label": "Weaknesses"},
-            {"key": "manage_subjects", "href": url_for("manage_subjects"), "label": "Practical"},
-            {"key": "manage_tests", "href": url_for("manage_tests"), "label": "Theory Tests"},
-            {"key": "manage_lessons", "href": url_for("manage_lessons"), "label": "Lesson Setup"},
+            {
+                "key": "tasks",
+                "href": url_for("manage_subjects"),
+                "label": "Tasks",
+                "children": [
+                    {"key": "manage_subjects", "href": url_for("manage_subjects"), "label": "Practical"},
+                    {"key": "manage_tests", "href": url_for("manage_tests"), "label": "Theory Tests"},
+                    {"key": "manage_lessons", "href": url_for("manage_lessons"), "label": "Lesson Setup"},
+                    {"key": "video_library", "href": url_for("screen_share_recordings"), "label": "Video Library"},
+                ],
+            },
+            {
+                "key": "export",
+                "href": url_for("export_attendance_form"),
+                "label": "Export",
+                "children": [
+                    {"key": "export_attendance_form", "href": url_for("export_attendance_form"), "label": "Attendance"},
+                    {"key": "export_results", "href": url_for("export_results"), "label": "Results"},
+                ],
+            },
             {"key": "response_review", "href": url_for("response_review"), "label": "Review"},
             {"key": "communications", "href": url_for("communications"), "label": f"Messages{' *' if teacher_unread_messages else ''}"},
             {"key": "marking_setup", "href": url_for("marking_setup"), "label": "Marking Setup"},
@@ -288,12 +321,20 @@ def inject_session_user():
     else:
         header_nav_items = [
             {"key": "student_dashboard", "href": url_for("student_dashboard"), "label": "Dashboard"},
-            {"key": "my_tasks", "href": url_for("learner_tasks"), "label": "Practical Tasks"},
+            {
+                "key": "tasks",
+                "href": url_for("learner_tasks"),
+                "label": "Tasks",
+                "children": [
+                    {"key": "my_tasks", "href": url_for("learner_tasks"), "label": "Practical"},
+                    {"key": "lessons", "href": url_for("learner_lessons"), "label": "Lessons"},
+                    {"key": "tests", "href": url_for("learner_tests"), "label": "Theory Tests"},
+                    {"key": "video_library", "href": url_for("screen_share_recordings"), "label": "Video Library"},
+                ],
+            },
             {"key": "my_results", "href": url_for("my_results"), "label": "Results"},
             {"key": "student_messages", "href": url_for("student_messages"), "label": f"Messages{' *' if student_unread_messages else ''}"},
             {"key": "my_weaknesses", "href": url_for("my_weaknesses"), "label": "Weaknesses"},
-            {"key": "lessons", "href": url_for("learner_lessons"), "label": "Lessons"},
-            {"key": "tests", "href": url_for("learner_tests"), "label": "Theory Tests"},
         ]
     return dict(
         session_username=uname,
@@ -313,5 +354,5 @@ if __name__ == "__main__":
     cleanup = threading.Thread(target=cleanup_thread, daemon=True)
     cleanup.start()
     
-    app.run(host=os.getenv("COMPUTERNAME", "127.0.0.1"), port=5000, debug=True)
+    app.run(host="0.0.0.0", port=5000, debug=True)
 

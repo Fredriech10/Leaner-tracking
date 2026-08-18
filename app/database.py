@@ -951,6 +951,69 @@ def init_db():
     )
     """)
 
+    cursor.execute("""
+    CREATE TABLE IF NOT EXISTS screen_share_sessions (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        teacher_username TEXT NOT NULL,
+        title TEXT,
+        status TEXT NOT NULL DEFAULT 'active',
+        created_at TEXT NOT NULL,
+        ended_at TEXT
+    )
+    """)
+
+    cursor.execute("""
+    CREATE TABLE IF NOT EXISTS screen_share_viewers (
+        session_id INTEGER NOT NULL,
+        viewer_username TEXT NOT NULL,
+        status TEXT NOT NULL DEFAULT 'pending',
+        joined_at TEXT,
+        left_at TEXT,
+        PRIMARY KEY (session_id, viewer_username),
+        FOREIGN KEY (session_id) REFERENCES screen_share_sessions (id)
+    )
+    """)
+
+    cursor.execute("""
+    CREATE TABLE IF NOT EXISTS screen_share_signals (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        session_id INTEGER NOT NULL,
+        sender_username TEXT NOT NULL,
+        recipient_username TEXT NOT NULL,
+        signal_type TEXT NOT NULL,
+        payload TEXT NOT NULL,
+        created_at TEXT NOT NULL,
+        delivered_at TEXT,
+        FOREIGN KEY (session_id) REFERENCES screen_share_sessions (id)
+    )
+    """)
+
+    cursor.execute("""
+    CREATE TABLE IF NOT EXISTS screen_share_recordings (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        session_id INTEGER,
+        teacher_username TEXT NOT NULL,
+        title TEXT NOT NULL,
+        file_name TEXT NOT NULL,
+        file_path TEXT NOT NULL,
+        poster_file_name TEXT,
+        poster_file_path TEXT,
+        mime_type TEXT,
+        file_size INTEGER DEFAULT 0,
+        created_at TEXT NOT NULL,
+        FOREIGN KEY (session_id) REFERENCES screen_share_sessions (id)
+    )
+    """)
+    try:
+        cursor.execute("PRAGMA table_info(screen_share_recordings)")
+        columns = [col[1] for col in cursor.fetchall()]
+        if "poster_file_name" not in columns:
+            cursor.execute("ALTER TABLE screen_share_recordings ADD COLUMN poster_file_name TEXT")
+        if "poster_file_path" not in columns:
+            cursor.execute("ALTER TABLE screen_share_recordings ADD COLUMN poster_file_path TEXT")
+    except Exception as e:
+        print(f"Note: screen_share_recordings migration check: {e}")
+
     cursor.execute("CREATE INDEX IF NOT EXISTS idx_results_user_subject_task ON results (username, subject, task)")
     cursor.execute("CREATE INDEX IF NOT EXISTS idx_results_user_timestamp ON results (username, timestamp)")
     cursor.execute("CREATE INDEX IF NOT EXISTS idx_login_history_user_date ON login_history (username, date)")
@@ -970,6 +1033,10 @@ def init_db():
     cursor.execute("CREATE INDEX IF NOT EXISTS idx_communication_threads_teacher_updated ON communication_threads (teacher_username, updated_at)")
     cursor.execute("CREATE INDEX IF NOT EXISTS idx_communication_messages_thread_created ON communication_messages (thread_id, created_at)")
     cursor.execute("CREATE INDEX IF NOT EXISTS idx_communication_threads_student_topic_test ON communication_threads (student_username, topic, theory_test_id)")
+    cursor.execute("CREATE INDEX IF NOT EXISTS idx_screen_share_sessions_teacher_status ON screen_share_sessions (teacher_username, status)")
+    cursor.execute("CREATE INDEX IF NOT EXISTS idx_screen_share_viewers_session_status ON screen_share_viewers (session_id, status)")
+    cursor.execute("CREATE INDEX IF NOT EXISTS idx_screen_share_signals_recipient_delivery ON screen_share_signals (recipient_username, delivered_at, session_id)")
+    cursor.execute("CREATE INDEX IF NOT EXISTS idx_screen_share_recordings_teacher_created ON screen_share_recordings (teacher_username, created_at)")
 
     cursor.execute("SELECT COUNT(*) FROM subjects")
     if cursor.fetchone()[0] == 0:

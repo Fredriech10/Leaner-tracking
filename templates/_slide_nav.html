@@ -22,7 +22,7 @@
         display: flex;
         flex-direction: column;
         transition: width 160ms ease;
-        overflow: hidden;
+        overflow: visible;
     }
     body.slide-nav-expanded .slide-nav-shell { width: var(--slide-nav-expanded); }
     .slide-nav-header {
@@ -80,6 +80,44 @@
     }
     .slide-nav-link:hover { background: var(--slide-nav-hover); }
     .slide-nav-link.active { background: var(--slide-nav-active); color: var(--slide-nav-accent); }
+    .slide-nav-group {
+        display: flex;
+        flex-direction: column;
+        gap: 4px;
+        position: relative;
+        overflow: visible;
+    }
+    .slide-nav-group-links {
+        display: none;
+        flex-direction: column;
+        gap: 4px;
+        padding-left: 10px;
+    }
+    body.slide-nav-expanded .slide-nav-group-links { display: flex; }
+    body:not(.slide-nav-expanded) .slide-nav-group.open .slide-nav-group-links {
+        display: flex;
+        position: fixed;
+        left: 0;
+        top: 0;
+        min-width: 210px;
+        padding: 8px;
+        background: white;
+        border: 1px solid #d9e4f0;
+        border-radius: 10px;
+        box-shadow: 0 14px 32px rgba(15, 23, 42, 0.14);
+        z-index: 1300;
+    }
+    .slide-nav-sublink {
+        min-height: 34px;
+        padding: 7px 12px 7px 34px;
+        border-radius: 8px;
+        color: var(--slide-nav-text);
+        text-decoration: none;
+        font-size: 0.82em;
+        font-weight: 600;
+    }
+    .slide-nav-sublink:hover { background: var(--slide-nav-hover); }
+    .slide-nav-sublink.active { background: var(--slide-nav-active); color: var(--slide-nav-accent); }
     .slide-nav-icon {
         width: 20px;
         text-align: center;
@@ -117,6 +155,14 @@
         body.slide-nav-expanded .slide-nav-list { overflow-y: auto; }
         .slide-nav-brand, .slide-nav-label { display: inline; }
         .slide-nav-header { justify-content: space-between; padding: 8px 10px; }
+        body:not(.slide-nav-expanded) .slide-nav-group.open .slide-nav-group-links {
+            position: static;
+            min-width: 0;
+            padding: 0 0 0 10px;
+            background: transparent;
+            border: none;
+            box-shadow: none;
+        }
     }
     .floating-back-btn {
         position: fixed;
@@ -179,33 +225,48 @@
         animation: globalRestoreSpin 0.7s linear infinite;
     }
     @keyframes globalRestoreSpin { to { transform: rotate(360deg); } }
+    .topbar:not(.shared-topbar-ready) > :not(h1):not(strong) {
+        display: none !important;
+    }
 </style>
 {% set resolved_current_page = current_page if current_page is defined else default_current_page %}
 {% set nav_items = [] %}
 {% if session_role in ['teacher', 'admin'] %}
     {% set nav_items = [
-        ('teacher_dashboard', '/teacher_dashboard', '🏠', 'Dashboard'),
-        ('attendance', '/attendance', '📅', 'Attendance'),
-        ('group_results', '/group_results', '📊', 'Results'),
-        ('risk_learners', '/risk_learners', '🚨', 'Learners At Risk'),
-        ('weakness_summary', '/weakness_summary', '🧠', 'Weaknesses'),
-        ('manage_subjects', '/manage_subjects', '📁', 'Practical'),
-        ('manage_tests', '/manage_tests', '📝', 'Theory Tests'),
-        ('manage_lessons', '/manage_lessons', '🧩', 'Lesson Setup'),
-        ('response_review', '/response_review', '🧾', 'Review'),
-        ('communications', '/communications', '💬', 'Messages' ~ (' *' if teacher_unread_messages else '')),
-        ('marking_setup', '/marking_setup', '⚙️', 'Marking Setup'),
-        ('admin', '/admin', '🛠️', 'Admin')
+        {'key': 'teacher_dashboard', 'href': '/teacher_dashboard', 'icon': '🏠', 'label': 'Dashboard'},
+        {'key': 'classroom', 'href': '/attendance', 'icon': '🏫', 'label': 'Classroom', 'children': [
+            {'key': 'attendance', 'href': '/attendance', 'label': 'Attendance'},
+            {'key': 'group_results', 'href': '/group_results', 'label': 'Results'},
+            {'key': 'risk_learners', 'href': '/risk_learners', 'label': 'Learners At Risk'}
+        ]},
+        {'key': 'weakness_summary', 'href': '/weakness_summary', 'icon': '🧠', 'label': 'Weaknesses'},
+        {'key': 'tasks', 'href': '/manage_subjects', 'icon': '🗂️', 'label': 'Tasks', 'children': [
+            {'key': 'manage_subjects', 'href': '/manage_subjects', 'label': 'Practical'},
+            {'key': 'manage_tests', 'href': '/manage_tests', 'label': 'Theory Tests'},
+            {'key': 'manage_lessons', 'href': '/manage_lessons', 'label': 'Lesson Setup'},
+            {'key': 'video_library', 'href': '/screen_share/recordings', 'label': 'Video Library'}
+        ]},
+        {'key': 'export', 'href': '/export_attendance_form', 'icon': '📤', 'label': 'Export', 'children': [
+            {'key': 'export_attendance_form', 'href': '/export_attendance_form', 'label': 'Attendance'},
+            {'key': 'export_results', 'href': '/export_results', 'label': 'Results'}
+        ]},
+        {'key': 'response_review', 'href': '/response_review', 'icon': '🧾', 'label': 'Review'},
+        {'key': 'communications', 'href': '/communications', 'icon': '💬', 'label': 'Messages' ~ (' *' if teacher_unread_messages else '')},
+        {'key': 'marking_setup', 'href': '/marking_setup', 'icon': '⚙️', 'label': 'Marking Setup'},
+        {'key': 'admin', 'href': '/admin', 'icon': '🛠️', 'label': 'Admin'}
     ] %}
 {% else %}
     {% set nav_items = [
-        ('student_dashboard', '/student_dashboard', '🏠', 'Dashboard'),
-        ('my_tasks', '/my_tasks', '📁', 'Practical Tasks'),
-        ('my_results', '/my_results', '📊', 'Results'),
-        ('student_messages', '/student_messages', '💬', 'Messages' ~ (' *' if student_unread_messages else '')),
-        ('my_weaknesses', '/my_weaknesses', '🧠', 'Weaknesses'),
-        ('lessons', '/lessons', '📘', 'Lessons'),
-        ('tests', '/tests', '📝', 'Theory Tests')
+        {'key': 'student_dashboard', 'href': '/student_dashboard', 'icon': '🏠', 'label': 'Dashboard'},
+        {'key': 'tasks', 'href': '/my_tasks', 'icon': '🗂️', 'label': 'Tasks', 'children': [
+            {'key': 'my_tasks', 'href': '/my_tasks', 'label': 'Practical'},
+            {'key': 'lessons', 'href': '/lessons', 'label': 'Lessons'},
+            {'key': 'tests', 'href': '/tests', 'label': 'Theory Tests'},
+            {'key': 'video_library', 'href': '/screen_share/recordings', 'label': 'Video Library'}
+        ]},
+        {'key': 'my_results', 'href': '/my_results', 'icon': '📊', 'label': 'Results'},
+        {'key': 'student_messages', 'href': '/student_messages', 'icon': '💬', 'label': 'Messages' ~ (' *' if student_unread_messages else '')},
+        {'key': 'my_weaknesses', 'href': '/my_weaknesses', 'icon': '🧠', 'label': 'Weaknesses'}
     ] %}
 {% endif %}
 <aside class="slide-nav-shell">
@@ -214,11 +275,27 @@
         <button type="button" class="slide-nav-toggle" id="slideNavToggle" aria-label="Toggle navigation">☰</button>
     </div>
     <nav class="slide-nav-list">
-        {% for key, href, icon, label in nav_items %}
-        <a href="{{ href }}" class="slide-nav-link{% if resolved_current_page == key %} active{% endif %}" data-tooltip="{{ label }}">
-            <span class="slide-nav-icon">{{ icon }}</span>
-            <span class="slide-nav-label">{{ label }}</span>
+        {% for item in nav_items %}
+        {% if item.children is defined %}
+        <div class="slide-nav-group">
+            <a href="{{ item.href }}" class="slide-nav-link{% if resolved_current_page == item.key %} active{% endif %}" data-tooltip="{{ item.label }}" data-has-children="true" aria-expanded="{% if resolved_current_page == item.key %}true{% else %}false{% endif %}">
+                <span class="slide-nav-icon">{{ item.icon }}</span>
+                <span class="slide-nav-label">{{ item.label }}</span>
+            </a>
+            <div class="slide-nav-group-links">
+                {% for child in item.children %}
+                <a href="{{ child.href }}" class="slide-nav-sublink{% if current_page is defined and current_page == child.key %} active{% endif %}">
+                    {{ child.label }}
+                </a>
+                {% endfor %}
+            </div>
+        </div>
+        {% else %}
+        <a href="{{ item.href }}" class="slide-nav-link{% if resolved_current_page == item.key %} active{% endif %}" data-tooltip="{{ item.label }}">
+            <span class="slide-nav-icon">{{ item.icon }}</span>
+            <span class="slide-nav-label">{{ item.label }}</span>
         </a>
+        {% endif %}
         {% endfor %}
     </nav>
 </aside>
@@ -289,8 +366,59 @@
         toggle.addEventListener('click', function () {
             document.body.classList.toggle('slide-nav-expanded');
             sessionStorage.setItem(storageKey, document.body.classList.contains('slide-nav-expanded') ? '1' : '0');
+            if (document.body.classList.contains('slide-nav-expanded')) {
+                document.querySelectorAll('.slide-nav-group.open').forEach(function (group) {
+                    group.classList.remove('open');
+                    const trigger = group.querySelector('.slide-nav-link[data-has-children="true"]');
+                    if (trigger) trigger.setAttribute('aria-expanded', 'false');
+                });
+            }
         });
     }
+
+    document.querySelectorAll('.slide-nav-link[data-has-children="true"]').forEach(function (trigger) {
+        trigger.addEventListener('click', function (event) {
+            if (document.body.classList.contains('slide-nav-expanded')) return;
+            event.preventDefault();
+            const group = trigger.closest('.slide-nav-group');
+            const flyout = group.querySelector('.slide-nav-group-links');
+            const willOpen = !group.classList.contains('open');
+            document.querySelectorAll('.slide-nav-group.open').forEach(function (openGroup) {
+                openGroup.classList.remove('open');
+                const openTrigger = openGroup.querySelector('.slide-nav-link[data-has-children="true"]');
+                if (openTrigger) openTrigger.setAttribute('aria-expanded', 'false');
+                const openFlyout = openGroup.querySelector('.slide-nav-group-links');
+                if (openFlyout) {
+                    openFlyout.style.left = '';
+                    openFlyout.style.top = '';
+                }
+            });
+            if (willOpen) {
+                if (flyout) {
+                    const rect = trigger.getBoundingClientRect();
+                    flyout.style.left = (rect.right + 8) + 'px';
+                    flyout.style.top = rect.top + 'px';
+                }
+                group.classList.add('open');
+                trigger.setAttribute('aria-expanded', 'true');
+            }
+        });
+    });
+
+    document.addEventListener('click', function (event) {
+        if (document.body.classList.contains('slide-nav-expanded')) return;
+        if (event.target.closest('.slide-nav-group')) return;
+        document.querySelectorAll('.slide-nav-group.open').forEach(function (group) {
+            group.classList.remove('open');
+            const trigger = group.querySelector('.slide-nav-link[data-has-children="true"]');
+            if (trigger) trigger.setAttribute('aria-expanded', 'false');
+            const flyout = group.querySelector('.slide-nav-group-links');
+            if (flyout) {
+                flyout.style.left = '';
+                flyout.style.top = '';
+            }
+        });
+    });
 
     function normalizeTopbars() {
         if (!topbarConfig) return;
@@ -316,20 +444,16 @@
                 backLink.className = 'shared-topbar-back';
                 links.appendChild(backLink);
             }
-
-            (topbarConfig.headerLinks || []).forEach(function (item) {
-                const link = document.createElement('a');
-                link.href = item.href;
-                link.textContent = item.label;
-                if (item.key === topbarConfig.currentPage) {
-                    link.className = 'active-topbar-link';
-                }
-                links.appendChild(link);
-            });
             topbar.appendChild(links);
 
             const account = document.createElement('div');
             account.className = 'topbar-links topbar-account';
+
+            const dashboardLink = document.createElement('a');
+            dashboardLink.href = '{{ "/teacher_dashboard" if session_role in ["teacher", "admin"] else "/student_dashboard" }}';
+            dashboardLink.textContent = 'Dashboard';
+            dashboardLink.className = 'shared-topbar-dashboard';
+            account.appendChild(dashboardLink);
 
             if (topbarConfig.profileUrl) {
                 const user = document.createElement('span');
@@ -347,6 +471,7 @@
             logoutLink.textContent = 'Logout';
             account.appendChild(logoutLink);
             topbar.appendChild(account);
+            topbar.classList.add('shared-topbar-ready');
         });
     }
 
@@ -357,7 +482,11 @@
         });
     }
 
-    normalizeTopbars();
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', normalizeTopbars, { once: true });
+    } else {
+        normalizeTopbars();
+    }
 
     document.querySelectorAll('form').forEach(function (form) {
         form.addEventListener('submit', saveScrollPosition);

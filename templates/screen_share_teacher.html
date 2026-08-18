@@ -1,0 +1,426 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Screen Share</title>
+    <style>
+        * { box-sizing: border-box; }
+        body { font-family: Arial, sans-serif; margin: 0; background: #f0f2f5; color: #222; }
+        .topbar { background: #005a9e; color: white; padding: 12px 24px; display: flex; justify-content: space-between; align-items: center; gap: 10px; }
+        .topbar a { color: white; text-decoration: none; font-size: 0.84em; }
+        .topbar a:hover { text-decoration: underline; }
+        .page { width: 92%; max-width: 1200px; margin: 20px auto; display: grid; gap: 16px; }
+        .card { background: white; border: 1px solid #ddd; border-radius: 10px; padding: 18px; }
+        .card h2 { margin: 0 0 14px 0; color: #005a9e; font-size: 1.05em; }
+        .actions { display: flex; gap: 10px; flex-wrap: wrap; align-items: center; }
+        input[type="text"] { padding: 10px 12px; border: 1px solid #cbd5e1; border-radius: 8px; min-width: 280px; }
+        button { border: none; border-radius: 8px; padding: 10px 16px; font-weight: bold; cursor: pointer; }
+        .btn-primary { background: #005a9e; color: white; }
+        .btn-danger { background: #b42318; color: white; }
+        .btn-secondary { background: #e2e8f0; color: #1e293b; }
+        .status { font-size: 0.92em; color: #475569; }
+        .layout { display: grid; grid-template-columns: 2fr 1fr; gap: 16px; }
+        .preview-wrap { background: #0f172a; border-radius: 10px; overflow: hidden; min-height: 420px; display: flex; align-items: center; justify-content: center; }
+        video { width: 100%; height: 100%; object-fit: contain; background: #000; }
+        .placeholder { color: #cbd5e1; text-align: center; padding: 30px; }
+        table { width: 100%; border-collapse: collapse; font-size: 0.88em; }
+        th, td { padding: 8px 10px; border-bottom: 1px solid #edf2f7; text-align: left; }
+        th { background: #f8fafc; color: #475569; }
+        .badge { display: inline-block; border-radius: 999px; padding: 2px 8px; font-size: 0.76em; font-weight: bold; }
+        .badge-pending { background: #fef3c7; color: #92400e; }
+        .badge-accepted { background: #dcfce7; color: #166534; }
+        .badge-ended { background: #e2e8f0; color: #475569; }
+        .helper { font-size: 0.84em; color: #64748b; margin-top: 8px; }
+        .recording-live { color: #b42318; font-weight: bold; }
+        .library-grid { display:grid; gap:12px; }
+        .recording-item { border:1px solid #e2e8f0; border-radius:10px; padding:12px; background:#fafcff; display:grid; grid-template-columns: 180px 1fr; gap:12px; }
+        .recording-meta { font-size:0.8em; color:#64748b; margin-top:6px; }
+        .recording-thumb { width:100%; height:102px; object-fit:cover; border-radius:8px; background:#0f172a; }
+        .recording-actions { display:flex; gap:8px; flex-wrap:wrap; margin-top:10px; }
+        .inline-form { display:flex; gap:8px; flex-wrap:wrap; align-items:center; margin-top:10px; }
+        .inline-form input[type="text"] { min-width: 220px; flex:1; }
+        @media (max-width: 900px) {
+            .layout { grid-template-columns: 1fr; }
+            input[type="text"] { min-width: 100%; }
+            .recording-item { grid-template-columns: 1fr; }
+        }
+    </style>
+</head>
+<body>
+{% set current_page = 'tasks' %}
+{% include '_slide_nav.html' %}
+<div class="topbar">
+    <h1>Live Screen Share</h1>
+</div>
+
+<div class="page">
+    <div class="card">
+        <h2>Broadcast Controls</h2>
+        <div class="actions">
+            <input type="text" id="shareTitle" value="{{ active_session.title if active_session else 'Live lesson screen share' }}" placeholder="Broadcast title">
+            <button class="btn-primary" id="startBtn">Start Broadcast</button>
+            <button class="btn-danger" id="stopBtn" {% if not active_session %}disabled{% endif %}>Stop Broadcast</button>
+            <button class="btn-secondary" id="recordBtn" disabled>Start Recording</button>
+        </div>
+        <div class="helper">When you start, the browser will ask which screen, window, or tab to share. Learners must still click Accept on their side.</div>
+        <div class="status" id="statusText">{% if active_session %}Broadcast is active. Session #{{ active_session.id }}.{% else %}No active broadcast.{% endif %}</div>
+        <div class="status" id="recordStatus">Recording is off.</div>
+    </div>
+
+    <div class="layout">
+        <div class="card">
+            <h2>Preview</h2>
+            <div class="preview-wrap">
+                <video id="previewVideo" autoplay muted playsinline></video>
+                <div class="placeholder" id="previewPlaceholder">Start a broadcast to preview the shared screen here.</div>
+            </div>
+        </div>
+
+        <div class="card">
+            <h2>Learners</h2>
+            <table>
+                <thead>
+                    <tr><th>Learner</th><th>Group</th><th>Status</th></tr>
+                </thead>
+                <tbody id="viewerTable">
+                    {% for username, full_name, group_name in learners %}
+                    <tr data-viewer="{{ username }}">
+                        <td>{{ full_name }}<div style="font-size:0.75em; color:#64748b;">{{ username }}</div></td>
+                        <td>{{ group_name }}</td>
+                        <td><span class="badge badge-pending">Waiting</span></td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <div class="card">
+        <h2>Saved Recordings</h2>
+        <div class="library-grid" id="recordingsList">
+            {% if recordings %}
+                {% for recording in recordings %}
+                <div class="recording-item">
+                    <div style="font-weight:bold;">{{ recording.title }}</div>
+                    <div class="recording-meta">{{ recording.created_at }} | {{ recording.file_name }}</div>
+                    <div style="margin-top:8px;"><a href="/screen_share/recordings/{{ recording.id }}" target="_blank">Open Recording</a></div>
+                </div>
+                {% endfor %}
+            {% else %}
+                <div class="recording-item" id="emptyRecordings">No recordings saved yet.</div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+
+<script>
+const state = {
+    sessionId: {{ active_session.id if active_session else 'null' }},
+    teacherUsername: {{ session_username|tojson }},
+    localStream: null,
+    peers: {},
+    mediaRecorder: null,
+    recordingChunks: [],
+    statusPoll: null,
+    eventsPoll: null
+};
+
+const rtcConfig = { iceServers: [{ urls: "stun:stun.l.google.com:19302" }] };
+
+function setStatus(message) {
+    document.getElementById('statusText').textContent = message;
+}
+
+function setButtons(active) {
+    document.getElementById('startBtn').disabled = active;
+    document.getElementById('stopBtn').disabled = !active;
+    document.getElementById('recordBtn').disabled = !active;
+}
+
+function updatePreview(stream) {
+    const video = document.getElementById('previewVideo');
+    const placeholder = document.getElementById('previewPlaceholder');
+    if (stream) {
+        video.srcObject = stream;
+        placeholder.style.display = 'none';
+    } else {
+        video.srcObject = null;
+        placeholder.style.display = 'block';
+    }
+}
+
+function setViewerBadge(username, status) {
+    const row = document.querySelector(`tr[data-viewer="${username}"] td:last-child`);
+    if (!row) return;
+    const css = status === 'accepted' ? 'badge-accepted' : (status === 'ended' ? 'badge-ended' : 'badge-pending');
+    const label = status === 'accepted' ? 'Accepted' : (status === 'ended' ? 'Ended' : 'Waiting');
+    row.innerHTML = `<span class="badge ${css}">${label}</span>`;
+}
+
+function setRecordingStatus(message, live=false) {
+    const node = document.getElementById('recordStatus');
+    node.textContent = message;
+    node.className = live ? 'status recording-live' : 'status';
+}
+
+function prependRecording(title, href, metaText, posterHref='') {
+    const list = document.getElementById('recordingsList');
+    const empty = document.getElementById('emptyRecordings');
+    if (empty) empty.remove();
+    const item = document.createElement('div');
+    item.className = 'recording-item';
+    const thumb = posterHref ? `<img class="recording-thumb" src="${posterHref}" alt="${title} poster">` : `<div class="recording-thumb"></div>`;
+    item.innerHTML = `${thumb}<div><div style="font-weight:bold;">${title}</div><div class="recording-meta">${metaText}</div><div class="recording-actions"><a href="${href}" target="_blank">Watch</a><a href="/screen_share/recordings">Open Library</a></div></div>`;
+    list.prepend(item);
+}
+
+async function buildPosterBlob(blob) {
+    return new Promise((resolve) => {
+        const video = document.createElement('video');
+        const url = URL.createObjectURL(blob);
+        video.preload = 'metadata';
+        video.muted = true;
+        video.playsInline = true;
+        video.src = url;
+        video.onloadeddata = () => {
+            const canvas = document.createElement('canvas');
+            canvas.width = video.videoWidth || 1280;
+            canvas.height = video.videoHeight || 720;
+            const ctx = canvas.getContext('2d');
+            ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+            canvas.toBlob((posterBlob) => {
+                URL.revokeObjectURL(url);
+                resolve(posterBlob || null);
+            }, 'image/png');
+        };
+        video.onerror = () => {
+            URL.revokeObjectURL(url);
+            resolve(null);
+        };
+    });
+}
+
+async function postForm(url, data) {
+    const formData = new URLSearchParams(data);
+    const response = await fetch(url, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+        body: formData
+    });
+    return response.json();
+}
+
+async function startBroadcast() {
+    if (state.localStream) return;
+    const title = document.getElementById('shareTitle').value.trim() || 'Live lesson screen share';
+    const startData = await postForm('/screen_share/start', { title });
+    if (!startData.ok) {
+        setStatus('Could not start broadcast.');
+        return;
+    }
+    state.sessionId = startData.session.id;
+    try {
+        if (!navigator.mediaDevices || !navigator.mediaDevices.getDisplayMedia) {
+            throw new Error('Screen sharing is not supported in this browser.');
+        }
+
+        let stream;
+        try {
+            stream = await navigator.mediaDevices.getDisplayMedia({
+                video: true,
+                audio: true
+            });
+        } catch (error) {
+            stream = await navigator.mediaDevices.getDisplayMedia({
+                video: true,
+                audio: false
+            });
+        }
+
+        state.localStream = stream;
+        updatePreview(stream);
+        setButtons(true);
+        setStatus(`Broadcast is active. Session #${state.sessionId}.`);
+        setRecordingStatus('Recording is off.');
+        const videoTrack = stream.getVideoTracks()[0];
+        if (videoTrack) {
+            videoTrack.addEventListener('ended', stopBroadcast);
+        }
+        beginPolling();
+    } catch (error) {
+        await postForm('/screen_share/stop', {});
+        state.sessionId = null;
+        const details = error && error.name ? `${error.name}${error.message ? `: ${error.message}` : ''}` : 'Unknown browser error';
+        setStatus(`Screen share could not start. ${details}`);
+    }
+}
+
+async function stopBroadcast() {
+    if (state.mediaRecorder && state.mediaRecorder.state !== 'inactive') {
+        state.mediaRecorder.stop();
+    }
+    if (state.localStream) {
+        state.localStream.getTracks().forEach(track => track.stop());
+    }
+    Object.values(state.peers).forEach(pc => pc.close());
+    state.peers = {};
+    state.localStream = null;
+    updatePreview(null);
+    clearInterval(state.statusPoll);
+    clearInterval(state.eventsPoll);
+    state.statusPoll = null;
+    state.eventsPoll = null;
+    await postForm('/screen_share/stop', {});
+    state.sessionId = null;
+    setButtons(false);
+    setStatus('Broadcast stopped.');
+    setRecordingStatus('Recording is off.');
+    document.querySelectorAll('#viewerTable tr[data-viewer]').forEach(row => {
+        setViewerBadge(row.dataset.viewer, 'pending');
+    });
+}
+
+async function uploadRecording(blob) {
+    const title = document.getElementById('shareTitle').value.trim() || 'Screen recording';
+    const formData = new FormData();
+    formData.append('title', title);
+    if (state.sessionId) {
+        formData.append('session_id', String(state.sessionId));
+    }
+    formData.append('recording', blob, `${title.replace(/[^a-z0-9-_]+/gi, '_') || 'screen_recording'}.webm`);
+    const posterBlob = await buildPosterBlob(blob);
+    if (posterBlob) {
+        formData.append('poster', posterBlob, `${title.replace(/[^a-z0-9-_]+/gi, '_') || 'screen_recording'}_poster.png`);
+    }
+    const response = await fetch('/screen_share/upload_recording', {
+        method: 'POST',
+        body: formData
+    });
+    const data = await response.json();
+    if (data.ok) {
+        const nowText = new Date().toLocaleString();
+        prependRecording(title, data.watch_href, `${nowText} | ${data.file_name}`, `/screen_share/recordings/${data.recording_id}/poster`);
+        setRecordingStatus('Recording saved.');
+    } else {
+        setRecordingStatus('Recording upload failed.');
+    }
+}
+
+function toggleRecording() {
+    if (!state.localStream) return;
+    const button = document.getElementById('recordBtn');
+    if (state.mediaRecorder && state.mediaRecorder.state === 'recording') {
+        state.mediaRecorder.stop();
+        return;
+    }
+    try {
+        state.recordingChunks = [];
+        state.mediaRecorder = new MediaRecorder(state.localStream, { mimeType: 'video/webm' });
+        state.mediaRecorder.ondataavailable = (event) => {
+            if (event.data && event.data.size > 0) {
+                state.recordingChunks.push(event.data);
+            }
+        };
+        state.mediaRecorder.onstop = async () => {
+            button.textContent = 'Start Recording';
+            const blob = new Blob(state.recordingChunks, { type: 'video/webm' });
+            state.recordingChunks = [];
+            if (blob.size > 0) {
+                setRecordingStatus('Uploading recording...');
+                await uploadRecording(blob);
+            } else {
+                setRecordingStatus('Recording stopped.');
+            }
+        };
+        state.mediaRecorder.start(1000);
+        button.textContent = 'Stop Recording';
+        setRecordingStatus('Recording live...', true);
+    } catch (error) {
+        setRecordingStatus(`Recording failed to start. ${error.name || 'Error'}`);
+    }
+}
+
+async function createPeerForViewer(viewerUsername) {
+    if (!state.localStream || state.peers[viewerUsername]) return;
+    const pc = new RTCPeerConnection(rtcConfig);
+    state.peers[viewerUsername] = pc;
+    state.localStream.getTracks().forEach(track => pc.addTrack(track, state.localStream));
+    pc.onicecandidate = async (event) => {
+        if (!event.candidate || !state.sessionId) return;
+        await postForm(`/screen_share/${state.sessionId}/signal`, {
+            recipient_username: viewerUsername,
+            signal_type: 'ice-candidate',
+            payload: JSON.stringify(event.candidate)
+        });
+    };
+    pc.onconnectionstatechange = () => {
+        if (['failed', 'closed', 'disconnected'].includes(pc.connectionState)) {
+            pc.close();
+            delete state.peers[viewerUsername];
+        }
+    };
+    const offer = await pc.createOffer();
+    await pc.setLocalDescription(offer);
+    await postForm(`/screen_share/${state.sessionId}/signal`, {
+        recipient_username: viewerUsername,
+        signal_type: 'offer',
+        payload: JSON.stringify(offer)
+    });
+}
+
+async function handleEvents() {
+    if (!state.sessionId) return;
+    const response = await fetch(`/screen_share/${state.sessionId}/events`);
+    const data = await response.json();
+    if (!data.ok) return;
+    for (const event of data.events) {
+        if (event.signal_type === 'answer') {
+            const pc = state.peers[event.sender_username];
+            if (pc) {
+                await pc.setRemoteDescription(new RTCSessionDescription(event.payload));
+            }
+        } else if (event.signal_type === 'ice-candidate') {
+            const pc = state.peers[event.sender_username];
+            if (pc && event.payload) {
+                await pc.addIceCandidate(new RTCIceCandidate(event.payload));
+            }
+        }
+    }
+}
+
+async function refreshStatus() {
+    if (!state.sessionId) return;
+    const response = await fetch(`/screen_share/${state.sessionId}/status`);
+    const data = await response.json();
+    if (!data.ok || !data.session || data.session.status !== 'active') {
+        stopBroadcast();
+        return;
+    }
+    for (const viewer of (data.viewers || [])) {
+        setViewerBadge(viewer.viewer_username, viewer.status);
+        if (viewer.status === 'accepted') {
+            createPeerForViewer(viewer.viewer_username);
+        }
+    }
+}
+
+function beginPolling() {
+    clearInterval(state.statusPoll);
+    clearInterval(state.eventsPoll);
+    state.statusPoll = setInterval(refreshStatus, 3000);
+    state.eventsPoll = setInterval(handleEvents, 1200);
+    refreshStatus();
+    handleEvents();
+}
+
+document.getElementById('startBtn').addEventListener('click', startBroadcast);
+document.getElementById('stopBtn').addEventListener('click', stopBroadcast);
+document.getElementById('recordBtn').addEventListener('click', toggleRecording);
+
+if (state.sessionId) {
+    setButtons(true);
+    beginPolling();
+}
+</script>
+</body>
+</html>

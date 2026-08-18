@@ -1,0 +1,192 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Watch Screen Share</title>
+    <style>
+        * { box-sizing: border-box; }
+        body { font-family: Arial, sans-serif; margin: 0; background: #f0f2f5; color: #222; }
+        .topbar { background: #0078D4; color: white; padding: 12px 24px; display:flex; justify-content:space-between; align-items:center; gap:10px; }
+        .topbar a { color: white; text-decoration: none; font-size: 0.84em; }
+        .page { width: 92%; max-width: 1100px; margin: 20px auto; display:grid; gap:16px; }
+        .card { background:white; border:1px solid #ddd; border-radius:10px; padding:18px; }
+        .card h2 { margin:0 0 12px 0; color:#0078D4; font-size:1.05em; }
+        .btn { border:none; border-radius:8px; padding:10px 16px; font-weight:bold; cursor:pointer; }
+        .btn-primary { background:#0078D4; color:white; }
+        .btn-secondary { background:#e2e8f0; color:#1e293b; }
+        .status { color:#475569; font-size:0.92em; }
+        .player { background:#0f172a; border-radius:10px; min-height:520px; display:flex; align-items:center; justify-content:center; overflow:hidden; }
+        video { width:100%; height:100%; object-fit:contain; background:#000; }
+        .placeholder { color:#cbd5e1; text-align:center; padding:30px; }
+        .library-grid { display:grid; gap:12px; }
+        .recording-item { border:1px solid #e2e8f0; border-radius:10px; padding:12px; background:#fafcff; }
+        .recording-meta { font-size:0.8em; color:#64748b; margin-top:6px; }
+    </style>
+</head>
+<body>
+{% set current_page = 'student_dashboard' %}
+{% include '_slide_nav.html' %}
+<div class="topbar">
+    <strong>Live Lesson Screen Share</strong>
+    <div style="display:flex; gap:10px; align-items:center;">
+        <a href="/student_dashboard">Dashboard</a>
+        <a href="/logout">Logout</a>
+    </div>
+</div>
+
+<div class="page">
+    <div class="card">
+        <h2>Broadcast</h2>
+        {% if active_session %}
+        <div style="font-weight:bold; margin-bottom:8px;">{{ active_session.title or 'Live lesson screen share' }}</div>
+        <div class="status" id="statusText">Your teacher has an active broadcast. Click Accept to join.</div>
+        <div style="margin-top:12px; display:flex; gap:10px; flex-wrap:wrap;">
+            <button class="btn btn-primary" id="acceptBtn">Accept and Watch</button>
+            <a href="/student_dashboard" class="btn btn-secondary" style="text-decoration:none;">Back</a>
+        </div>
+        {% else %}
+        <div class="status">No live broadcast is active right now.</div>
+        {% endif %}
+    </div>
+
+    <div class="card">
+        <h2>Viewer</h2>
+        <div class="player">
+            <video id="remoteVideo" autoplay playsinline controls></video>
+            <div class="placeholder" id="playerPlaceholder">When the teacher starts sending video, it will appear here.</div>
+        </div>
+    </div>
+
+    <div class="card">
+        <h2>Replay Library</h2>
+        <div class="library-grid">
+            {% if recordings %}
+                {% for recording in recordings %}
+                <div class="recording-item">
+                    <div style="font-weight:bold;">{{ recording.title }}</div>
+                    <div class="recording-meta">{{ recording.created_at }}</div>
+                    <div style="margin-top:8px;"><a href="{{ recording.watch_href }}">Watch Recording</a></div>
+                </div>
+                {% endfor %}
+            {% else %}
+                <div class="recording-item">No recordings available yet.</div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+
+<script>
+const state = {
+    sessionId: {{ active_session.id if active_session else 'null' }},
+    teacherUsername: {{ (active_session.teacher_username if active_session else '')|tojson }},
+    peer: null,
+    joined: {{ 'true' if active_session and active_session.get('viewer_status') == 'accepted' else 'false' }},
+    statusPoll: null,
+    eventsPoll: null
+};
+
+const rtcConfig = { iceServers: [{ urls: "stun:stun.l.google.com:19302" }] };
+
+function setStatus(message) {
+    const node = document.getElementById('statusText');
+    if (node) node.textContent = message;
+}
+
+async function postForm(url, data) {
+    const formData = new URLSearchParams(data);
+    const response = await fetch(url, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+        body: formData
+    });
+    return response.json();
+}
+
+function ensurePeer() {
+    if (state.peer) return state.peer;
+    const pc = new RTCPeerConnection(rtcConfig);
+    state.peer = pc;
+    pc.ontrack = (event) => {
+        const video = document.getElementById('remoteVideo');
+        const placeholder = document.getElementById('playerPlaceholder');
+        video.srcObject = event.streams[0];
+        placeholder.style.display = 'none';
+        setStatus('Connected to the live screen share.');
+    };
+    pc.onicecandidate = async (event) => {
+        if (!event.candidate || !state.sessionId) return;
+        await postForm(`/screen_share/${state.sessionId}/signal`, {
+            recipient_username: state.teacherUsername,
+            signal_type: 'ice-candidate',
+            payload: JSON.stringify(event.candidate)
+        });
+    };
+    return pc;
+}
+
+async function joinSession() {
+    if (!state.sessionId || state.joined) return;
+    const data = await postForm(`/screen_share/${state.sessionId}/join`, {});
+    if (!data.ok) {
+        setStatus('Could not join the broadcast.');
+        return;
+    }
+    state.joined = true;
+    setStatus('Waiting for the teacher to connect the stream...');
+    beginPolling();
+}
+
+async function handleEvents() {
+    if (!state.sessionId || !state.joined) return;
+    const response = await fetch(`/screen_share/${state.sessionId}/events`);
+    const data = await response.json();
+    if (!data.ok) return;
+    for (const event of data.events) {
+        const pc = ensurePeer();
+        if (event.signal_type === 'offer') {
+            await pc.setRemoteDescription(new RTCSessionDescription(event.payload));
+            const answer = await pc.createAnswer();
+            await pc.setLocalDescription(answer);
+            await postForm(`/screen_share/${state.sessionId}/signal`, {
+                recipient_username: state.teacherUsername,
+                signal_type: 'answer',
+                payload: JSON.stringify(answer)
+            });
+        } else if (event.signal_type === 'ice-candidate' && event.payload) {
+            await pc.addIceCandidate(new RTCIceCandidate(event.payload));
+        }
+    }
+}
+
+async function refreshStatus() {
+    if (!state.sessionId) return;
+    const response = await fetch(`/screen_share/${state.sessionId}/status`);
+    const data = await response.json();
+    if (!data.ok || !data.session || data.session.status !== 'active') {
+        clearInterval(state.statusPoll);
+        clearInterval(state.eventsPoll);
+        setStatus('This broadcast has ended.');
+        return;
+    }
+}
+
+function beginPolling() {
+    clearInterval(state.statusPoll);
+    clearInterval(state.eventsPoll);
+    state.statusPoll = setInterval(refreshStatus, 3000);
+    state.eventsPoll = setInterval(handleEvents, 1200);
+    refreshStatus();
+    handleEvents();
+}
+
+const acceptBtn = document.getElementById('acceptBtn');
+if (acceptBtn) {
+    acceptBtn.addEventListener('click', joinSession);
+}
+
+if (state.joined) {
+    beginPolling();
+}
+</script>
+</body>
+</html>

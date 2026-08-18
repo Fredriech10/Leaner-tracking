@@ -1,0 +1,38 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>{{ recording.title }}</title>
+    <style>
+        * { box-sizing: border-box; }
+        body { font-family: Arial, sans-serif; margin: 0; background: #f0f2f5; color: #222; }
+        .topbar { background: #005a9e; color: white; padding: 12px 24px; display:flex; justify-content:space-between; align-items:center; }
+        .topbar a { color: white; text-decoration:none; }
+        .page { width: 92%; max-width: 1200px; margin: 20px auto; display:grid; gap:16px; }
+        .card { background:white; border:1px solid #ddd; border-radius:10px; padding:18px; }
+        .player { background:#0f172a; border-radius:10px; overflow:hidden; }
+        video { width:100%; max-height:72vh; background:#000; }
+        .meta { color:#64748b; font-size:0.9em; margin-top:6px; }
+    </style>
+</head>
+<body>
+{% set current_page = 'video_library' %}
+{% include '_slide_nav.html' %}
+<div class="topbar">
+    <h1>Recording Watch</h1>
+</div>
+<div class="page">
+    <div class="card">
+        <div style="font-size:1.2em; font-weight:bold;">{{ recording.title }}</div>
+        <div class="meta">{{ recording.created_at }} | {{ recording.file_name }}</div>
+    </div>
+    <div class="card">
+        <div class="player">
+            <video controls preload="metadata" {% if recording.poster_href %}poster="{{ recording.poster_href }}"{% endif %}>
+                <source src="{{ recording.stream_href }}" type="{{ recording.mime_type }}">
+            </video>
+        </div>
+    </div>
+</div>
+</body>
+</html>

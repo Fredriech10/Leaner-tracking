@@ -482,7 +482,7 @@ def register_review_routes(app):
         conn.commit()
         conn.close()
 
-        updated = regrade_theory_question_answers(test_id, question_id, selected_group or None, learner_username or None)
+        updated = regrade_theory_question_answers(test_id, question_id, selected_group or None)
         flash(f"Accepted answer added. {updated} learner answer(s) regraded.", "success")
         if learner_username:
             return redirect(url_for("response_review_learner", learner=learner_username, item=test_id))

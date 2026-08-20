@@ -222,6 +222,66 @@
         animation: globalRestoreSpin 0.7s linear infinite;
     }
     @keyframes globalRestoreSpin { to { transform: rotate(360deg); } }
+    .topbar.shared-topbar-ready {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 14px;
+    }
+    .topbar.shared-topbar-ready h1,
+    .topbar.shared-topbar-ready strong {
+        margin: 0;
+        flex: 1 1 auto;
+        min-width: 0;
+    }
+    .topbar.shared-topbar-ready .shared-topbar-links,
+    .topbar.shared-topbar-ready .topbar-account {
+        display: inline-flex;
+        align-items: center;
+        gap: 12px;
+        flex-wrap: nowrap;
+        white-space: nowrap;
+    }
+    .topbar.shared-topbar-ready .topbar-account {
+        margin-left: auto;
+    }
+    .topbar.shared-topbar-ready a {
+        color: white;
+        text-decoration: none;
+        font-size: 0.84em;
+        opacity: 0.96;
+    }
+    .topbar.shared-topbar-ready a:hover {
+        opacity: 1;
+        text-decoration: underline;
+    }
+    .topbar.shared-topbar-ready .topbar-user {
+        display: inline-flex;
+        align-items: center;
+        gap: 4px;
+        color: white;
+        font-size: 0.84em;
+        border-left: 1px solid rgba(255,255,255,0.35);
+        padding-left: 12px;
+        margin-left: 2px;
+    }
+    .topbar.shared-topbar-ready .topbar-user a {
+        font-weight: bold;
+    }
+    @media (max-width: 900px) {
+        .topbar.shared-topbar-ready {
+            flex-wrap: wrap;
+            align-items: flex-start;
+        }
+        .topbar.shared-topbar-ready .shared-topbar-links,
+        .topbar.shared-topbar-ready .topbar-account {
+            width: 100%;
+        }
+        .topbar.shared-topbar-ready .topbar-account {
+            justify-content: flex-end;
+            margin-left: 0;
+        }
+    }
     .topbar:not(.shared-topbar-ready) > :not(h1):not(strong) {
         display: none !important;
     }
@@ -315,7 +375,25 @@
   "backHidden": {{ logical_back_hidden|tojson }},
   "profileUrl": {{ (url_for('edit_user', username=session_username) if session_username else '')|tojson }},
   "logoutUrl": "/logout",
-  "headerLinks": {{ header_nav_items|tojson }}
+  "headerLinks": {{ header_nav_items|tojson }},
+  "autoRefreshEnabled": {{ (resolved_current_page in [
+    'teacher_dashboard',
+    'student_dashboard',
+    'attendance',
+    'group_results',
+    'risk_learners',
+    'weakness_summary',
+    'communications',
+    'student_messages',
+    'my_results',
+    'my_weaknesses',
+    'response_review',
+    'screen_share_teacher',
+    'screen_share_student',
+    'screen_share_library',
+    'screen_share_watch'
+  ])|tojson }},
+  "autoRefreshMs": 45000
 }
 </script>
 <script>
@@ -331,6 +409,8 @@
     const pathScrollKey = 'learnerTrackingGlobalScrollY:path:' + window.location.pathname;
     const fullScrollKey = 'learnerTrackingGlobalScrollY:full:' + window.location.pathname + window.location.search;
     const legacyScrollKey = 'learnerTrackingGlobalScrollY:' + window.location.pathname;
+    let lastUserActivityAt = Date.now();
+    let autoRefreshTimer = null;
     if (sessionStorage.getItem(storageKey) === '1') {
         document.body.classList.add('slide-nav-expanded');
     }
@@ -425,6 +505,38 @@
         tooltip.textContent = '';
     }
 
+    function markUserActivity() {
+        lastUserActivityAt = Date.now();
+    }
+
+    function hasBlockingInputFocus() {
+        const active = document.activeElement;
+        if (!active) return false;
+        const tag = (active.tagName || '').toLowerCase();
+        return tag === 'input' || tag === 'textarea' || tag === 'select' || active.isContentEditable;
+    }
+
+    function canAutoRefreshNow() {
+        if (!topbarConfig || !topbarConfig.autoRefreshEnabled) return false;
+        if (document.visibilityState !== 'visible') return false;
+        if (document.body.classList.contains('slide-nav-expanded')) return false;
+        if (hasBlockingInputFocus()) return false;
+        return (Date.now() - lastUserActivityAt) >= (topbarConfig.autoRefreshMs || 45000);
+    }
+
+    function scheduleAutoRefresh() {
+        if (autoRefreshTimer) {
+            clearInterval(autoRefreshTimer);
+            autoRefreshTimer = null;
+        }
+        if (!topbarConfig || !topbarConfig.autoRefreshEnabled) return;
+        autoRefreshTimer = setInterval(function () {
+            if (!canAutoRefreshNow()) return;
+            saveScrollPosition();
+            window.location.reload();
+        }, 15000);
+    }
+
     function showTooltip(link) {
         if (!tooltip || document.body.classList.contains('slide-nav-expanded')) return;
         const label = link.getAttribute('data-tooltip');
@@ -450,6 +562,9 @@
 
     window.addEventListener('scroll', hideTooltip, { passive: true });
     window.addEventListener('resize', hideTooltip);
+    ['click', 'keydown', 'input', 'change', 'mousemove', 'touchstart'].forEach(function (eventName) {
+        document.addEventListener(eventName, markUserActivity, { passive: true });
+    });
 
     function normalizeTopbars() {
         if (!topbarConfig) return;
@@ -543,5 +658,6 @@
     });
     window.addEventListener('pageshow', restoreScrollPosition);
     window.addEventListener('load', restoreScrollPosition);
+    scheduleAutoRefresh();
 })();
 </script>

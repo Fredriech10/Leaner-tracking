@@ -193,19 +193,22 @@ def register_review_routes(app):
                             break
                     if orientation_rows is None:
                         orientation_rows, _ = build_match_review_rows(options, "")
+                    total_answers = len(answers)
                     for row_data in orientation_rows:
-                        responses = []
+                        correct_matches = 0
                         for answer in answers:
                             learner_rows, _ = build_match_review_rows(options, answer["answer_text"] or "")
                             for learner_row in learner_rows:
-                                if learner_row["left"] == row_data["left"] and learner_row["learner_match"] != "No answer":
-                                    responses.append(learner_row["learner_match"])
+                                if learner_row["left"] == row_data["left"]:
+                                    if learner_row["learner_match"] == row_data["correct_match"]:
+                                        correct_matches += 1
                                     break
                         option_rows.append(
                             {
                                 "left": row_data["left"],
                                 "accepted": row_data["correct_match"],
-                                "responses": responses,
+                                "correct_count": correct_matches,
+                                "correct_pct": round((correct_matches / total_answers) * 100) if total_answers else 0,
                             }
                         )
                 else:
@@ -337,6 +340,7 @@ def register_review_routes(app):
             options = cursor.fetchall()
             correct_answers = []
             match_rows = []
+            choice_rows = []
             if row["question_type"] == "true_false":
                 correct_choice, accepted_corrections = get_true_false_option_data(options)
                 correct_answers = ([correct_choice] if correct_choice else []) + accepted_corrections
@@ -346,6 +350,16 @@ def register_review_routes(app):
                 match_rows, _ = build_match_review_rows(options, row["answer_text"])
             else:
                 correct_answers = [option["option_text"] for option in options if option["is_correct"] == 1]
+                if row["question_type"] == "mcq_single":
+                    learner_answer = row["answer_text"] or "No answer"
+                    for option in options:
+                        choice_rows.append(
+                            {
+                                "option_text": option["option_text"],
+                                "is_selected": learner_answer == option["option_text"],
+                                "is_correct": option["is_correct"] == 1,
+                            }
+                        )
 
             suggested_acceptable_answer = ""
             if row["question_type"] == "true_false":
@@ -366,6 +380,7 @@ def register_review_routes(app):
                     "marks_awarded": row["marks_awarded"],
                     "correct_answers": correct_answers,
                     "match_rows": match_rows,
+                    "choice_rows": choice_rows,
                     "suggested_acceptable_answer": suggested_acceptable_answer,
                 }
             )

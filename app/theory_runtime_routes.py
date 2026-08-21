@@ -7,6 +7,7 @@ from flask import redirect, render_template, request, session, url_for
 from app.database import get_db, get_user_role, log_activity
 from app.helper_common import externalize_data_uri_images, parse_module_names, pptx_to_content_slide_html, safe_int
 from app.helper_theory import (
+    build_match_review_rows,
     clone_bank_question_to_test,
     merge_bank_match_rows_into_test,
     score_fill_in_answer,
@@ -996,12 +997,15 @@ def register_theory_runtime_routes(app):
             q_text, q_type, marks, answer_text, is_correct, marks_awarded, q_id = ans
             cursor.execute(
                 """
-                SELECT option_text, is_correct, match_pair
+                SELECT id, option_text, is_correct, match_pair
                 FROM theory_options WHERE question_id = ?
                 """,
                 (q_id,),
             )
             options = cursor.fetchall()
+            match_rows = []
+            if q_type == "match":
+                match_rows, _ = build_match_review_rows(options, answer_text or "")
             detailed.append(
                 {
                     "question": q_text,
@@ -1011,6 +1015,7 @@ def register_theory_runtime_routes(app):
                     "correct": is_correct,
                     "awarded": marks_awarded,
                     "options": options,
+                    "match_rows": match_rows,
                 }
             )
 

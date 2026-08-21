@@ -119,14 +119,14 @@
         </form>
     </div>
 
-    <div class="thread-list">
+    <div class="thread-list" id="threadList">
         {% if threads %}
             {% for thread in threads %}
             {% set latest_message = thread.messages[-1] if thread.messages else none %}
             {% set student_msgs = thread.messages | selectattr('sender_role', 'equalto', 'student') | list %}
             {% set last_student_msg = student_msgs[-1] if student_msgs else none %}
             {% set is_unread = last_student_msg and (not thread.teacher_read_at or thread.teacher_read_at < last_student_msg.created_at) %}
-            <div class="thread-card {{ 'unread' if is_unread else 'read' }}">
+            <div class="thread-card {{ 'unread' if is_unread else 'read' }}" id="threadCard_{{ thread.id }}" data-thread-id="{{ thread.id }}" data-last-message-at="{{ latest_message.created_at if latest_message else '' }}">
                 <button type="button" class="thread-toggle" data-thread-id="{{ thread.id }}" data-unread="{{ 'true' if is_unread else 'false' }}">
                     <div class="thread-toggle-left">
                         <div class="thread-title">{{ thread.student_name }} ({{ thread.student_username }})</div>
@@ -153,7 +153,7 @@
                         <span class="section-label">{{ (thread.updated_at or thread.created_at)[:16] }}</span>
                     </div>
 
-                    <div class="message-stack">
+                    <div class="message-stack" id="messageStack_{{ thread.id }}">
                         {% for message in thread.messages %}
                         <div class="message {{ 'teacher' if message.sender_role in ['teacher', 'admin'] else 'student' }}">
                             {{ message.message }}
@@ -233,47 +233,132 @@
     </div>
 </div>
 <script>
-document.querySelectorAll('.thread-toggle').forEach(function (button, index) {
-    const card = button.closest('.thread-card');
-    if (!card) return;
-    if (index === 0) {
-        card.classList.add('open');
-    }
-    async function markRead() {
-        if (button.dataset.unread !== 'true') return;
-        try {
-            const formData = new FormData();
-            formData.append('thread_id', button.dataset.threadId);
-            const response = await fetch('/communications/mark_read', {
-                method: 'POST',
-                body: formData
-            });
-            if (!response.ok) return;
-            button.dataset.unread = 'false';
-            card.classList.remove('unread');
-            card.classList.add('read');
-            const stateTag = card.querySelector('.tag-unread, .tag-read');
-            if (stateTag) {
-                stateTag.classList.remove('tag-unread');
-                stateTag.classList.add('tag-read');
-                stateTag.textContent = 'Read';
-            }
-        } catch (_error) {
+const selectedFilters = {
+    group: {{ selected_group|tojson }},
+    topic: {{ selected_topic|tojson }},
+    date: {{ selected_date|tojson }}
+};
+
+function escapeHtml(value) {
+    return String(value || '')
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#39;');
+}
+
+async function markRead(button, card) {
+    if (!button || !card || button.dataset.unread !== 'true') return;
+    try {
+        const formData = new FormData();
+        formData.append('thread_id', button.dataset.threadId);
+        const response = await fetch('/communications/mark_read', {
+            method: 'POST',
+            body: formData
+        });
+        if (!response.ok) return;
+        button.dataset.unread = 'false';
+        card.classList.remove('unread');
+        card.classList.add('read');
+        const stateTag = card.querySelector('.tag-unread, .tag-read');
+        if (stateTag) {
+            stateTag.classList.remove('tag-unread');
+            stateTag.classList.add('tag-read');
+            stateTag.textContent = 'Read';
         }
+    } catch (_error) {
+    }
+}
+
+function bindThreadToggle(button, index) {
+    const card = button.closest('.thread-card');
+    if (!card || button.dataset.bound === 'true') return;
+    button.dataset.bound = 'true';
+    if (index === 0 && !document.querySelector('.thread-card.open')) {
+        card.classList.add('open');
+        markRead(button, card);
     }
     button.addEventListener('click', function () {
         const willOpen = !card.classList.contains('open');
         document.querySelectorAll('.thread-card.open').forEach(function (openCard) {
-            if (openCard !== card) {
-                openCard.classList.remove('open');
-            }
+            if (openCard !== card) openCard.classList.remove('open');
         });
         card.classList.toggle('open');
-        if (willOpen) {
-            markRead();
-        }
+        if (willOpen) markRead(button, card);
     });
-});
+}
+
+function renderMessageHtml(message) {
+    const roleClass = ['teacher', 'admin'].includes(message.sender_role) ? 'teacher' : 'student';
+    const createdAt = message.created_at ? String(message.created_at).slice(0, 16) : '';
+    return `
+        <div class="message ${roleClass}">
+            ${escapeHtml(message.message)}
+            <div class="message-meta">${escapeHtml(message.sender_username)} • ${escapeHtml(createdAt)}</div>
+        </div>
+    `;
+}
+
+function updateThreadCard(thread) {
+    const card = document.getElementById(`threadCard_${thread.id}`);
+    if (!card) return;
+    const toggle = card.querySelector('.thread-toggle');
+    const preview = card.querySelector('.thread-preview');
+    const stack = document.getElementById(`messageStack_${thread.id}`);
+    const latestAt = thread.messages.length ? (thread.messages[thread.messages.length - 1].created_at || '') : '';
+    const currentLastAt = card.dataset.lastMessageAt || '';
+
+    if (preview) {
+        preview.textContent = thread.latest_preview || '';
+    }
+    if (latestAt !== currentLastAt && stack) {
+        stack.innerHTML = thread.messages.map(renderMessageHtml).join('');
+        card.dataset.lastMessageAt = latestAt;
+    }
+
+    const metaLine = card.querySelector('.thread-toggle-left .meta-line');
+    if (metaLine) {
+        metaLine.innerHTML = `
+            ${thread.group_name ? `<span>${escapeHtml(thread.group_name)}</span>` : ''}
+            ${thread.subject_line ? `<span>${escapeHtml(thread.subject_line)}</span>` : ''}
+            ${thread.attendance_date ? `<span>${escapeHtml(thread.attendance_date)}</span>` : ''}
+            <span>${escapeHtml(String(thread.updated_at || thread.created_at || '').slice(0, 16))}</span>
+        `;
+    }
+
+    card.classList.toggle('unread', !!thread.is_unread);
+    card.classList.toggle('read', !thread.is_unread);
+    if (toggle) toggle.dataset.unread = thread.is_unread ? 'true' : 'false';
+    const stateTag = card.querySelector('.thread-toggle-right .tag');
+    if (stateTag) {
+        stateTag.classList.toggle('tag-unread', !!thread.is_unread);
+        stateTag.classList.toggle('tag-read', !thread.is_unread);
+        stateTag.textContent = thread.is_unread ? 'Unread' : 'Read';
+    }
+
+    if (card.classList.contains('open') && toggle && thread.is_unread) {
+        markRead(toggle, card);
+    }
+}
+
+async function pollCommunicationUpdates() {
+    const params = new URLSearchParams(selectedFilters);
+    try {
+        const response = await fetch(`/communications/updates?${params.toString()}`, {
+            method: 'GET',
+            cache: 'no-store'
+        });
+        if (!response.ok) return;
+        const payload = await response.json();
+        if (!payload.ok || !Array.isArray(payload.threads)) return;
+        payload.threads.forEach(updateThreadCard);
+    } catch (_error) {
+    }
+}
+
+document.querySelectorAll('.thread-toggle').forEach(bindThreadToggle);
+window.setInterval(pollCommunicationUpdates, 3000);
 </script>
 </body>
 </html>

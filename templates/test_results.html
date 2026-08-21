@@ -35,6 +35,13 @@
         .answer-row span { font-weight: bold; }
         .correct-answer { color: #107C10; }
         .wrong-answer { color: #A4262C; }
+        .question-meta { color: #64748b; font-size: 0.82em; margin-bottom: 10px; }
+        .match-table { width:100%; margin-top:10px; border-collapse:collapse; font-size:0.9em; background:#fff; }
+        .match-table th { background:#f8fafc; color:#555; font-weight:bold; }
+        .match-table td, .match-table th { padding:8px 10px; border-bottom:1px solid rgba(0,0,0,0.08); text-align:left; vertical-align:top; }
+        .choice-table { width:100%; margin-top:10px; border-collapse:collapse; font-size:0.9em; background:#fff; }
+        .choice-table th { background:#f8fafc; color:#555; font-weight:bold; }
+        .choice-table td, .choice-table th { padding:8px 10px; border-bottom:1px solid rgba(0,0,0,0.08); text-align:left; vertical-align:top; }
         .no-answers-msg { background: #f9f9f9; border: 1px solid #ddd; border-radius: 8px; padding: 20px; text-align: center; color: #555; margin-bottom: 20px; }
         .btn { padding: 10px 20px; border: none; border-radius: 5px; cursor: pointer; text-decoration: none; font-size: 1em; display: inline-block; margin-right: 8px; }
         .btn-primary { background: #0078D4; color: white; }
@@ -105,28 +112,71 @@
         </div>
     </div>
 
-    <div class="answer-row">
-        <span>Your answer:</span>
-        <span class="{{ 'correct-answer' if item.correct else 'wrong-answer' }}">
-            {{ item.answer or '(no answer)' }}
-        </span>
+    {% if item.type == 'match' and item.match_rows %}
+    <div class="question-meta">
+        Match Columns | {{ item.marks }} mark{{ 's' if item.marks != 1 }}
     </div>
+    <table class="match-table">
+        <tr><th>Option</th><th>Their Answer</th><th>Correct Answer</th></tr>
+        {% for pair in item.match_rows %}
+        <tr>
+            <td>{{ pair.left }}</td>
+            <td><span class="{{ 'correct-answer' if pair.is_correct else 'wrong-answer' }}">{{ pair.learner_match }}</span></td>
+            <td class="correct-answer">{{ pair.correct_match }}</td>
+        </tr>
+        {% endfor %}
+    </table>
+    {% elif item.type in ['mcq_single', 'mcq_multi'] %}
+    {% set learner_answers = (item.answer or '').split(',') | map('trim') | list %}
+    <table class="choice-table">
+        <tr><th>Option</th><th>Their Answer</th><th>Correct Answer</th></tr>
+        {% for o in item.options %}
+        {% set option_text = o[1] %}
+        {% set is_correct_option = o[2] == 1 %}
+        {% set is_selected = option_text in learner_answers %}
+        <tr>
+            <td>{{ option_text }}</td>
+            <td>
+                {% if is_selected %}
+                    <span class="{{ 'correct-answer' if is_correct_option else 'wrong-answer' }}">Selected</span>
+                {% else %}
+                    <span class="muted">Not selected</span>
+                {% endif %}
+            </td>
+            <td>
+                {% if is_correct_option %}
+                    <span class="correct-answer">Correct</span>
+                {% else %}
+                    <span class="muted">-</span>
+                {% endif %}
+            </td>
+        </tr>
+        {% endfor %}
+    </table>
+    {% else %}
+        <div class="answer-row">
+            <span>Your answer:</span>
+            <span class="{{ 'correct-answer' if item.correct else 'wrong-answer' }}">
+                {{ item.answer or '(no answer)' }}
+            </span>
+        </div>
 
-    {% if not item.correct %}
-    <div class="answer-row">
-        <span>Correct answer:</span>
-        <span class="correct-answer">
-            {% if item.type == 'mcq_single' or item.type == 'true_false' %}
-                {% for o in item.options %}{% if o[1] == 1 %}{{ o[0] }}{% endif %}{% endfor %}
-            {% elif item.type == 'mcq_multi' %}
-                {% for o in item.options %}{% if o[1] == 1 %}{{ o[0] }} {% endif %}{% endfor %}
-            {% elif item.type == 'fill_in' %}
-                {{ item.options[0][0] if item.options else '—' }}
-            {% elif item.type == 'match' %}
-                {% for o in item.options %}{% if o[2] and o[2] != 'correction' %}{{ o[0] }} → {{ o[2] }}{% if not loop.last %}, {% endif %}{% endif %}{% endfor %}
-            {% endif %}
-        </span>
-    </div>
+        {% if not item.correct %}
+        <div class="answer-row">
+            <span>Correct answer:</span>
+            <span class="correct-answer">
+                {% if item.type == 'mcq_single' or item.type == 'true_false' %}
+                    {% for o in item.options %}{% if o[2] == 1 %}{{ o[1] }}{% endif %}{% endfor %}
+                {% elif item.type == 'mcq_multi' %}
+                    {% for o in item.options %}{% if o[2] == 1 %}{{ o[1] }} {% endif %}{% endfor %}
+                {% elif item.type == 'fill_in' %}
+                    {{ item.options[0][1] if item.options else '—' }}
+                {% elif item.type == 'match' %}
+                    {% for o in item.options %}{% if o[3] and o[3] != 'correction' %}{{ o[1] }} → {{ o[3] }}{% if not loop.last %}, {% endif %}{% endif %}{% endfor %}
+                {% endif %}
+            </span>
+        </div>
+        {% endif %}
     {% endif %}
 </div>
 {% endfor %}

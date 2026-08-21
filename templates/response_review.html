@@ -138,12 +138,12 @@
                     {% endif %}
                     {% if question.type == 'match' %}
                     <table class="match-table">
-                        <tr><th>Column A</th><th>Accepted Match</th><th>Learner Responses</th></tr>
+                        <tr><th>Column A</th><th>Column B</th><th>Correct</th></tr>
                         {% for option in question.options %}
                         <tr>
                             <td>{{ option.left }}</td>
                             <td class="correct-option">{{ option.accepted }}</td>
-                            <td>{{ option.responses | join(', ') if option.responses else 'No responses' }}</td>
+                            <td>{{ option.correct_pct }}%{% if question.responses %} ({{ option.correct_count }}/{{ question.responses }}){% endif %}</td>
                         </tr>
                         {% endfor %}
                     </table>

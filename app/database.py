@@ -1,7 +1,9 @@
+import json
 import re
 import sqlite3
 from datetime import datetime
 from werkzeug.security import check_password_hash, generate_password_hash
+from app.practical_simulators import get_word_caps_question_bank
 
 DB_NAME = "school.db"
 MARKING_DB_NAME = "marking_experiment.db"
@@ -875,6 +877,38 @@ def init_db():
     )
     """)
 
+    cursor.execute("""
+    CREATE TABLE IF NOT EXISTS practical_question_bank (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        seed_key TEXT UNIQUE,
+        program TEXT NOT NULL,
+        category TEXT,
+        title TEXT NOT NULL,
+        prompt_html TEXT NOT NULL,
+        steps_json TEXT NOT NULL,
+        marks INTEGER NOT NULL DEFAULT 1,
+        caps_tags TEXT,
+        created_by TEXT,
+        created_at TEXT,
+        updated_at TEXT
+    )
+    """)
+
+    cursor.execute("""
+    CREATE TABLE IF NOT EXISTS task_practical_questions (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        task_id INTEGER NOT NULL,
+        bank_question_id INTEGER,
+        order_index INTEGER NOT NULL DEFAULT 0,
+        title_override TEXT,
+        prompt_override_html TEXT,
+        steps_json_override TEXT,
+        marks_override INTEGER,
+        FOREIGN KEY (task_id) REFERENCES tasks (id),
+        FOREIGN KEY (bank_question_id) REFERENCES practical_question_bank (id)
+    )
+    """)
+
     try:
         cursor.execute("PRAGMA table_info(tasks)")
         columns = [col[1] for col in cursor.fetchall()]
@@ -1071,6 +1105,8 @@ def init_db():
     cursor.execute("CREATE INDEX IF NOT EXISTS idx_task_groups_group_task ON task_groups (group_name, task_id)")
     cursor.execute("CREATE INDEX IF NOT EXISTS idx_theory_test_groups_group_test ON theory_test_groups (group_name, test_id)")
     cursor.execute("CREATE INDEX IF NOT EXISTS idx_tasks_assign_type ON tasks (assign_date, task_type)")
+    cursor.execute("CREATE INDEX IF NOT EXISTS idx_practical_bank_program_category ON practical_question_bank (program, category, title)")
+    cursor.execute("CREATE INDEX IF NOT EXISTS idx_task_practical_questions_task_order ON task_practical_questions (task_id, order_index)")
     cursor.execute("CREATE INDEX IF NOT EXISTS idx_theory_tests_assign_date ON theory_tests (assign_date)")
     cursor.execute("CREATE INDEX IF NOT EXISTS idx_theory_tests_generated_module_name ON theory_tests (generated_module_name)")
     cursor.execute("CREATE INDEX IF NOT EXISTS idx_excluded_dates_group_date ON excluded_dates (group_name, date)")
@@ -1104,6 +1140,38 @@ def init_db():
                 groups = cursor.fetchall()
                 for group_row in groups:
                     cursor.execute("INSERT INTO task_groups (task_id, group_name) VALUES (?, ?)", (task_id, group_row[0]))
+
+    now_iso = datetime.now().isoformat()
+    for item in get_word_caps_question_bank():
+        cursor.execute(
+            """
+            INSERT INTO practical_question_bank (
+                seed_key, program, category, title, prompt_html, steps_json, marks, caps_tags, created_by, created_at, updated_at
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            ON CONFLICT(seed_key) DO UPDATE SET
+                program = excluded.program,
+                category = excluded.category,
+                title = excluded.title,
+                prompt_html = excluded.prompt_html,
+                steps_json = excluded.steps_json,
+                marks = excluded.marks,
+                caps_tags = excluded.caps_tags,
+                updated_at = excluded.updated_at
+            """,
+            (
+                item["seed_key"],
+                item["program"],
+                item["category"],
+                item["title"],
+                item["prompt_html"],
+                json.dumps(item["steps"]),
+                item["marks"],
+                item["caps_tags"],
+                "system",
+                now_iso,
+                now_iso,
+            ),
+        )
 
     conn.commit()
     conn.close()

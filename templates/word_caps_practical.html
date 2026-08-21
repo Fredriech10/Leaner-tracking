@@ -1,0 +1,320 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Word Practical - {{ subject_name }} {{ task_name }}</title>
+    <style>
+        * { box-sizing: border-box; }
+        body { margin: 0; font-family: "Segoe UI", Arial, sans-serif; background: #eef2f7; color: #1f2937; }
+        .topbar { background: #2b579a; color: white; padding: 12px 24px; display: flex; justify-content: space-between; align-items: center; gap: 10px; position: sticky; top: 0; z-index: 20; }
+        .topbar a { color: white; text-decoration: none; font-size: 0.86em; }
+        .topbar a:hover { text-decoration: underline; }
+        .page { padding: 18px 20px 28px; }
+        .layout { display: grid; grid-template-columns: 2fr 1fr; gap: 18px; align-items: start; }
+        .workspace, .sidebar { background: white; border: 1px solid #d9e0ea; border-radius: 16px; overflow: hidden; box-shadow: 0 16px 36px rgba(15, 23, 42, 0.08); }
+        .workspace-head { background: linear-gradient(180deg, #2b579a 0%, #24497f 100%); color: white; padding: 14px 18px; }
+        .workspace-head h1 { margin: 0; font-size: 1.05rem; }
+        .tab-strip { display: flex; gap: 8px; padding: 12px 12px 0; border-bottom: 1px solid #e6ebf2; background: #fbfcfe; flex-wrap: wrap; }
+        .tab-btn { border: 1px solid #cfd8e3; background: white; color: #2b579a; border-radius: 10px 10px 0 0; padding: 8px 14px; cursor: pointer; font-weight: 600; }
+        .tab-btn.active { background: #e8f1ff; border-bottom-color: #e8f1ff; }
+        .controls { padding: 12px; display: none; flex-wrap: wrap; gap: 10px; min-height: 124px; background: #f8fafc; }
+        .controls.active { display: flex; }
+        .control-btn { min-width: 118px; border: 1px solid #cfd8e3; background: white; border-radius: 12px; padding: 12px 10px; cursor: pointer; text-align: center; color: #1f3b57; font-weight: 600; }
+        .control-btn:hover { background: #eef5ff; border-color: #91b4eb; }
+        .control-btn.done { background: #e7f6ea; border-color: #8fd19e; color: #136c2e; }
+        .document-area { padding: 18px; min-height: 380px; background: #f3f4f6; }
+        .document-sheet { width: min(100%, 780px); min-height: 560px; margin: 0 auto; background: white; border: 1px solid #d8dce2; padding: 42px 54px; position: relative; }
+        .document-sheet h2 { margin-top: 0; font-size: 1.4rem; }
+        .doc-note { color: #475569; line-height: 1.6; }
+        .action-log { margin-top: 20px; border-top: 1px solid #e5e7eb; padding-top: 14px; }
+        .action-log h3 { margin: 0 0 8px; font-size: 0.94rem; color: #2b579a; }
+        .action-pills { display: flex; flex-wrap: wrap; gap: 8px; }
+        .action-pill { background: #eef5ff; color: #24497f; border-radius: 999px; padding: 6px 10px; font-size: 0.8rem; }
+        .sidebar { position: sticky; top: 74px; }
+        .sidebar-body { padding: 16px; }
+        .meta-grid { display: grid; gap: 10px; margin-bottom: 14px; }
+        .meta-card { border: 1px solid #dde5ef; border-radius: 12px; padding: 12px; background: #fafcff; }
+        .meta-label { font-size: 0.78rem; color: #64748b; text-transform: uppercase; letter-spacing: .04em; }
+        .meta-value { margin-top: 4px; font-weight: 700; color: #183b63; }
+        .question-list { display: grid; gap: 10px; margin-top: 14px; }
+        .question-item { border: 1px solid #d8e0ea; border-radius: 12px; padding: 12px; background: white; }
+        .question-item.active { border-color: #2b579a; box-shadow: 0 0 0 2px rgba(43, 87, 154, 0.12); }
+        .question-item.done { background: #edf9ef; border-color: #9cd3a9; }
+        .question-item.skipped { background: #fff7e9; border-color: #f0c36a; }
+        .question-title { font-weight: 700; color: #163759; }
+        .question-prompt { margin-top: 6px; color: #334155; font-size: 0.92rem; line-height: 1.55; }
+        .question-status { margin-top: 6px; font-size: 0.82rem; color: #64748b; }
+        .skip-floating { position: fixed; right: 20px; bottom: 18px; z-index: 30; border: none; border-radius: 999px; background: #f59e0b; color: white; padding: 14px 18px; font-weight: 700; cursor: pointer; box-shadow: 0 10px 24px rgba(245, 158, 11, 0.28); }
+        .submit-main { width: 100%; margin-top: 14px; border: none; border-radius: 12px; background: #2b579a; color: white; padding: 14px 16px; font-size: 1rem; font-weight: 700; cursor: pointer; }
+        @media (max-width: 980px) {
+            .layout { grid-template-columns: 1fr; }
+            .sidebar { position: static; }
+        }
+    </style>
+</head>
+<body>
+{% set current_page = 'my_tasks' %}
+{% include '_slide_nav.html' %}
+<div class="topbar">
+    <div><strong>Word Practical Simulator</strong></div>
+    <div>
+        <a href="/student_dashboard">Dashboard</a>
+        <a href="/my_tasks">Tasks</a>
+        <a href="/logout">Logout</a>
+    </div>
+</div>
+
+<div class="page">
+    <form method="post" id="wordCapsForm">
+        {% for question in task_practical_questions %}
+        <input type="hidden" name="question_{{ question.id }}_actions" id="question_{{ question.id }}_actions" value="[]">
+        <input type="hidden" name="question_{{ question.id }}_skipped" id="question_{{ question.id }}_skipped" value="0">
+        {% endfor %}
+
+        <div class="layout">
+            <section class="workspace">
+                <div class="workspace-head">
+                    <h1>{{ subject_name }} | {{ task_name }}</h1>
+                    <div style="margin-top:4px;font-size:0.85rem;opacity:0.92;">Complete each CAPS Word action. Questions submit automatically when all required clicks are done.</div>
+                </div>
+
+                <div class="tab-strip" id="tabStrip"></div>
+                <div id="controlsRoot"></div>
+
+                <div class="document-area">
+                    <div class="document-sheet">
+                        <h2>Practical Document</h2>
+                        <p class="doc-note">Use the ribbon controls above to perform the required Word actions. This implementation tracks the practical click path for each selected question.</p>
+                        <div class="action-log">
+                            <h3>Current Question Action Log</h3>
+                            <div class="action-pills" id="actionPills"></div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <aside class="sidebar">
+                <div class="sidebar-body">
+                    <div class="meta-grid">
+                        <div class="meta-card">
+                            <div class="meta-label">Learner</div>
+                            <div class="meta-value">{{ learner_full_name }}</div>
+                        </div>
+                        <div class="meta-card">
+                            <div class="meta-label">Questions</div>
+                            <div class="meta-value"><span id="doneCount">0</span> / {{ task_practical_questions|length }}</div>
+                        </div>
+                        <div class="meta-card">
+                            <div class="meta-label">Marks Available</div>
+                            <div class="meta-value">{{ task_practical_questions|sum(attribute='marks') }}</div>
+                        </div>
+                    </div>
+
+                    <div class="question-list" id="questionList">
+                        {% for question in task_practical_questions %}
+                        <div class="question-item{% if loop.first %} active{% endif %}" id="questionCard_{{ question.id }}">
+                            <div class="question-title">{{ loop.index }}. {{ question.title }}</div>
+                            <div class="question-prompt">{{ question.prompt_html|safe }}</div>
+                            <div class="question-status">{{ question.marks }} mark{{ '' if question.marks == 1 else 's' }} | {{ question.steps|length }} click step{{ '' if question.steps|length == 1 else 's' }}</div>
+                        </div>
+                        {% endfor %}
+                    </div>
+
+                    <button type="submit" class="submit-main" id="submitMain">Submit Practical</button>
+                </div>
+            </aside>
+        </div>
+    </form>
+</div>
+
+<button type="button" class="skip-floating" id="skipButton">Skip Question</button>
+
+<script>
+    const questions = {{ task_practical_questions|tojson }};
+    const controlLabels = {
+        "home.font_size": "Font Size",
+        "home.font_color": "Font Color",
+        "home.bullets": "Bullets",
+        "home.numbering": "Numbering",
+        "insert.chart": "Chart",
+        "insert.pictures": "Pictures",
+        "insert.table": "Table",
+        "references.manage_sources": "Manage Sources",
+        "references.insert_citation": "Insert Citation",
+        "references.insert_footnote": "Footnote",
+        "references.caption": "Caption",
+        "insert.bookmark": "Bookmark",
+        "home.style_heading1": "Heading 1",
+        "home.align_left": "Align Left",
+        "home.align_center": "Align Center",
+        "home.align_right": "Align Right",
+        "home.justify": "Justify",
+        "home.borders": "Borders",
+        "home.find": "Find",
+        "home.replace": "Replace",
+        "home.shading": "Shading",
+        "layout.orientation": "Orientation",
+        "layout.size": "Page Size",
+        "insert.page_break": "Page Break",
+        "layout.breaks": "Breaks",
+        "insert.cover_page": "Cover Page",
+        "insert.smartart": "SmartArt",
+        "smartart_format": "SmartArt Format",
+        "layout.indent_left": "Left Indent",
+        "layout.indent_right": "Right Indent",
+        "mailings.start_merge": "Start Mail Merge",
+        "mailings.insert_merge_field": "Insert Merge Field"
+    };
+    const tabOrder = ["home", "insert", "layout", "references", "mailings", "smartart_format"];
+    const tabLabels = {
+        "home": "Home",
+        "insert": "Insert",
+        "layout": "Layout",
+        "references": "References",
+        "mailings": "Mailings",
+        "smartart_format": "SmartArt Format"
+    };
+
+    let activeQuestionIndex = 0;
+    let activeTab = "home";
+    const state = questions.map(question => ({ id: question.id, actions: [], skipped: false, complete: false }));
+
+    function questionState(index) {
+        return state[index];
+    }
+
+    function currentQuestion() {
+        return questions[activeQuestionIndex];
+    }
+
+    function currentState() {
+        return state[activeQuestionIndex];
+    }
+
+    function requiredTabs() {
+        const tabs = new Set(["home"]);
+        questions.forEach(question => {
+            question.steps.forEach(step => {
+                const tab = step.includes(".") ? step.split(".")[0] : step;
+                tabs.add(tab);
+            });
+        });
+        return tabOrder.filter(tab => tabs.has(tab));
+    }
+
+    function controlsForTab(tab) {
+        const controls = new Map();
+        questions.forEach(question => {
+            question.steps.forEach(step => {
+                const stepTab = step.includes(".") ? step.split(".")[0] : step;
+                if (stepTab === tab && step.includes(".")) controls.set(step, controlLabels[step] || step);
+            });
+        });
+        return Array.from(controls.entries());
+    }
+
+    function renderTabs() {
+        const root = document.getElementById("tabStrip");
+        root.innerHTML = requiredTabs().map(tab => `
+            <button type="button" class="tab-btn${tab === activeTab ? " active" : ""}" onclick="setActiveTab('${tab}')">${tabLabels[tab] || tab}</button>
+        `).join("");
+    }
+
+    function renderControls() {
+        const root = document.getElementById("controlsRoot");
+        root.innerHTML = requiredTabs().map(tab => {
+            const controls = controlsForTab(tab);
+            return `
+                <div class="controls${tab === activeTab ? " active" : ""}" id="controls_${tab}">
+                    ${controls.map(([controlId, label]) => `
+                        <button type="button"
+                                class="control-btn${currentState().actions.includes(controlId) ? " done" : ""}"
+                                onclick="recordAction('${controlId}')">${label}</button>
+                    `).join("") || `<div class="doc-note">No actions on this tab for the selected questions.</div>`}
+                </div>
+            `;
+        }).join("");
+    }
+
+    function renderSidebar() {
+        let done = 0;
+        questions.forEach((question, index) => {
+            const card = document.getElementById(`questionCard_${question.id}`);
+            if (!card) return;
+            card.classList.toggle("active", index === activeQuestionIndex);
+            card.classList.toggle("done", state[index].complete);
+            card.classList.toggle("skipped", state[index].skipped);
+            if (state[index].complete) done += 1;
+        });
+        document.getElementById("doneCount").textContent = String(done);
+    }
+
+    function renderActions() {
+        const root = document.getElementById("actionPills");
+        const actions = currentState().actions;
+        root.innerHTML = actions.length
+            ? actions.map(action => `<span class="action-pill">${controlLabels[action] || action}</span>`).join("")
+            : `<span class="doc-note">No actions recorded yet.</span>`;
+    }
+
+    function syncHiddenFields(index) {
+        const q = questions[index];
+        document.getElementById(`question_${q.id}_actions`).value = JSON.stringify(state[index].actions);
+        document.getElementById(`question_${q.id}_skipped`).value = state[index].skipped ? "1" : "0";
+    }
+
+    function setActiveTab(tab) {
+        activeTab = tab;
+        renderTabs();
+        renderControls();
+    }
+
+    function advanceQuestion() {
+        if (activeQuestionIndex < questions.length - 1) {
+            activeQuestionIndex += 1;
+            activeTab = "home";
+            renderAll();
+            return;
+        }
+        document.getElementById("wordCapsForm").requestSubmit();
+    }
+
+    function recordAction(controlId) {
+        const q = currentQuestion();
+        const s = currentState();
+        if (s.complete || s.skipped) return;
+        if (!s.actions.includes(controlId)) s.actions.push(controlId);
+        syncHiddenFields(activeQuestionIndex);
+        const expected = q.steps;
+        const matched = s.actions.length >= expected.length && expected.every((step, idx) => s.actions[idx] === step);
+        if (matched) {
+            s.complete = true;
+            syncHiddenFields(activeQuestionIndex);
+            renderAll();
+            window.setTimeout(advanceQuestion, 250);
+            return;
+        }
+        renderAll();
+    }
+
+    function skipCurrentQuestion() {
+        const s = currentState();
+        if (s.complete) return;
+        s.skipped = true;
+        syncHiddenFields(activeQuestionIndex);
+        renderAll();
+        window.setTimeout(advanceQuestion, 150);
+    }
+
+    function renderAll() {
+        renderTabs();
+        renderControls();
+        renderSidebar();
+        renderActions();
+    }
+
+    document.getElementById("skipButton").addEventListener("click", skipCurrentQuestion);
+    renderAll();
+</script>
+</body>
+</html>

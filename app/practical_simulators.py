@@ -1,3 +1,4 @@
+import json
 import re
 
 
@@ -9,6 +10,67 @@ ACCESS_TABLE_SIMULATOR_KEY = "access_table_design"
 ACCESS_QUERY_SIMULATOR_KEY = "access_query_design"
 ACCESS_FORM_SIMULATOR_KEY = "access_form_design"
 ACCESS_REPORT_SIMULATOR_KEY = "access_report_design"
+WORD_CAPS_PRACTICAL_KEY = "word_caps_practical"
+
+
+def _word_caps_question_bank():
+    items = [
+        ("Font Size", "Change the selected text font size using the Home tab font size control.", ["home", "home.font_size"], "Formatting"),
+        ("Font Color", "Change the selected text font color using the Home tab font color control.", ["home", "home.font_color"], "Formatting"),
+        ("Bullet List", "Apply a bullet list to the selected paragraphs.", ["home", "home.bullets"], "Paragraph"),
+        ("Numbered List", "Apply numbering to the selected paragraphs.", ["home", "home.numbering"], "Paragraph"),
+        ("Insert Chart", "Insert a chart from the Insert tab.", ["insert", "insert.chart"], "Insert"),
+        ("Insert Picture", "Insert a picture from the Insert tab.", ["insert", "insert.pictures"], "Insert"),
+        ("Insert Table", "Insert a table into the document.", ["insert", "insert.table"], "Insert"),
+        ("Insert Sources", "Open source management for references.", ["references", "references.manage_sources"], "References"),
+        ("Insert Citation", "Insert a citation in the current position.", ["references", "references.insert_citation"], "References"),
+        ("Insert Footnote", "Insert a footnote from the References tab.", ["references", "references.insert_footnote"], "References"),
+        ("Insert Caption", "Insert a caption for the selected object.", ["references", "references.caption"], "References"),
+        ("Insert Bookmark", "Insert a bookmark from the Insert tab.", ["insert", "insert.bookmark"], "Insert"),
+        ("Apply Heading", "Apply Heading 1 to the selected text.", ["home", "home.style_heading1"], "Styles"),
+        ("Align Left", "Align the selected paragraph to the left.", ["home", "home.align_left"], "Paragraph"),
+        ("Align Center", "Center align the selected paragraph.", ["home", "home.align_center"], "Paragraph"),
+        ("Align Right", "Right align the selected paragraph.", ["home", "home.align_right"], "Paragraph"),
+        ("Justify Text", "Justify the selected paragraph.", ["home", "home.justify"], "Paragraph"),
+        ("Table Borders", "Apply table borders from the Home tab borders menu.", ["home", "home.borders"], "Table"),
+        ("Paragraph Borders", "Apply paragraph borders from the Borders menu.", ["home", "home.borders"], "Paragraph"),
+        ("Find", "Open Find from the Home tab editing group.", ["home", "home.find"], "Editing"),
+        ("Replace", "Open Replace from the Home tab editing group.", ["home", "home.replace"], "Editing"),
+        ("Shading", "Apply paragraph shading from the Home tab.", ["home", "home.shading"], "Paragraph"),
+        ("Change Orientation", "Change page orientation from the Layout tab.", ["layout", "layout.orientation"], "Layout"),
+        ("Change Page Size", "Change page size from the Layout tab.", ["layout", "layout.size"], "Layout"),
+        ("Add Page Break", "Insert a page break.", ["insert", "insert.page_break"], "Layout"),
+        ("Add Column Break", "Insert a column break from Layout > Breaks.", ["layout", "layout.breaks"], "Layout"),
+        ("Add Cover Page", "Insert a cover page from the Insert tab.", ["insert", "insert.cover_page"], "Insert"),
+        ("Insert SmartArt", "Insert SmartArt from the Insert tab.", ["insert", "insert.smartart"], "Insert"),
+        ("Edit SmartArt", "Use SmartArt tools after inserting SmartArt.", ["insert", "insert.smartart", "smartart_format"], "Insert"),
+        ("Left Indent", "Set the left indent from the Layout tab paragraph controls.", ["layout", "layout.indent_left"], "Layout"),
+        ("Right Indent", "Set the right indent from the Layout tab paragraph controls.", ["layout", "layout.indent_right"], "Layout"),
+        ("Mail Merge", "Start Mail Merge from the Mailings tab.", ["mailings", "mailings.start_merge"], "Mailings"),
+        ("Insert Merge Fields", "Insert a merge field in the specified area.", ["mailings", "mailings.insert_merge_field"], "Mailings"),
+    ]
+    bank = []
+    for idx, (title, prompt, steps, category) in enumerate(items, start=1):
+        bank.append(
+            {
+                "seed_key": f"word_caps_{idx:03d}",
+                "program": "word",
+                "category": category,
+                "title": title,
+                "prompt_html": f"<p>{prompt}</p>",
+                "steps": steps,
+                "marks": len(steps),
+                "caps_tags": "word,caps",
+            }
+        )
+    return bank
+
+
+WORD_CAPS_QUESTION_BANK = _word_caps_question_bank()
+
+
+def get_word_caps_question_bank():
+    return [dict(item) for item in WORD_CAPS_QUESTION_BANK]
 
 
 def build_word_shell(task_title, active_tabs, active_controls, shell_mode="test", inactive_controls_style=None):

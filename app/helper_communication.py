@@ -126,7 +126,7 @@ def get_student_message_threads(username):
 
 
 def mark_student_threads_read(username):
-    now_text = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    now_text = datetime.now().isoformat()
     conn = get_db()
     cursor = conn.cursor()
     cursor.execute(

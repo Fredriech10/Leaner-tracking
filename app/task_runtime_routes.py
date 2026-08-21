@@ -1,4 +1,5 @@
 import os
+import json
 from datetime import datetime
 
 from flask import redirect, render_template, request, send_file, session, url_for
@@ -9,6 +10,83 @@ from app.database import get_db, get_groups, get_teachers, get_user_role, log_ac
 from app.helper_marking import get_marking_scripts, mark_file
 from app.practical_simulators import get_simulator_catalog, get_simulator_definition, score_simulator_attempt
 from app.runtime import update_active_user
+
+
+def _load_task_practical_questions(cursor, task_id):
+    cursor.execute(
+        """
+        SELECT tpq.id, COALESCE(tpq.title_override, pq.title), COALESCE(tpq.prompt_override_html, pq.prompt_html),
+               COALESCE(tpq.steps_json_override, pq.steps_json), COALESCE(tpq.marks_override, pq.marks)
+        FROM task_practical_questions tpq
+        JOIN practical_question_bank pq ON pq.id = tpq.bank_question_id
+        WHERE tpq.task_id = ?
+        ORDER BY tpq.order_index, tpq.id
+        """,
+        (task_id,),
+    )
+    questions = []
+    for question_id, title, prompt_html, steps_json, marks in cursor.fetchall():
+        try:
+            steps = json.loads(steps_json or "[]")
+        except Exception:
+            steps = []
+        questions.append(
+            {
+                "id": question_id,
+                "title": title,
+                "prompt_html": prompt_html,
+                "steps": steps,
+                "marks": marks or len(steps) or 1,
+            }
+        )
+    return questions
+
+
+def _score_word_caps_practical(questions, form_data):
+    question_results = []
+    total_score = 0
+    total_marks = 0
+    completed_count = 0
+    skipped_count = 0
+
+    for index, question in enumerate(questions, start=1):
+        actions = []
+        try:
+            actions = json.loads(form_data.get(f"question_{question['id']}_actions") or "[]")
+        except Exception:
+            actions = []
+        skip_flag = (form_data.get(f"question_{question['id']}_skipped") or "").strip() == "1"
+        expected_steps = question["steps"]
+        passed = actions[: len(expected_steps)] == expected_steps and len(actions) >= len(expected_steps) and not skip_flag
+        awarded = question["marks"] if passed else 0
+        total_score += awarded
+        total_marks += question["marks"]
+        if passed:
+            completed_count += 1
+        if skip_flag:
+            skipped_count += 1
+        question_results.append(
+            {
+                "question": f"{index}. {question['title']}",
+                "passed": passed,
+                "marks_awarded": awarded,
+                "marks_available": question["marks"],
+                "details": "Skipped" if skip_flag else f"{len(actions)}/{len(expected_steps)} step(s) completed",
+            }
+        )
+
+    percentage = round((total_score / total_marks) * 100) if total_marks else 0
+    return {
+        "score": total_score,
+        "total": total_marks,
+        "percentage": percentage,
+        "results": question_results,
+        "meta": {
+            "completed_count": completed_count,
+            "skipped_count": skipped_count,
+            "question_count": len(questions),
+        },
+    }
 
 
 def register_task_runtime_routes(app):
@@ -246,6 +324,7 @@ def register_task_runtime_routes(app):
         cursor.execute("SELECT full_name FROM users WHERE username = ?", (username,))
         learner_name_row = cursor.fetchone()
         learner_full_name = (learner_name_row[0] or username) if learner_name_row else username
+        task_practical_questions = _load_task_practical_questions(cursor, task_id) if practical_mode == "simulator" else []
 
         if user_role not in ["teacher", "admin"]:
             today = datetime.now().date().isoformat()
@@ -277,7 +356,10 @@ def register_task_runtime_routes(app):
                 return '<p><a href="/student_dashboard">← Back to Dashboard</a></p><h2>Upload Closed</h2><p style="color:#A4262C;">You have reached the maximum number of submissions for this task.</p>', 403
 
             if practical_mode == "simulator":
-                result = score_simulator_attempt(simulator_key, request.form)
+                if simulator_key == "word_caps_practical":
+                    result = _score_word_caps_practical(task_practical_questions, request.form)
+                else:
+                    result = score_simulator_attempt(simulator_key, request.form)
                 if not result:
                     conn.close()
                     return "Simulator task is not configured correctly", 500
@@ -346,17 +428,20 @@ def register_task_runtime_routes(app):
         simulator_definition = get_simulator_definition(simulator_key) if practical_mode == "simulator" else None
         simulator_template = "upload_task.html"
         if practical_mode == "simulator":
-            simulator_template = (
-                "simulator_access_practical.html"
-                if simulator_definition and simulator_definition.get("shell", {}).get("app") == "access"
-                else
-                "simulator_excel_practical.html"
-                if simulator_definition and simulator_definition.get("shell", {}).get("app") == "excel"
-                else
-                "simulator_html_practical.html"
-                if simulator_definition and simulator_definition.get("shell", {}).get("app") == "html"
-                else "simulator_practical.html"
-            )
+            if simulator_key == "word_caps_practical":
+                simulator_template = "word_caps_practical.html"
+            else:
+                simulator_template = (
+                    "simulator_access_practical.html"
+                    if simulator_definition and simulator_definition.get("shell", {}).get("app") == "access"
+                    else
+                    "simulator_excel_practical.html"
+                    if simulator_definition and simulator_definition.get("shell", {}).get("app") == "excel"
+                    else
+                    "simulator_html_practical.html"
+                    if simulator_definition and simulator_definition.get("shell", {}).get("app") == "html"
+                    else "simulator_practical.html"
+                )
 
         return render_template(
             simulator_template,
@@ -366,6 +451,7 @@ def register_task_runtime_routes(app):
             sample_link_html=sample_link_html,
             learner_full_name=learner_full_name,
             simulator_definition=simulator_definition,
+            task_practical_questions=task_practical_questions,
         )
 
     @app.route("/subjects/<username>")

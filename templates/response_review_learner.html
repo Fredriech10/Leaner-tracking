@@ -81,12 +81,23 @@
                 </div>
                 {% if row.type == 'match' %}
                 <table class="match-table">
-                    <tr><th>Column A</th><th>Learner Match</th><th>Accepted Match</th></tr>
+                    <tr><th>Option</th><th>Their Answer</th><th>Correct Answer</th></tr>
                     {% for pair in row.match_rows %}
                     <tr>
                         <td>{{ pair.left }}</td>
                         <td><span class="{{ 'match-good' if pair.is_correct else 'match-bad' }}">{{ pair.learner_match }}</span></td>
                         <td><span class="match-good">{{ pair.correct_match }}</span></td>
+                    </tr>
+                    {% endfor %}
+                </table>
+                {% elif row.type == 'mcq_single' and row.choice_rows %}
+                <table>
+                    <tr><th>Option</th><th>Learner Answer</th><th>Correct Answer</th></tr>
+                    {% for choice in row.choice_rows %}
+                    <tr>
+                        <td>{{ choice.option_text }}</td>
+                        <td>{% if choice.is_selected %}<span class="{{ 'score-high' if row.correct else 'score-low' }}">Selected</span>{% else %}<span class="muted">Not selected</span>{% endif %}</td>
+                        <td>{% if choice.is_correct %}<span class="score-high">Correct</span>{% else %}<span class="muted">-</span>{% endif %}</td>
                     </tr>
                     {% endfor %}
                 </table>

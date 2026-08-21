@@ -1,4 +1,5 @@
 import io
+import json
 from datetime import datetime
 
 from flask import redirect, render_template, request, send_file, session, url_for
@@ -8,9 +9,50 @@ from app.database import get_db, get_marking_db, get_teachers, get_user_role, lo
 from app.helper_marking import get_marking_scripts
 from app.practical_simulators import (
     WORD_INSERT_PICTURE_SIMULATOR_KEY,
+    WORD_CAPS_PRACTICAL_KEY,
     get_simulator_catalog,
     get_simulator_definition,
 )
+
+
+def _load_word_bank_questions(cursor):
+    cursor.execute(
+        """
+        SELECT id, category, title, prompt_html, steps_json, marks
+        FROM practical_question_bank
+        WHERE program = 'word'
+        ORDER BY category, title
+        """
+    )
+    questions = []
+    for bank_id, category, title, prompt_html, steps_json, marks in cursor.fetchall():
+        try:
+            steps = json.loads(steps_json or "[]")
+        except Exception:
+            steps = []
+        questions.append(
+            {
+                "id": bank_id,
+                "category": category or "General",
+                "title": title,
+                "prompt_html": prompt_html,
+                "steps": steps,
+                "marks": marks or len(steps) or 1,
+            }
+        )
+    return questions
+
+
+def _save_task_practical_questions(cursor, task_id, selected_question_ids):
+    cursor.execute("DELETE FROM task_practical_questions WHERE task_id = ?", (task_id,))
+    for order_index, question_id in enumerate(selected_question_ids, start=1):
+        cursor.execute(
+            """
+            INSERT INTO task_practical_questions (task_id, bank_question_id, order_index)
+            VALUES (?, ?, ?)
+            """,
+            (task_id, question_id, order_index),
+        )
 
 
 def register_task_admin_routes(app):
@@ -105,8 +147,26 @@ def register_task_admin_routes(app):
                 groups = request.form.getlist("groups")
                 teachers = request.form.getlist("teachers")
                 if task_name and assign_date:
+                    selected_word_question_ids = [
+                        int(value) for value in request.form.getlist("word_question_ids") if str(value).strip().isdigit()
+                    ]
                     question_text = request.form.get("question_text", "").strip()
-                    if practical_mode == "simulator" and simulator_key and not question_text:
+                    if practical_mode == "simulator" and simulator_key == WORD_CAPS_PRACTICAL_KEY:
+                        simulator_key = WORD_CAPS_PRACTICAL_KEY
+                        if selected_word_question_ids:
+                            cursor.execute(
+                                "SELECT COUNT(*), COALESCE(SUM(marks), 0) FROM practical_question_bank WHERE id IN ({})".format(
+                                    ",".join("?" for _ in selected_word_question_ids)
+                                ),
+                                tuple(selected_word_question_ids),
+                            )
+                            selected_count, total_marks = cursor.fetchone()
+                            question_text = (
+                                f"<p><strong>Word practical:</strong> {selected_count} selected question"
+                                f"{'' if selected_count == 1 else 's'} worth {total_marks} mark"
+                                f"{'' if total_marks == 1 else 's'} in total.</p>"
+                            )
+                    elif practical_mode == "simulator" and simulator_key and not question_text:
                         simulator_definition = get_simulator_definition(simulator_key)
                         if simulator_definition:
                             question_text = simulator_definition["default_question_html"]
@@ -130,6 +190,8 @@ def register_task_admin_routes(app):
                         ),
                     )
                     task_id = cursor.lastrowid
+                    if practical_mode == "simulator" and simulator_key == WORD_CAPS_PRACTICAL_KEY:
+                        _save_task_practical_questions(cursor, task_id, selected_word_question_ids)
                     if practical_mode == "upload" and "sample_file" in request.files:
                         file = request.files["sample_file"]
                         if file.filename:
@@ -191,6 +253,17 @@ def register_task_admin_routes(app):
                         ),
                     )
                     new_task_id = cursor.lastrowid
+                    if new_practical_mode == "simulator":
+                        cursor.execute(
+                            """
+                            INSERT INTO task_practical_questions (task_id, bank_question_id, order_index, title_override, prompt_override_html, steps_json_override, marks_override)
+                            SELECT ?, bank_question_id, order_index, title_override, prompt_override_html, steps_json_override, marks_override
+                            FROM task_practical_questions
+                            WHERE task_id = ?
+                            ORDER BY order_index
+                            """,
+                            (new_task_id, source_task_id),
+                        )
                     for g in new_groups:
                         if g.strip():
                             cursor.execute("INSERT INTO task_groups (task_id, group_name) VALUES (?, ?)", (new_task_id, g))
@@ -254,6 +327,11 @@ def register_task_admin_routes(app):
 
         teachers = get_teachers()
         simulator_catalog = get_simulator_catalog()
+        simulator_catalog[WORD_CAPS_PRACTICAL_KEY] = {
+            "title": "Word CAPS Practical Builder",
+            "description": "Build a Word practical from a tick-box question bank.",
+        }
+        word_bank_questions = _load_word_bank_questions(cursor)
         teacher_checkboxes = "".join(
             f'<label style="display:inline-flex;align-items:center;gap:5px;">'
             f'<input type="checkbox" name="teachers" value="{escape(t[0])}"> {escape(t[1] or t[0])}</label>'
@@ -368,6 +446,8 @@ def register_task_admin_routes(app):
             group_checkboxes=group_checkboxes,
             teacher_checkboxes=teacher_checkboxes,
             task_list=task_list,
+            word_bank_questions=word_bank_questions,
+            word_caps_practical_key=WORD_CAPS_PRACTICAL_KEY,
         )
 
     @app.route("/tasks/<int:task_id>/preview")

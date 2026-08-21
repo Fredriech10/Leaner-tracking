@@ -23,6 +23,98 @@ from app.helper_communication import (
 )
 
 
+def _build_teacher_threads(cursor, role, username, selected_group="", selected_topic="", selected_date=""):
+    query = """
+        SELECT t.*,
+               u.full_name AS student_name,
+               u.group_name
+        FROM communication_threads t
+        JOIN users u ON u.username = t.student_username
+        WHERE 1=1
+    """
+    params = []
+    if role == "teacher":
+        query += " AND (t.teacher_username = ? OR u.teacher_username = ?)"
+        params.extend([username, username])
+    if selected_group:
+        query += " AND u.group_name = ?"
+        params.append(selected_group)
+    if selected_topic:
+        query += " AND t.topic = ?"
+        params.append(selected_topic)
+    if selected_date:
+        query += " AND (t.attendance_date = ? OR substr(COALESCE(t.updated_at, t.created_at), 1, 10) = ?)"
+        params.extend([selected_date, selected_date])
+    query += " ORDER BY COALESCE(t.updated_at, t.created_at) DESC, t.id DESC"
+    cursor.execute(query, params)
+
+    threads = []
+    for row in cursor.fetchall():
+        thread = dict(row)
+        cursor.execute(
+            """
+            SELECT *
+            FROM communication_messages
+            WHERE thread_id = ?
+            ORDER BY COALESCE(created_at, '') ASC, id ASC
+            """,
+            (thread["id"],),
+        )
+        thread["messages"] = [dict(message_row) for message_row in cursor.fetchall()]
+        if thread.get("topic") == "attendance_review" and thread.get("attendance_date") and thread.get("student_username") and thread.get("group_name"):
+            attendance_day = thread["attendance_date"]
+            student_username = thread["student_username"]
+            group_name = thread["group_name"]
+            login_map = fetch_first_login_times(cursor, [student_username], [attendance_day])
+            override_map = fetch_attendance_override_statuses(cursor, [student_username], [attendance_day])
+            thread_teacher = thread.get("teacher_username")
+            late_cutoffs = fetch_group_late_thresholds(cursor, group_name, [attendance_day], teacher_username=thread_teacher)
+            class_checked_dates = fetch_class_checked_dates(cursor, group_name, teacher_username=thread_teacher)
+            history = build_attendance_history(
+                cursor,
+                student_username,
+                group_name,
+                [attendance_day],
+                login_map=login_map,
+                override_map=override_map,
+                late_cutoffs=late_cutoffs,
+                class_checked_dates=class_checked_dates,
+            )
+            current_item = history[0] if history else None
+            if current_item:
+                if current_item["status"] == "Present":
+                    thread["attendance_state_code"] = "L" if current_item["late"] else "P"
+                    thread["attendance_state_label"] = "Late" if current_item["late"] else "Present"
+                elif current_item["status"] == "Absent":
+                    thread["attendance_state_code"] = "A"
+                    thread["attendance_state_label"] = "Absent"
+                else:
+                    thread["attendance_state_code"] = "-"
+                    thread["attendance_state_label"] = "Normal"
+            else:
+                thread["attendance_state_code"] = "-"
+                thread["attendance_state_label"] = "Unknown"
+        if thread.get("topic") == "theory_review" and thread.get("theory_test_id") and thread.get("student_username"):
+            cursor.execute("SELECT title FROM theory_tests WHERE id = ?", (thread["theory_test_id"],))
+            test_row = cursor.fetchone()
+            thread["theory_test_title"] = test_row[0] if test_row else f"Test {thread['theory_test_id']}"
+            thread["theory_review_href"] = url_for(
+                "response_review_learner",
+                learner=thread["student_username"],
+                item=thread["theory_test_id"],
+            )
+        student_msgs = [message for message in thread["messages"] if message.get("sender_role") == "student"]
+        last_student_msg = student_msgs[-1] if student_msgs else None
+        thread["is_unread"] = bool(last_student_msg and (not thread.get("teacher_read_at") or thread["teacher_read_at"] < (last_student_msg.get("created_at") or "")))
+        latest_message = thread["messages"][-1] if thread["messages"] else None
+        thread["latest_preview"] = (
+            f"{latest_message.get('sender_username')}: {latest_message.get('message')}"
+            if latest_message else ""
+        )
+        threads.append(thread)
+    return threads
+
+
 def register_communication_routes(app):
     @app.route("/teacher_dashboard/quick_actions", methods=["POST"])
     def update_teacher_quick_actions():
@@ -293,86 +385,7 @@ def register_communication_routes(app):
         conn.row_factory = sqlite3.Row
         cursor = conn.cursor()
 
-        query = """
-            SELECT t.*,
-                   u.full_name AS student_name,
-                   u.group_name
-            FROM communication_threads t
-            JOIN users u ON u.username = t.student_username
-            WHERE 1=1
-        """
-        params = []
-        if role == "teacher":
-            query += " AND (t.teacher_username = ? OR u.teacher_username = ?)"
-            params.extend([username, username])
-        if selected_group:
-            query += " AND u.group_name = ?"
-            params.append(selected_group)
-        if selected_topic:
-            query += " AND t.topic = ?"
-            params.append(selected_topic)
-        if selected_date:
-            query += " AND (t.attendance_date = ? OR substr(COALESCE(t.updated_at, t.created_at), 1, 10) = ?)"
-            params.extend([selected_date, selected_date])
-        query += " ORDER BY COALESCE(t.updated_at, t.created_at) DESC, t.id DESC"
-        cursor.execute(query, params)
-
-        threads = []
-        for row in cursor.fetchall():
-            thread = dict(row)
-            cursor.execute(
-                """
-                SELECT *
-                FROM communication_messages
-                WHERE thread_id = ?
-                ORDER BY COALESCE(created_at, '') ASC, id ASC
-                """,
-                (thread["id"],),
-            )
-            thread["messages"] = [dict(message_row) for message_row in cursor.fetchall()]
-            if thread.get("topic") == "attendance_review" and thread.get("attendance_date") and thread.get("student_username") and thread.get("group_name"):
-                attendance_day = thread["attendance_date"]
-                student_username = thread["student_username"]
-                group_name = thread["group_name"]
-                login_map = fetch_first_login_times(cursor, [student_username], [attendance_day])
-                override_map = fetch_attendance_override_statuses(cursor, [student_username], [attendance_day])
-                thread_teacher = thread.get("teacher_username")
-                late_cutoffs = fetch_group_late_thresholds(cursor, group_name, [attendance_day], teacher_username=thread_teacher)
-                class_checked_dates = fetch_class_checked_dates(cursor, group_name, teacher_username=thread_teacher)
-                history = build_attendance_history(
-                    cursor,
-                    student_username,
-                    group_name,
-                    [attendance_day],
-                    login_map=login_map,
-                    override_map=override_map,
-                    late_cutoffs=late_cutoffs,
-                    class_checked_dates=class_checked_dates,
-                )
-                current_item = history[0] if history else None
-                if current_item:
-                    if current_item["status"] == "Present":
-                        thread["attendance_state_code"] = "L" if current_item["late"] else "P"
-                        thread["attendance_state_label"] = "Late" if current_item["late"] else "Present"
-                    elif current_item["status"] == "Absent":
-                        thread["attendance_state_code"] = "A"
-                        thread["attendance_state_label"] = "Absent"
-                    else:
-                        thread["attendance_state_code"] = "-"
-                        thread["attendance_state_label"] = "Normal"
-                else:
-                    thread["attendance_state_code"] = "-"
-                    thread["attendance_state_label"] = "Unknown"
-            if thread.get("topic") == "theory_review" and thread.get("theory_test_id") and thread.get("student_username"):
-                cursor.execute("SELECT title FROM theory_tests WHERE id = ?", (thread["theory_test_id"],))
-                test_row = cursor.fetchone()
-                thread["theory_test_title"] = test_row[0] if test_row else f"Test {thread['theory_test_id']}"
-                thread["theory_review_href"] = url_for(
-                    "response_review_learner",
-                    learner=thread["student_username"],
-                    item=thread["theory_test_id"],
-                )
-            threads.append(thread)
+        threads = _build_teacher_threads(cursor, role, username, selected_group, selected_topic, selected_date)
 
         conn.close()
         return render_template(
@@ -427,7 +440,7 @@ def register_communication_routes(app):
         if not thread_id:
             return jsonify({"ok": False}), 400
 
-        now_text = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+        now_text = datetime.now().isoformat()
         conn = get_db()
         cursor = conn.cursor()
         cursor.execute(
@@ -441,6 +454,26 @@ def register_communication_routes(app):
         conn.commit()
         conn.close()
         return jsonify({"ok": True})
+
+    @app.route("/communications/updates")
+    def communications_updates():
+        username = session.get("username")
+        if not username:
+            return jsonify({"ok": False}), 401
+        role = get_user_role(username)
+        if role not in ["teacher", "admin"]:
+            return jsonify({"ok": False}), 403
+
+        selected_group = (request.args.get("group") or "").strip()
+        selected_topic = (request.args.get("topic") or "").strip()
+        selected_date = (request.args.get("date") or "").strip()
+
+        conn = get_db()
+        conn.row_factory = sqlite3.Row
+        cursor = conn.cursor()
+        threads = _build_teacher_threads(cursor, role, username, selected_group, selected_topic, selected_date)
+        conn.close()
+        return jsonify({"ok": True, "threads": threads, "unread": get_teacher_unread_message_count(username)})
 
     @app.route("/communications/attendance_action", methods=["POST"])
     def communications_attendance_action():

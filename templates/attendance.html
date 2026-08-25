@@ -213,6 +213,7 @@
 <div id="loadingIndicator" class="loading" style="display:none;">Loading attendance data...</div>
 {% endif %}
 
+<div id="attendanceLiveContent">
 {% if not selected_group %}
     <div class="summary-grid">
         <div class="card">
@@ -589,7 +590,21 @@
 
 </div>
 
+</div>
+
 <script>
+let attendancePollTimer = null;
+let attendancePollInFlight = false;
+
+function setupAttendanceCellEditors() {
+    document.querySelectorAll('.attendance-cell.editable').forEach(function (cell) {
+        if (cell.dataset.pollBound === '1') return;
+        cell.dataset.pollBound = '1';
+        cell.addEventListener('dblclick', function () {
+            openAttendanceEditor(cell);
+        });
+    });
+}
 
 function initSortableTable(tableId, defaultColumnIndex = 0, defaultDirection = 'asc') {
     const table = document.getElementById(tableId);
@@ -679,8 +694,6 @@ function quickAction(action, dateFieldId, confirmMsg) {
         document.getElementById(formId).submit();
     }
 }
-
-initSortableTable('attendanceTable', 1, 'asc');
 
 function setModuleNoteDate() {
     const selectedDate = document.getElementById('actionDate').value;
@@ -810,12 +823,6 @@ function openAttendanceEditor(cell) {
     });
 }
 
-document.querySelectorAll('.attendance-cell.editable').forEach(function (cell) {
-    cell.addEventListener('dblclick', function () {
-        openAttendanceEditor(cell);
-    });
-});
-
 function toggleTermDates() {
     const body = document.getElementById('termBody');
     const chevron = document.getElementById('termChevron');
@@ -844,6 +851,59 @@ function showExcludeModal() {
 function hideExcludeModal() {
     document.getElementById('excludeModal').style.display = 'none';
 }
+
+function initializeAttendancePage() {
+    initSortableTable('attendanceTable', 1, 'asc');
+    setupAttendanceCellEditors();
+}
+
+function shouldSkipAttendancePoll() {
+    return Boolean(
+        document.querySelector('.attendance-cell.editing') ||
+        document.getElementById('moduleNoteModal')?.style.display === 'flex' ||
+        document.getElementById('excludeModal')?.style.display === 'flex'
+    );
+}
+
+function refreshAttendanceLiveContent() {
+    if (attendancePollInFlight || shouldSkipAttendancePoll()) return;
+
+    const container = document.getElementById('attendanceLiveContent');
+    if (!container) return;
+
+    attendancePollInFlight = true;
+    fetch(window.location.href, {
+        method: 'GET',
+        headers: {
+            'X-Requested-With': 'XMLHttpRequest',
+            'Cache-Control': 'no-cache'
+        },
+        cache: 'no-store'
+    })
+    .then((response) => response.text())
+    .then((html) => {
+        const doc = new DOMParser().parseFromString(html, 'text/html');
+        const incoming = doc.getElementById('attendanceLiveContent');
+        if (!incoming) return;
+
+        container.innerHTML = incoming.innerHTML;
+        initializeAttendancePage();
+    })
+    .catch(() => {})
+    .finally(() => {
+        attendancePollInFlight = false;
+    });
+}
+
+function startAttendancePolling() {
+    if (attendancePollTimer) {
+        clearInterval(attendancePollTimer);
+    }
+    attendancePollTimer = window.setInterval(refreshAttendanceLiveContent, 5000);
+}
+
+initializeAttendancePage();
+startAttendancePolling();
 </script>
 
 </body>

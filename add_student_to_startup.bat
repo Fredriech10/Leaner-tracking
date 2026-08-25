@@ -10,7 +10,7 @@ if %errorlevel% neq 0 (
 
 echo Copying Start Student to All Users Startup...
 
-set SOURCE=%~dp0start STUDENT.bat
+set SOURCE=%~dp0start_STUDENT.bat
 set DEST=C:\ProgramData\Microsoft\Windows\Start Menu\Programs\Startup\LearnerTrackingStudent.bat
 
 copy /Y "%SOURCE%" "%DEST%"

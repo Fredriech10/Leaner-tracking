@@ -55,9 +55,124 @@ def _score_word_caps_practical(questions, form_data):
             actions = json.loads(form_data.get(f"question_{question['id']}_actions") or "[]")
         except Exception:
             actions = []
+        try:
+            question_state = json.loads(form_data.get(f"question_{question['id']}_state") or "{}")
+        except Exception:
+            question_state = {}
         skip_flag = (form_data.get(f"question_{question['id']}_skipped") or "").strip() == "1"
         expected_steps = question["steps"]
         passed = actions[: len(expected_steps)] == expected_steps and len(actions) >= len(expected_steps) and not skip_flag
+        details = f"{len(actions)}/{len(expected_steps)} step(s) completed"
+
+        if not skip_flag and question["title"] == "Replace":
+            passed = (
+                question_state.get("find_text", "").strip().upper() == "CAR"
+                and question_state.get("replace_text", "").strip().upper() == "MOTOR"
+                and bool(question_state.get("replace_done"))
+                and str(question_state.get("preview_text", "")).strip().upper() == "MOTOR MOTOR BUS MOTOR"
+            )
+            details = "Replace task completed" if passed else "Replace task not completed correctly"
+        elif not skip_flag and question["title"] == "Insert Table":
+            table_state = question_state.get("table") or {}
+            passed = int(table_state.get("columns", 0) or 0) == 3 and int(table_state.get("rows", 0) or 0) == 6
+            details = "Inserted 3 x 6 table" if passed else "Table dimensions not correct"
+        elif not skip_flag and question["title"] == "Font Size":
+            passed = int(question_state.get("font_size", 0) or 0) == 24
+            details = "Font size changed" if passed else "Font size not changed correctly"
+        elif not skip_flag and question["title"] == "Font Color":
+            passed = str(question_state.get("font_color", "")).lower() == "#c62828"
+            details = "Font colour changed" if passed else "Font colour not changed correctly"
+        elif not skip_flag and question["title"] == "Insert Chart":
+            passed = bool(question_state.get("chart_inserted"))
+            details = "Chart inserted" if passed else "Chart not inserted"
+        elif not skip_flag and question["title"] == "Insert Picture":
+            passed = bool(question_state.get("picture_inserted"))
+            details = "Picture inserted" if passed else "Picture not inserted"
+        elif not skip_flag and question["title"] == "Insert Sources":
+            passed = bool(question_state.get("source_added"))
+            details = "Source manager completed" if passed else "Source not added"
+        elif not skip_flag and question["title"] == "Insert Citation":
+            passed = bool(question_state.get("citation_inserted"))
+            details = "Citation inserted" if passed else "Citation not inserted"
+        elif not skip_flag and question["title"] == "Insert Footnote":
+            passed = bool(question_state.get("footnote_inserted"))
+            details = "Footnote inserted" if passed else "Footnote not inserted"
+        elif not skip_flag and question["title"] == "Insert Caption":
+            passed = bool(question_state.get("caption_inserted"))
+            details = "Caption inserted" if passed else "Caption not inserted"
+        elif not skip_flag and question["title"] == "Insert Bookmark":
+            passed = bool(question_state.get("bookmark_inserted"))
+            details = "Bookmark inserted" if passed else "Bookmark not inserted"
+        elif not skip_flag and question["title"] == "Bullet List":
+            passed = question_state.get("list_type") == "bullets"
+            details = "Bullet list applied" if passed else "Bullet list not applied"
+        elif not skip_flag and question["title"] == "Numbered List":
+            passed = question_state.get("list_type") == "numbered"
+            details = "Numbered list applied" if passed else "Numbered list not applied"
+        elif not skip_flag and question["title"] == "Apply Heading":
+            passed = question_state.get("heading_level") == "heading1"
+            details = "Heading 1 applied" if passed else "Heading style not applied"
+        elif not skip_flag and question["title"] == "Align Left":
+            passed = question_state.get("alignment") == "left"
+            details = "Left alignment applied" if passed else "Left alignment not applied"
+        elif not skip_flag and question["title"] == "Align Center":
+            passed = question_state.get("alignment") == "center"
+            details = "Center alignment applied" if passed else "Center alignment not applied"
+        elif not skip_flag and question["title"] == "Align Right":
+            passed = question_state.get("alignment") == "right"
+            details = "Right alignment applied" if passed else "Right alignment not applied"
+        elif not skip_flag and question["title"] == "Justify Text":
+            passed = question_state.get("alignment") == "justify"
+            details = "Justify applied" if passed else "Justify not applied"
+        elif not skip_flag and question["title"] == "Table Borders":
+            passed = bool(question_state.get("table_borders"))
+            details = "Table borders applied" if passed else "Table borders not applied"
+        elif not skip_flag and question["title"] == "Paragraph Borders":
+            passed = bool(question_state.get("paragraph_borders"))
+            details = "Paragraph borders applied" if passed else "Paragraph borders not applied"
+        elif not skip_flag and question["title"] == "Find":
+            passed = (
+                question_state.get("find_text", "").strip().upper() == "TABLES"
+                and bool(question_state.get("found"))
+            )
+            details = "Find task completed" if passed else "Find task not completed correctly"
+        elif not skip_flag and question["title"] == "Shading":
+            passed = bool(question_state.get("shaded"))
+            details = "Shading applied" if passed else "Shading not applied"
+        elif not skip_flag and question["title"] == "Change Orientation":
+            passed = question_state.get("orientation") == "landscape"
+            details = "Orientation changed" if passed else "Orientation not changed"
+        elif not skip_flag and question["title"] == "Change Page Size":
+            passed = question_state.get("page_size") == "Legal"
+            details = "Page size changed" if passed else "Page size not changed"
+        elif not skip_flag and question["title"] == "Add Page Break":
+            passed = bool(question_state.get("page_break"))
+            details = "Page break inserted" if passed else "Page break not inserted"
+        elif not skip_flag and question["title"] == "Add Column Break":
+            passed = bool(question_state.get("column_break"))
+            details = "Column break inserted" if passed else "Column break not inserted"
+        elif not skip_flag and question["title"] == "Add Cover Page":
+            passed = bool(question_state.get("cover_page"))
+            details = "Cover page inserted" if passed else "Cover page not inserted"
+        elif not skip_flag and question["title"] == "Insert SmartArt":
+            passed = bool(question_state.get("smartart_inserted"))
+            details = "SmartArt inserted" if passed else "SmartArt not inserted"
+        elif not skip_flag and question["title"] == "Edit SmartArt":
+            passed = bool(question_state.get("smartart_inserted")) and bool(question_state.get("smartart_edited"))
+            details = "SmartArt edited" if passed else "SmartArt not edited"
+        elif not skip_flag and question["title"] == "Left Indent":
+            passed = int(question_state.get("left_indent", 0) or 0) == 48
+            details = "Left indent applied" if passed else "Left indent not applied"
+        elif not skip_flag and question["title"] == "Right Indent":
+            passed = int(question_state.get("right_indent", 0) or 0) == 48
+            details = "Right indent applied" if passed else "Right indent not applied"
+        elif not skip_flag and question["title"] == "Mail Merge":
+            passed = bool(question_state.get("merge_started"))
+            details = "Mail Merge started" if passed else "Mail Merge not started"
+        elif not skip_flag and question["title"] == "Insert Merge Fields":
+            passed = bool(question_state.get("merge_field_inserted"))
+            details = "Merge field inserted" if passed else "Merge field not inserted"
+
         awarded = question["marks"] if passed else 0
         total_score += awarded
         total_marks += question["marks"]
@@ -71,7 +186,7 @@ def _score_word_caps_practical(questions, form_data):
                 "passed": passed,
                 "marks_awarded": awarded,
                 "marks_available": question["marks"],
-                "details": "Skipped" if skip_flag else f"{len(actions)}/{len(expected_steps)} step(s) completed",
+                "details": "Skipped" if skip_flag else details,
             }
         )
 

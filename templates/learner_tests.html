@@ -91,7 +91,8 @@
 {% else %}
     {% for t in tests %}
     {% set has_attempted = t[4] is not none %}
-    {% set maxed_out = has_attempted and (not t[6] or t[8] >= t[7]) %}
+    {% set effective_max_attempts = t[7] + t[8] %}
+    {% set maxed_out = has_attempted and (not t[6] or t[9] >= effective_max_attempts) %}
 
     <div class="test-card">
         <div class="test-info">
@@ -102,14 +103,14 @@
             <p>
                 {% if t[2] %}Subject: {{ t[2] }} | {% endif %}
                 {% if t[3] %}Time limit: {{ t[3] }} min{% else %}No time limit{% endif %}
-                {% if t[6] %} | Max {{ t[7] }} attempt{{ 's' if t[7] != 1 }}{% endif %}
+                {% if t[6] %} | Max {{ effective_max_attempts }} attempt{{ 's' if effective_max_attempts != 1 }}{% endif %}
             </p>
         </div>
         <div class="test-actions">
             {% if has_attempted %}
                 <span class="badge badge-best">Best: {{ t[4] }}%</span>
                 <span class="badge badge-attempts {{ 'badge-maxed' if maxed_out else '' }}">
-                    {{ t[8] }}/{{ t[7] if t[6] else 1 }} attempt{{ 's' if t[8] != 1 }}
+                    {{ t[9] }}/{{ effective_max_attempts if t[6] else 1 }} attempt{{ 's' if t[9] != 1 }}
                 </span>
                 <div class="action-row">
                     <a href="/test_results/{{ t[5] }}" class="btn btn-success">View Results</a>

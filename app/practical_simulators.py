@@ -21,7 +21,7 @@ def _word_caps_question_bank():
         ("Numbered List", "Apply numbering to the selected paragraphs.", ["home", "home.numbering"], "Paragraph"),
         ("Insert Chart", "Insert a chart from the Insert tab.", ["insert", "insert.chart"], "Insert"),
         ("Insert Picture", "Insert a picture from the Insert tab.", ["insert", "insert.pictures"], "Insert"),
-        ("Insert Table", "Insert a table into the document.", ["insert", "insert.table"], "Insert"),
+        ("Insert Table", "Insert a table with 3 columns and 6 rows into the document.", ["insert", "insert.table", "insert.table_apply"], "Insert"),
         ("Insert Sources", "Open source management for references.", ["references", "references.manage_sources"], "References"),
         ("Insert Citation", "Insert a citation in the current position.", ["references", "references.insert_citation"], "References"),
         ("Insert Footnote", "Insert a footnote from the References tab.", ["references", "references.insert_footnote"], "References"),
@@ -35,7 +35,7 @@ def _word_caps_question_bank():
         ("Table Borders", "Apply table borders from the Home tab borders menu.", ["home", "home.borders"], "Table"),
         ("Paragraph Borders", "Apply paragraph borders from the Borders menu.", ["home", "home.borders"], "Paragraph"),
         ("Find", "Open Find from the Home tab editing group.", ["home", "home.find"], "Editing"),
-        ("Replace", "Open Replace from the Home tab editing group.", ["home", "home.replace"], "Editing"),
+        ("Replace", "Use Replace to find all the words CAR and replace them with MOTOR.", ["home", "home.replace", "home.replace_apply"], "Editing"),
         ("Shading", "Apply paragraph shading from the Home tab.", ["home", "home.shading"], "Paragraph"),
         ("Change Orientation", "Change page orientation from the Layout tab.", ["layout", "layout.orientation"], "Layout"),
         ("Change Page Size", "Change page size from the Layout tab.", ["layout", "layout.size"], "Layout"),
@@ -506,7 +506,27 @@ def build_excel_shell(task_title, simulator_type, shell_mode="test"):
 
 
 def get_simulator_catalog():
+    word_caps_active_controls = sorted(
+        {
+            step
+            for item in WORD_CAPS_QUESTION_BANK
+            for step in item.get("steps", [])
+            if "." in step
+        }
+    )
     return {
+        WORD_CAPS_PRACTICAL_KEY: {
+            "title": "Word CAPS Practical Builder",
+            "description": "Word-style practical simulator with one question at a time.",
+            "shell": build_word_shell(
+                "CAPS Word Practical",
+                active_tabs=["home", "insert", "layout", "references", "mailings", "smartart_format"],
+                active_controls=word_caps_active_controls,
+                shell_mode="test",
+                inactive_controls_style="enabled",
+            ),
+            "default_question_html": "<p>Complete each Word practical question one at a time.</p>",
+        },
         WORD_INSERT_PICTURE_SIMULATOR_KEY: {
             "title": "Word: Insert a Picture",
             "description": "Simulates inserting and formatting a picture in a Word document.",

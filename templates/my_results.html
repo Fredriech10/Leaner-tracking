@@ -62,6 +62,7 @@
 </div>
 
 <div class="page">
+    <div id="myResultsLiveContent">
     <div class="hero">
         <div>
             <h2>{{ display_name }}</h2>
@@ -211,5 +212,40 @@
         </div>
     </div>
 </div>
+</div>
+
+<script>
+let myResultsPollInFlight = false;
+
+function refreshMyResultsLiveContent() {
+    if (myResultsPollInFlight) return;
+
+    const container = document.getElementById('myResultsLiveContent');
+    if (!container) return;
+
+    myResultsPollInFlight = true;
+    fetch(window.location.href, {
+        method: 'GET',
+        headers: {
+            'X-Requested-With': 'XMLHttpRequest',
+            'Cache-Control': 'no-cache'
+        },
+        cache: 'no-store'
+    })
+    .then((response) => response.text())
+    .then((html) => {
+        const doc = new DOMParser().parseFromString(html, 'text/html');
+        const incoming = doc.getElementById('myResultsLiveContent');
+        if (!incoming) return;
+        container.innerHTML = incoming.innerHTML;
+    })
+    .catch(() => {})
+    .finally(() => {
+        myResultsPollInFlight = false;
+    });
+}
+
+window.setInterval(refreshMyResultsLiveContent, 5000);
+</script>
 </body>
 </html>

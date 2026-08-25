@@ -8,6 +8,8 @@ LESSON_SLIDE_TYPES = ("content_slide", "title_slide", "heading_slide")
 
 
 def register_theory_learner_routes(app):
+    ACTIVE_TEST_WINDOW_SECONDS = 90
+
     @app.route("/tests")
     def learner_tests():
         username = session.get("username")
@@ -26,6 +28,7 @@ def register_theory_learner_routes(app):
                    best.best_percentage,
                    sub.id as latest_submission_id,
                    t.allow_multiple, t.max_attempts,
+                   COALESCE(ovr.extra_attempts, 0) as extra_attempts,
                    COALESCE(cnt.attempt_count, 0) as attempt_count,
                    COALESCE(qstats.content_count, 0) as content_count,
                    COALESCE(qstats.question_count, 0) as question_count,
@@ -57,6 +60,7 @@ def register_theory_learner_routes(app):
                 GROUP BY test_id
             ) qstats ON t.id = qstats.test_id
             LEFT JOIN theory_progress prog ON prog.test_id = t.id AND prog.username = ?
+            LEFT JOIN theory_test_attempt_overrides ovr ON ovr.test_id = t.id AND ovr.username = ?
             WHERE t.is_active = 1
               AND COALESCE(qstats.content_count, 0) = 0
               AND (
@@ -68,7 +72,7 @@ def register_theory_learner_routes(app):
                 CASE WHEN best.best_percentage IS NULL THEN 0 ELSE 1 END,
                 t.created_at DESC
             """,
-            (username, username, username, username, user_group),
+            (username, username, username, username, username, user_group),
         )
         tests = cursor.fetchall()
         conn.close()
@@ -92,6 +96,7 @@ def register_theory_learner_routes(app):
                    best.best_percentage,
                    sub.id as latest_submission_id,
                    t.allow_multiple, t.max_attempts,
+                   COALESCE(ovr.extra_attempts, 0) as extra_attempts,
                    COALESCE(cnt.attempt_count, 0) as attempt_count,
                    COALESCE(qstats.content_count, 0) as content_count,
                    COALESCE(qstats.total_questions, 0) as total_questions,
@@ -122,6 +127,7 @@ def register_theory_learner_routes(app):
                 GROUP BY test_id
             ) qstats ON t.id = qstats.test_id
             LEFT JOIN theory_progress prog ON prog.test_id = t.id AND prog.username = ?
+            LEFT JOIN theory_test_attempt_overrides ovr ON ovr.test_id = t.id AND ovr.username = ?
             WHERE t.is_active = 1
               AND COALESCE(qstats.content_count, 0) > 0
               AND (
@@ -131,7 +137,7 @@ def register_theory_learner_routes(app):
             GROUP BY t.id
             ORDER BY t.created_at DESC
             """,
-            (username, username, username, username, user_group),
+            (username, username, username, username, username, user_group),
         )
         tests = cursor.fetchall()
         conn.close()
@@ -290,3 +296,35 @@ def register_theory_learner_routes(app):
         conn.commit()
         conn.close()
         return {"ok": True}
+
+    @app.route("/tests/<int:test_id>/activity", methods=["POST"])
+    def update_theory_test_activity(test_id):
+        username = session.get("username")
+        if not username:
+            return {"ok": False, "error": "not_logged_in"}, 401
+
+        payload = request.get_json(silent=True) or {}
+        current_slide = int(payload.get("current_slide", 0) or 0)
+        max_slide = int(payload.get("max_slide", current_slide) or 0)
+
+        conn = get_db()
+        cursor = conn.cursor()
+        cursor.execute("SELECT 1 FROM theory_tests WHERE id = ?", (test_id,))
+        if not cursor.fetchone():
+            conn.close()
+            return {"ok": False, "error": "not_found"}, 404
+
+        cursor.execute(
+            """
+            INSERT INTO theory_progress (test_id, username, current_slide, max_slide, time_spent_seconds, completed, updated_at)
+            VALUES (?, ?, ?, ?, 0, 0, ?)
+            ON CONFLICT(test_id, username) DO UPDATE SET
+                current_slide = excluded.current_slide,
+                max_slide = MAX(theory_progress.max_slide, excluded.max_slide),
+                updated_at = excluded.updated_at
+            """,
+            (test_id, username, current_slide, max_slide, datetime.now().isoformat()),
+        )
+        conn.commit()
+        conn.close()
+        return {"ok": True, "active_window_seconds": ACTIVE_TEST_WINDOW_SECONDS}

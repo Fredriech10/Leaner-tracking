@@ -58,11 +58,12 @@
 {% else %}
     {% for t in tests %}
     {% set has_attempted = t[4] is not none %}
-    {% set maxed_out = has_attempted and (not t[6] or t[8] >= t[7]) %}
-    {% set is_lesson = t[9] > 0 %}
-    {% set is_lesson_only = is_lesson and t[10] == t[9] %}
-    {% set progress_slide = t[13] + 1 %}
-    {% set total_slides = t[10] %}
+    {% set effective_max_attempts = t[7] + t[8] %}
+    {% set maxed_out = has_attempted and (not t[6] or t[9] >= effective_max_attempts) %}
+    {% set is_lesson = t[10] > 0 %}
+    {% set is_lesson_only = is_lesson and t[11] == t[10] %}
+    {% set progress_slide = t[14] + 1 %}
+    {% set total_slides = t[11] %}
     {% set progress_pct = ((progress_slide / total_slides) * 100) if is_lesson and total_slides else 0 %}
 
     <div class="test-card">
@@ -76,12 +77,12 @@
             <p>
                 {% if t[2] %}Subject: {{ t[2] }} | {% endif %}
                 {% if is_lesson %}
-                    {{ t[9] }} lesson slide{{ 's' if t[9] != 1 }}
-                    {% if t[10] > t[9] %} + {{ t[10] - t[9] }} question{{ 's' if (t[10] - t[9]) != 1 }}{% endif %}
+                    {{ t[10] }} lesson slide{{ 's' if t[10] != 1 }}
+                    {% if t[11] > t[10] %} + {{ t[11] - t[10] }} question{{ 's' if (t[11] - t[10]) != 1 }}{% endif %}
                 {% else %}
                     {% if t[3] %}Time limit: {{ t[3] }} min{% else %}No time limit{% endif %}
                 {% endif %}
-                {% if t[6] %} | Max {{ t[7] }} attempt{{ 's' if t[7] != 1 }}{% endif %}
+                {% if t[6] %} | Max {{ effective_max_attempts }} attempt{{ 's' if effective_max_attempts != 1 }}{% endif %}
             </p>
         </div>
         <div class="test-actions">
@@ -91,27 +92,27 @@
                     <div class="progress-text">{{ progress_pct | round | int }}% viewed</div>
                 </div>
             {% endif %}
-            {% if is_lesson and not has_attempted and t[13] > 0 %}
+            {% if is_lesson and not has_attempted and t[14] > 0 %}
                 <a href="/take_test/{{ t[0] }}" class="btn btn-primary">Continue Lesson -></a>
             {% endif %}
 
             {% if has_attempted and is_lesson_only %}
                 <span class="badge badge-best">Lesson completed</span>
-                {% if t[14] %}
-                    <span class="badge badge-attempts">{{ (t[14] // 60) }}m {{ (t[14] % 60) }}s</span>
+                {% if t[15] %}
+                    <span class="badge badge-attempts">{{ (t[15] // 60) }}m {{ (t[15] % 60) }}s</span>
                 {% endif %}
                 <a href="/take_test/{{ t[0] }}" class="btn btn-success">Review Lesson</a>
             {% elif has_attempted %}
                 <span class="badge badge-best">Best: {{ t[4] }}%</span>
                 <span class="badge badge-attempts {{ 'badge-maxed' if maxed_out else '' }}">
-                    {{ t[8] }}/{{ t[7] if t[6] else 1 }} attempt{{ 's' if t[8] != 1 }}
+                    {{ t[9] }}/{{ effective_max_attempts if t[6] else 1 }} attempt{{ 's' if t[9] != 1 }}
                 </span>
                 <a href="/test_results/{{ t[5] }}" class="btn btn-success">View Results</a>
                 {% if t[6] and not maxed_out %}
                     <a href="/take_test/{{ t[0] }}" class="btn btn-retry">Try Again</a>
                 {% endif %}
             {% else %}
-                {% if not (is_lesson and t[13] > 0) %}
+                {% if not (is_lesson and t[14] > 0) %}
                     <a href="/take_test/{{ t[0] }}" class="btn btn-primary">{{ 'Start Lesson ->' if is_lesson else 'Start Test ->' }}</a>
                 {% endif %}
             {% endif %}

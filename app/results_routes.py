@@ -1,7 +1,7 @@
 from datetime import datetime
 
 import pandas as pd
-from flask import redirect, render_template, request, send_file, session, url_for
+from flask import flash, redirect, render_template, request, send_file, session, url_for
 
 from app.database import get_db, get_grades, get_groups, get_user_role, log_activity
 from app.helper_attendance import (
@@ -28,6 +28,29 @@ from app.helper_results import (
 
 
 def register_results_routes(app):
+    ACTIVE_TEST_WINDOW_SECONDS = 90
+
+    def is_recent_test_activity(updated_at):
+        if not updated_at:
+            return False
+        try:
+            updated = datetime.fromisoformat(updated_at)
+        except (TypeError, ValueError):
+            return False
+        return (datetime.now() - updated).total_seconds() <= ACTIVE_TEST_WINDOW_SECONDS
+
+    def is_newer_than_submission(progress_updated_at, latest_submission_at):
+        if not progress_updated_at:
+            return False
+        if not latest_submission_at:
+            return True
+        try:
+            progress_dt = datetime.fromisoformat(progress_updated_at)
+            submission_dt = datetime.fromisoformat(latest_submission_at)
+        except (TypeError, ValueError):
+            return False
+        return progress_dt > submission_dt
+
     @app.route("/weakness_summary")
     def weakness_summary():
         username = session.get("username")
@@ -1506,7 +1529,7 @@ def register_results_routes(app):
 
                 cursor.execute(
                     f"""
-                    SELECT DISTINCT tt.id, tt.title, tt.subject
+                    SELECT DISTINCT tt.id, tt.title, tt.subject, COALESCE(tt.max_attempts, 1)
                     FROM theory_tests tt
                     LEFT JOIN theory_test_groups ttg ON tt.id = ttg.test_id
                     WHERE ttg.group_name IN ({placeholders}) OR ttg.group_name IS NULL
@@ -1514,7 +1537,7 @@ def register_results_routes(app):
                     """,
                     tuple(relevant_groups),
                 )
-                theory_tasks = [{"test_id": row[0], "title": row[1], "subject": row[2]} for row in cursor.fetchall()]
+                theory_tasks = [{"test_id": row[0], "title": row[1], "subject": row[2], "max_attempts": row[3] or 1} for row in cursor.fetchall()]
         else:
             if selected_teacher:
                 cursor.execute(
@@ -1551,7 +1574,7 @@ def register_results_routes(app):
 
             cursor.execute(
                 """
-                SELECT DISTINCT tt.id, tt.title, tt.subject
+                SELECT DISTINCT tt.id, tt.title, tt.subject, COALESCE(tt.max_attempts, 1)
                 FROM theory_tests tt
                 LEFT JOIN theory_test_groups ttg ON tt.id = ttg.test_id
                 WHERE (ttg.group_name = ? OR ttg.group_name IS NULL)
@@ -1559,10 +1582,29 @@ def register_results_routes(app):
                 """,
                 (selected_group,),
             )
-            theory_tasks = [{"test_id": row[0], "title": row[1], "subject": row[2]} for row in cursor.fetchall()]
+            theory_tasks = [{"test_id": row[0], "title": row[1], "subject": row[2], "max_attempts": row[3] or 1} for row in cursor.fetchall()]
 
         students = []
         total_averages = []
+        live_test_activity = []
+        theory_attempt_override_map = {}
+        if theory_tasks and students_raw:
+            test_ids = sorted({task["test_id"] for task in theory_tasks})
+            usernames = sorted({row[0] for row in students_raw})
+            test_placeholders = ",".join("?" for _ in test_ids)
+            user_placeholders = ",".join("?" for _ in usernames)
+            cursor.execute(
+                f"""
+                SELECT test_id, username, COALESCE(extra_attempts, 0)
+                FROM theory_test_attempt_overrides
+                WHERE test_id IN ({test_placeholders}) AND username IN ({user_placeholders})
+                """,
+                tuple(test_ids + usernames),
+            )
+            theory_attempt_override_map = {
+                (row[0], row[1]): row[2] or 0
+                for row in cursor.fetchall()
+            }
         for username, full_name, learner_group in students_raw:
             student = {
                 "username": username,
@@ -1618,6 +1660,8 @@ def register_results_routes(app):
                     }
 
             for task in theory_tasks:
+                progress_row = None
+                progress_is_live = False
                 if all_groups_selected and learner_group:
                     cursor.execute(
                         """
@@ -1665,15 +1709,78 @@ def register_results_routes(app):
                 if scores:
                     all_scores = [s[0] for s in scores]
                     best_score = max(all_scores)
+                    latest_submission_at = scores[0][1] if scores else None
+                    cursor.execute(
+                        """
+                        SELECT current_slide, max_slide, completed, updated_at
+                        FROM theory_progress
+                        WHERE username = ? AND test_id = ?
+                        """,
+                        (username, task["test_id"]),
+                    )
+                    progress_row = cursor.fetchone()
+                    if progress_row:
+                        _current_slide, _max_slide, _completed, updated_at = progress_row
+                        progress_is_live = is_recent_test_activity(updated_at) and is_newer_than_submission(updated_at, latest_submission_at)
+                        if progress_is_live:
+                            live_test_activity.append(
+                                {
+                                    "username": username,
+                                    "full_name": full_name or username,
+                                    "group_name": learner_group,
+                                    "test_id": task["test_id"],
+                                    "test_title": task["title"],
+                                    "subject": task["subject"] or "Theory",
+                                    "updated_at": updated_at,
+                                }
+                            )
                     student["theory_results"][task["test_id"]] = {
                         "best_score": best_score,
                         "attempts": len(scores),
+                        "max_attempts": task.get("max_attempts", 1) + theory_attempt_override_map.get((task["test_id"], username), 0),
+                        "extra_attempts": theory_attempt_override_map.get((task["test_id"], username), 0),
                         "all_scores": all_scores,
+                        "status": "in_progress" if progress_is_live else "completed",
+                        "updated_at": progress_row[3] if progress_row else None,
                     }
+                else:
+                    cursor.execute(
+                        """
+                        SELECT current_slide, max_slide, completed, updated_at
+                        FROM theory_progress
+                        WHERE username = ? AND test_id = ?
+                        """,
+                        (username, task["test_id"]),
+                    )
+                    progress_row = cursor.fetchone()
+                    if progress_row:
+                        current_slide, max_slide, completed, updated_at = progress_row
+                        has_progress = bool(completed) or (max_slide is not None and max_slide >= 0) or (current_slide is not None and current_slide >= 0)
+                        if has_progress and is_recent_test_activity(updated_at):
+                            live_test_activity.append(
+                                {
+                                    "username": username,
+                                    "full_name": full_name or username,
+                                    "group_name": learner_group,
+                                    "test_id": task["test_id"],
+                                    "test_title": task["title"],
+                                    "subject": task["subject"] or "Theory",
+                                    "updated_at": updated_at,
+                                }
+                            )
+                            student["theory_results"][task["test_id"]] = {
+                                "best_score": None,
+                                "attempts": 0,
+                                "max_attempts": task.get("max_attempts", 1) + theory_attempt_override_map.get((task["test_id"], username), 0),
+                                "extra_attempts": theory_attempt_override_map.get((task["test_id"], username), 0),
+                                "all_scores": [],
+                                "status": "in_progress",
+                                "updated_at": updated_at,
+                            }
 
             all_best_scores = []
             all_best_scores.extend([r["best_score"] for r in student["practical_results"].values()])
-            all_best_scores.extend([r["best_score"] for r in student["theory_results"].values()])
+            all_best_scores.extend([r["best_score"] for r in student["theory_results"].values() if r.get("best_score") is not None])
             if all_best_scores:
                 student["overall_avg"] = round(sum(all_best_scores) / len(all_best_scores), 1)
                 total_averages.append(student["overall_avg"])
@@ -1681,6 +1788,14 @@ def register_results_routes(app):
             students.append(student)
 
         group_average = round(sum(total_averages) / len(total_averages), 1) if total_averages else 0
+        deduped_live_activity = []
+        seen_live_activity = set()
+        for item in live_test_activity:
+            key = (item["username"], item["test_id"])
+            if key in seen_live_activity:
+                continue
+            seen_live_activity.add(key)
+            deduped_live_activity.append(item)
         conn.close()
         return render_template(
             "group_results.html",
@@ -1694,5 +1809,59 @@ def register_results_routes(app):
             practical_tasks=practical_tasks,
             theory_tasks=theory_tasks,
             group_average=group_average,
+            live_test_activity=deduped_live_activity,
             result_summaries=[],
         )
+
+    @app.route("/grant_theory_extra_attempt", methods=["POST"])
+    def grant_theory_extra_attempt():
+        username = session.get("username")
+        if not username:
+            return redirect(url_for("login"))
+        if get_user_role(username) not in ["teacher", "admin"]:
+            return "Access denied", 403
+
+        test_id = request.form.get("test_id", type=int)
+        target = (request.form.get("target") or "").strip()
+        selected_group = (request.form.get("selected_group") or "").strip()
+        selected_teacher = (request.form.get("selected_teacher") or "").strip()
+        selected_grade = (request.form.get("selected_grade") or "").strip()
+        if not test_id or not target:
+            flash("Could not grant an extra attempt.", "error")
+            return redirect(url_for("group_results", group=selected_group or None, teacher=selected_teacher or None, grade=selected_grade or None))
+
+        conn = get_db()
+        cursor = conn.cursor()
+        if target == "all":
+            query = "SELECT username FROM users WHERE role = 'student' AND group_name = ?"
+            params = [selected_group]
+            if selected_teacher:
+                query += " AND teacher_username = ?"
+                params.append(selected_teacher)
+            if selected_grade:
+                query += " AND grade = ?"
+                params.append(selected_grade)
+            cursor.execute(query, tuple(params))
+            target_usernames = [row[0] for row in cursor.fetchall()]
+        else:
+            target_usernames = [target]
+
+        granted = 0
+        updated_at = datetime.now().isoformat()
+        for learner_username in target_usernames:
+            cursor.execute(
+                """
+                INSERT INTO theory_test_attempt_overrides (test_id, username, extra_attempts, updated_at)
+                VALUES (?, ?, 1, ?)
+                ON CONFLICT(test_id, username) DO UPDATE SET
+                    extra_attempts = theory_test_attempt_overrides.extra_attempts + 1,
+                    updated_at = excluded.updated_at
+                """,
+                (test_id, learner_username, updated_at),
+            )
+            granted += 1
+
+        conn.commit()
+        conn.close()
+        flash("Extra attempt granted." if target != "all" else f"Extra attempt granted to {granted} learners.", "success")
+        return redirect(url_for("group_results", group=selected_group or None, teacher=selected_teacher or None, grade=selected_grade or None))

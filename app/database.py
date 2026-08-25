@@ -677,6 +677,17 @@ def init_db():
     """)
 
     cursor.execute("""
+    CREATE TABLE IF NOT EXISTS theory_test_attempt_overrides (
+        test_id INTEGER,
+        username TEXT,
+        extra_attempts INTEGER DEFAULT 0,
+        updated_at TEXT,
+        PRIMARY KEY (test_id, username),
+        FOREIGN KEY (test_id) REFERENCES theory_tests (id)
+    )
+    """)
+
+    cursor.execute("""
     CREATE TABLE IF NOT EXISTS theory_questions (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         test_id INTEGER,

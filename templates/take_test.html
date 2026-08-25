@@ -571,10 +571,12 @@ var isPreview = {{ 'true' if is_preview else 'false' }};
 var hasContentSlides = {{ 'true' if has_content_slides else 'false' }};
 var isLessonOnly = {{ 'true' if is_lesson_only else 'false' }};
 var lessonCompleted = {{ 'true' if lesson_completed else 'false' }};
+var allowManualSubmit = false;
 var restrictForwardSlides = !isPreview;
 var maxViewedSlide = {{ max_slide | default(0) }};
 var timeSpentSeconds = 0;
 var unsavedTimeSeconds = 0;
+var testActivityHeartbeat = null;
 setInterval(function () {
     if (isPreview) return;
     timeSpentSeconds++;
@@ -642,6 +644,7 @@ function goToSlide(index) {
     if (nextBtn) nextBtn.style.display = currentSlide === slides.length - 1 ? 'none' : 'inline-block';
     if (submitBtn) submitBtn.style.display = currentSlide === slides.length - 1 ? 'inline-block' : 'none';
     saveLessonProgress(false);
+    sendLiveTestActivity();
 }
 function updateDeckHeight() {
     var viewport = document.getElementById('deckViewport');
@@ -664,12 +667,24 @@ function changeSlide(dir) {
 }
 var testForm = document.getElementById('testForm');
 if (testForm) {
+    testForm.addEventListener('submit', function (event) {
+        if (allowManualSubmit) {
+            allowManualSubmit = false;
+            return;
+        }
+        if (submissionTriggered) {
+            return;
+        }
+        event.preventDefault();
+    });
     testForm.addEventListener('keydown', function (event) {
         if (event.key !== 'Enter') return;
         if (event.ctrlKey || event.shiftKey || event.altKey || event.metaKey) return;
         if (event.target && event.target.tagName === 'TEXTAREA') return;
-        if (currentSlide < slides.length - 1) {
+        if (event.target && (event.target.tagName === 'INPUT' || event.target.tagName === 'SELECT')) {
             event.preventDefault();
+        }
+        if (currentSlide < slides.length - 1) {
             changeSlide(1);
         }
     });
@@ -682,6 +697,15 @@ function saveLessonProgress(completed) {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ current_slide: currentSlide, max_slide: maxViewedSlide, time_delta: delta, completed: completed })
+    }).catch(function () {});
+}
+
+function sendLiveTestActivity() {
+    if (isPreview || isLessonOnly || lessonCompleted || submissionTriggered) return;
+    fetch('/tests/{{ test[0] }}/activity', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ current_slide: currentSlide, max_slide: maxViewedSlide })
     }).catch(function () {});
 }
 
@@ -746,8 +770,14 @@ function toggleCorrection(qId, value) {
     if (box) box.style.display = value === 'False' ? 'block' : 'none';
 }
 function confirmSubmit() {
-    saveLessonProgress(true);
-    return confirm(isLessonOnly ? 'Mark this lesson as complete?' : 'Submit your answers now? You cannot change them afterwards.');
+    var confirmed = confirm(isLessonOnly ? 'Mark this lesson as complete?' : 'Submit your answers now? You cannot change them afterwards.');
+    if (confirmed) {
+        allowManualSubmit = true;
+        saveLessonProgress(true);
+    } else {
+        allowManualSubmit = false;
+    }
+    return confirmed;
 }
 
 var submissionTriggered = false;
@@ -777,11 +807,11 @@ window.addEventListener('pagehide', function () {
     if (isLessonOnly) saveLessonProgress(false);
     else triggerAutoSubmit();
 });
-window.addEventListener('blur', function () {
-    if (isLessonOnly) saveLessonProgress(false);
-    else triggerAutoSubmit();
-});
 {% endif %}
+if (!isPreview && !isLessonOnly && !lessonCompleted) {
+    sendLiveTestActivity();
+    testActivityHeartbeat = window.setInterval(sendLiveTestActivity, 15000);
+}
 window.addEventListener('resize', scaleSlideSurfaces);
 scaleSlideSurfaces();
 </script>

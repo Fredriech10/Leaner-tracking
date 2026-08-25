@@ -731,13 +731,20 @@ def register_theory_runtime_routes(app):
         attempt_count = cursor.fetchone()[0]
         allow_multiple = test[4]
         max_attempts = test[5]
+        cursor.execute(
+            "SELECT COALESCE(extra_attempts, 0) FROM theory_test_attempt_overrides WHERE test_id = ? AND username = ?",
+            (test_id, username),
+        )
+        override_row = cursor.fetchone()
+        extra_attempts = override_row[0] if override_row else 0
+        effective_max_attempts = max_attempts + extra_attempts
 
         redirect_endpoint = "lesson_tests" if has_content_slides else "learner_tests"
 
         if not is_lesson_only and not allow_multiple and attempt_count > 0:
             conn.close()
             return redirect(url_for(redirect_endpoint))
-        if not is_lesson_only and allow_multiple and attempt_count >= max_attempts:
+        if not is_lesson_only and allow_multiple and attempt_count >= effective_max_attempts:
             conn.close()
             return redirect(url_for(redirect_endpoint))
 
@@ -972,12 +979,19 @@ def register_theory_runtime_routes(app):
         show_answers = submission[7]
         allow_multiple = submission[8]
         max_attempts = submission[9]
+        cursor.execute(
+            "SELECT COALESCE(extra_attempts, 0) FROM theory_test_attempt_overrides WHERE test_id = ? AND username = ?",
+            (test_id, username),
+        )
+        override_row = cursor.fetchone()
+        extra_attempts = override_row[0] if override_row else 0
+        effective_max_attempts = max_attempts + extra_attempts
 
         cursor.execute("SELECT COUNT(*), MAX(percentage) FROM theory_submissions WHERE test_id = ? AND username = ?", (test_id, username))
         attempt_row = cursor.fetchone()
         attempts_used = attempt_row[0]
         best_percentage = attempt_row[1]
-        can_retry = allow_multiple and attempts_used < max_attempts
+        can_retry = allow_multiple and attempts_used < effective_max_attempts
 
         cursor.execute(
             """
@@ -1027,7 +1041,7 @@ def register_theory_runtime_routes(app):
             show_answers=show_answers,
             can_retry=can_retry,
             attempts_used=attempts_used,
-            max_attempts=max_attempts,
+            max_attempts=effective_max_attempts,
             best_percentage=best_percentage,
             test_id=test_id,
         )

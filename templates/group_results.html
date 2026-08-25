@@ -43,6 +43,17 @@
 
         .score-cell { text-align: center; cursor: pointer; position: relative; }
         .score-cell:hover { background: #e8f4f8; }
+        .score-actions {
+            display: none;
+            margin-top: 3px;
+            gap: 4px;
+            flex-wrap: wrap;
+            justify-content: center;
+        }
+        .score-cell:hover .score-actions,
+        .score-cell:focus-within .score-actions {
+            display: flex;
+        }
 
         .score-high { color: #107C10; font-weight: bold; }
         .score-medium { color: #ff8c00; font-weight: bold; }
@@ -96,6 +107,12 @@
         .stat-box { background: white; border: 1px solid #ddd; border-radius: 6px; padding: 12px 16px; flex: 1; min-width: 150px; }
         .stat-label { font-size: 0.8em; color: #666; margin-bottom: 4px; }
         .stat-value { font-size: 1.4em; font-weight: bold; color: #005a9e; }
+        .live-activity-card { border: 1px solid #facc15; background: #fffbeb; }
+        .live-activity-list { display: grid; gap: 10px; }
+        .live-activity-item { display: flex; justify-content: space-between; gap: 12px; flex-wrap: wrap; padding: 10px 12px; border: 1px solid #fde68a; border-radius: 8px; background: white; }
+        .live-activity-main { font-weight: bold; color: #92400e; }
+        .live-activity-meta { color: #78716c; font-size: 0.86em; }
+        .live-pill { display: inline-flex; align-items: center; gap: 6px; padding: 4px 10px; border-radius: 999px; background: #fef3c7; color: #92400e; font-weight: bold; font-size: 0.8em; }
 
         .filter-bar { display: flex; gap: 12px; align-items: center; margin-bottom: 16px; flex-wrap: wrap; }
         .table-row-link { color: inherit; text-decoration: none; font-weight: inherit; }
@@ -133,6 +150,10 @@
         .btn-cancel:hover { background: #ddd; }
         .modal .btn-danger-confirm { background: #A4262C; color: white; padding: 7px 16px; border: none; border-radius: 4px; cursor: pointer; font-size: 0.88em; }
         .modal .btn-danger-confirm:hover { background: #7a1a1e; }
+        .flash-wrap { margin-bottom: 16px; display:grid; gap:10px; }
+        .flash-msg { padding: 12px 14px; border-radius: 8px; border: 1px solid; font-size: 0.9em; }
+        .flash-msg.success { background:#e8f5e9; color:#1b5e20; border-color:#a5d6a7; }
+        .flash-msg.error { background:#ffebee; color:#8e2430; border-color:#ef9a9a; }
     </style>
 </head>
 <body>
@@ -144,6 +165,16 @@
 </div>
 
 <div class="page">
+
+{% with messages = get_flashed_messages(with_categories=true) %}
+{% if messages %}
+<div class="flash-wrap">
+    {% for category, message in messages %}
+    <div class="flash-msg {{ 'error' if category == 'error' else 'success' }}">{{ message }}</div>
+    {% endfor %}
+</div>
+{% endif %}
+{% endwith %}
 
 <div class="card">
     <form method="get" id="groupForm" style="display: flex; gap: 12px; align-items: center;">
@@ -177,6 +208,7 @@
     </form>
 </div>
 
+<div id="resultsLiveContent">
 {% if not selected_group %}
 <div class="summary-layout">
     <div class="card">
@@ -229,6 +261,26 @@
         <div class="stat-value">{{ group_average }}%</div>
     </div>
 </div>
+
+{% if live_test_activity %}
+<div class="card live-activity-card">
+    <h3>⏱ Live Test Activity</h3>
+    <div class="live-activity-list">
+        {% for item in live_test_activity %}
+        <div class="live-activity-item">
+            <div>
+                <div class="live-activity-main">{{ item.full_name }}</div>
+                <div class="live-activity-meta">
+                    {{ item.subject }} - {{ item.test_title }}
+                    {% if selected_group == 'all' and item.group_name %} | {{ item.group_name }}{% endif %}
+                </div>
+            </div>
+            <div class="live-pill">In Progress</div>
+        </div>
+        {% endfor %}
+    </div>
+</div>
+{% endif %}
 
 <div class="legend">
     <span class="legend-item legend-practical">📁 Practical Task</span>
@@ -285,6 +337,16 @@
                         <br>
                         <a href="/response_review?type=theory{% if selected_group != 'all' %}&group={{ selected_group }}{% endif %}{% if selected_teacher %}&teacher={{ selected_teacher }}{% endif %}{% if selected_grade %}&grade={{ selected_grade }}{% endif %}&item={{ task.test_id }}" class="btn-primary" style="display:inline-block; margin-top:4px; margin-right:4px; text-decoration:none; padding:4px 8px; border-radius:4px;">Review</a>
                         {% if selected_group != 'all' %}
+                        <form method="post" action="/grant_theory_extra_attempt" style="display:inline;">
+                            <input type="hidden" name="test_id" value="{{ task.test_id }}">
+                            <input type="hidden" name="target" value="all">
+                            <input type="hidden" name="selected_group" value="{{ selected_group }}">
+                            <input type="hidden" name="selected_teacher" value="{{ selected_teacher or '' }}">
+                            <input type="hidden" name="selected_grade" value="{{ selected_grade or '' }}">
+                            <button class="btn-primary" type="submit" style="margin-top:4px; margin-right:4px; padding:4px 8px; border-radius:4px;">+1 Attempt All</button>
+                        </form>
+                        {% endif %}
+                        {% if selected_group != 'all' %}
                         <button class="btn-danger" onclick="openRemoveModal('theory','','{{ task.title }}','{{ task.test_id }}','all','{{ selected_group }}')">🗑 Remove All</button>
                         {% endif %}
                     </th>
@@ -328,8 +390,9 @@
                                 {% for score in result.all_scores %}{{ loop.index }}. {{ score }}%<br>{% endfor %}
                             </div>
                             {% endif %}
-                            <br>
-                            <button class="btn-danger" style="margin-top:3px;" onclick="openRemoveModal('practical','{{ task.subject }}','{{ task.name }}','','{{ student.username }}','{{ selected_group }}')">✕ Remove</button>
+                            <div class="score-actions">
+                                <button class="btn-danger" onclick="openRemoveModal('practical','{{ task.subject }}','{{ task.name }}','','{{ student.username }}','{{ selected_group }}')">✕ Remove</button>
+                            </div>
                         {% else %}
                             <span class="score-none">Not submitted</span>
                         {% endif %}
@@ -340,21 +403,40 @@
                     <td class="score-cell">
                         {% set result = student.theory_results.get(task.test_id) %}
                         {% if result %}
-                            <span class="{% if result.best_score >= 75 %}score-high{% elif result.best_score >= 50 %}score-medium{% else %}score-low{% endif %}">
-                                {{ result.best_score }}%
-                            </span>
-                            {% if result.attempts > 1 %}
-                            <span class="attempts-badge">{{ result.attempts }}x</span>
+                            {% if result.status == 'in_progress' %}
+                                <span class="score-medium">In Progress</span>
+                                {% if result.best_score is not none %}
+                                <br>
+                                <span class="score-none">Best so far: {{ result.best_score }}%</span>
+                                {% endif %}
+                            {% else %}
+                                <span class="{% if result.best_score >= 75 %}score-high{% elif result.best_score >= 50 %}score-medium{% else %}score-low{% endif %}">
+                                    {{ result.best_score }}%
+                                </span>
+                                {% if result.attempts > 1 %}
+                                <span class="attempts-badge">{{ result.attempts }}x</span>
+                                {% endif %}
+                                {% if result.all_scores|length > 1 %}
+                                <div class="tooltip">
+                                    <strong>All Attempts:</strong><br>
+                                    {% for score in result.all_scores %}{{ loop.index }}. {{ score }}%<br>{% endfor %}
+                                </div>
+                                {% endif %}
+                                <div class="score-actions">
+                                    {% if selected_group != 'all' %}
+                                    <form method="post" action="/grant_theory_extra_attempt" style="display:inline;">
+                                        <input type="hidden" name="test_id" value="{{ task.test_id }}">
+                                        <input type="hidden" name="target" value="{{ student.username }}">
+                                        <input type="hidden" name="selected_group" value="{{ selected_group }}">
+                                        <input type="hidden" name="selected_teacher" value="{{ selected_teacher or '' }}">
+                                        <input type="hidden" name="selected_grade" value="{{ selected_grade or '' }}">
+                                        <button class="btn-primary" type="submit" style="padding:4px 8px; border-radius:4px;">+1 Attempt</button>
+                                    </form>
+                                    {% endif %}
+                                    <a href="/response_review/learner?learner={{ student.username }}&item={{ task.test_id }}" class="btn-primary" style="display:inline-block; text-decoration:none; padding:4px 8px; border-radius:4px;">Review</a>
+                                    <button class="btn-danger" onclick="openRemoveModal('theory','','{{ task.title }}','{{ task.test_id }}','{{ student.username }}','{{ selected_group }}')">✕ Remove</button>
+                                </div>
                             {% endif %}
-                            {% if result.all_scores|length > 1 %}
-                            <div class="tooltip">
-                                <strong>All Attempts:</strong><br>
-                                {% for score in result.all_scores %}{{ loop.index }}. {{ score }}%<br>{% endfor %}
-                            </div>
-                            {% endif %}
-                            <br>
-                            <a href="/response_review/learner?learner={{ student.username }}&item={{ task.test_id }}" class="btn-primary" style="display:inline-block; margin-top:3px; margin-right:4px; text-decoration:none; padding:4px 8px; border-radius:4px;">Review</a>
-                            <button class="btn-danger" style="margin-top:3px;" onclick="openRemoveModal('theory','','{{ task.title }}','{{ task.test_id }}','{{ student.username }}','{{ selected_group }}')">✕ Remove</button>
                         {% else %}
                             <span class="score-none">Not submitted</span>
                         {% endif %}
@@ -370,6 +452,8 @@
     {% endif %}
 </div>
 {% endif %}
+
+</div>
 
 </div>
 
@@ -398,53 +482,8 @@
 </div>
 
 <script>
-const resultsTableScroll = document.getElementById('resultsTableScroll');
-const resultsScrollLeft = document.getElementById('resultsScrollLeft');
-const resultsScrollRight = document.getElementById('resultsScrollRight');
-
-if (resultsTableScroll && resultsScrollLeft && resultsScrollRight) {
-    const scrollStep = () => Math.max(240, Math.floor(resultsTableScroll.clientWidth * 0.75));
-    const updateScrollButtons = () => {
-        const maxScrollLeft = resultsTableScroll.scrollWidth - resultsTableScroll.clientWidth;
-        resultsScrollLeft.disabled = resultsTableScroll.scrollLeft <= 4;
-        resultsScrollRight.disabled = resultsTableScroll.scrollLeft >= maxScrollLeft - 4;
-    };
-
-    resultsScrollLeft.addEventListener('click', function () {
-        resultsTableScroll.scrollBy({ left: -scrollStep(), behavior: 'smooth' });
-    });
-    resultsScrollRight.addEventListener('click', function () {
-        resultsTableScroll.scrollBy({ left: scrollStep(), behavior: 'smooth' });
-    });
-
-    let isDraggingResults = false;
-    let dragStartX = 0;
-    let dragStartScrollLeft = 0;
-
-    resultsTableScroll.addEventListener('mousedown', function (event) {
-        if (event.target.closest('button, a, input, select, textarea, form')) return;
-        isDraggingResults = true;
-        dragStartX = event.pageX;
-        dragStartScrollLeft = resultsTableScroll.scrollLeft;
-        resultsTableScroll.classList.add('dragging');
-    });
-
-    window.addEventListener('mousemove', function (event) {
-        if (!isDraggingResults) return;
-        const delta = event.pageX - dragStartX;
-        resultsTableScroll.scrollLeft = dragStartScrollLeft - delta;
-    });
-
-    window.addEventListener('mouseup', function () {
-        if (!isDraggingResults) return;
-        isDraggingResults = false;
-        resultsTableScroll.classList.remove('dragging');
-    });
-
-    resultsTableScroll.addEventListener('scroll', updateScrollButtons, { passive: true });
-    window.addEventListener('resize', updateScrollButtons);
-    updateScrollButtons();
-}
+let resultsPollTimer = null;
+let resultsPollInFlight = false;
 
 function initSortableTable(tableId, defaultColumnIndex = 0, defaultDirection = 'asc') {
     const table = document.getElementById(tableId);
@@ -525,7 +564,112 @@ function submitRemove() {
     document.getElementById('removeForm').submit();
 }
 
-initSortableTable('resultsTable', 0, 'asc');
+function initializeResultsScroll() {
+    const resultsTableScroll = document.getElementById('resultsTableScroll');
+    const resultsScrollLeft = document.getElementById('resultsScrollLeft');
+    const resultsScrollRight = document.getElementById('resultsScrollRight');
+
+    if (!resultsTableScroll || !resultsScrollLeft || !resultsScrollRight || resultsTableScroll.dataset.pollBound === '1') {
+        return;
+    }
+
+    resultsTableScroll.dataset.pollBound = '1';
+
+    const scrollStep = () => Math.max(240, Math.floor(resultsTableScroll.clientWidth * 0.75));
+    const updateScrollButtons = () => {
+        const maxScrollLeft = resultsTableScroll.scrollWidth - resultsTableScroll.clientWidth;
+        resultsScrollLeft.disabled = resultsTableScroll.scrollLeft <= 4;
+        resultsScrollRight.disabled = resultsTableScroll.scrollLeft >= maxScrollLeft - 4;
+    };
+
+    resultsScrollLeft.addEventListener('click', function () {
+        resultsTableScroll.scrollBy({ left: -scrollStep(), behavior: 'smooth' });
+    });
+    resultsScrollRight.addEventListener('click', function () {
+        resultsTableScroll.scrollBy({ left: scrollStep(), behavior: 'smooth' });
+    });
+
+    let isDraggingResults = false;
+    let dragStartX = 0;
+    let dragStartScrollLeft = 0;
+
+    resultsTableScroll.addEventListener('mousedown', function (event) {
+        if (event.target.closest('button, a, input, select, textarea, form')) return;
+        isDraggingResults = true;
+        dragStartX = event.pageX;
+        dragStartScrollLeft = resultsTableScroll.scrollLeft;
+        resultsTableScroll.classList.add('dragging');
+    });
+
+    window.addEventListener('mousemove', function (event) {
+        if (!isDraggingResults) return;
+        const delta = event.pageX - dragStartX;
+        resultsTableScroll.scrollLeft = dragStartScrollLeft - delta;
+    });
+
+    window.addEventListener('mouseup', function () {
+        if (!isDraggingResults) return;
+        isDraggingResults = false;
+        resultsTableScroll.classList.remove('dragging');
+    });
+
+    resultsTableScroll.addEventListener('scroll', updateScrollButtons, { passive: true });
+    window.addEventListener('resize', updateScrollButtons);
+    updateScrollButtons();
+}
+
+function initializeResultsPage() {
+    initializeResultsScroll();
+    initSortableTable('resultsTable', 0, 'asc');
+}
+
+function refreshResultsLiveContent() {
+    if (resultsPollInFlight) return;
+    if (document.getElementById('removeModal')?.classList.contains('active')) return;
+
+    const container = document.getElementById('resultsLiveContent');
+    if (!container) return;
+
+    const currentScrollLeft = document.getElementById('resultsTableScroll')?.scrollLeft || 0;
+    resultsPollInFlight = true;
+
+    fetch(window.location.href, {
+        method: 'GET',
+        headers: {
+            'X-Requested-With': 'XMLHttpRequest',
+            'Cache-Control': 'no-cache'
+        },
+        cache: 'no-store'
+    })
+    .then((response) => response.text())
+    .then((html) => {
+        const doc = new DOMParser().parseFromString(html, 'text/html');
+        const incoming = doc.getElementById('resultsLiveContent');
+        if (!incoming) return;
+
+        container.innerHTML = incoming.innerHTML;
+        initializeResultsPage();
+
+        const nextScroll = document.getElementById('resultsTableScroll');
+        if (nextScroll) {
+            nextScroll.scrollLeft = currentScrollLeft;
+        }
+    })
+    .catch(() => {})
+    .finally(() => {
+        resultsPollInFlight = false;
+    });
+}
+
+function startResultsPolling() {
+    if (resultsPollTimer) {
+        clearInterval(resultsPollTimer);
+    }
+    resultsPollTimer = window.setInterval(refreshResultsLiveContent, 5000);
+}
+
+initializeResultsPage();
+startResultsPolling();
 </script>
 
 </body>

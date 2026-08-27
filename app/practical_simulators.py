@@ -16,7 +16,7 @@ WORD_CAPS_PRACTICAL_KEY = "word_caps_practical"
 def _word_caps_question_bank():
     items = [
         ("Font Size", "Change the selected text font size using the Home tab font size control.", ["home", "home.font_size"], "Formatting"),
-        ("Font Color", "Change the selected text font color using the Home tab font color control.", ["home", "home.font_color"], "Formatting"),
+        ("Font Color", "Change the selected text font color to red using the Home tab font color control.", ["home", "home.font_color"], "Formatting"),
         ("Bullet List", "Apply a bullet list to the selected paragraphs.", ["home", "home.bullets"], "Paragraph"),
         ("Numbered List", "Apply numbering to the selected paragraphs.", ["home", "home.numbering"], "Paragraph"),
         ("Insert Chart", "Insert a chart from the Insert tab.", ["insert", "insert.chart"], "Insert"),

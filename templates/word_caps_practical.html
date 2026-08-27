@@ -175,11 +175,12 @@
         .dialog-layer { position: absolute; inset: 8px 0 0 0; pointer-events: none; z-index: 8; }
         .dialog-layer::before { content: ""; position: absolute; inset: 0; background: linear-gradient(180deg, rgba(255,255,255,0.0) 0%, rgba(241,245,249,0.28) 14%, rgba(241,245,249,0.42) 100%); }
         .word-dialog-floating { width: min(560px, calc(100% - 24px)); margin-left: auto; margin-right: 12px; box-shadow: 0 24px 48px rgba(15,23,42,0.22); border-radius: 10px; pointer-events: auto; position: relative; }
+        .word-dialog-anchored { width: 238px; position: fixed; z-index: 40; border-radius: 4px; box-shadow: 0 20px 40px rgba(15,23,42,0.24); pointer-events: auto; }
         .word-dialog-head { background: linear-gradient(180deg, #fbfbfc 0%, #f2f4f7 100%); padding: 7px 12px; border-bottom: 1px solid #d9dfe8; font-weight: 400; color: #111827; font-size: 0.9rem; display: flex; justify-content: space-between; align-items: center; }
         .word-dialog-head::after { content: "?    ✕"; white-space: pre; font-size: 0.82rem; color: #111827; }
         .word-dialog-body { padding: 10px 12px 12px; display: grid; gap: 10px; background: #f7f7f8; }
         .find-tabs { display: flex; gap: 0; align-items: end; }
-        .find-tab { border: 1px solid #d7dbe2; border-bottom: none; background: #eceff3; color: #111827; font-size: 0.82rem; padding: 4px 12px 5px; margin-right: 2px; }
+        .find-tab { border: 1px solid #d7dbe2; border-bottom: none; background: #eceff3; color: #111827; font-size: 0.82rem; padding: 4px 12px 5px; margin-right: 2px; cursor: pointer; }
         .find-tab.active { background: #fff; position: relative; top: 1px; }
         .find-panel { border: 1px solid #d7dbe2; background: #fff; padding: 10px 10px 12px; }
         .find-grid { display: grid; grid-template-columns: 72px 1fr; gap: 10px 8px; align-items: center; }
@@ -188,6 +189,13 @@
         .find-input { width: 100%; height: 20px; border: 1px solid #b8c0cc; background: #fff; padding: 0 24px 0 6px; font-size: 0.82rem; }
         .find-input-wrap::after { content: "⌄"; position: absolute; right: 6px; top: 50%; transform: translateY(-54%); color: #6b7280; font-size: 0.8rem; }
         .find-spacer { min-height: 64px; }
+        .go-to-layout { display: grid; grid-template-columns: 92px 1fr; gap: 10px; align-items: start; }
+        .go-to-list { border: 1px solid #b8c0cc; background: #fff; min-height: 116px; overflow: auto; }
+        .go-to-item { padding: 4px 6px; font-size: 0.81rem; cursor: pointer; }
+        .go-to-item.selected { background: #cfe8ff; }
+        .go-to-copy { display: grid; gap: 8px; }
+        .go-to-copy input { height: 22px; border: 1px solid #b8c0cc; padding: 0 6px; font-size: 0.82rem; }
+        .go-to-help { font-size: 0.79rem; color: #374151; line-height: 1.4; }
         .field-grid { display: grid; gap: 10px; }
         .field-grid label { display: grid; gap: 4px; font-weight: 600; color: #334155; font-size: 0.82rem; }
         .field-grid input { padding: 7px 9px; border: 1px solid #bcc7d6; border-radius: 0; background: #fff; font-size: 0.83rem; box-shadow: inset 0 1px 1px rgba(15,23,42,0.03); }
@@ -264,6 +272,78 @@
         .dialog-stack-note { font-size: 0.75rem; color: #64748b; margin-top: -2px; }
         .dialog-pane { border: 1px solid #d7dee8; background: #fff; padding: 10px; }
         .dialog-pane-head { font-size: 0.76rem; text-transform: uppercase; letter-spacing: .04em; color: #64748b; font-weight: 700; margin-bottom: 8px; }
+        .office-list-box { border: 1px solid #b8c0cc; background: #fff; min-height: 118px; overflow: auto; }
+        .office-list-item { padding: 6px 8px; font-size: 0.82rem; color: #111827; cursor: pointer; border-bottom: 1px solid #edf0f4; }
+        .office-list-item:last-child { border-bottom: none; }
+        .office-list-item.selected { background: #cfe8ff; color: #0f172a; }
+        .office-list-item:hover { background: #eaf4ff; }
+        .dialog-form-grid { display: grid; grid-template-columns: 88px 1fr; gap: 8px 10px; align-items: center; }
+        .dialog-form-grid label { font-size: 0.81rem; color: #111827; }
+        .dialog-form-grid input, .dialog-form-grid select { height: 24px; border: 1px solid #b8c0cc; background: #fff; padding: 0 6px; font-size: 0.81rem; }
+        .font-size-list { border: 1px solid #b8c0cc; background: #fff; max-height: 148px; overflow: auto; }
+        .font-size-item { padding: 4px 8px; font-size: 0.82rem; cursor: pointer; }
+        .font-size-item.selected { background: #cfe8ff; }
+        .font-size-item:hover { background: #eaf4ff; }
+        .color-swatch-grid { display: grid; grid-template-columns: repeat(8, 1fr); gap: 6px; }
+        .color-swatch { width: 100%; aspect-ratio: 1; border: 1px solid #94a3b8; cursor: pointer; }
+        .color-swatch.selected { box-shadow: 0 0 0 2px #3b82f6; }
+        .color-swatch-labels { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 6px 10px; font-size: 0.75rem; color: #475569; }
+        .border-preset-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
+        .border-preset { border: 1px solid #cfd7e4; background: #fff; padding: 10px; cursor: pointer; text-align: center; }
+        .border-preset.selected { border-color: #3b82f6; box-shadow: inset 0 0 0 2px #bfdbfe; background: #f8fbff; }
+        .border-preview-box { width: 84px; height: 56px; margin: 0 auto 6px; background: #fff; position: relative; }
+        .border-preview-box.all { border: 2px solid #475569; }
+        .border-preview-box.outside { border: 2px solid #475569; }
+        .border-preview-box.all::before, .border-preview-box.all::after { content: ""; position: absolute; background: #475569; }
+        .border-preview-box.all::before { width: 2px; top: 0; bottom: 0; left: 50%; transform: translateX(-50%); }
+        .border-preview-box.all::after { height: 2px; left: 0; right: 0; top: 50%; transform: translateY(-50%); }
+        .shade-gallery { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; }
+        .shade-chip { min-height: 34px; border: 1px solid #94a3b8; cursor: pointer; }
+        .shade-chip.selected { box-shadow: 0 0 0 2px #3b82f6; }
+        .page-setup-choices { display: grid; gap: 10px; }
+        .page-setup-choice { border: 1px solid #cfd7e4; background: #fff; padding: 10px; cursor: pointer; display: flex; align-items: center; gap: 10px; }
+        .page-setup-choice.selected { border-color: #3b82f6; box-shadow: inset 0 0 0 2px #bfdbfe; background: #f8fbff; }
+        .page-orientation-icon { width: 48px; height: 64px; border: 2px solid #64748b; background: #fff; flex: 0 0 auto; }
+        .page-orientation-icon.landscape { width: 64px; height: 48px; }
+        .size-preview-icon { width: 52px; height: 68px; border: 2px solid #64748b; background: linear-gradient(180deg, #fff 0%, #f8fafc 100%); flex: 0 0 auto; }
+        .size-preview-icon.legal { height: 78px; }
+        .gallery-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
+        .gallery-card { border: 1px solid #cfd7e4; background: #fff; padding: 8px; cursor: pointer; }
+        .gallery-card.selected { border-color: #3b82f6; box-shadow: inset 0 0 0 2px #bfdbfe; background: #f8fbff; }
+        .gallery-thumb { height: 86px; border: 1px solid #d8dee8; background: linear-gradient(180deg, #f8fafc 0%, #eef2f7 100%); display: grid; place-items: center; margin-bottom: 6px; color: #475569; font-size: 0.8rem; }
+        .gallery-label { font-size: 0.8rem; color: #111827; text-align: center; }
+        .list-library-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
+        .list-library-card { border: 1px solid #cfd7e4; background: #fff; padding: 10px; cursor: pointer; min-height: 92px; }
+        .list-library-card.selected { border-color: #3b82f6; box-shadow: inset 0 0 0 2px #bfdbfe; background: #f8fbff; }
+        .list-library-sample { font-size: 0.87rem; line-height: 1.55; color: #111827; }
+        .mini-document { border: 1px solid #dbe4f0; background: #fff; box-shadow: inset 0 0 0 1px #f8fafc; padding: 16px 18px; }
+        .bookmark-dialog-grid { display: grid; grid-template-columns: 1fr; gap: 8px; }
+        .bookmark-list { border: 1px solid #b8c0cc; background: #fff; min-height: 96px; }
+        .bookmark-list-item { padding: 5px 8px; font-size: 0.82rem; border-bottom: 1px solid #edf0f4; }
+        .caption-object-preview { width: 100%; min-height: 130px; border: 1px solid #cfd8e3; background: linear-gradient(180deg, #f8fafc 0%, #eef2f7 100%); display: grid; place-items: center; color: #475569; }
+        .break-marker { border: 1px dashed #f59e0b; background: #fffbeb; color: #92400e; padding: 8px 10px; font-size: 0.8rem; font-weight: 700; text-align: center; margin: 10px 0; }
+        .columns-mini-page { border: 1px solid #cfd8e3; background: #fff; padding: 16px; }
+        .chart-gallery-preview { display: grid; grid-template-columns: repeat(4, 12px); gap: 5px; align-items: end; justify-content: center; min-height: 54px; }
+        .chart-gallery-preview span { background: linear-gradient(180deg, #60a5fa 0%, #2563eb 100%); border-radius: 3px 3px 0 0; }
+        .picture-gallery-preview { width: 88px; height: 54px; border: 1px solid #cfd8e3; background: linear-gradient(180deg, #dbeafe 0%, #fef3c7 100%); display: grid; place-items: center; margin: 0 auto; font-size: 1.4rem; }
+        .smartart-browser { display: grid; grid-template-columns: 116px 1fr; gap: 10px; min-height: 220px; }
+        .smartart-stage { border: 1px solid #d7dee8; background: #fff; padding: 12px; display: grid; gap: 10px; align-content: start; }
+        .smartart-template { border: 1px solid #cfd7e4; padding: 10px; cursor: pointer; }
+        .smartart-template.selected { border-color: #3b82f6; background: #f8fbff; box-shadow: inset 0 0 0 2px #bfdbfe; }
+        .smartart-template-preview { display: flex; gap: 6px; justify-content: center; align-items: center; min-height: 54px; }
+        .smartart-template-preview .node { width: 42px; height: 22px; border-radius: 999px; background: #dbeafe; border: 1px solid #93c5fd; }
+        .smartart-template-preview.cycle .node { border-radius: 10px; }
+        .smartart-template-title { text-align: center; font-size: 0.78rem; color: #334155; margin-top: 4px; }
+        .smartart-color-strip { display: flex; gap: 8px; }
+        .smartart-color-chip { flex: 1; min-height: 34px; border: 1px solid #b8c0cc; cursor: pointer; display: grid; place-items: center; font-size: 0.78rem; font-weight: 700; color: #fff; }
+        .smartart-color-chip.selected { box-shadow: inset 0 0 0 2px rgba(255,255,255,0.75), 0 0 0 2px #93c5fd; }
+        .mail-merge-types { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
+        .mail-merge-tile { border: 1px solid #cfd7e4; background: #fff; padding: 10px; cursor: pointer; min-height: 100px; }
+        .mail-merge-tile.selected { border-color: #3b82f6; background: #f8fbff; box-shadow: inset 0 0 0 2px #bfdbfe; }
+        .mail-merge-tile strong { display: block; margin-bottom: 6px; color: #0f172a; }
+        .merge-field-strip { border: 1px solid #d7dee8; background: #fff; padding: 10px; display: grid; gap: 8px; }
+        .merge-field-row { display: flex; justify-content: space-between; align-items: center; gap: 10px; padding: 6px 8px; border: 1px solid #e2e8f0; cursor: pointer; }
+        .merge-field-row.selected { background: #e0f2fe; border-color: #7dd3fc; }
         @media (max-width: 1180px) {
             .workspace-main { grid-template-columns: 1fr; grid-template-areas: "page" "inspector"; }
             .app-titlebar { grid-template-columns: 1fr auto; }
@@ -480,6 +560,23 @@ function switchTab(tabId) {
     closeAllMiniMenus();
 }
 function closeAllMiniMenus() { document.querySelectorAll('.mini-menu.open').forEach(menu => menu.classList.remove('open')); }
+function setFindDialogMode(index, mode) {
+    ensureDocState(index);
+    const item = state[index];
+    item.docState.find_dialog_mode = mode;
+    syncHiddenFields(index);
+}
+function getFindDialogMode(docState, fallbackMode) {
+    return docState.find_dialog_mode || fallbackMode;
+}
+function getControlAnchorStyle(controlId, width, offsetY = 8) {
+    const button = document.getElementById(controlId.replaceAll(".", "_"));
+    if (!button) return "";
+    const rect = button.getBoundingClientRect();
+    const left = Math.max(8, Math.round(rect.left));
+    const top = Math.round(rect.bottom + offsetY);
+    return `left:${left}px;top:${top}px;width:${width}px;`;
+}
 function currentControls() { return currentQuestion().steps.filter(step => step.includes(".")); }
 function currentTabs() {
     const tabs = new Set(["home"]);
@@ -487,10 +584,9 @@ function currentTabs() {
     return tabs;
 }
 function updateRibbonHighlights() {
-    const activeControls = currentControls();
     document.querySelectorAll('.ribbon-btn[data-control-id]').forEach(button => {
         const controlId = button.dataset.controlId;
-        button.classList.toggle('primary', activeControls.includes(controlId));
+        button.classList.remove('primary');
         button.classList.toggle('active', currentState().actions.includes(controlId));
     });
 }
@@ -547,7 +643,12 @@ function renderCurrentQuestion() {
     const q = currentQuestion();
     const s = currentState();
     document.getElementById("currentQuestionTitle").textContent = q.title;
-    document.getElementById("currentQuestionPrompt").innerHTML = q.prompt_html;
+    let promptHtml = q.prompt_html;
+    if (q.title === "Font Color") {
+        const requiredName = s.docState.required_color_name || "Red";
+        promptHtml = `<p>Change the selected text font colour to <strong>${requiredName}</strong> using the Home tab font colour control.</p>`;
+    }
+    document.getElementById("currentQuestionPrompt").innerHTML = promptHtml;
     document.getElementById("currentQuestionCounter").textContent = `Question ${activeQuestionIndex + 1} of ${questions.length}`;
     const skipBtn = document.getElementById("skipButton");
     const feedback = document.getElementById("questionFeedback");
@@ -568,35 +669,35 @@ function renderCurrentQuestion() {
 function defaultDocStateForQuestion(question) {
     const t = question.title;
     if (t === "Font Size") return { font_size: 16, size_dialog_open: false, pending_size: 16 };
-    if (t === "Font Color") return { font_color: "#111827", color_dialog_open: false, pending_color: "#111827" };
+    if (t === "Font Color") return { font_color: "#111827", color_dialog_open: false, pending_color: "#c62828", required_color: "#c62828", required_color_name: "Red" };
     if (t === "Bullet List") return { list_type: "none", list_dialog_open: false, pending_list: "" };
     if (t === "Numbered List") return { list_type: "none", list_dialog_open: false, pending_list: "" };
-    if (t === "Insert Chart") return { chart_inserted: false };
-    if (t === "Insert Picture") return { picture_inserted: false };
+    if (t === "Insert Chart") return { chart_inserted: false, chart_dialog_open: false, chart_type: "column" };
+    if (t === "Insert Picture") return { picture_inserted: false, picture_dialog_open: false, picture_choice: "campus" };
     if (t === "Insert Table") return { table: null, picker_open: false, hover_columns: 0, hover_rows: 0 };
-    if (t === "Insert Sources") return { source_dialog_open: false, source_added: false, source_type: "" };
-    if (t === "Insert Citation") return { citation_dialog_open: false, citation_inserted: false, citation_style: "" };
-    if (t === "Insert Footnote") return { footnote_inserted: false };
-    if (t === "Insert Caption") return { caption_inserted: false };
-    if (t === "Insert Bookmark") return { bookmark_inserted: false };
-    if (t === "Apply Heading") return { heading_level: "normal" };
-    if (["Align Left", "Align Center", "Align Right", "Justify Text"].includes(t)) return { alignment: "left" };
+    if (t === "Insert Sources") return { source_dialog_open: false, source_added: false, source_type: "Book", source_author: "S. Naidoo", source_title: "Digital Research Skills", source_year: "2024" };
+    if (t === "Insert Citation") return { citation_dialog_open: false, citation_inserted: false, citation_style: "Naidoo2024" };
+    if (t === "Insert Footnote") return { footnote_inserted: false, footnote_dialog_open: false, footnote_text: "Extra explanatory information inserted as a footnote." };
+    if (t === "Insert Caption") return { caption_inserted: false, caption_dialog_open: false, caption_label: "Figure", caption_text: "Learner performance chart" };
+    if (t === "Insert Bookmark") return { bookmark_inserted: false, bookmark_name: "bmResults", bookmark_dialog_open: false };
+    if (t === "Apply Heading") return { heading_level: "normal", styles_dialog_open: false, pending_style: "Normal" };
+    if (["Align Left", "Align Center", "Align Right", "Justify Text"].includes(t)) return { alignment: "left", alignment_dialog_open: false, pending_alignment: "left" };
     if (t === "Table Borders") return { borders_dialog_open: false, table_borders: false, border_choice: "" };
     if (t === "Paragraph Borders") return { borders_dialog_open: false, paragraph_borders: false, border_choice: "" };
-    if (t === "Find") return { find_open: false, find_text: "", found: false, preview_text: "DATABASES use TABLES and QUERIES." };
-    if (t === "Replace") return { find_text: "", replace_text: "", replace_done: false, preview_text: "CAR CAR BUS CAR", dialog_open: false };
+    if (t === "Find") return { find_open: false, find_text: "", found: false, preview_text: "DATABASES use TABLES and QUERIES.", find_dialog_mode: "find", go_to_what: "Page", go_to_page: "" };
+    if (t === "Replace") return { find_text: "", replace_text: "", replace_done: false, preview_text: "CAR CAR BUS CAR", dialog_open: false, find_dialog_mode: "replace", go_to_what: "Page", go_to_page: "" };
     if (t === "Shading") return { shading_dialog_open: false, shaded: false, shade_choice: "" };
     if (t === "Change Orientation") return { orientation: "portrait", orientation_dialog_open: false, pending_orientation: "portrait" };
     if (t === "Change Page Size") return { page_size: "A4", size_dialog_open: false, pending_page_size: "A4" };
-    if (t === "Add Page Break") return { page_break: false };
-    if (t === "Add Column Break") return { column_break: false };
-    if (t === "Add Cover Page") return { cover_page: false, cover_dialog_open: false, cover_choice: "" };
-    if (t === "Insert SmartArt") return { smartart_inserted: false, smartart_dialog_open: false, smartart_choice: "" };
-    if (t === "Edit SmartArt") return { smartart_inserted: false, smartart_edited: false, smartart_edit_open: false, smartart_color: "" };
-    if (t === "Left Indent") return { left_indent: 0 };
-    if (t === "Right Indent") return { right_indent: 0 };
-    if (t === "Mail Merge") return { merge_started: false, merge_dialog_open: false, merge_type: "" };
-    if (t === "Insert Merge Fields") return { merge_field_inserted: false, field_dialog_open: false, field_name: "" };
+    if (t === "Add Page Break") return { page_break: false, break_dialog_open: false, break_choice: "page" };
+    if (t === "Add Column Break") return { column_break: false, break_dialog_open: false, break_choice: "column" };
+    if (t === "Add Cover Page") return { cover_page: false, cover_dialog_open: false, cover_choice: "annual" };
+    if (t === "Insert SmartArt") return { smartart_inserted: false, smartart_dialog_open: false, smartart_choice: "process" };
+    if (t === "Edit SmartArt") return { smartart_inserted: false, smartart_edited: false, smartart_dialog_open: false, smartart_choice: "process", smartart_edit_open: false, smartart_color: "green" };
+    if (t === "Left Indent") return { left_indent: 0, indent_dialog_open: false, pending_indent_left: 0 };
+    if (t === "Right Indent") return { right_indent: 0, indent_dialog_open: false, pending_indent_right: 0 };
+    if (t === "Mail Merge") return { merge_started: false, merge_dialog_open: false, merge_type: "letters" };
+    if (t === "Insert Merge Fields") return { merge_started: true, merge_dialog_open: false, merge_field_inserted: false, field_dialog_open: false, field_name: "FirstName" };
     return {};
 }
 function renderQuestionWorkspace() {
@@ -607,20 +708,34 @@ function renderQuestionWorkspace() {
     if (!root) return;
     if (q.title === "Replace") {
         const d = s.docState;
+        const mode = getFindDialogMode(d, "replace");
         const previewHtml = (d.preview_text || "").split(" ").map(token => token.toUpperCase() === "CAR" ? `<span class="replace-hit">${token}</span>` : token).join(" ");
-        root.innerHTML = `<div class="workspace-sim"><div class="doc-preview"><div class="preview-title">Document Preview</div><div class="preview-text">${previewHtml}</div></div>${d.dialog_open ? `<div class="dialog-layer"><div class="word-dialog word-dialog-floating"><div class="word-dialog-head">Find and Replace</div><div class="word-dialog-body"><div class="find-tabs"><div class="find-tab">Find</div><div class="find-tab active">Replace</div><div class="find-tab">Go To</div></div><div class="find-panel"><div class="find-grid"><div class="find-label">Find what:</div><div class="find-input-wrap"><input class="find-input" type="text" id="replaceFindText" value="${d.find_text || ""}"></div><div class="find-label">Replace with:</div><div class="find-input-wrap"><input class="find-input" type="text" id="replaceWithText" value="${d.replace_text || ""}"></div></div><div class="find-spacer"></div></div><div class="dialog-actions split"><button type="button" class="mini-btn" id="replaceMoreBtn">More &gt;&gt;</button><div style="display:flex;gap:10px;"><button type="button" class="mini-btn disabled" type="button">Replace</button><button type="button" class="mini-btn primary" id="replaceApplyBtn">Replace All</button><button type="button" class="mini-btn disabled" type="button">Find Next</button><button type="button" class="mini-btn" id="replaceCancelBtn">Cancel</button></div></div></div></div></div>` : `<div class="doc-note">Use the Home tab Replace command to open the dialog.</div>`}</div>`;
-        const fi = document.getElementById("replaceFindText"), ri = document.getElementById("replaceWithText"), cb = document.getElementById("replaceCancelBtn"), ab = document.getElementById("replaceApplyBtn");
+        const findPanel = `<div class="find-panel"><div class="find-grid"><div class="find-label">Find what:</div><div class="find-input-wrap"><input class="find-input" type="text" id="replaceFindText" value="${d.find_text || ""}"></div></div><div class="find-spacer"></div></div><div class="doc-note" id="replaceFindStatus">${(d.find_text || "").trim().toUpperCase() === "CAR" ? "The text CAR is ready to replace." : "Enter CAR to locate the required word."}</div><div class="dialog-actions split"><button type="button" class="mini-btn" id="replaceMoreBtn">More &gt;&gt;</button><div style="display:flex;gap:10px;"><button type="button" class="mini-btn disabled">Reading Highlight</button><button type="button" class="mini-btn disabled">Find In</button><button type="button" class="mini-btn" id="replaceFindNextBtn">Find Next</button><button type="button" class="mini-btn" id="replaceCancelBtn">Cancel</button></div></div>`;
+        const replacePanel = `<div class="find-panel"><div class="find-grid"><div class="find-label">Find what:</div><div class="find-input-wrap"><input class="find-input" type="text" id="replaceFindText" value="${d.find_text || ""}"></div><div class="find-label">Replace with:</div><div class="find-input-wrap"><input class="find-input" type="text" id="replaceWithText" value="${d.replace_text || ""}"></div></div><div class="find-spacer"></div></div><div class="dialog-actions split"><button type="button" class="mini-btn" id="replaceMoreBtn">More &gt;&gt;</button><div style="display:flex;gap:10px;"><button type="button" class="mini-btn disabled">Replace</button><button type="button" class="mini-btn primary" id="replaceApplyBtn">Replace All</button><button type="button" class="mini-btn" id="replaceFindNextBtn">Find Next</button><button type="button" class="mini-btn" id="replaceCancelBtn">Cancel</button></div></div>`;
+        const goToPanel = `<div class="find-panel"><div class="go-to-layout"><div class="go-to-list">${["Page","Section","Line","Bookmark","Comment","Footnote"].map(item => `<div class="go-to-item${(d.go_to_what || "Page") === item ? " selected" : ""}" data-go-to-item="${item}">${item}</div>`).join("")}</div><div class="go-to-copy"><div class="find-label">Enter page number:</div><input id="replaceGoToPage" value="${d.go_to_page || ""}"><div class="go-to-help">Enter + and - to move relative to the current location. Example: +4 will move forward four items.</div></div></div><div class="dialog-actions"><button type="button" class="mini-btn" id="replacePrevBtn">Previous</button><button type="button" class="mini-btn primary" id="replaceNextBtn">Next</button><button type="button" class="mini-btn" id="replaceCancelBtn">Close</button></div>`;
+        root.innerHTML = `<div class="workspace-sim"><div class="doc-preview"><div class="preview-title">Document Preview</div><div class="preview-text">${previewHtml}</div></div>${d.dialog_open ? `<div class="dialog-layer"><div class="word-dialog word-dialog-floating"><div class="word-dialog-head">Find and Replace</div><div class="word-dialog-body"><div class="find-tabs"><div class="find-tab${mode === "find" ? " active" : ""}" data-find-mode="find">Find</div><div class="find-tab${mode === "replace" ? " active" : ""}" data-find-mode="replace">Replace</div><div class="find-tab${mode === "goto" ? " active" : ""}" data-find-mode="goto">Go To</div></div>${mode === "find" ? findPanel : mode === "goto" ? goToPanel : replacePanel}</div></div></div>` : `<div class="doc-note">Use the Home tab Replace command to open the dialog.</div>`}</div>`;
+        document.querySelectorAll("[data-find-mode]").forEach(tab => tab.addEventListener("click", function(){ d.find_dialog_mode = this.dataset.findMode || "replace"; syncHiddenFields(activeQuestionIndex); renderQuestionWorkspace(); }));
+        document.querySelectorAll("[data-go-to-item]").forEach(item => item.addEventListener("click", function(){ d.go_to_what = this.dataset.goToItem || "Page"; syncHiddenFields(activeQuestionIndex); renderQuestionWorkspace(); }));
+        const fi = document.getElementById("replaceFindText"), ri = document.getElementById("replaceWithText"), cb = document.getElementById("replaceCancelBtn"), ab = document.getElementById("replaceApplyBtn"), rfs = document.getElementById("replaceFindStatus"), rgn = document.getElementById("replaceGoToPage");
         if (fi) fi.addEventListener("input", function(){ s.docState.find_text = this.value; syncHiddenFields(activeQuestionIndex); });
         if (ri) ri.addEventListener("input", function(){ s.docState.replace_text = this.value; syncHiddenFields(activeQuestionIndex); });
+        if (rgn) rgn.addEventListener("input", function(){ s.docState.go_to_page = this.value; syncHiddenFields(activeQuestionIndex); });
         if (cb) cb.addEventListener("click", function(){ s.docState.dialog_open = false; syncHiddenFields(activeQuestionIndex); renderQuestionWorkspace(); });
         if (ab) ab.addEventListener("click", function(){ recordAction("home.replace_apply"); });
+        const rfn = document.getElementById("replaceFindNextBtn");
+        if (rfn) rfn.addEventListener("click", function(){
+            s.docState.find_text = fi ? fi.value : (s.docState.find_text || "");
+            syncHiddenFields(activeQuestionIndex);
+            if (rfs) rfs.textContent = s.docState.find_text.trim().toUpperCase() === "CAR" ? "The text CAR is ready to replace." : "Enter CAR to locate the required word.";
+        });
         return;
     }
     if (q.title === "Insert Table") {
         const table = s.docState.table || {}, hc = Number(s.docState.hover_columns || 0), hr = Number(s.docState.hover_rows || 0);
         const rows = table.columns && table.rows ? Array.from({ length: table.rows }).map(() => `<tr>${Array.from({ length: table.columns }).map(() => "<td></td>").join("")}</tr>`).join("") : "";
         const grid = Array.from({ length: 36 }).map((_, idx) => { const c = (idx % 6) + 1, r = Math.floor(idx / 6) + 1; return `<button type="button" class="table-cell-picker${hc >= c && hr >= r ? " active" : ""}" data-col="${c}" data-row="${r}"></button>`; }).join("");
-        root.innerHTML = `<div class="workspace-sim">${table.columns ? `<div class="doc-preview"><div class="preview-title">Inserted Table Preview</div><div class="table-status">Current table: ${table.columns} columns x ${table.rows} rows</div><table class="preview-table">${rows}</table></div>` : `<div class="doc-note">Use the Insert tab Table command to choose a table size.</div>`}${s.docState.picker_open ? `<div class="dialog-layer"><div class="word-dialog word-dialog-floating"><div class="word-dialog-head">Insert Table</div><div class="word-dialog-body"><div class="dialog-pane"><div class="dialog-pane-head">Grid</div><div class="table-grid">${grid}</div></div><div class="table-status">${hc && hr ? `${hc} columns x ${hr} rows` : "Select table size"}</div><div class="dialog-actions"><button type="button" class="mini-btn" id="tableCancelBtn">Cancel</button><button type="button" class="mini-btn primary" id="tableApplyBtn">Insert Table</button></div></div></div></div>` : ``}</div>`;
+        const anchoredStyle = getControlAnchorStyle("insert.table", 238, 6);
+        root.innerHTML = `<div class="workspace-sim">${table.columns ? `<div class="doc-preview"><div class="preview-title">Inserted Table Preview</div><div class="table-status">Current table: ${table.columns} columns x ${table.rows} rows</div><table class="preview-table">${rows}</table></div>` : `<div class="doc-note">Use the Insert tab Table command to choose a table size.</div>`}${s.docState.picker_open ? `<div class="word-dialog word-dialog-anchored" style="${anchoredStyle}"><div class="word-dialog-body" style="padding:8px;background:#fff;"><div class="table-grid" style="border:none;padding:0;">${grid}</div><div class="table-status">${hc && hr ? `${hc} columns x ${hr} rows` : "Select table size"}</div><div class="dialog-actions" style="padding-top:2px;"><button type="button" class="mini-btn" id="tableCancelBtn">Cancel</button><button type="button" class="mini-btn primary" id="tableApplyBtn">Insert</button></div></div></div>` : ``}</div>`;
         document.querySelectorAll(".table-cell-picker").forEach(button => {
             button.addEventListener("mouseenter", function(){ s.docState.hover_columns = parseInt(this.dataset.col || "0", 10); s.docState.hover_rows = parseInt(this.dataset.row || "0", 10); syncHiddenFields(activeQuestionIndex); renderQuestionWorkspace(); });
             button.addEventListener("click", function(){ s.docState.hover_columns = parseInt(this.dataset.col || "0", 10); s.docState.hover_rows = parseInt(this.dataset.row || "0", 10); syncHiddenFields(activeQuestionIndex); renderQuestionWorkspace(); });
@@ -632,7 +747,7 @@ function renderQuestionWorkspace() {
     }
     if (q.title === "Font Size") {
         const d = s.docState;
-        root.innerHTML = `<div class="workspace-sim"><div class="preview-box"><div class="preview-title">Selected Text Preview</div><p class="format-sample" style="font-size:${d.font_size || 16}px;">This sentence should be resized from the Home tab.</p></div>${d.size_dialog_open ? `<div class="dialog-layer"><div class="word-dialog word-dialog-floating"><div class="word-dialog-head">Font</div><div class="word-dialog-body"><div class="dialog-pane"><div class="dialog-pane-head">Size</div><div class="choice-grid">${[11,16,24,28].map(v => `<button type="button" class="choice-btn${Number(d.pending_size) === v ? " selected" : ""}" data-size="${v}">${v} pt</button>`).join("")}</div></div><div class="dialog-actions"><button type="button" class="mini-btn" id="fontSizeCancelBtn">Cancel</button><button type="button" class="mini-btn primary" id="fontSizeApplyBtn">OK</button></div></div></div></div>` : `<div class="doc-note">Use the Home tab font size control and choose the correct size.</div>`}</div>`;
+        root.innerHTML = `<div class="workspace-sim"><div class="preview-box"><div class="preview-title">Selected Text Preview</div><p class="format-sample" style="font-size:${d.font_size || 16}px;">This sentence should be resized from the Home tab.</p></div>${d.size_dialog_open ? `<div class="dialog-layer"><div class="word-dialog word-dialog-floating"><div class="word-dialog-head">Font</div><div class="word-dialog-body"><div class="dialog-form-grid"><label>Font size:</label><div class="font-size-list">${[8,9,10,11,12,14,16,18,20,22,24,26,28].map(v => `<div class="font-size-item${Number(d.pending_size) === v ? " selected" : ""}" data-size="${v}">${v}</div>`).join("")}</div></div><div class="dialog-actions"><button type="button" class="mini-btn" id="fontSizeCancelBtn">Cancel</button><button type="button" class="mini-btn primary" id="fontSizeApplyBtn">OK</button></div></div></div></div>` : `<div class="doc-note">Use the Home tab font size control and choose the correct size.</div>`}</div>`;
         document.querySelectorAll("[data-size]").forEach(button => button.addEventListener("click", function(){ d.pending_size = parseInt(this.dataset.size || "16", 10); syncHiddenFields(activeQuestionIndex); renderQuestionWorkspace(); }));
         const cancel = document.getElementById("fontSizeCancelBtn"), apply = document.getElementById("fontSizeApplyBtn");
         if (cancel) cancel.addEventListener("click", function(){ d.size_dialog_open = false; syncHiddenFields(activeQuestionIndex); renderQuestionWorkspace(); });
@@ -641,7 +756,8 @@ function renderQuestionWorkspace() {
     }
     if (q.title === "Font Color") {
         const d = s.docState;
-        root.innerHTML = `<div class="workspace-sim"><div class="preview-box"><div class="preview-title">Selected Text Preview</div><p class="format-sample" style="color:${d.font_color || "#111827"};">This sentence should change font colour from the Home tab.</p></div>${d.color_dialog_open ? `<div class="dialog-layer"><div class="word-dialog word-dialog-floating"><div class="word-dialog-head">Font Colour</div><div class="word-dialog-body"><div class="dialog-pane"><div class="dialog-pane-head">Theme Colours</div><div class="choice-grid">${[["#111827","Black"],["#c62828","Red"],["#2563eb","Blue"],["#16a34a","Green"]].map(([value,label]) => `<button type="button" class="choice-btn${d.pending_color === value ? " selected" : ""}" data-color="${value}"><span style="display:inline-block;width:10px;height:10px;background:${value};border:1px solid #94a3b8;margin-right:8px;vertical-align:middle;"></span>${label}</button>`).join("")}</div></div><div class="dialog-actions"><button type="button" class="mini-btn" id="fontColorCancelBtn">Cancel</button><button type="button" class="mini-btn primary" id="fontColorApplyBtn">OK</button></div></div></div></div>` : `<div class="doc-note">Use the Home tab font colour picker to choose the correct colour.</div>`}</div>`;
+        const colors = [["#111827","Black"],["#44546a","Blue Gray"],["#5b9bd5","Blue"],["#ed7d31","Orange"],["#a5a5a5","Gray"],["#ffc000","Gold"],["#70ad47","Green"],["#c62828","Red"],["#0563c1","Accent 1"],["#954f72","Plum"],["#00b0f0","Aqua"],["#92d050","Lime"],["#ff0000","Bright Red"],["#7030a0","Violet"],["#c55a11","Dark Orange"],["#1f4e79","Dark Blue"]];
+        root.innerHTML = `<div class="workspace-sim"><div class="preview-box"><div class="preview-title">Selected Text Preview</div><p class="format-sample" style="color:${d.font_color || "#111827"};">This sentence should change font colour to ${(d.required_color_name || "Red").toLowerCase()} from the Home tab.</p></div>${d.color_dialog_open ? `<div class="dialog-layer"><div class="word-dialog word-dialog-floating"><div class="word-dialog-head">Colors</div><div class="word-dialog-body"><div class="dialog-pane"><div class="dialog-pane-head">Theme Colors</div><div class="color-swatch-grid">${colors.map(([value,label]) => `<button type="button" title="${label}" class="color-swatch${d.pending_color === value ? " selected" : ""}" data-color="${value}" style="background:${value};"></button>`).join("")}</div></div><div class="color-swatch-labels"><div>Text/Background</div><div>Accent 1</div><div>Accent 2</div><div>Accent 3</div></div><div class="dialog-actions"><button type="button" class="mini-btn" id="fontColorCancelBtn">Cancel</button><button type="button" class="mini-btn primary" id="fontColorApplyBtn">OK</button></div></div></div></div>` : `<div class="doc-note">Use the Home tab font colour picker to choose <strong>${d.required_color_name || "Red"}</strong>.</div>`}</div>`;
         document.querySelectorAll("[data-color]").forEach(button => button.addEventListener("click", function(){ d.pending_color = this.dataset.color || "#111827"; syncHiddenFields(activeQuestionIndex); renderQuestionWorkspace(); }));
         const cancel = document.getElementById("fontColorCancelBtn"), apply = document.getElementById("fontColorApplyBtn");
         if (cancel) cancel.addEventListener("click", function(){ d.color_dialog_open = false; syncHiddenFields(activeQuestionIndex); renderQuestionWorkspace(); });
@@ -650,19 +766,43 @@ function renderQuestionWorkspace() {
     }
     if (q.title === "Bullet List" || q.title === "Numbered List") {
         const d = s.docState;
-        root.innerHTML = `<div class="workspace-sim"><div class="preview-box"><div class="preview-title">Paragraph Preview</div>${d.list_type === "bullets" ? `<ul class="list-preview"><li>Monitor attendance</li><li>Review marks</li><li>Submit report</li></ul>` : d.list_type === "numbered" ? `<ol class="list-preview"><li>Monitor attendance</li><li>Review marks</li><li>Submit report</li></ol>` : `<div class="doc-note">Monitor attendance<br>Review marks<br>Submit report</div>`}</div>${d.list_dialog_open ? `<div class="dialog-layer"><div class="word-dialog word-dialog-floating"><div class="word-dialog-head">List Library</div><div class="word-dialog-body"><div class="dialog-pane"><div class="dialog-pane-head">List Styles</div><div class="choice-grid"><button type="button" class="choice-btn${d.pending_list === "bullets" ? " selected" : ""}" data-list="bullets">• Bulleted List</button><button type="button" class="choice-btn${d.pending_list === "numbered" ? " selected" : ""}" data-list="numbered">1. Numbered List</button></div></div><div class="dialog-actions"><button type="button" class="mini-btn" id="listCancelBtn">Cancel</button><button type="button" class="mini-btn primary" id="listApplyBtn">Apply</button></div></div></div></div>` : `<div class="doc-note">Choose the correct list style from the Home tab.</div>`}</div>`;
+        root.innerHTML = `<div class="workspace-sim"><div class="preview-box"><div class="preview-title">Paragraph Preview</div>${d.list_type === "bullets" ? `<ul class="list-preview"><li>Monitor attendance</li><li>Review marks</li><li>Submit report</li></ul>` : d.list_type === "numbered" ? `<ol class="list-preview"><li>Monitor attendance</li><li>Review marks</li><li>Submit report</li></ol>` : `<div class="doc-note">Monitor attendance<br>Review marks<br>Submit report</div>`}</div>${d.list_dialog_open ? `<div class="dialog-layer"><div class="word-dialog word-dialog-floating"><div class="word-dialog-head">List Library</div><div class="word-dialog-body"><div class="list-library-grid"><div class="list-library-card${d.pending_list === "bullets" ? " selected" : ""}" data-list="bullets"><div class="list-library-sample">&bull; Monitor attendance<br>&bull; Review marks<br>&bull; Submit report</div></div><div class="list-library-card${d.pending_list === "numbered" ? " selected" : ""}" data-list="numbered"><div class="list-library-sample">1. Monitor attendance<br>2. Review marks<br>3. Submit report</div></div></div><div class="dialog-actions"><button type="button" class="mini-btn" id="listCancelBtn">Cancel</button><button type="button" class="mini-btn primary" id="listApplyBtn">Apply</button></div></div></div></div>` : `<div class="doc-note">Choose the correct list style from the Home tab.</div>`}</div>`;
         document.querySelectorAll("[data-list]").forEach(button => button.addEventListener("click", function(){ d.pending_list = this.dataset.list || ""; syncHiddenFields(activeQuestionIndex); renderQuestionWorkspace(); }));
         const cancel = document.getElementById("listCancelBtn"), apply = document.getElementById("listApplyBtn");
         if (cancel) cancel.addEventListener("click", function(){ d.list_dialog_open = false; syncHiddenFields(activeQuestionIndex); renderQuestionWorkspace(); });
         if (apply) apply.addEventListener("click", function(){ recordAction(q.title === "Bullet List" ? "home.bullets_apply" : "home.numbering_apply"); });
         return;
     }
-    if (q.title === "Insert Chart") { root.innerHTML = s.docState.chart_inserted ? `<div class="chart-preview"><div class="chart-bar" style="height:120px;"></div><div class="chart-bar" style="height:86px;"></div><div class="chart-bar" style="height:144px;"></div><div class="chart-bar" style="height:100px;"></div></div>` : `<div class="illustration-box">No chart inserted yet.</div>`; return; }
-    if (q.title === "Insert Picture") { root.innerHTML = s.docState.picture_inserted ? `<div class="illustration-box" style="background:linear-gradient(180deg, #dbeafe 0%, #fef3c7 100%);"><div><div style="font-size:42px;text-align:center;">🖼️</div><div>Picture inserted into document</div></div></div>` : `<div class="illustration-box">No picture inserted yet.</div>`; return; }
+    if (q.title === "Insert Chart") {
+        const d = s.docState;
+        root.innerHTML = d.chart_inserted
+            ? `<div class="chart-preview"><div class="chart-bar" style="height:120px;"></div><div class="chart-bar" style="height:86px;"></div><div class="chart-bar" style="height:144px;"></div><div class="chart-bar" style="height:100px;"></div></div>`
+            : `<div class="workspace-sim"><div class="doc-note">Use Insert &gt; Chart to insert a chart.</div>${d.chart_dialog_open ? `<div class="dialog-layer"><div class="word-dialog word-dialog-floating"><div class="word-dialog-head">Insert Chart</div><div class="word-dialog-body"><div class="gallery-grid"><div class="gallery-card${d.chart_type === "column" ? " selected" : ""}" data-chart-type="column"><div class="gallery-thumb"><div class="chart-gallery-preview"><span style="height:26px;"></span><span style="height:38px;"></span><span style="height:18px;"></span><span style="height:44px;"></span></div></div><div class="gallery-label">Clustered Column</div></div><div class="gallery-card${d.chart_type === "line" ? " selected" : ""}" data-chart-type="line"><div class="gallery-thumb"><svg width="90" height="54" viewBox="0 0 90 54"><polyline fill="none" stroke="#2563eb" stroke-width="3" points="4,44 24,30 44,34 64,14 84,20"/></svg></div><div class="gallery-label">Line</div></div></div><div class="dialog-actions"><button type="button" class="mini-btn" id="chartCancelBtn">Cancel</button><button type="button" class="mini-btn primary" id="chartApplyBtn">OK</button></div></div></div></div>` : `<div class="gallery-grid"><div class="gallery-card"><div class="gallery-thumb"><div class="chart-gallery-preview"><span style="height:26px;"></span><span style="height:38px;"></span><span style="height:18px;"></span><span style="height:44px;"></span></div></div><div class="gallery-label">Column Chart Preview</div></div></div>`}</div>`;
+        document.querySelectorAll("[data-chart-type]").forEach(card => card.addEventListener("click", function(){ d.chart_type = this.dataset.chartType || "column"; syncHiddenFields(activeQuestionIndex); renderQuestionWorkspace(); }));
+        const cancel = document.getElementById("chartCancelBtn"), apply = document.getElementById("chartApplyBtn");
+        if (cancel) cancel.addEventListener("click", function(){ d.chart_dialog_open = false; syncHiddenFields(activeQuestionIndex); renderQuestionWorkspace(); });
+        if (apply) apply.addEventListener("click", function(){ recordAction("insert.chart_apply"); });
+        return;
+    }
+    if (q.title === "Insert Picture") {
+        const d = s.docState;
+        root.innerHTML = d.picture_inserted
+            ? `<div class="illustration-box" style="background:linear-gradient(180deg, #dbeafe 0%, #fef3c7 100%);"><div><div style="font-size:42px;text-align:center;">🖼️</div><div>Picture inserted into document</div></div></div>`
+            : `<div class="workspace-sim"><div class="doc-note">Use Insert &gt; Pictures to insert the prepared image.</div>${d.picture_dialog_open ? `<div class="dialog-layer"><div class="word-dialog word-dialog-floating"><div class="word-dialog-head">Insert Picture</div><div class="word-dialog-body"><div class="gallery-grid"><div class="gallery-card${d.picture_choice === "campus" ? " selected" : ""}" data-picture-choice="campus"><div class="gallery-thumb"><div class="picture-gallery-preview">🖼️</div></div><div class="gallery-label">campus-photo.jpg</div></div><div class="gallery-card${d.picture_choice === "charts" ? " selected" : ""}" data-picture-choice="charts"><div class="gallery-thumb"><div class="picture-gallery-preview">📄</div></div><div class="gallery-label">results-sheet.png</div></div></div><div class="dialog-actions"><button type="button" class="mini-btn" id="pictureCancelBtn">Cancel</button><button type="button" class="mini-btn primary" id="pictureApplyBtn">Insert</button></div></div></div></div>` : `<div class="gallery-grid"><div class="gallery-card"><div class="gallery-thumb"><div class="picture-gallery-preview">🖼️</div></div><div class="gallery-label">Selected Picture File</div></div></div>`}</div>`;
+        document.querySelectorAll("[data-picture-choice]").forEach(card => card.addEventListener("click", function(){ d.picture_choice = this.dataset.pictureChoice || "campus"; syncHiddenFields(activeQuestionIndex); renderQuestionWorkspace(); }));
+        const cancel = document.getElementById("pictureCancelBtn"), apply = document.getElementById("pictureApplyBtn");
+        if (cancel) cancel.addEventListener("click", function(){ d.picture_dialog_open = false; syncHiddenFields(activeQuestionIndex); renderQuestionWorkspace(); });
+        if (apply) apply.addEventListener("click", function(){ recordAction("insert.pictures_apply"); });
+        return;
+    }
     if (q.title === "Insert Sources") {
         const d = s.docState;
-        root.innerHTML = `<div class="workspace-sim">${d.source_added ? `<div class="source-card"><div class="preview-title">Source Manager</div><div><strong>Author:</strong> S. Naidoo</div><div><strong>Title:</strong> Digital Research Skills</div><div><strong>Year:</strong> 2024</div></div>` : `<div class="doc-note">Use References > Sources to add the prepared source.</div>`}${d.source_dialog_open ? `<div class="dialog-layer"><div class="word-dialog word-dialog-floating"><div class="word-dialog-head">Create Source</div><div class="word-dialog-body"><div class="choice-grid"><button type="button" class="choice-btn${d.source_type === "Book" ? " selected" : ""}" data-source-type="Book">Book</button><button type="button" class="choice-btn${d.source_type === "Website" ? " selected" : ""}" data-source-type="Website">Website</button></div><div class="dialog-actions"><button type="button" class="mini-btn" id="sourceCancelBtn">Cancel</button><button type="button" class="mini-btn primary" id="sourceApplyBtn">Save</button></div></div></div></div>` : ``}</div>`;
-        document.querySelectorAll("[data-source-type]").forEach(button => button.addEventListener("click", function(){ d.source_type = this.dataset.sourceType || ""; syncHiddenFields(activeQuestionIndex); renderQuestionWorkspace(); }));
+        root.innerHTML = `<div class="workspace-sim">${d.source_added ? `<div class="source-card"><div class="preview-title">Source Manager</div><div><strong>Type:</strong> ${d.source_type || "Book"}</div><div><strong>Author:</strong> ${d.source_author || "S. Naidoo"}</div><div><strong>Title:</strong> ${d.source_title || "Digital Research Skills"}</div><div><strong>Year:</strong> ${d.source_year || "2024"}</div></div>` : `<div class="doc-note">Use References &gt; Sources to add the prepared source.</div>`}${d.source_dialog_open ? `<div class="dialog-layer"><div class="word-dialog word-dialog-floating"><div class="word-dialog-head">Create Source</div><div class="word-dialog-body"><div class="dialog-form-grid"><label>Type of Source:</label><select id="sourceTypeSelect"><option${d.source_type === "Book" ? " selected" : ""}>Book</option><option${d.source_type === "Website" ? " selected" : ""}>Website</option></select><label>Author:</label><input id="sourceAuthorInput" value="${d.source_author || "S. Naidoo"}"><label>Title:</label><input id="sourceTitleInput" value="${d.source_title || "Digital Research Skills"}"><label>Year:</label><input id="sourceYearInput" value="${d.source_year || "2024"}"></div><div class="dialog-actions split"><button type="button" class="mini-btn" id="sourceCancelBtn">Cancel</button><div style="display:flex;gap:10px;"><button type="button" class="mini-btn disabled">Previous</button><button type="button" class="mini-btn primary" id="sourceApplyBtn">OK</button></div></div></div></div></div>` : ``}</div>`;
+        const typeSelect = document.getElementById("sourceTypeSelect"), authorInput = document.getElementById("sourceAuthorInput"), titleInput = document.getElementById("sourceTitleInput"), yearInput = document.getElementById("sourceYearInput");
+        if (typeSelect) typeSelect.addEventListener("change", function(){ d.source_type = this.value; syncHiddenFields(activeQuestionIndex); });
+        if (authorInput) authorInput.addEventListener("input", function(){ d.source_author = this.value; syncHiddenFields(activeQuestionIndex); });
+        if (titleInput) titleInput.addEventListener("input", function(){ d.source_title = this.value; syncHiddenFields(activeQuestionIndex); });
+        if (yearInput) yearInput.addEventListener("input", function(){ d.source_year = this.value; syncHiddenFields(activeQuestionIndex); });
         const cancel = document.getElementById("sourceCancelBtn"), apply = document.getElementById("sourceApplyBtn");
         if (cancel) cancel.addEventListener("click", function(){ d.source_dialog_open = false; syncHiddenFields(activeQuestionIndex); renderQuestionWorkspace(); });
         if (apply) apply.addEventListener("click", function(){ recordAction("references.manage_sources_apply"); });
@@ -670,24 +810,65 @@ function renderQuestionWorkspace() {
     }
     if (q.title === "Insert Citation") {
         const d = s.docState;
-        root.innerHTML = `<div class="workspace-sim"><div class="preview-box"><div class="preview-title">Paragraph Preview</div><p class="format-sample">Research skills improve assignment quality ${d.citation_inserted ? `<span class="citation-chip">(Naidoo, 2024)</span>` : ``}</p></div>${d.citation_dialog_open ? `<div class="dialog-layer"><div class="word-dialog word-dialog-floating"><div class="word-dialog-head">Insert Citation</div><div class="word-dialog-body"><div class="choice-grid"><button type="button" class="choice-btn${d.citation_style === "Naidoo2024" ? " selected" : ""}" data-citation="Naidoo2024">Naidoo 2024</button><button type="button" class="choice-btn${d.citation_style === "Smith2023" ? " selected" : ""}" data-citation="Smith2023">Smith 2023</button></div><div class="dialog-actions"><button type="button" class="mini-btn" id="citationCancelBtn">Cancel</button><button type="button" class="mini-btn primary" id="citationApplyBtn">Insert</button></div></div></div></div>` : ``}</div>`;
+        root.innerHTML = `<div class="workspace-sim"><div class="preview-box"><div class="preview-title">Paragraph Preview</div><p class="format-sample">Research skills improve assignment quality ${d.citation_inserted ? `<span class="citation-chip">(Naidoo, 2024)</span>` : ``}</p></div>${d.citation_dialog_open ? `<div class="dialog-layer"><div class="word-dialog word-dialog-floating"><div class="word-dialog-head">Insert Citation</div><div class="word-dialog-body"><div class="office-list-box"><div class="office-list-item${d.citation_style === "Naidoo2024" ? " selected" : ""}" data-citation="Naidoo2024">Naidoo, S. (2024) Digital Research Skills</div><div class="office-list-item${d.citation_style === "Smith2023" ? " selected" : ""}" data-citation="Smith2023">Smith, T. (2023) Study Skills for CAT</div></div><div class="dialog-actions split"><button type="button" class="mini-btn" id="citationCancelBtn">Cancel</button><div style="display:flex;gap:10px;"><button type="button" class="mini-btn disabled">Add New Source</button><button type="button" class="mini-btn primary" id="citationApplyBtn">Insert</button></div></div></div></div></div>` : ``}</div>`;
         document.querySelectorAll("[data-citation]").forEach(button => button.addEventListener("click", function(){ d.citation_style = this.dataset.citation || ""; syncHiddenFields(activeQuestionIndex); renderQuestionWorkspace(); }));
         const cancel = document.getElementById("citationCancelBtn"), apply = document.getElementById("citationApplyBtn");
         if (cancel) cancel.addEventListener("click", function(){ d.citation_dialog_open = false; syncHiddenFields(activeQuestionIndex); renderQuestionWorkspace(); });
         if (apply) apply.addEventListener("click", function(){ recordAction("references.insert_citation_apply"); });
         return;
     }
-    if (q.title === "Insert Footnote") { root.innerHTML = `<div class="preview-box"><div class="preview-title">Document Preview</div><p class="format-sample">A footnote can provide extra detail${s.docState.footnote_inserted ? `<sup>1</sup>` : ``}.</p>${s.docState.footnote_inserted ? `<div class="footnote-preview"><sup>1</sup> Extra explanatory information inserted as a footnote.</div>` : ``}</div>`; return; }
-    if (q.title === "Insert Caption") { root.innerHTML = `<div class="workspace-sim"><div class="illustration-box" style="min-height:120px;">Selected object</div>${s.docState.caption_inserted ? `<div class="caption-preview">Figure 1: Learner performance chart</div>` : ``}</div>`; return; }
-    if (q.title === "Insert Bookmark") { root.innerHTML = `<div class="preview-box"><div class="preview-title">Text Selection</div><p class="format-sample">Results Summary ${s.docState.bookmark_inserted ? `<span class="bookmark-tag">bmResults</span>` : ``}</p></div>`; return; }
-    if (q.title === "Apply Heading") { root.innerHTML = `<div class="preview-box"><div class="preview-title">Heading Preview</div><p class="format-sample${s.docState.heading_level === "heading1" ? " heading1" : ""}">Introduction to Databases</p></div>`; return; }
-    if (["Align Left", "Align Center", "Align Right", "Justify Text"].includes(q.title)) { root.innerHTML = `<div class="preview-box"><div class="preview-title">Paragraph Preview</div><p class="format-sample ${s.docState.alignment || "left"}">Computer studies practical tasks should be completed accurately and presented in a neat, readable format for assessment.</p></div>`; return; }
+    if (q.title === "Insert Footnote") {
+        const d = s.docState;
+        root.innerHTML = `<div class="workspace-sim"><div class="mini-document"><div class="preview-title">Document Preview</div><p class="format-sample">A footnote can provide extra detail${d.footnote_inserted ? `<sup>1</sup>` : ``}.</p>${d.footnote_inserted ? `<div class="footnote-preview"><sup>1</sup> ${d.footnote_text || "Extra explanatory information inserted as a footnote."}</div>` : `<div class="doc-note">The insertion point is ready at the end of the sentence.</div>`}</div>${d.footnote_dialog_open ? `<div class="word-dialog" style="max-width:420px;"><div class="word-dialog-head">Footnote and Endnote</div><div class="word-dialog-body"><div class="dialog-form-grid"><label>Footnote text:</label><input id="footnoteTextInput" value="${d.footnote_text || "Extra explanatory information inserted as a footnote."}"></div><div class="dialog-actions"><button type="button" class="mini-btn" id="footnoteCancelBtn">Cancel</button><button type="button" class="mini-btn primary" id="footnoteApplyBtn">Insert</button></div></div></div>` : ``}</div>`;
+        const input = document.getElementById("footnoteTextInput"), cancel = document.getElementById("footnoteCancelBtn"), apply = document.getElementById("footnoteApplyBtn");
+        if (input) input.addEventListener("input", function(){ d.footnote_text = this.value; syncHiddenFields(activeQuestionIndex); });
+        if (cancel) cancel.addEventListener("click", function(){ d.footnote_dialog_open = false; syncHiddenFields(activeQuestionIndex); renderQuestionWorkspace(); });
+        if (apply) apply.addEventListener("click", function(){ recordAction("references.insert_footnote_apply"); });
+        return;
+    }
+    if (q.title === "Insert Caption") {
+        const d = s.docState;
+        root.innerHTML = `<div class="workspace-sim"><div class="caption-object-preview">Selected object</div>${d.caption_inserted ? `<div class="caption-preview">${d.caption_label || "Figure"} 1: ${d.caption_text || "Learner performance chart"}</div>` : `<div class="doc-note">Insert a caption below the selected object.</div>`}${d.caption_dialog_open ? `<div class="word-dialog" style="max-width:420px;"><div class="word-dialog-head">Caption</div><div class="word-dialog-body"><div class="dialog-form-grid"><label>Label:</label><select id="captionLabelSelect"><option${(d.caption_label || "Figure") === "Figure" ? " selected" : ""}>Figure</option><option${(d.caption_label || "Figure") === "Table" ? " selected" : ""}>Table</option></select><label>Caption:</label><input id="captionTextInput" value="${d.caption_text || "Learner performance chart"}"></div><div class="dialog-actions"><button type="button" class="mini-btn" id="captionCancelBtn">Cancel</button><button type="button" class="mini-btn primary" id="captionApplyBtn">OK</button></div></div></div>` : ``}</div>`;
+        const label = document.getElementById("captionLabelSelect"), input = document.getElementById("captionTextInput"), cancel = document.getElementById("captionCancelBtn"), apply = document.getElementById("captionApplyBtn");
+        if (label) label.addEventListener("change", function(){ d.caption_label = this.value; syncHiddenFields(activeQuestionIndex); });
+        if (input) input.addEventListener("input", function(){ d.caption_text = this.value; syncHiddenFields(activeQuestionIndex); });
+        if (cancel) cancel.addEventListener("click", function(){ d.caption_dialog_open = false; syncHiddenFields(activeQuestionIndex); renderQuestionWorkspace(); });
+        if (apply) apply.addEventListener("click", function(){ recordAction("references.caption_apply"); });
+        return;
+    }
+    if (q.title === "Insert Bookmark") {
+        const d = s.docState;
+        root.innerHTML = `<div class="workspace-sim"><div class="preview-box"><div class="preview-title">Text Selection</div><p class="format-sample">Results Summary ${d.bookmark_inserted ? `<span class="bookmark-tag">${d.bookmark_name || "bmResults"}</span>` : ``}</p></div>${d.bookmark_dialog_open ? `<div class="word-dialog" style="max-width:360px;"><div class="word-dialog-head">Bookmark</div><div class="word-dialog-body"><div class="bookmark-dialog-grid"><div class="dialog-form-grid"><label>Bookmark name:</label><input id="bookmarkNameInput" value="${d.bookmark_name || "bmResults"}"></div><div class="bookmark-list"><div class="bookmark-list-item">bmSummary</div><div class="bookmark-list-item">bmCharts</div></div></div><div class="dialog-actions"><button type="button" class="mini-btn disabled">Delete</button><button type="button" class="mini-btn primary" id="bookmarkApplyBtn">Add</button></div></div></div>` : `<div class="doc-note">Open the Bookmark dialog from Insert &gt; Bookmark.</div>`}</div>`;
+        const input = document.getElementById("bookmarkNameInput"), apply = document.getElementById("bookmarkApplyBtn");
+        if (input) input.addEventListener("input", function(){ d.bookmark_name = this.value; syncHiddenFields(activeQuestionIndex); });
+        if (apply) apply.addEventListener("click", function(){ recordAction("insert.bookmark_apply"); });
+        return;
+    }
+    if (q.title === "Apply Heading") {
+        const d = s.docState;
+        root.innerHTML = `<div class="workspace-sim"><div class="preview-box"><div class="preview-title">Styles Preview</div><p class="format-sample${d.heading_level === "heading1" ? " heading1" : ""}">Introduction to Databases</p><div class="doc-note" style="margin-top:10px;">Apply the built-in <strong>Heading 1</strong> style from the Styles gallery.</div></div>${d.styles_dialog_open ? `<div class="word-dialog word-dialog-anchored" style="${getControlAnchorStyle("home.style_heading1", 260, 6)}"><div class="word-dialog-body" style="padding:8px;background:#fff;"><div class="list-library-grid" style="grid-template-columns:1fr;"><div class="list-library-card${d.pending_style === "Normal" ? " selected" : ""}" data-style-choice="Normal"><div class="list-library-sample">Normal<br><span style="font-size:0.8rem;color:#64748b;">Body text style</span></div></div><div class="list-library-card${d.pending_style === "Heading 1" ? " selected" : ""}" data-style-choice="Heading 1"><div class="list-library-sample" style="font-size:1.25rem;font-weight:700;color:#163759;">Heading 1</div></div></div><div class="dialog-actions" style="padding-top:4px;"><button type="button" class="mini-btn" id="styleCancelBtn">Cancel</button><button type="button" class="mini-btn primary" id="styleApplyBtn">Apply</button></div></div></div>` : ``}</div>`;
+        document.querySelectorAll("[data-style-choice]").forEach(card => card.addEventListener("click", function(){ d.pending_style = this.dataset.styleChoice || "Normal"; syncHiddenFields(activeQuestionIndex); renderQuestionWorkspace(); }));
+        const cancel = document.getElementById("styleCancelBtn"), apply = document.getElementById("styleApplyBtn");
+        if (cancel) cancel.addEventListener("click", function(){ d.styles_dialog_open = false; syncHiddenFields(activeQuestionIndex); renderQuestionWorkspace(); });
+        if (apply) apply.addEventListener("click", function(){ recordAction("home.style_heading1_apply"); });
+        return;
+    }
+    if (["Align Left", "Align Center", "Align Right", "Justify Text"].includes(q.title)) {
+        const d = s.docState;
+        const controlId = q.title === "Align Left" ? "home.align_left" : q.title === "Align Center" ? "home.align_center" : q.title === "Align Right" ? "home.align_right" : "home.justify";
+        root.innerHTML = `<div class="workspace-sim"><div class="preview-box"><div class="preview-title">Paragraph Preview</div><p class="format-sample ${d.alignment || "left"}">Computer studies practical tasks should be completed accurately and presented in a neat, readable format for assessment.</p></div>${d.alignment_dialog_open ? `<div class="word-dialog word-dialog-anchored" style="${getControlAnchorStyle(controlId, 240, 6)}"><div class="word-dialog-body" style="padding:8px;background:#fff;"><div class="office-list-box"><div class="office-list-item${d.pending_alignment === "left" ? " selected" : ""}" data-align-choice="left">Align Left</div><div class="office-list-item${d.pending_alignment === "center" ? " selected" : ""}" data-align-choice="center">Align Center</div><div class="office-list-item${d.pending_alignment === "right" ? " selected" : ""}" data-align-choice="right">Align Right</div><div class="office-list-item${d.pending_alignment === "justify" ? " selected" : ""}" data-align-choice="justify">Justify</div></div><div class="dialog-actions" style="padding-top:4px;"><button type="button" class="mini-btn" id="alignCancelBtn">Cancel</button><button type="button" class="mini-btn primary" id="alignApplyBtn">Apply</button></div></div></div>` : ``}</div>`;
+        document.querySelectorAll("[data-align-choice]").forEach(item => item.addEventListener("click", function(){ d.pending_alignment = this.dataset.alignChoice || "left"; syncHiddenFields(activeQuestionIndex); renderQuestionWorkspace(); }));
+        const cancel = document.getElementById("alignCancelBtn"), apply = document.getElementById("alignApplyBtn");
+        if (cancel) cancel.addEventListener("click", function(){ d.alignment_dialog_open = false; syncHiddenFields(activeQuestionIndex); renderQuestionWorkspace(); });
+        if (apply) apply.addEventListener("click", function(){ recordAction(`${controlId}_apply`); });
+        return;
+    }
     if (q.title === "Table Borders" || q.title === "Paragraph Borders") {
         const d = s.docState;
         const preview = q.title === "Table Borders"
             ? `<table class="preview-table"><tr><td style="${d.table_borders ? "" : "border:none;"}"></td><td style="${d.table_borders ? "" : "border:none;"}"></td><td style="${d.table_borders ? "" : "border:none;"}"></td></tr><tr><td style="${d.table_borders ? "" : "border:none;"}"></td><td style="${d.table_borders ? "" : "border:none;"}"></td><td style="${d.table_borders ? "" : "border:none;"}"></td></tr></table>`
             : `<div class="${d.paragraph_borders ? "border-sample paragraph" : "doc-note"}">This paragraph should display a paragraph border.</div>`;
-        root.innerHTML = `<div class="workspace-sim"><div class="preview-box"><div class="preview-title">${q.title === "Table Borders" ? "Table" : "Paragraph"} Preview</div>${preview}</div>${d.borders_dialog_open ? `<div class="dialog-layer"><div class="word-dialog word-dialog-floating"><div class="word-dialog-head">Borders</div><div class="word-dialog-body"><div class="choice-grid"><button type="button" class="choice-btn${d.border_choice === "all" ? " selected" : ""}" data-border="all">All Borders</button><button type="button" class="choice-btn${d.border_choice === "outside" ? " selected" : ""}" data-border="outside">Outside</button></div><div class="dialog-actions"><button type="button" class="mini-btn" id="bordersCancelBtn">Cancel</button><button type="button" class="mini-btn primary" id="bordersApplyBtn">Apply</button></div></div></div></div>` : ``}</div>`;
+        root.innerHTML = `<div class="workspace-sim"><div class="preview-box"><div class="preview-title">${q.title === "Table Borders" ? "Table" : "Paragraph"} Preview</div>${preview}</div>${d.borders_dialog_open ? `<div class="dialog-layer"><div class="word-dialog word-dialog-floating"><div class="word-dialog-head">Borders and Shading</div><div class="word-dialog-body"><div class="border-preset-grid"><div class="border-preset${d.border_choice === "all" ? " selected" : ""}" data-border="all"><div class="border-preview-box all"></div><div>All</div></div><div class="border-preset${d.border_choice === "outside" ? " selected" : ""}" data-border="outside"><div class="border-preview-box outside"></div><div>Outside</div></div></div><div class="dialog-actions"><button type="button" class="mini-btn" id="bordersCancelBtn">Cancel</button><button type="button" class="mini-btn primary" id="bordersApplyBtn">OK</button></div></div></div></div>` : ``}</div>`;
         document.querySelectorAll("[data-border]").forEach(button => button.addEventListener("click", function(){ d.border_choice = this.dataset.border || ""; syncHiddenFields(activeQuestionIndex); renderQuestionWorkspace(); }));
         const cancel = document.getElementById("bordersCancelBtn"), apply = document.getElementById("bordersApplyBtn");
         if (cancel) cancel.addEventListener("click", function(){ d.borders_dialog_open = false; syncHiddenFields(activeQuestionIndex); renderQuestionWorkspace(); });
@@ -696,14 +877,21 @@ function renderQuestionWorkspace() {
     }
     if (q.title === "Find") {
         const d = s.docState, html = (d.preview_text || "").replace(/TABLES/g, `<span class="replace-hit">TABLES</span>`);
-        root.innerHTML = `<div class="workspace-sim"><div class="doc-preview"><div class="preview-title">Document Preview</div><div class="preview-text">${html}</div></div>${d.find_open ? `<div class="dialog-layer"><div class="word-dialog word-dialog-floating"><div class="word-dialog-head">Find and Replace</div><div class="word-dialog-body"><div class="find-tabs"><div class="find-tab active">Find</div><div class="find-tab">Replace</div><div class="find-tab">Go To</div></div><div class="find-panel"><div class="find-grid"><div class="find-label">Find what:</div><div class="find-input-wrap"><input class="find-input" type="text" id="findTextInput" value="${d.find_text || ""}"></div></div><div class="find-spacer"></div></div><div class="doc-note" id="findStatusText">${d.found ? "1 result found for TABLES." : "Enter TABLES to complete this find task."}</div><div class="dialog-actions split"><button type="button" class="mini-btn" id="findMoreBtn">More &gt;&gt;</button><div style="display:flex;gap:10px;"><button type="button" class="mini-btn disabled">Reading Highlight</button><button type="button" class="mini-btn disabled">Find In</button><button type="button" class="mini-btn primary" id="findApplyBtn">Find Next</button><button type="button" class="mini-btn" id="findCloseBtn">Cancel</button></div></div></div></div></div>` : `<div class="doc-note">Use the Find command on the Home tab to open the navigation pane, then search for TABLES.</div>`}</div>`;
-        const fi = document.getElementById("findTextInput"), fb = document.getElementById("findCloseBtn"), fa = document.getElementById("findApplyBtn"), fs = document.getElementById("findStatusText");
+        const mode = getFindDialogMode(d, "find");
+        const findPanel = `<div class="find-panel"><div class="find-grid"><div class="find-label">Find what:</div><div class="find-input-wrap"><input class="find-input" type="text" id="findTextInput" value="${d.find_text || ""}"></div></div><div class="find-spacer"></div></div><div class="doc-note" id="findStatusText">${d.found ? "1 result found for TABLES." : "Enter TABLES to complete this find task."}</div><div class="dialog-actions split"><button type="button" class="mini-btn" id="findMoreBtn">More &gt;&gt;</button><div style="display:flex;gap:10px;"><button type="button" class="mini-btn disabled">Reading Highlight</button><button type="button" class="mini-btn disabled">Find In</button><button type="button" class="mini-btn primary" id="findApplyBtn">Find Next</button><button type="button" class="mini-btn" id="findCloseBtn">Cancel</button></div></div>`;
+        const replacePanel = `<div class="find-panel"><div class="find-grid"><div class="find-label">Find what:</div><div class="find-input-wrap"><input class="find-input" type="text" id="findTextInput" value="${d.find_text || ""}"></div><div class="find-label">Replace with:</div><div class="find-input-wrap"><input class="find-input" type="text" id="findReplaceDummy" value=""></div></div><div class="find-spacer"></div></div><div class="doc-note">This question only requires Find, but the Replace tab is interactive for practice.</div><div class="dialog-actions split"><button type="button" class="mini-btn" id="findMoreBtn">More &gt;&gt;</button><div style="display:flex;gap:10px;"><button type="button" class="mini-btn disabled">Replace</button><button type="button" class="mini-btn disabled">Replace All</button><button type="button" class="mini-btn primary" id="findApplyBtn">Find Next</button><button type="button" class="mini-btn" id="findCloseBtn">Cancel</button></div></div>`;
+        const goToPanel = `<div class="find-panel"><div class="go-to-layout"><div class="go-to-list">${["Page","Section","Line","Bookmark","Comment","Footnote"].map(item => `<div class="go-to-item${(d.go_to_what || "Page") === item ? " selected" : ""}" data-go-to-item="${item}">${item}</div>`).join("")}</div><div class="go-to-copy"><div class="find-label">Enter page number:</div><input id="findGoToPage" value="${d.go_to_page || ""}"><div class="go-to-help">Enter + and - to move relative to the current location. Example: +4 will move forward four items.</div></div></div><div class="dialog-actions"><button type="button" class="mini-btn" id="findPrevBtn">Previous</button><button type="button" class="mini-btn primary" id="findNextBtn">Next</button><button type="button" class="mini-btn" id="findCloseBtn">Close</button></div>`;
+        root.innerHTML = `<div class="workspace-sim"><div class="doc-preview"><div class="preview-title">Document Preview</div><div class="preview-text">${html}</div></div>${d.find_open ? `<div class="dialog-layer"><div class="word-dialog word-dialog-floating"><div class="word-dialog-head">Find and Replace</div><div class="word-dialog-body"><div class="find-tabs"><div class="find-tab${mode === "find" ? " active" : ""}" data-find-mode="find">Find</div><div class="find-tab${mode === "replace" ? " active" : ""}" data-find-mode="replace">Replace</div><div class="find-tab${mode === "goto" ? " active" : ""}" data-find-mode="goto">Go To</div></div>${mode === "replace" ? replacePanel : mode === "goto" ? goToPanel : findPanel}</div></div></div>` : `<div class="doc-note">Use the Find command on the Home tab to open the navigation pane, then search for TABLES.</div>`}</div>`;
+        document.querySelectorAll("[data-find-mode]").forEach(tab => tab.addEventListener("click", function(){ d.find_dialog_mode = this.dataset.findMode || "find"; syncHiddenFields(activeQuestionIndex); renderQuestionWorkspace(); }));
+        document.querySelectorAll("[data-go-to-item]").forEach(item => item.addEventListener("click", function(){ d.go_to_what = this.dataset.goToItem || "Page"; syncHiddenFields(activeQuestionIndex); renderQuestionWorkspace(); }));
+        const fi = document.getElementById("findTextInput"), fb = document.getElementById("findCloseBtn"), fa = document.getElementById("findApplyBtn"), fs = document.getElementById("findStatusText"), fgp = document.getElementById("findGoToPage");
         if (fi) fi.addEventListener("input", function(){
             s.docState.find_text = this.value;
             s.docState.found = this.value.trim().toUpperCase() === "TABLES";
             syncHiddenFields(activeQuestionIndex);
             if (fs) fs.textContent = s.docState.found ? "1 result found for TABLES." : "Enter TABLES to complete this find task.";
         });
+        if (fgp) fgp.addEventListener("input", function(){ s.docState.go_to_page = this.value; syncHiddenFields(activeQuestionIndex); });
         if (fb) fb.addEventListener("click", function(){ s.docState.find_open = false; syncHiddenFields(activeQuestionIndex); renderQuestionWorkspace(); });
         if (fa) fa.addEventListener("click", function(){
             s.docState.find_text = fi ? fi.value : (s.docState.find_text || "");
@@ -725,7 +913,7 @@ function renderQuestionWorkspace() {
     }
     if (q.title === "Shading") {
         const d = s.docState;
-        root.innerHTML = `<div class="workspace-sim"><div class="preview-box"><div class="preview-title">Paragraph Preview</div><div class="${d.shaded ? "shading-sample" : "doc-note"}">This paragraph should have paragraph shading applied.</div></div>${d.shading_dialog_open ? `<div class="dialog-layer"><div class="word-dialog word-dialog-floating"><div class="word-dialog-head">Shading</div><div class="word-dialog-body"><div class="choice-grid"><button type="button" class="choice-btn${d.shade_choice === "yellow" ? " selected" : ""}" data-shade="yellow">Yellow</button><button type="button" class="choice-btn${d.shade_choice === "blue" ? " selected" : ""}" data-shade="blue">Blue</button></div><div class="dialog-actions"><button type="button" class="mini-btn" id="shadeCancelBtn">Cancel</button><button type="button" class="mini-btn primary" id="shadeApplyBtn">Apply</button></div></div></div></div>` : ``}</div>`;
+        root.innerHTML = `<div class="workspace-sim"><div class="preview-box"><div class="preview-title">Paragraph Preview</div><div class="${d.shaded ? "shading-sample" : "doc-note"}">This paragraph should have paragraph shading applied.</div></div>${d.shading_dialog_open ? `<div class="dialog-layer"><div class="word-dialog word-dialog-floating"><div class="word-dialog-head">Shading</div><div class="word-dialog-body"><div class="shade-gallery"><button type="button" class="shade-chip${d.shade_choice === "yellow" ? " selected" : ""}" data-shade="yellow" style="background:#fef3c7;"></button><button type="button" class="shade-chip${d.shade_choice === "blue" ? " selected" : ""}" data-shade="blue" style="background:#dbeafe;"></button><button type="button" class="shade-chip${d.shade_choice === "green" ? " selected" : ""}" data-shade="green" style="background:#dcfce7;"></button><button type="button" class="shade-chip${d.shade_choice === "none" ? " selected" : ""}" data-shade="none" style="background:#ffffff;"></button></div><div class="dialog-actions"><button type="button" class="mini-btn" id="shadeCancelBtn">Cancel</button><button type="button" class="mini-btn primary" id="shadeApplyBtn">OK</button></div></div></div></div>` : ``}</div>`;
         document.querySelectorAll("[data-shade]").forEach(button => button.addEventListener("click", function(){ d.shade_choice = this.dataset.shade || ""; syncHiddenFields(activeQuestionIndex); renderQuestionWorkspace(); }));
         const cancel = document.getElementById("shadeCancelBtn"), apply = document.getElementById("shadeApplyBtn");
         if (cancel) cancel.addEventListener("click", function(){ d.shading_dialog_open = false; syncHiddenFields(activeQuestionIndex); renderQuestionWorkspace(); });
@@ -734,7 +922,7 @@ function renderQuestionWorkspace() {
     }
     if (q.title === "Change Orientation") {
         const d = s.docState;
-        root.innerHTML = `<div class="workspace-sim"><div class="preview-box"><div class="preview-title">Page Preview</div><div class="layout-page${d.orientation === "landscape" ? " landscape" : ""}"><strong>Orientation:</strong> ${(d.orientation || "portrait").toUpperCase()}</div></div>${d.orientation_dialog_open ? `<div class="dialog-layer"><div class="word-dialog word-dialog-floating"><div class="word-dialog-head">Orientation</div><div class="word-dialog-body"><div class="choice-grid"><button type="button" class="choice-btn${d.pending_orientation === "portrait" ? " selected" : ""}" data-orientation="portrait">Portrait</button><button type="button" class="choice-btn${d.pending_orientation === "landscape" ? " selected" : ""}" data-orientation="landscape">Landscape</button></div><div class="dialog-actions"><button type="button" class="mini-btn" id="orientationCancelBtn">Cancel</button><button type="button" class="mini-btn primary" id="orientationApplyBtn">Apply</button></div></div></div></div>` : ``}</div>`;
+        root.innerHTML = `<div class="workspace-sim"><div class="preview-box"><div class="preview-title">Page Preview</div><div class="layout-page${d.orientation === "landscape" ? " landscape" : ""}"><strong>Orientation:</strong> ${(d.orientation || "portrait").toUpperCase()}</div></div>${d.orientation_dialog_open ? `<div class="dialog-layer"><div class="word-dialog word-dialog-floating"><div class="word-dialog-head">Page Setup</div><div class="word-dialog-body"><div class="page-setup-choices"><div class="page-setup-choice${d.pending_orientation === "portrait" ? " selected" : ""}" data-orientation="portrait"><div class="page-orientation-icon"></div><div><strong>Portrait</strong><div class="doc-note">Vertical page layout</div></div></div><div class="page-setup-choice${d.pending_orientation === "landscape" ? " selected" : ""}" data-orientation="landscape"><div class="page-orientation-icon landscape"></div><div><strong>Landscape</strong><div class="doc-note">Horizontal page layout</div></div></div></div><div class="dialog-actions"><button type="button" class="mini-btn" id="orientationCancelBtn">Cancel</button><button type="button" class="mini-btn primary" id="orientationApplyBtn">OK</button></div></div></div></div>` : ``}</div>`;
         document.querySelectorAll("[data-orientation]").forEach(button => button.addEventListener("click", function(){ d.pending_orientation = this.dataset.orientation || "portrait"; syncHiddenFields(activeQuestionIndex); renderQuestionWorkspace(); }));
         const cancel = document.getElementById("orientationCancelBtn"), apply = document.getElementById("orientationApplyBtn");
         if (cancel) cancel.addEventListener("click", function(){ d.orientation_dialog_open = false; syncHiddenFields(activeQuestionIndex); renderQuestionWorkspace(); });
@@ -743,18 +931,34 @@ function renderQuestionWorkspace() {
     }
     if (q.title === "Change Page Size") {
         const d = s.docState;
-        root.innerHTML = `<div class="workspace-sim"><div class="preview-box"><div class="preview-title">Page Setup Preview</div><div class="layout-page"><strong>Paper Size:</strong> ${d.page_size || "A4"}</div></div>${d.size_dialog_open ? `<div class="dialog-layer"><div class="word-dialog word-dialog-floating"><div class="word-dialog-head">Page Size</div><div class="word-dialog-body"><div class="choice-grid"><button type="button" class="choice-btn${d.pending_page_size === "A4" ? " selected" : ""}" data-page-size="A4">A4</button><button type="button" class="choice-btn${d.pending_page_size === "Legal" ? " selected" : ""}" data-page-size="Legal">Legal</button></div><div class="dialog-actions"><button type="button" class="mini-btn" id="pageSizeCancelBtn">Cancel</button><button type="button" class="mini-btn primary" id="pageSizeApplyBtn">Apply</button></div></div></div></div>` : ``}</div>`;
+        root.innerHTML = `<div class="workspace-sim"><div class="preview-box"><div class="preview-title">Page Setup Preview</div><div class="layout-page"><strong>Paper Size:</strong> ${d.page_size || "A4"}</div></div>${d.size_dialog_open ? `<div class="dialog-layer"><div class="word-dialog word-dialog-floating"><div class="word-dialog-head">Page Setup</div><div class="word-dialog-body"><div class="page-setup-choices"><div class="page-setup-choice${d.pending_page_size === "A4" ? " selected" : ""}" data-page-size="A4"><div class="size-preview-icon"></div><div><strong>A4</strong><div class="doc-note">210 x 297 mm</div></div></div><div class="page-setup-choice${d.pending_page_size === "Legal" ? " selected" : ""}" data-page-size="Legal"><div class="size-preview-icon legal"></div><div><strong>Legal</strong><div class="doc-note">8.5 x 14 in</div></div></div></div><div class="dialog-actions"><button type="button" class="mini-btn" id="pageSizeCancelBtn">Cancel</button><button type="button" class="mini-btn primary" id="pageSizeApplyBtn">OK</button></div></div></div></div>` : ``}</div>`;
         document.querySelectorAll("[data-page-size]").forEach(button => button.addEventListener("click", function(){ d.pending_page_size = this.dataset.pageSize || "A4"; syncHiddenFields(activeQuestionIndex); renderQuestionWorkspace(); }));
         const cancel = document.getElementById("pageSizeCancelBtn"), apply = document.getElementById("pageSizeApplyBtn");
         if (cancel) cancel.addEventListener("click", function(){ d.size_dialog_open = false; syncHiddenFields(activeQuestionIndex); renderQuestionWorkspace(); });
         if (apply) apply.addEventListener("click", function(){ recordAction("layout.size_apply"); });
         return;
     }
-    if (q.title === "Add Page Break") { root.innerHTML = `<div class="preview-box"><div class="preview-title">Document Flow</div><div>Page 1 content</div>${s.docState.page_break ? `<div class="page-break-line">Page Break</div><div>Page 2 content</div>` : `<div class="doc-note" style="margin-top:10px;">No page break inserted yet.</div>`}</div>`; return; }
-    if (q.title === "Add Column Break") { root.innerHTML = `<div class="preview-box"><div class="preview-title">Columns Preview</div><div class="column-preview"><div class="column-box">Column 1 text${s.docState.column_break ? `<div class="page-break-line">Column Break</div>` : ``}</div><div class="column-box">${s.docState.column_break ? "Column 2 starts here" : "Column 2 text"}</div></div></div>`; return; }
+    if (q.title === "Add Page Break") {
+        const d = s.docState;
+        root.innerHTML = `<div class="workspace-sim"><div class="mini-document"><div class="preview-title">Document Flow</div><div>Page 1 content</div>${d.page_break ? `<div class="break-marker">Page Break</div><div>Page 2 content</div>` : `<div class="doc-note" style="margin-top:10px;">No page break inserted yet.</div>`}</div>${d.break_dialog_open ? `<div class="word-dialog word-dialog-anchored" style="${getControlAnchorStyle("insert.page_break", 250, 6)}"><div class="word-dialog-body" style="padding:8px;background:#fff;"><div class="office-list-box"><div class="office-list-item${d.break_choice === "page" ? " selected" : ""}" data-break-choice="page">Page Break</div><div class="office-list-item${d.break_choice === "column" ? " selected" : ""}" data-break-choice="column">Column Break</div></div><div class="dialog-actions" style="padding-top:4px;"><button type="button" class="mini-btn" id="breakCancelBtn">Cancel</button><button type="button" class="mini-btn primary" id="breakApplyBtn">Insert</button></div></div></div>` : ``}</div>`;
+        document.querySelectorAll("[data-break-choice]").forEach(item => item.addEventListener("click", function(){ d.break_choice = this.dataset.breakChoice || "page"; syncHiddenFields(activeQuestionIndex); renderQuestionWorkspace(); }));
+        const cancel = document.getElementById("breakCancelBtn"), apply = document.getElementById("breakApplyBtn");
+        if (cancel) cancel.addEventListener("click", function(){ d.break_dialog_open = false; syncHiddenFields(activeQuestionIndex); renderQuestionWorkspace(); });
+        if (apply) apply.addEventListener("click", function(){ recordAction("insert.page_break_apply"); });
+        return;
+    }
+    if (q.title === "Add Column Break") {
+        const d = s.docState;
+        root.innerHTML = `<div class="workspace-sim"><div class="columns-mini-page"><div class="preview-title">Columns Preview</div><div class="column-preview"><div class="column-box">Column 1 text${d.column_break ? `<div class="break-marker">Column Break</div>` : ``}</div><div class="column-box">${d.column_break ? "Column 2 starts here" : "Column 2 text"}</div></div></div>${d.break_dialog_open ? `<div class="word-dialog word-dialog-anchored" style="${getControlAnchorStyle("layout.breaks", 250, 6)}"><div class="word-dialog-body" style="padding:8px;background:#fff;"><div class="office-list-box"><div class="office-list-item${d.break_choice === "page" ? " selected" : ""}" data-break-choice="page">Page Break</div><div class="office-list-item${d.break_choice === "column" ? " selected" : ""}" data-break-choice="column">Column Break</div></div><div class="dialog-actions" style="padding-top:4px;"><button type="button" class="mini-btn" id="columnBreakCancelBtn">Cancel</button><button type="button" class="mini-btn primary" id="columnBreakApplyBtn">Insert</button></div></div></div>` : ``}</div>`;
+        document.querySelectorAll("[data-break-choice]").forEach(item => item.addEventListener("click", function(){ d.break_choice = this.dataset.breakChoice || "column"; syncHiddenFields(activeQuestionIndex); renderQuestionWorkspace(); }));
+        const cancel = document.getElementById("columnBreakCancelBtn"), apply = document.getElementById("columnBreakApplyBtn");
+        if (cancel) cancel.addEventListener("click", function(){ d.break_dialog_open = false; syncHiddenFields(activeQuestionIndex); renderQuestionWorkspace(); });
+        if (apply) apply.addEventListener("click", function(){ recordAction("layout.breaks_apply"); });
+        return;
+    }
     if (q.title === "Add Cover Page") {
         const d = s.docState;
-        root.innerHTML = `<div class="workspace-sim">${d.cover_page ? `<div class="cover-page-preview"><div class="preview-title">Cover Page</div><h2 style="margin:10px 0 6px;">CAT Practical Portfolio</h2><div>2026</div></div>` : `<div class="doc-note">Insert a cover page from the Insert tab to create a title page.</div>`}${d.cover_dialog_open ? `<div class="dialog-layer"><div class="word-dialog word-dialog-floating"><div class="word-dialog-head">Cover Page</div><div class="word-dialog-body"><div class="choice-grid"><button type="button" class="choice-btn${d.cover_choice === "annual" ? " selected" : ""}" data-cover="annual">Annual</button><button type="button" class="choice-btn${d.cover_choice === "facet" ? " selected" : ""}" data-cover="facet">Facet</button></div><div class="dialog-actions"><button type="button" class="mini-btn" id="coverCancelBtn">Cancel</button><button type="button" class="mini-btn primary" id="coverApplyBtn">Insert</button></div></div></div></div>` : ``}</div>`;
+        root.innerHTML = `<div class="workspace-sim">${d.cover_page ? `<div class="cover-page-preview"><div class="preview-title">Cover Page</div><h2 style="margin:10px 0 6px;">CAT Practical Portfolio</h2><div>2026</div></div>` : `<div class="doc-note">Insert a cover page from the Insert tab to create a title page.</div>`}${d.cover_dialog_open ? `<div class="dialog-layer"><div class="word-dialog word-dialog-floating"><div class="word-dialog-head">Built-In Cover Pages</div><div class="word-dialog-body"><div class="gallery-grid"><div class="gallery-card${d.cover_choice === "annual" ? " selected" : ""}" data-cover="annual"><div class="gallery-thumb"><div style="width:58px;height:68px;border:1px solid #cbd5e1;background:linear-gradient(180deg,#dbeafe 0%,#ffffff 100%);"></div></div><div class="gallery-label">Annual</div></div><div class="gallery-card${d.cover_choice === "facet" ? " selected" : ""}" data-cover="facet"><div class="gallery-thumb"><div style="width:58px;height:68px;border:1px solid #cbd5e1;background:linear-gradient(180deg,#fef3c7 0%,#ffffff 100%);"></div></div><div class="gallery-label">Facet</div></div></div><div class="dialog-actions"><button type="button" class="mini-btn" id="coverCancelBtn">Cancel</button><button type="button" class="mini-btn primary" id="coverApplyBtn">Insert</button></div></div></div></div>` : ``}</div>`;
         document.querySelectorAll("[data-cover]").forEach(button => button.addEventListener("click", function(){ d.cover_choice = this.dataset.cover || ""; syncHiddenFields(activeQuestionIndex); renderQuestionWorkspace(); }));
         const cancel = document.getElementById("coverCancelBtn"), apply = document.getElementById("coverApplyBtn");
         if (cancel) cancel.addEventListener("click", function(){ d.cover_dialog_open = false; syncHiddenFields(activeQuestionIndex); renderQuestionWorkspace(); });
@@ -763,7 +967,7 @@ function renderQuestionWorkspace() {
     }
     if (q.title === "Insert SmartArt" || q.title === "Edit SmartArt") {
         const d = s.docState;
-        root.innerHTML = `<div class="workspace-sim">${d.smartart_inserted ? `<div class="preview-box"><div class="preview-title">SmartArt Preview</div><div class="smartart-preview"><div class="smartart-node${d.smartart_edited ? " edited" : ""}">Plan</div><div class="smartart-node${d.smartart_edited ? " edited" : ""}">Create</div><div class="smartart-node${d.smartart_edited ? " edited" : ""}">Review</div></div></div>` : `<div class="illustration-box">No SmartArt inserted yet.</div>`}${d.smartart_dialog_open ? `<div class="dialog-layer"><div class="word-dialog word-dialog-floating"><div class="word-dialog-head">Choose a SmartArt Graphic</div><div class="word-dialog-body"><div class="choice-grid"><button type="button" class="choice-btn${d.smartart_choice === "process" ? " selected" : ""}" data-smartart="process">Process</button><button type="button" class="choice-btn${d.smartart_choice === "cycle" ? " selected" : ""}" data-smartart="cycle">Cycle</button></div><div class="dialog-actions"><button type="button" class="mini-btn" id="smartartCancelBtn">Cancel</button><button type="button" class="mini-btn primary" id="smartartApplyBtn">OK</button></div></div></div></div>` : ``}${d.smartart_edit_open ? `<div class="dialog-layer"><div class="word-dialog word-dialog-floating"><div class="word-dialog-head">SmartArt Format</div><div class="word-dialog-body"><div class="choice-grid"><button type="button" class="choice-btn${d.smartart_color === "green" ? " selected" : ""}" data-smartart-color="green">Green Accent</button><button type="button" class="choice-btn${d.smartart_color === "blue" ? " selected" : ""}" data-smartart-color="blue">Blue Accent</button></div><div class="dialog-actions"><button type="button" class="mini-btn" id="smartartEditCancelBtn">Cancel</button><button type="button" class="mini-btn primary" id="smartartEditApplyBtn">Apply</button></div></div></div></div>` : ``}</div>`;
+        root.innerHTML = `<div class="workspace-sim">${d.smartart_inserted ? `<div class="preview-box"><div class="preview-title">SmartArt Preview</div><div class="smartart-preview"><div class="smartart-node${d.smartart_edited ? " edited" : ""}">Plan</div><div class="smartart-node${d.smartart_edited ? " edited" : ""}">Create</div><div class="smartart-node${d.smartart_edited ? " edited" : ""}">Review</div></div></div>` : `<div class="illustration-box">No SmartArt inserted yet.</div>`}${d.smartart_dialog_open ? `<div class="dialog-layer"><div class="word-dialog word-dialog-floating"><div class="word-dialog-head">Choose a SmartArt Graphic</div><div class="word-dialog-body"><div class="smartart-browser"><div class="office-list-box"><div class="office-list-item selected">List</div><div class="office-list-item">Process</div><div class="office-list-item">Cycle</div><div class="office-list-item">Hierarchy</div></div><div class="smartart-stage"><div class="gallery-grid"><div class="smartart-template${d.smartart_choice === "process" ? " selected" : ""}" data-smartart="process"><div class="smartart-template-preview"><span class="node"></span><span class="node"></span><span class="node"></span></div><div class="smartart-template-title">Basic Process</div></div><div class="smartart-template${d.smartart_choice === "cycle" ? " selected" : ""}" data-smartart="cycle"><div class="smartart-template-preview cycle"><span class="node"></span><span class="node"></span><span class="node"></span></div><div class="smartart-template-title">Basic Cycle</div></div></div><div class="doc-note">Select the correct SmartArt graphic and click OK.</div></div></div><div class="dialog-actions"><button type="button" class="mini-btn" id="smartartCancelBtn">Cancel</button><button type="button" class="mini-btn primary" id="smartartApplyBtn">OK</button></div></div></div></div>` : ``}${d.smartart_edit_open ? `<div class="dialog-layer"><div class="word-dialog word-dialog-floating"><div class="word-dialog-head">Change Colors</div><div class="word-dialog-body"><div class="smartart-color-strip"><button type="button" class="smartart-color-chip${d.smartart_color === "green" ? " selected" : ""}" data-smartart-color="green" style="background:linear-gradient(90deg,#16a34a 0%,#22c55e 100%);">Green</button><button type="button" class="smartart-color-chip${d.smartart_color === "blue" ? " selected" : ""}" data-smartart-color="blue" style="background:linear-gradient(90deg,#2563eb 0%,#60a5fa 100%);">Blue</button></div><div class="dialog-actions"><button type="button" class="mini-btn" id="smartartEditCancelBtn">Cancel</button><button type="button" class="mini-btn primary" id="smartartEditApplyBtn">Apply</button></div></div></div></div>` : ``}</div>`;
         document.querySelectorAll("[data-smartart]").forEach(button => button.addEventListener("click", function(){ d.smartart_choice = this.dataset.smartart || ""; syncHiddenFields(activeQuestionIndex); renderQuestionWorkspace(); }));
         document.querySelectorAll("[data-smartart-color]").forEach(button => button.addEventListener("click", function(){ d.smartart_color = this.dataset.smartartColor || ""; syncHiddenFields(activeQuestionIndex); renderQuestionWorkspace(); }));
         const cancel = document.getElementById("smartartCancelBtn"), apply = document.getElementById("smartartApplyBtn"), ecancel = document.getElementById("smartartEditCancelBtn"), eapply = document.getElementById("smartartEditApplyBtn");
@@ -773,10 +977,23 @@ function renderQuestionWorkspace() {
         if (eapply) eapply.addEventListener("click", function(){ recordAction("smartart_format_apply"); });
         return;
     }
-    if (q.title === "Left Indent" || q.title === "Right Indent") { root.innerHTML = `<div class="preview-box"><div class="preview-title">Indent Preview</div><div class="indent-ruler"></div><div class="indent-paragraph" style="margin-left:${Number(s.docState.left_indent || 0)}px;margin-right:${Number(s.docState.right_indent || 0)}px;">This paragraph should be moved inward using the Layout paragraph indent controls.</div></div>`; return; }
+    if (q.title === "Left Indent" || q.title === "Right Indent") {
+        const d = s.docState;
+        const isLeft = q.title === "Left Indent";
+        root.innerHTML = `<div class="workspace-sim"><div class="preview-box"><div class="preview-title">Indent Preview</div><div class="indent-ruler"></div><div class="indent-paragraph" style="margin-left:${Number(d.left_indent || 0)}px;margin-right:${Number(d.right_indent || 0)}px;">This paragraph should be moved inward using the Layout paragraph indent controls.</div></div>${d.indent_dialog_open ? `<div class="word-dialog word-dialog-anchored" style="${getControlAnchorStyle(isLeft ? "layout.indent_left" : "layout.indent_right", 280, 6)}"><div class="word-dialog-body" style="padding:8px;background:#fff;"><div class="dialog-form-grid"><label>${isLeft ? "Left" : "Right"} indent:</label><select id="indentValueSelect"><option value="0"${Number(isLeft ? d.pending_indent_left : d.pending_indent_right) === 0 ? " selected" : ""}>0 cm</option><option value="24"${Number(isLeft ? d.pending_indent_left : d.pending_indent_right) === 24 ? " selected" : ""}>0.63 cm</option><option value="48"${Number(isLeft ? d.pending_indent_left : d.pending_indent_right) === 48 ? " selected" : ""}>1.27 cm</option></select></div><div class="dialog-actions" style="padding-top:4px;"><button type="button" class="mini-btn" id="indentCancelBtn">Cancel</button><button type="button" class="mini-btn primary" id="indentApplyBtn">OK</button></div></div></div>` : ``}</div>`;
+        const select = document.getElementById("indentValueSelect"), cancel = document.getElementById("indentCancelBtn"), apply = document.getElementById("indentApplyBtn");
+        if (select) select.addEventListener("change", function(){
+            if (isLeft) d.pending_indent_left = Number(this.value || 0);
+            else d.pending_indent_right = Number(this.value || 0);
+            syncHiddenFields(activeQuestionIndex);
+        });
+        if (cancel) cancel.addEventListener("click", function(){ d.indent_dialog_open = false; syncHiddenFields(activeQuestionIndex); renderQuestionWorkspace(); });
+        if (apply) apply.addEventListener("click", function(){ recordAction(isLeft ? "layout.indent_left_apply" : "layout.indent_right_apply"); });
+        return;
+    }
     if (q.title === "Mail Merge" || q.title === "Insert Merge Fields") {
         const d = s.docState;
-        root.innerHTML = `<div class="workspace-sim"><div class="merge-preview"><div class="preview-title">Mail Merge Preview</div><div>Dear ${d.merge_field_inserted ? `<span class="merge-field">&laquo;FirstName&raquo;</span>` : "Learner"},</div><div>Your practical test is scheduled for Friday.</div></div>${d.merge_dialog_open ? `<div class="dialog-layer"><div class="word-dialog word-dialog-floating"><div class="word-dialog-head">Start Mail Merge</div><div class="word-dialog-body"><div class="choice-grid"><button type="button" class="choice-btn${d.merge_type === "letters" ? " selected" : ""}" data-merge-type="letters">Letters</button><button type="button" class="choice-btn${d.merge_type === "labels" ? " selected" : ""}" data-merge-type="labels">Labels</button></div><div class="dialog-actions"><button type="button" class="mini-btn" id="mergeCancelBtn">Cancel</button><button type="button" class="mini-btn primary" id="mergeApplyBtn">OK</button></div></div></div></div>` : ``}${d.field_dialog_open ? `<div class="dialog-layer"><div class="word-dialog word-dialog-floating"><div class="word-dialog-head">Insert Merge Field</div><div class="word-dialog-body"><div class="choice-grid"><button type="button" class="choice-btn${d.field_name === "FirstName" ? " selected" : ""}" data-field-name="FirstName">FirstName</button><button type="button" class="choice-btn${d.field_name === "Surname" ? " selected" : ""}" data-field-name="Surname">Surname</button></div><div class="dialog-actions"><button type="button" class="mini-btn" id="fieldCancelBtn">Cancel</button><button type="button" class="mini-btn primary" id="fieldApplyBtn">Insert</button></div></div></div></div>` : ``}</div>`;
+        root.innerHTML = `<div class="workspace-sim"><div class="merge-preview"><div class="preview-title">Mail Merge Preview</div><div>Dear ${d.merge_field_inserted ? `<span class="merge-field">&laquo;FirstName&raquo;</span>` : "Learner"},</div><div>Your practical test is scheduled for Friday.</div></div>${d.merge_dialog_open ? `<div class="dialog-layer"><div class="word-dialog word-dialog-floating"><div class="word-dialog-head">Start Mail Merge</div><div class="word-dialog-body"><div class="mail-merge-types"><div class="mail-merge-tile${d.merge_type === "letters" ? " selected" : ""}" data-merge-type="letters"><strong>Letters</strong><div>Create a set of letters for printing or email.</div></div><div class="mail-merge-tile${d.merge_type === "labels" ? " selected" : ""}" data-merge-type="labels"><strong>Labels</strong><div>Create address labels from a recipient list.</div></div></div><div class="dialog-actions"><button type="button" class="mini-btn" id="mergeCancelBtn">Cancel</button><button type="button" class="mini-btn primary" id="mergeApplyBtn">OK</button></div></div></div></div>` : ``}${d.field_dialog_open ? `<div class="dialog-layer"><div class="word-dialog word-dialog-floating"><div class="word-dialog-head">Insert Merge Field</div><div class="word-dialog-body"><div class="merge-field-strip"><div class="merge-field-row${d.field_name === "FirstName" ? " selected" : ""}" data-field-name="FirstName"><span>FirstName</span><span>Text</span></div><div class="merge-field-row${d.field_name === "Surname" ? " selected" : ""}" data-field-name="Surname"><span>Surname</span><span>Text</span></div></div><div class="dialog-actions"><button type="button" class="mini-btn" id="fieldCancelBtn">Cancel</button><button type="button" class="mini-btn primary" id="fieldApplyBtn">Insert</button></div></div></div></div>` : ``}</div>`;
         document.querySelectorAll("[data-merge-type]").forEach(button => button.addEventListener("click", function(){ d.merge_type = this.dataset.mergeType || ""; syncHiddenFields(activeQuestionIndex); renderQuestionWorkspace(); }));
         document.querySelectorAll("[data-field-name]").forEach(button => button.addEventListener("click", function(){ d.field_name = this.dataset.fieldName || ""; syncHiddenFields(activeQuestionIndex); renderQuestionWorkspace(); }));
         const mcancel = document.getElementById("mergeCancelBtn"), mapply = document.getElementById("mergeApplyBtn"), fcancel = document.getElementById("fieldCancelBtn"), fapply = document.getElementById("fieldApplyBtn");
@@ -793,28 +1010,28 @@ function evaluateQuestion(q, s) {
     if (q.title === "Insert Table") return !!s.docState.table && Number(s.docState.table.columns) === 3 && Number(s.docState.table.rows) === 6;
     if (q.title === "Font Size") return Number(s.docState.font_size || 0) === 24;
     if (q.title === "Font Color") return (s.docState.font_color || "").toLowerCase() === "#c62828";
-    if (q.title === "Insert Chart") return !!s.docState.chart_inserted;
-    if (q.title === "Insert Picture") return !!s.docState.picture_inserted;
+    if (q.title === "Insert Chart") return !!s.docState.chart_inserted && s.docState.chart_type === "column";
+    if (q.title === "Insert Picture") return !!s.docState.picture_inserted && s.docState.picture_choice === "campus";
     if (q.title === "Insert Sources") return !!s.docState.source_added;
     if (q.title === "Insert Citation") return !!s.docState.citation_inserted;
-    if (q.title === "Insert Footnote") return !!s.docState.footnote_inserted;
-    if (q.title === "Insert Caption") return !!s.docState.caption_inserted;
-    if (q.title === "Insert Bookmark") return !!s.docState.bookmark_inserted;
+    if (q.title === "Insert Footnote") return !!s.docState.footnote_inserted && !!String(s.docState.footnote_text || "").trim();
+    if (q.title === "Insert Caption") return !!s.docState.caption_inserted && (s.docState.caption_label || "") === "Figure" && !!String(s.docState.caption_text || "").trim();
+    if (q.title === "Insert Bookmark") return !!s.docState.bookmark_inserted && (s.docState.bookmark_name || "").trim() === "bmResults";
     if (q.title === "Bullet List") return s.docState.list_type === "bullets";
     if (q.title === "Numbered List") return s.docState.list_type === "numbered";
-    if (q.title === "Apply Heading") return s.docState.heading_level === "heading1";
-    if (q.title === "Align Left") return s.docState.alignment === "left";
-    if (q.title === "Align Center") return s.docState.alignment === "center";
-    if (q.title === "Align Right") return s.docState.alignment === "right";
-    if (q.title === "Justify Text") return s.docState.alignment === "justify";
+    if (q.title === "Apply Heading") return s.docState.heading_level === "heading1" && s.docState.pending_style === "Heading 1";
+    if (q.title === "Align Left") return s.docState.alignment === "left" && s.docState.pending_alignment === "left";
+    if (q.title === "Align Center") return s.docState.alignment === "center" && s.docState.pending_alignment === "center";
+    if (q.title === "Align Right") return s.docState.alignment === "right" && s.docState.pending_alignment === "right";
+    if (q.title === "Justify Text") return s.docState.alignment === "justify" && s.docState.pending_alignment === "justify";
     if (q.title === "Table Borders") return !!s.docState.table_borders;
     if (q.title === "Paragraph Borders") return !!s.docState.paragraph_borders;
     if (q.title === "Find") return (s.docState.find_text || "").trim().toUpperCase() === "TABLES" && !!s.docState.found;
     if (q.title === "Shading") return !!s.docState.shaded;
     if (q.title === "Change Orientation") return s.docState.orientation === "landscape";
     if (q.title === "Change Page Size") return s.docState.page_size === "Legal";
-    if (q.title === "Add Page Break") return !!s.docState.page_break;
-    if (q.title === "Add Column Break") return !!s.docState.column_break;
+    if (q.title === "Add Page Break") return !!s.docState.page_break && s.docState.break_choice === "page";
+    if (q.title === "Add Column Break") return !!s.docState.column_break && s.docState.break_choice === "column";
     if (q.title === "Add Cover Page") return !!s.docState.cover_page;
     if (q.title === "Insert SmartArt") return !!s.docState.smartart_inserted;
     if (q.title === "Edit SmartArt") return !!s.docState.smartart_inserted && !!s.docState.smartart_edited;
@@ -835,11 +1052,17 @@ function recordAction(controlId) {
     if (q.title === "Font Size" && controlId === "home.font_size") { s.docState.size_dialog_open = true; syncHiddenFields(activeQuestionIndex); renderAll(); return; }
     if (q.title === "Font Color" && controlId === "home.font_color") { s.docState.color_dialog_open = true; syncHiddenFields(activeQuestionIndex); renderAll(); return; }
     if ((q.title === "Bullet List" && controlId === "home.bullets") || (q.title === "Numbered List" && controlId === "home.numbering")) { s.docState.list_dialog_open = true; syncHiddenFields(activeQuestionIndex); renderAll(); return; }
+    if (q.title === "Insert Chart" && controlId === "insert.chart") { s.docState.chart_dialog_open = true; syncHiddenFields(activeQuestionIndex); renderAll(); return; }
+    if (q.title === "Insert Picture" && controlId === "insert.pictures") { s.docState.picture_dialog_open = true; syncHiddenFields(activeQuestionIndex); renderAll(); return; }
     if (q.title === "Insert Sources" && controlId === "references.manage_sources") { s.docState.source_dialog_open = true; syncHiddenFields(activeQuestionIndex); renderAll(); return; }
     if (q.title === "Insert Citation" && controlId === "references.insert_citation") { s.docState.citation_dialog_open = true; syncHiddenFields(activeQuestionIndex); renderAll(); return; }
+    if (q.title === "Insert Bookmark" && controlId === "insert.bookmark") { s.docState.bookmark_dialog_open = true; syncHiddenFields(activeQuestionIndex); renderAll(); return; }
+    if (q.title === "Apply Heading" && controlId === "home.style_heading1") { s.docState.styles_dialog_open = true; s.docState.pending_style = "Heading 1"; syncHiddenFields(activeQuestionIndex); renderAll(); return; }
+    if (q.title === "Left Indent" && controlId === "layout.indent_left") { s.docState.indent_dialog_open = true; syncHiddenFields(activeQuestionIndex); renderAll(); return; }
+    if (q.title === "Right Indent" && controlId === "layout.indent_right") { s.docState.indent_dialog_open = true; syncHiddenFields(activeQuestionIndex); renderAll(); return; }
     if ((q.title === "Table Borders" || q.title === "Paragraph Borders") && controlId === "home.borders") { s.docState.borders_dialog_open = true; syncHiddenFields(activeQuestionIndex); renderAll(); return; }
-    if (controlId === "home.replace") { s.docState.dialog_open = true; syncHiddenFields(activeQuestionIndex); renderAll(); return; }
-    if (controlId === "home.find") { s.docState.find_open = true; syncHiddenFields(activeQuestionIndex); renderAll(); return; }
+    if (controlId === "home.replace") { s.docState.dialog_open = true; s.docState.find_dialog_mode = "replace"; syncHiddenFields(activeQuestionIndex); renderAll(); return; }
+    if (controlId === "home.find") { s.docState.find_open = true; s.docState.find_dialog_mode = "find"; syncHiddenFields(activeQuestionIndex); renderAll(); return; }
     if (controlId === "insert.table") { s.docState.picker_open = true; syncHiddenFields(activeQuestionIndex); renderAll(); return; }
     if (q.title === "Shading" && controlId === "home.shading") { s.docState.shading_dialog_open = true; syncHiddenFields(activeQuestionIndex); renderAll(); return; }
     if (q.title === "Change Orientation" && controlId === "layout.orientation") { s.docState.orientation_dialog_open = true; syncHiddenFields(activeQuestionIndex); renderAll(); return; }
@@ -847,21 +1070,39 @@ function recordAction(controlId) {
     if (q.title === "Add Cover Page" && controlId === "insert.cover_page") { s.docState.cover_dialog_open = true; syncHiddenFields(activeQuestionIndex); renderAll(); return; }
     if (q.title === "Insert SmartArt" && controlId === "insert.smartart") { s.docState.smartart_dialog_open = true; syncHiddenFields(activeQuestionIndex); renderAll(); return; }
     if (q.title === "Edit SmartArt" && controlId === "insert.smartart") { s.docState.smartart_dialog_open = true; syncHiddenFields(activeQuestionIndex); renderAll(); return; }
-    if (q.title === "Edit SmartArt" && controlId === "smartart_format") { s.docState.smartart_edit_open = true; syncHiddenFields(activeQuestionIndex); renderAll(); return; }
+    if (q.title === "Edit SmartArt" && controlId === "smartart_format") {
+        if (!s.docState.smartart_inserted) return;
+        s.docState.smartart_edit_open = true;
+        syncHiddenFields(activeQuestionIndex);
+        renderAll();
+        return;
+    }
     if (q.title === "Mail Merge" && controlId === "mailings.start_merge") { s.docState.merge_dialog_open = true; syncHiddenFields(activeQuestionIndex); renderAll(); return; }
-    if (q.title === "Insert Merge Fields" && controlId === "mailings.insert_merge_field") { s.docState.field_dialog_open = true; syncHiddenFields(activeQuestionIndex); renderAll(); return; }
+    if (q.title === "Insert Merge Fields" && controlId === "mailings.insert_merge_field") {
+        if (!s.docState.merge_started) s.docState.merge_started = true;
+        s.docState.field_dialog_open = true;
+        syncHiddenFields(activeQuestionIndex);
+        renderAll();
+        return;
+    }
     if (q.title === "Font Size" && controlId === "home.font_size_apply") { s.docState.font_size = Number(s.docState.pending_size || 16); s.docState.size_dialog_open = false; }
     if (q.title === "Font Color" && controlId === "home.font_color_apply") { s.docState.font_color = s.docState.pending_color || "#111827"; s.docState.color_dialog_open = false; }
-    if (q.title === "Insert Chart" && controlId === "insert.chart") s.docState.chart_inserted = true;
-    if (q.title === "Insert Picture" && controlId === "insert.pictures") s.docState.picture_inserted = true;
-    if (q.title === "Insert Sources" && controlId === "references.manage_sources_apply") { s.docState.source_added = s.docState.source_type === "Book"; s.docState.source_dialog_open = false; }
+    if (q.title === "Insert Chart" && controlId === "insert.chart_apply") { s.docState.chart_inserted = s.docState.chart_type === "column"; s.docState.chart_dialog_open = false; }
+    if (q.title === "Insert Picture" && controlId === "insert.pictures_apply") { s.docState.picture_inserted = s.docState.picture_choice === "campus"; s.docState.picture_dialog_open = false; }
+    if (q.title === "Insert Sources" && controlId === "references.manage_sources_apply") {
+        s.docState.source_added = s.docState.source_type === "Book"
+            && !!String(s.docState.source_author || "").trim()
+            && !!String(s.docState.source_title || "").trim()
+            && !!String(s.docState.source_year || "").trim();
+        s.docState.source_dialog_open = false;
+    }
     if (q.title === "Insert Citation" && controlId === "references.insert_citation_apply") { s.docState.citation_inserted = s.docState.citation_style === "Naidoo2024"; s.docState.citation_dialog_open = false; }
     if (q.title === "Insert Footnote" && controlId === "references.insert_footnote") s.docState.footnote_inserted = true;
     if (q.title === "Insert Caption" && controlId === "references.caption") s.docState.caption_inserted = true;
-    if (q.title === "Insert Bookmark" && controlId === "insert.bookmark") s.docState.bookmark_inserted = true;
+    if (q.title === "Insert Bookmark" && controlId === "insert.bookmark_apply") { s.docState.bookmark_inserted = (s.docState.bookmark_name || "").trim() === "bmResults"; s.docState.bookmark_dialog_open = false; }
     if (q.title === "Bullet List" && controlId === "home.bullets_apply") { s.docState.list_type = s.docState.pending_list; s.docState.list_dialog_open = false; }
     if (q.title === "Numbered List" && controlId === "home.numbering_apply") { s.docState.list_type = s.docState.pending_list; s.docState.list_dialog_open = false; }
-    if (q.title === "Apply Heading" && controlId === "home.style_heading1") s.docState.heading_level = "heading1";
+    if (q.title === "Apply Heading" && controlId === "home.style_heading1_apply") { s.docState.heading_level = s.docState.pending_style === "Heading 1" ? "heading1" : "normal"; s.docState.styles_dialog_open = false; }
     if (q.title === "Align Left" && controlId === "home.align_left") s.docState.alignment = "left";
     if (q.title === "Align Center" && controlId === "home.align_center") s.docState.alignment = "center";
     if (q.title === "Align Right" && controlId === "home.align_right") s.docState.alignment = "right";
@@ -886,10 +1127,14 @@ function recordAction(controlId) {
     if (q.title === "Insert SmartArt" && controlId === "insert.smartart_apply") { s.docState.smartart_inserted = s.docState.smartart_choice === "process"; s.docState.smartart_dialog_open = false; }
     if (q.title === "Edit SmartArt" && controlId === "insert.smartart_apply") { s.docState.smartart_inserted = s.docState.smartart_choice === "process"; s.docState.smartart_dialog_open = false; }
     if (q.title === "Edit SmartArt" && controlId === "smartart_format_apply") { s.docState.smartart_edited = s.docState.smartart_color === "green"; s.docState.smartart_edit_open = false; }
-    if (q.title === "Left Indent" && controlId === "layout.indent_left") s.docState.left_indent = 48;
-    if (q.title === "Right Indent" && controlId === "layout.indent_right") s.docState.right_indent = 48;
+    if (q.title === "Left Indent" && controlId === "layout.indent_left_apply") { s.docState.left_indent = Number(s.docState.pending_indent_left || 0); s.docState.indent_dialog_open = false; }
+    if (q.title === "Right Indent" && controlId === "layout.indent_right_apply") { s.docState.right_indent = Number(s.docState.pending_indent_right || 0); s.docState.indent_dialog_open = false; }
     if (q.title === "Mail Merge" && controlId === "mailings.start_merge_apply") { s.docState.merge_started = s.docState.merge_type === "letters"; s.docState.merge_dialog_open = false; }
-    if (q.title === "Insert Merge Fields" && controlId === "mailings.insert_merge_field_apply") { s.docState.merge_field_inserted = s.docState.field_name === "FirstName"; s.docState.field_dialog_open = false; }
+    if (q.title === "Insert Merge Fields" && controlId === "mailings.insert_merge_field_apply") {
+        s.docState.merge_started = true;
+        s.docState.merge_field_inserted = s.docState.field_name === "FirstName";
+        s.docState.field_dialog_open = false;
+    }
     if (!s.actions.includes(controlId)) s.actions.push(controlId);
     syncHiddenFields(activeQuestionIndex);
     if (evaluateQuestion(q, s)) {
@@ -941,4 +1186,18 @@ document.addEventListener("click", function (event) { if (!event.target.closest(
 document.getElementById("wordCapsForm").addEventListener("keydown", function (event) {
     if (event.key !== "Enter") return;
     const target = event.target;
-    i
+    if (!target) return;
+    if (target.tagName === "TEXTAREA") return;
+    if (target.tagName === "BUTTON" && target.type === "submit") return;
+    event.preventDefault();
+});
+document.getElementById("wordCapsForm").addEventListener("submit", function () {
+    try { localStorage.removeItem(storageKey); } catch (error) {}
+});
+restoreProgress();
+const initialTabs = Array.from(currentTabs());
+switchTab(initialTabs.includes("home") ? "home" : initialTabs[0]);
+renderAll();
+</script>
+</body>
+</html>

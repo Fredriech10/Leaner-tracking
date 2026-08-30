@@ -13,5 +13,7 @@
     "editor.defaultFormatter": null
   },
   "editor.defaultFormatter": "Blackboxapp.blackboxagent",
-  "editor.defaultFoldingRangeProvider": "Blackboxapp.blackboxagent"
+  "editor.defaultFoldingRangeProvider": "Blackboxapp.blackboxagent",
+  "python.defaultInterpreterPath": "E:\\Sripts\\Leaner tracking\\.venv-1\\Scripts\\python.exe",
+  "python.terminal.activateEnvironment": true
 }

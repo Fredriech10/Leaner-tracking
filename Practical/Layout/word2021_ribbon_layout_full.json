@@ -1,0 +1,3102 @@
+{
+  "schemaVersion": "1.0",
+  "application": "Microsoft Word",
+  "targetVersion": "Office 2021",
+  "layoutProfile": {
+    "name": "wide-desktop-reference",
+    "description": "Approximate wide-window Word 2021 ribbon layout for visual reconstruction/quiz rendering.",
+    "coordinateSystem": {
+      "groupOrder": "left-to-right",
+      "rowCount": 3,
+      "rowMeaning": "Small controls normally occupy one of three vertical rows. Large controls span all three rows.",
+      "columnMeaning": "Logical position within each group, not pixel coordinates.",
+      "responsive": false
+    },
+    "assetPolicy": {
+      "originalIconFolder": "assets/word2021/original",
+      "quizIconFolder": "assets/word2021/quiz_black",
+      "ribbonIconFolder": "assets/word2021/ribbon"
+    },
+    "importantNote": "This is a renderer-oriented model, not an official Microsoft export. Word's real ribbon is responsive and may rearrange/collapse controls based on window width and build."
+  },
+  "tabs": [
+    {
+      "label": "Home",
+      "idMso": "TabHome",
+      "order": 1,
+      "groups": [
+        {
+          "label": "Clipboard",
+          "idMso": "GroupClipboard",
+          "groupIndex": 1,
+          "widthUnits": 5,
+          "layout": {
+            "rows": 3,
+            "columns": 3,
+            "flow": "column-major",
+            "launcher": false
+          },
+          "controls": [
+            {
+              "label": "Paste",
+              "idMso": "Paste",
+              "type": "splitButton",
+              "size": "large",
+              "row": 1,
+              "column": 1,
+              "rowSpan": 3,
+              "colSpan": 2,
+              "image": "Paste.png",
+              "idStatus": "confirmed"
+            },
+            {
+              "label": "Cut",
+              "idMso": "Cut",
+              "type": "button",
+              "size": "small",
+              "row": 1,
+              "column": 3,
+              "rowSpan": 1,
+              "colSpan": 1,
+              "image": "Cut.png",
+              "idStatus": "confirmed"
+            },
+            {
+              "label": "Copy",
+              "idMso": "Copy",
+              "type": "button",
+              "size": "small",
+              "row": 2,
+              "column": 3,
+              "rowSpan": 1,
+              "colSpan": 1,
+              "image": "Copy.png",
+              "idStatus": "confirmed"
+            },
+            {
+              "label": "Format Painter",
+              "idMso": "FormatPainter",
+              "type": "button",
+              "size": "small",
+              "row": 3,
+              "column": 3,
+              "rowSpan": 1,
+              "colSpan": 1,
+              "image": "FormatPainter.png",
+              "idStatus": "confirmed"
+            }
+          ]
+        },
+        {
+          "label": "Font",
+          "idMso": "GroupFont",
+          "groupIndex": 2,
+          "widthUnits": 12,
+          "layout": {
+            "rows": 3,
+            "columns": 9,
+            "flow": "column-major",
+            "launcher": true
+          },
+          "controls": [
+            {
+              "label": "Font",
+              "idMso": null,
+              "type": "comboBox",
+              "size": "comboBox",
+              "row": 1,
+              "column": 1,
+              "rowSpan": 1,
+              "colSpan": 3,
+              "image": null,
+              "idStatus": "needs_validation",
+              "notes": "Font family selector"
+            },
+            {
+              "label": "Font Size",
+              "idMso": null,
+              "type": "comboBox",
+              "size": "comboBox",
+              "row": 1,
+              "column": 4,
+              "rowSpan": 1,
+              "colSpan": 2,
+              "image": null,
+              "idStatus": "needs_validation"
+            },
+            {
+              "label": "Grow Font",
+              "idMso": "FontSizeIncrease",
+              "type": "button",
+              "size": "small",
+              "row": 1,
+              "column": 6,
+              "rowSpan": 1,
+              "colSpan": 1,
+              "image": "FontSizeIncrease.png",
+              "idStatus": "confirmed"
+            },
+            {
+              "label": "Shrink Font",
+              "idMso": "FontSizeDecrease",
+              "type": "button",
+              "size": "small",
+              "row": 1,
+              "column": 7,
+              "rowSpan": 1,
+              "colSpan": 1,
+              "image": "FontSizeDecrease.png",
+              "idStatus": "confirmed"
+            },
+            {
+              "label": "Change Case",
+              "idMso": "ChangeCaseGallery",
+              "type": "menu",
+              "size": "small",
+              "row": 1,
+              "column": 8,
+              "rowSpan": 1,
+              "colSpan": 1,
+              "image": "ChangeCaseGallery.png",
+              "idStatus": "confirmed"
+            },
+            {
+              "label": "Clear All Formatting",
+              "idMso": "ClearFormatting",
+              "type": "button",
+              "size": "small",
+              "row": 1,
+              "column": 9,
+              "rowSpan": 1,
+              "colSpan": 1,
+              "image": "ClearFormatting.png",
+              "idStatus": "confirmed"
+            },
+            {
+              "label": "Bold",
+              "idMso": "Bold",
+              "type": "button",
+              "size": "small",
+              "row": 2,
+              "column": 1,
+              "rowSpan": 1,
+              "colSpan": 1,
+              "image": "Bold.png",
+              "idStatus": "confirmed"
+            },
+            {
+              "label": "Italic",
+              "idMso": "Italic",
+              "type": "button",
+              "size": "small",
+              "row": 2,
+              "column": 2,
+              "rowSpan": 1,
+              "colSpan": 1,
+              "image": "Italic.png",
+              "idStatus": "confirmed"
+            },
+            {
+              "label": "Underline",
+              "idMso": "Underline",
+              "type": "splitButton",
+              "size": "small",
+              "row": 2,
+              "column": 3,
+              "rowSpan": 1,
+              "colSpan": 1,
+              "image": "Underline.png",
+              "idStatus": "confirmed"
+            },
+            {
+              "label": "Strikethrough",
+              "idMso": "Strikethrough",
+              "type": "button",
+              "size": "small",
+              "row": 2,
+              "column": 4,
+              "rowSpan": 1,
+              "colSpan": 1,
+              "image": "Strikethrough.png",
+              "idStatus": "confirmed"
+            },
+            {
+              "label": "Subscript",
+              "idMso": "Subscript",
+              "type": "button",
+              "size": "small",
+              "row": 2,
+              "column": 5,
+              "rowSpan": 1,
+              "colSpan": 1,
+              "image": "Subscript.png",
+              "idStatus": "confirmed"
+            },
+            {
+              "label": "Superscript",
+              "idMso": "Superscript",
+              "type": "button",
+              "size": "small",
+              "row": 2,
+              "column": 6,
+              "rowSpan": 1,
+              "colSpan": 1,
+              "image": "Superscript.png",
+              "idStatus": "confirmed"
+            },
+            {
+              "label": "Text Effects",
+              "idMso": "TextEffectsGallery",
+              "type": "menu",
+              "size": "small",
+              "row": 3,
+              "column": 1,
+              "rowSpan": 1,
+              "colSpan": 1,
+              "image": "TextEffectsGallery.png",
+              "idStatus": "confirmed"
+            },
+            {
+              "label": "Text Highlight Color",
+              "idMso": "TextHighlightColorPicker",
+              "type": "splitButton",
+              "size": "small",
+              "row": 3,
+              "column": 2,
+              "rowSpan": 1,
+              "colSpan": 1,
+              "image": "TextHighlightColorPicker.png",
+              "idStatus": "confirmed"
+            },
+            {
+              "label": "Font Color",
+              "idMso": "FontColorPicker",
+              "type": "splitButton",
+              "size": "small",
+              "row": 3,
+              "column": 3,
+              "rowSpan": 1,
+              "colSpan": 1,
+              "image": "FontColorPicker.png",
+              "idStatus": "confirmed"
+            }
+          ]
+        },
+        {
+          "label": "Paragraph",
+          "idMso": "GroupParagraph",
+          "groupIndex": 3,
+          "widthUnits": 12,
+          "layout": {
+            "rows": 3,
+            "columns": 7,
+            "flow": "column-major",
+            "launcher": true
+          },
+          "controls": [
+            {
+              "label": "Bullets",
+              "idMso": "Bullets",
+              "type": "splitButton",
+              "size": "small",
+              "row": 1,
+              "column": 1,
+              "rowSpan": 1,
+              "colSpan": 1,
+              "image": "Bullets.png",
+              "idStatus": "confirmed"
+            },
+            {
+              "label": "Numbering",
+              "idMso": "Numbering",
+              "type": "splitButton",
+              "size": "small",
+              "row": 1,
+              "column": 2,
+              "rowSpan": 1,
+              "colSpan": 1,
+              "image": "Numbering.png",
+              "idStatus": "confirmed"
+            },
+            {
+              "label": "Multilevel List",
+              "idMso": "MultiLevelListGallery",
+              "type": "menu",
+              "size": "small",
+              "row": 1,
+              "column": 3,
+              "rowSpan": 1,
+              "colSpan": 1,
+              "image": "MultiLevelListGallery.png",
+              "idStatus": "confirmed"
+            },
+            {
+              "label": "Decrease Indent",
+              "idMso": "IndentDecreaseWord",
+              "type": "button",
+              "size": "small",
+              "row": 1,
+              "column": 4,
+              "rowSpan": 1,
+              "colSpan": 1,
+              "image": "IndentDecreaseWord.png",
+              "idStatus": "confirmed"
+            },
+            {
+              "label": "Increase Indent",
+              "idMso": "IndentIncreaseWord",
+              "type": "button",
+              "size": "small",
+              "row": 1,
+              "column": 5,
+              "rowSpan": 1,
+              "colSpan": 1,
+              "image": "IndentIncreaseWord.png",
+              "idStatus": "confirmed"
+            },
+            {
+              "label": "Sort",
+              "idMso": "SortDialogClassic",
+              "type": "button",
+              "size": "small",
+              "row": 1,
+              "column": 6,
+              "rowSpan": 1,
+              "colSpan": 1,
+              "image": "SortDialogClassic.png",
+              "idStatus": "confirmed"
+            },
+            {
+              "label": "Show/Hide ¶",
+              "idMso": "ParagraphMarks",
+              "type": "toggleButton",
+              "size": "small",
+              "row": 1,
+              "column": 7,
+              "rowSpan": 1,
+              "colSpan": 1,
+              "image": "ParagraphMarks.png",
+              "idStatus": "confirmed"
+            },
+            {
+              "label": "Align Left",
+              "idMso": "AlignLeft",
+              "type": "toggleButton",
+              "size": "small",
+              "row": 2,
+              "column": 1,
+              "rowSpan": 1,
+              "colSpan": 1,
+              "image": "AlignLeft.png",
+              "idStatus": "confirmed"
+            },
+            {
+              "label": "Center",
+              "idMso": "AlignCenter",
+              "type": "toggleButton",
+              "size": "small",
+              "row": 2,
+              "column": 2,
+              "rowSpan": 1,
+              "colSpan": 1,
+              "image": "AlignCenter.png",
+              "idStatus": "confirmed"
+            },
+            {
+              "label": "Align Right",
+              "idMso": "AlignRight",
+              "type": "toggleButton",
+              "size": "small",
+              "row": 2,
+              "column": 3,
+              "rowSpan": 1,
+              "colSpan": 1,
+              "image": "AlignRight.png",
+              "idStatus": "confirmed"
+            },
+            {
+              "label": "Justify",
+              "idMso": "AlignJustify",
+              "type": "toggleButton",
+              "size": "small",
+              "row": 2,
+              "column": 4,
+              "rowSpan": 1,
+              "colSpan": 1,
+              "image": "AlignJustify.png",
+              "idStatus": "confirmed"
+            },
+            {
+              "label": "Line and Paragraph Spacing",
+              "idMso": "LineSpacing",
+              "type": "menu",
+              "size": "small",
+              "row": 2,
+              "column": 5,
+              "rowSpan": 1,
+              "colSpan": 1,
+              "image": "LineSpacing.png",
+              "idStatus": "confirmed"
+            },
+            {
+              "label": "Shading",
+              "idMso": "ShadingColorPicker",
+              "type": "splitButton",
+              "size": "small",
+              "row": 3,
+              "column": 1,
+              "rowSpan": 1,
+              "colSpan": 1,
+              "image": "ShadingColorPicker.png",
+              "idStatus": "confirmed"
+            },
+            {
+              "label": "Borders",
+              "idMso": "BordersGallery",
+              "type": "splitButton",
+              "size": "small",
+              "row": 3,
+              "column": 2,
+              "rowSpan": 1,
+              "colSpan": 1,
+              "image": "BordersGallery.png",
+              "idStatus": "confirmed"
+            }
+          ]
+        },
+        {
+          "label": "Styles",
+          "idMso": "GroupStyles",
+          "groupIndex": 4,
+          "widthUnits": 10,
+          "layout": {
+            "rows": 3,
+            "columns": 9,
+            "flow": "column-major",
+            "launcher": true
+          },
+          "controls": [
+            {
+              "label": "Styles Gallery",
+              "idMso": null,
+              "type": "gallery",
+              "size": "gallery",
+              "row": 1,
+              "column": 1,
+              "rowSpan": 3,
+              "colSpan": 8,
+              "image": null,
+              "idStatus": "needs_validation",
+              "notes": "Horizontal Quick Styles gallery"
+            },
+            {
+              "label": "Styles Pane",
+              "idMso": "StylesPane",
+              "type": "button",
+              "size": "small",
+              "row": 1,
+              "column": 9,
+              "rowSpan": 1,
+              "colSpan": 1,
+              "image": "StylesPane.png",
+              "idStatus": "confirmed"
+            }
+          ]
+        },
+        {
+          "label": "Editing",
+          "idMso": "GroupEditing",
+          "groupIndex": 5,
+          "widthUnits": 5,
+          "layout": {
+            "rows": 3,
+            "columns": 3,
+            "flow": "column-major",
+            "launcher": false
+          },
+          "controls": [
+            {
+              "label": "Find",
+              "idMso": "FindDialog",
+              "type": "button",
+              "size": "large",
+              "row": 1,
+              "column": 1,
+              "rowSpan": 2,
+              "colSpan": 2,
+              "image": "FindDialog.png",
+              "idStatus": "confirmed"
+            },
+            {
+              "label": "Replace",
+              "idMso": "ReplaceDialog",
+              "type": "button",
+              "size": "small",
+              "row": 1,
+              "column": 3,
+              "rowSpan": 1,
+              "colSpan": 1,
+              "image": "ReplaceDialog.png",
+              "idStatus": "confirmed"
+            },
+            {
+              "label": "Select",
+              "idMso": "SelectMenu",
+              "type": "menu",
+              "size": "small",
+              "row": 2,
+              "column": 3,
+              "rowSpan": 1,
+              "colSpan": 1,
+              "image": "SelectMenu.png",
+              "idStatus": "confirmed"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "label": "Insert",
+      "idMso": "TabInsert",
+      "order": 2,
+      "groups": [
+        {
+          "label": "Pages",
+          "idMso": "GroupPages",
+          "groupIndex": 1,
+          "widthUnits": 6,
+          "layout": {
+            "rows": 3,
+            "columns": 6,
+            "flow": "column-major",
+            "launcher": false
+          },
+          "controls": [
+            {
+              "label": "Cover Page",
+              "idMso": "CoverPageInsertGallery",
+              "type": "gallery",
+              "size": "large",
+              "row": 1,
+              "column": 1,
+              "rowSpan": 3,
+              "colSpan": 2,
+              "image": "CoverPageInsertGallery.png",
+              "idStatus": "confirmed"
+            },
+            {
+              "label": "Blank Page",
+              "idMso": "PageInsert",
+              "type": "button",
+              "size": "large",
+              "row": 1,
+              "column": 3,
+              "rowSpan": 3,
+              "colSpan": 2,
+              "image": "PageInsert.png",
+              "idStatus": "confirmed"
+            },
+            {
+              "label": "Page Break",
+              "idMso": "PageBreakInsertWord",
+              "type": "button",
+              "size": "large",
+              "row": 1,
+              "column": 5,
+              "rowSpan": 3,
+              "colSpan": 2,
+              "image": "PageBreakInsertWord.png",
+              "idStatus": "confirmed"
+            }
+          ]
+        },
+        {
+          "label": "Tables",
+          "idMso": "GroupInsertTableWord",
+          "groupIndex": 2,
+          "widthUnits": 4,
+          "layout": {
+            "rows": 3,
+            "columns": 3,
+            "flow": "column-major",
+            "launcher": false
+          },
+          "controls": [
+            {
+              "label": "Table",
+              "idMso": "TableInsertDialog",
+              "type": "gallery",
+              "size": "large",
+              "row": 1,
+              "column": 1,
+              "rowSpan": 3,
+              "colSpan": 3,
+              "image": "TableInsertDialog.png",
+              "idStatus": "confirmed"
+            }
+          ]
+        },
+        {
+          "label": "Illustrations",
+          "idMso": "GroupInsertIllustrations",
+          "groupIndex": 3,
+          "widthUnits": 10,
+          "layout": {
+            "rows": 3,
+            "columns": 10,
+            "flow": "column-major",
+            "launcher": false
+          },
+          "controls": [
+            {
+              "label": "Pictures",
+              "idMso": "PictureInsertFromFile",
+              "type": "button",
+              "size": "large",
+              "row": 1,
+              "column": 1,
+              "rowSpan": 3,
+              "colSpan": 2,
+              "image": "PictureInsertFromFile.png",
+              "idStatus": "confirmed"
+            },
+            {
+              "label": "Shapes",
+              "idMso": "ShapesInsertGallery",
+              "type": "gallery",
+              "size": "large",
+              "row": 1,
+              "column": 3,
+              "rowSpan": 3,
+              "colSpan": 2,
+              "image": "ShapesInsertGallery.png",
+              "idStatus": "confirmed"
+            },
+            {
+              "label": "SmartArt",
+              "idMso": "SmartArtInsert",
+              "type": "button",
+              "size": "large",
+              "row": 1,
+              "column": 5,
+              "rowSpan": 3,
+              "colSpan": 2,
+              "image": "SmartArtInsert.png",
+              "idStatus": "confirmed"
+            },
+            {
+              "label": "Chart",
+              "idMso": "ChartInsert",
+              "type": "button",
+              "size": "large",
+              "row": 1,
+              "column": 7,
+              "rowSpan": 3,
+              "colSpan": 2,
+              "image": "ChartInsert.png",
+              "idStatus": "confirmed"
+            },
+            {
+              "label": "Screenshot",
+              "idMso": "ScreenshotInsertGallery",
+              "type": "gallery",
+              "size": "large",
+              "row": 1,
+              "column": 9,
+              "rowSpan": 3,
+              "colSpan": 2,
+              "image": "ScreenshotInsertGallery.png",
+              "idStatus": "confirmed"
+            }
+          ]
+        },
+        {
+          "label": "Links",
+          "idMso": "GroupLinks",
+          "groupIndex": 4,
+          "widthUnits": 5,
+          "layout": {
+            "rows": 3,
+            "columns": 3,
+            "flow": "column-major",
+            "launcher": false
+          },
+          "controls": [
+            {
+              "label": "Link",
+              "idMso": "HyperlinkInsert",
+              "type": "button",
+              "size": "large",
+              "row": 1,
+              "column": 1,
+              "rowSpan": 3,
+              "colSpan": 2,
+              "image": "HyperlinkInsert.png",
+              "idStatus": "confirmed"
+            },
+            {
+              "label": "Bookmark",
+              "idMso": "BookmarkInsert",
+              "type": "button",
+              "size": "small",
+              "row": 1,
+              "column": 3,
+              "rowSpan": 1,
+              "colSpan": 1,
+              "image": "BookmarkInsert.png",
+              "idStatus": "confirmed"
+            },
+            {
+              "label": "Cross-reference",
+              "idMso": "CrossReferenceInsert",
+              "type": "button",
+              "size": "small",
+              "row": 2,
+              "column": 3,
+              "rowSpan": 1,
+              "colSpan": 1,
+              "image": "CrossReferenceInsert.png",
+              "idStatus": "confirmed"
+            }
+          ]
+        },
+        {
+          "label": "Header & Footer",
+          "idMso": "GroupHeaderFooter",
+          "groupIndex": 5,
+          "widthUnits": 6,
+          "layout": {
+            "rows": 3,
+            "columns": 6,
+            "flow": "column-major",
+            "launcher": false
+          },
+          "controls": [
+            {
+              "label": "Header",
+              "idMso": "HeaderInsertGallery",
+              "type": "gallery",
+              "size": "large",
+              "row": 1,
+              "column": 1,
+              "rowSpan": 3,
+              "colSpan": 2,
+              "image": "HeaderInsertGallery.png",
+              "idStatus": "confirmed"
+            },
+            {
+              "label": "Footer",
+              "idMso": "FooterInsertGallery",
+              "type": "gallery",
+              "size": "large",
+              "row": 1,
+              "column": 3,
+              "rowSpan": 3,
+              "colSpan": 2,
+              "image": "FooterInsertGallery.png",
+              "idStatus": "confirmed"
+            },
+            {
+              "label": "Page Number",
+              "idMso": "HeaderFooterPageNumberInsert",
+              "type": "gallery",
+              "size": "large",
+              "row": 1,
+              "column": 5,
+              "rowSpan": 3,
+              "colSpan": 2,
+              "image": "HeaderFooterPageNumberInsert.png",
+              "idStatus": "confirmed"
+            }
+          ]
+        },
+        {
+          "label": "Text",
+          "idMso": "GroupText",
+          "groupIndex": 6,
+          "widthUnits": 9,
+          "layout": {
+            "rows": 3,
+            "columns": 4,
+            "flow": "column-major",
+            "launcher": false
+          },
+          "controls": [
+            {
+              "label": "Text Box",
+              "idMso": "TextBoxInsert",
+              "type": "gallery",
+              "size": "large",
+              "row": 1,
+              "column": 1,
+              "rowSpan": 3,
+              "colSpan": 2,
+              "image": "TextBoxInsert.png",
+              "idStatus": "confirmed"
+            },
+            {
+              "label": "Quick Parts",
+              "idMso": "QuickPartsInsertGallery",
+              "type": "menu",
+              "size": "small",
+              "row": 1,
+              "column": 3,
+              "rowSpan": 1,
+              "colSpan": 1,
+              "image": "QuickPartsInsertGallery.png",
+              "idStatus": "confirmed"
+            },
+            {
+              "label": "WordArt",
+              "idMso": "WordArtInsertGallery",
+              "type": "gallery",
+              "size": "small",
+              "row": 2,
+              "column": 3,
+              "rowSpan": 1,
+              "colSpan": 1,
+              "image": "WordArtInsertGallery.png",
+              "idStatus": "confirmed"
+            },
+            {
+              "label": "Drop Cap",
+              "idMso": "DropCapInsertGallery",
+              "type": "menu",
+              "size": "small",
+              "row": 3,
+              "column": 3,
+              "rowSpan": 1,
+              "colSpan": 1,
+              "image": "DropCapInsertGallery.png",
+              "idStatus": "confirmed"
+            },
+            {
+              "label": "Signature Line",
+              "idMso": "SignatureLineInsert",
+              "type": "button",
+              "size": "small",
+              "row": 1,
+              "column": 4,
+              "rowSpan": 1,
+              "colSpan": 1,
+              "image": "SignatureLineInsert.png",
+              "idStatus": "confirmed"
+            },
+            {
+              "label": "Date & Time",
+              "idMso": "DateAndTimeInsert",
+              "type": "button",
+              "size": "small",
+              "row": 2,
+              "column": 4,
+              "rowSpan": 1,
+              "colSpan": 1,
+              "image": "DateAndTimeInsert.png",
+              "idStatus": "confirmed"
+            },
+            {
+              "label": "Object",
+              "idMso": "OleObjectInsertMenu",
+              "type": "menu",
+              "size": "small",
+              "row": 3,
+              "column": 4,
+              "rowSpan": 1,
+              "colSpan": 1,
+              "image": "OleObjectInsertMenu.png",
+              "idStatus": "confirmed"
+            }
+          ]
+        },
+        {
+          "label": "Symbols",
+          "idMso": "GroupInsertSymbols",
+          "groupIndex": 7,
+          "widthUnits": 5,
+          "layout": {
+            "rows": 3,
+            "columns": 4,
+            "flow": "column-major",
+            "launcher": false
+          },
+          "controls": [
+            {
+              "label": "Equation",
+              "idMso": "EquationInsertNew",
+              "type": "menu",
+              "size": "large",
+              "row": 1,
+              "column": 1,
+              "rowSpan": 3,
+              "colSpan": 2,
+              "image": "EquationInsertNew.png",
+              "idStatus": "confirmed"
+            },
+            {
+              "label": "Symbol",
+              "idMso": "SymbolInsert",
+              "type": "gallery",
+              "size": "large",
+              "row": 1,
+              "column": 3,
+              "rowSpan": 3,
+              "colSpan": 2,
+              "image": "SymbolInsert.png",
+              "idStatus": "confirmed"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "label": "Design",
+      "idMso": "TabWordDesign",
+      "order": 3,
+      "groups": [
+        {
+          "label": "Document Formatting",
+          "idMso": "GroupDocumentFormatting",
+          "groupIndex": 1,
+          "widthUnits": 20,
+          "layout": {
+            "rows": 3,
+            "columns": 14,
+            "flow": "column-major",
+            "launcher": false
+          },
+          "controls": [
+            {
+              "label": "Themes",
+              "idMso": "ThemesGallery",
+              "type": "gallery",
+              "size": "large",
+              "row": 1,
+              "column": 1,
+              "rowSpan": 3,
+              "colSpan": 2,
+              "image": "ThemesGallery.png",
+              "idStatus": "confirmed"
+            },
+            {
+              "label": "Style Set",
+              "idMso": null,
+              "type": "gallery",
+              "size": "gallery",
+              "row": 1,
+              "column": 3,
+              "rowSpan": 3,
+              "colSpan": 10,
+              "image": null,
+              "idStatus": "needs_validation",
+              "notes": "Wide horizontal style-set gallery"
+            },
+            {
+              "label": "Colors",
+              "idMso": "ThemeColorsGallery",
+              "type": "menu",
+              "size": "small",
+              "row": 1,
+              "column": 13,
+              "rowSpan": 1,
+              "colSpan": 1,
+              "image": "ThemeColorsGallery.png",
+              "idStatus": "confirmed"
+            },
+            {
+              "label": "Fonts",
+              "idMso": "ThemeFontsGallery",
+              "type": "menu",
+              "size": "small",
+              "row": 2,
+              "column": 13,
+              "rowSpan": 1,
+              "colSpan": 1,
+              "image": "ThemeFontsGallery.png",
+              "idStatus": "confirmed"
+            },
+            {
+              "label": "Paragraph Spacing",
+              "idMso": null,
+              "type": "menu",
+              "size": "small",
+              "row": 3,
+              "column": 13,
+              "rowSpan": 1,
+              "colSpan": 1,
+              "image": null,
+              "idStatus": "needs_validation"
+            },
+            {
+              "label": "Effects",
+              "idMso": "ThemeEffectsGallery",
+              "type": "menu",
+              "size": "small",
+              "row": 1,
+              "column": 14,
+              "rowSpan": 1,
+              "colSpan": 1,
+              "image": "ThemeEffectsGallery.png",
+              "idStatus": "confirmed"
+            },
+            {
+              "label": "Set as Default",
+              "idMso": "SetAsDefault",
+              "type": "button",
+              "size": "small",
+              "row": 2,
+              "column": 14,
+              "rowSpan": 1,
+              "colSpan": 1,
+              "image": "SetAsDefault.png",
+              "idStatus": "confirmed"
+            }
+          ]
+        },
+        {
+          "label": "Page Background",
+          "idMso": "GroupPageBackground",
+          "groupIndex": 2,
+          "widthUnits": 7,
+          "layout": {
+            "rows": 3,
+            "columns": 6,
+            "flow": "column-major",
+            "launcher": false
+          },
+          "controls": [
+            {
+              "label": "Watermark",
+              "idMso": "WatermarkGallery",
+              "type": "gallery",
+              "size": "large",
+              "row": 1,
+              "column": 1,
+              "rowSpan": 3,
+              "colSpan": 2,
+              "image": "WatermarkGallery.png",
+              "idStatus": "confirmed"
+            },
+            {
+              "label": "Page Color",
+              "idMso": "PageColorPicker",
+              "type": "splitButton",
+              "size": "large",
+              "row": 1,
+              "column": 3,
+              "rowSpan": 3,
+              "colSpan": 2,
+              "image": "PageColorPicker.png",
+              "idStatus": "confirmed"
+            },
+            {
+              "label": "Page Borders",
+              "idMso": "PageBordersDialog",
+              "type": "button",
+              "size": "large",
+              "row": 1,
+              "column": 5,
+              "rowSpan": 3,
+              "colSpan": 2,
+              "image": "PageBordersDialog.png",
+              "idStatus": "candidate"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "label": "Layout",
+      "idMso": "TabPageLayoutWord",
+      "order": 4,
+      "groups": [
+        {
+          "label": "Page Setup",
+          "idMso": "GroupPageSetup",
+          "groupIndex": 1,
+          "widthUnits": 12,
+          "layout": {
+            "rows": 3,
+            "columns": 9,
+            "flow": "column-major",
+            "launcher": true
+          },
+          "controls": [
+            {
+              "label": "Margins",
+              "idMso": "PageMarginsGallery",
+              "type": "gallery",
+              "size": "large",
+              "row": 1,
+              "column": 1,
+              "rowSpan": 3,
+              "colSpan": 2,
+              "image": "PageMarginsGallery.png",
+              "idStatus": "confirmed"
+            },
+            {
+              "label": "Orientation",
+              "idMso": "PageOrientationGallery",
+              "type": "menu",
+              "size": "large",
+              "row": 1,
+              "column": 3,
+              "rowSpan": 3,
+              "colSpan": 2,
+              "image": "PageOrientationGallery.png",
+              "idStatus": "confirmed"
+            },
+            {
+              "label": "Size",
+              "idMso": "PageSizeGallery",
+              "type": "menu",
+              "size": "large",
+              "row": 1,
+              "column": 5,
+              "rowSpan": 3,
+              "colSpan": 2,
+              "image": "PageSizeGallery.png",
+              "idStatus": "confirmed"
+            },
+            {
+              "label": "Columns",
+              "idMso": "ColumnsGallery",
+              "type": "menu",
+              "size": "large",
+              "row": 1,
+              "column": 7,
+              "rowSpan": 3,
+              "colSpan": 2,
+              "image": "ColumnsGallery.png",
+              "idStatus": "candidate"
+            },
+            {
+              "label": "Breaks",
+              "idMso": "BreaksGallery",
+              "type": "menu",
+              "size": "small",
+              "row": 1,
+              "column": 9,
+              "rowSpan": 1,
+              "colSpan": 1,
+              "image": "BreaksGallery.png",
+              "idStatus": "confirmed"
+            },
+            {
+              "label": "Line Numbers",
+              "idMso": "LineNumberingGallery",
+              "type": "menu",
+              "size": "small",
+              "row": 2,
+              "column": 9,
+              "rowSpan": 1,
+              "colSpan": 1,
+              "image": "LineNumberingGallery.png",
+              "idStatus": "candidate"
+            },
+            {
+              "label": "Hyphenation",
+              "idMso": "HyphenationGallery",
+              "type": "menu",
+              "size": "small",
+              "row": 3,
+              "column": 9,
+              "rowSpan": 1,
+              "colSpan": 1,
+              "image": "HyphenationGallery.png",
+              "idStatus": "candidate"
+            }
+          ]
+        },
+        {
+          "label": "Paragraph",
+          "idMso": "GroupParagraphLayout",
+          "groupIndex": 2,
+          "widthUnits": 8,
+          "layout": {
+            "rows": 3,
+            "columns": 6,
+            "flow": "column-major",
+            "launcher": true
+          },
+          "controls": [
+            {
+              "label": "Indent Left",
+              "idMso": null,
+              "type": "numericField",
+              "size": "field",
+              "row": 1,
+              "column": 1,
+              "rowSpan": 1,
+              "colSpan": 3,
+              "image": null,
+              "idStatus": "needs_validation"
+            },
+            {
+              "label": "Indent Right",
+              "idMso": null,
+              "type": "numericField",
+              "size": "field",
+              "row": 2,
+              "column": 1,
+              "rowSpan": 1,
+              "colSpan": 3,
+              "image": null,
+              "idStatus": "needs_validation"
+            },
+            {
+              "label": "Spacing Before",
+              "idMso": null,
+              "type": "numericField",
+              "size": "field",
+              "row": 1,
+              "column": 4,
+              "rowSpan": 1,
+              "colSpan": 3,
+              "image": null,
+              "idStatus": "needs_validation"
+            },
+            {
+              "label": "Spacing After",
+              "idMso": null,
+              "type": "numericField",
+              "size": "field",
+              "row": 2,
+              "column": 4,
+              "rowSpan": 1,
+              "colSpan": 3,
+              "image": null,
+              "idStatus": "needs_validation"
+            }
+          ]
+        },
+        {
+          "label": "Arrange",
+          "idMso": "GroupArrange",
+          "groupIndex": 3,
+          "widthUnits": 13,
+          "layout": {
+            "rows": 3,
+            "columns": 6,
+            "flow": "column-major",
+            "launcher": false
+          },
+          "controls": [
+            {
+              "label": "Position",
+              "idMso": "ObjectPositionGallery",
+              "type": "gallery",
+              "size": "large",
+              "row": 1,
+              "column": 1,
+              "rowSpan": 3,
+              "colSpan": 2,
+              "image": "ObjectPositionGallery.png",
+              "idStatus": "candidate"
+            },
+            {
+              "label": "Wrap Text",
+              "idMso": "TextWrappingGallery",
+              "type": "gallery",
+              "size": "large",
+              "row": 1,
+              "column": 3,
+              "rowSpan": 3,
+              "colSpan": 2,
+              "image": "TextWrappingGallery.png",
+              "idStatus": "confirmed"
+            },
+            {
+              "label": "Bring Forward",
+              "idMso": "ObjectBringForward",
+              "type": "splitButton",
+              "size": "small",
+              "row": 1,
+              "column": 5,
+              "rowSpan": 1,
+              "colSpan": 1,
+              "image": "ObjectBringForward.png",
+              "idStatus": "confirmed"
+            },
+            {
+              "label": "Send Backward",
+              "idMso": "ObjectSendBackward",
+              "type": "splitButton",
+              "size": "small",
+              "row": 2,
+              "column": 5,
+              "rowSpan": 1,
+              "colSpan": 1,
+              "image": "ObjectSendBackward.png",
+              "idStatus": "confirmed"
+            },
+            {
+              "label": "Selection Pane",
+              "idMso": "SelectionPane",
+              "type": "button",
+              "size": "small",
+              "row": 3,
+              "column": 5,
+              "rowSpan": 1,
+              "colSpan": 1,
+              "image": "SelectionPane.png",
+              "idStatus": "confirmed"
+            },
+            {
+              "label": "Align",
+              "idMso": "ObjectsAlignMenu",
+              "type": "menu",
+              "size": "small",
+              "row": 1,
+              "column": 6,
+              "rowSpan": 1,
+              "colSpan": 1,
+              "image": "ObjectsAlignMenu.png",
+              "idStatus": "candidate"
+            },
+            {
+              "label": "Group",
+              "idMso": "ObjectsGroupMenu",
+              "type": "menu",
+              "size": "small",
+              "row": 2,
+              "column": 6,
+              "rowSpan": 1,
+              "colSpan": 1,
+              "image": "ObjectsGroupMenu.png",
+              "idStatus": "confirmed"
+            },
+            {
+              "label": "Rotate",
+              "idMso": "ObjectRotateGallery",
+              "type": "menu",
+              "size": "small",
+              "row": 3,
+              "column": 6,
+              "rowSpan": 1,
+              "colSpan": 1,
+              "image": "ObjectRotateGallery.png",
+              "idStatus": "confirmed"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "label": "References",
+      "idMso": "TabReferences",
+      "order": 5,
+      "groups": [
+        {
+          "label": "Table of Contents",
+          "idMso": "GroupTableOfContents",
+          "groupIndex": 1,
+          "widthUnits": 7,
+          "layout": {
+            "rows": 3,
+            "columns": 3,
+            "flow": "column-major",
+            "launcher": false
+          },
+          "controls": [
+            {
+              "label": "Table of Contents",
+              "idMso": "TableOfContentsGallery",
+              "type": "gallery",
+              "size": "large",
+              "row": 1,
+              "column": 1,
+              "rowSpan": 3,
+              "colSpan": 2,
+              "image": "TableOfContentsGallery.png",
+              "idStatus": "confirmed"
+            },
+            {
+              "label": "Add Text",
+              "idMso": "AddTextToTableOfContents",
+              "type": "menu",
+              "size": "small",
+              "row": 1,
+              "column": 3,
+              "rowSpan": 1,
+              "colSpan": 1,
+              "image": "AddTextToTableOfContents.png",
+              "idStatus": "candidate"
+            },
+            {
+              "label": "Update Table",
+              "idMso": "TableOfContentsUpdate",
+              "type": "button",
+              "size": "small",
+              "row": 2,
+              "column": 3,
+              "rowSpan": 1,
+              "colSpan": 1,
+              "image": "TableOfContentsUpdate.png",
+              "idStatus": "confirmed"
+            }
+          ]
+        },
+        {
+          "label": "Footnotes",
+          "idMso": "GroupFootnotes",
+          "groupIndex": 2,
+          "widthUnits": 7,
+          "layout": {
+            "rows": 3,
+            "columns": 3,
+            "flow": "column-major",
+            "launcher": true
+          },
+          "controls": [
+            {
+              "label": "Insert Footnote",
+              "idMso": "FootnoteInsert",
+              "type": "button",
+              "size": "large",
+              "row": 1,
+              "column": 1,
+              "rowSpan": 3,
+              "colSpan": 2,
+              "image": "FootnoteInsert.png",
+              "idStatus": "confirmed"
+            },
+            {
+              "label": "Insert Endnote",
+              "idMso": "EndnoteInsert",
+              "type": "button",
+              "size": "small",
+              "row": 1,
+              "column": 3,
+              "rowSpan": 1,
+              "colSpan": 1,
+              "image": "EndnoteInsert.png",
+              "idStatus": "candidate"
+            },
+            {
+              "label": "Next Footnote",
+              "idMso": null,
+              "type": "menu",
+              "size": "small",
+              "row": 2,
+              "column": 3,
+              "rowSpan": 1,
+              "colSpan": 1,
+              "image": null,
+              "idStatus": "needs_validation"
+            },
+            {
+              "label": "Show Notes",
+              "idMso": "FootnotesShow",
+              "type": "button",
+              "size": "small",
+              "row": 3,
+              "column": 3,
+              "rowSpan": 1,
+              "colSpan": 1,
+              "image": "FootnotesShow.png",
+              "idStatus": "candidate"
+            }
+          ]
+        },
+        {
+          "label": "Research",
+          "idMso": "GroupResearch",
+          "groupIndex": 3,
+          "widthUnits": 4,
+          "layout": {
+            "rows": 3,
+            "columns": 3,
+            "flow": "column-major",
+            "launcher": false
+          },
+          "controls": [
+            {
+              "label": "Research",
+              "idMso": "ResearchPane",
+              "type": "button",
+              "size": "large",
+              "row": 1,
+              "column": 1,
+              "rowSpan": 3,
+              "colSpan": 3,
+              "image": "ResearchPane.png",
+              "idStatus": "confirmed"
+            }
+          ]
+        },
+        {
+          "label": "Citations & Bibliography",
+          "idMso": "GroupCitationsAndBibliography",
+          "groupIndex": 4,
+          "widthUnits": 9,
+          "layout": {
+            "rows": 3,
+            "columns": 7,
+            "flow": "column-major",
+            "launcher": false
+          },
+          "controls": [
+            {
+              "label": "Insert Citation",
+              "idMso": "CitationInsert",
+              "type": "menu",
+              "size": "large",
+              "row": 1,
+              "column": 1,
+              "rowSpan": 3,
+              "colSpan": 2,
+              "image": "CitationInsert.png",
+              "idStatus": "confirmed"
+            },
+            {
+              "label": "Manage Sources",
+              "idMso": "CitationsManageSources",
+              "type": "button",
+              "size": "small",
+              "row": 1,
+              "column": 3,
+              "rowSpan": 1,
+              "colSpan": 1,
+              "image": "CitationsManageSources.png",
+              "idStatus": "candidate"
+            },
+            {
+              "label": "Style",
+              "idMso": null,
+              "type": "comboBox",
+              "size": "comboBox",
+              "row": 2,
+              "column": 3,
+              "rowSpan": 1,
+              "colSpan": 3,
+              "image": null,
+              "idStatus": "needs_validation"
+            },
+            {
+              "label": "Bibliography",
+              "idMso": "BibliographyGallery",
+              "type": "gallery",
+              "size": "large",
+              "row": 1,
+              "column": 6,
+              "rowSpan": 3,
+              "colSpan": 2,
+              "image": "BibliographyGallery.png",
+              "idStatus": "confirmed"
+            }
+          ]
+        },
+        {
+          "label": "Captions",
+          "idMso": "GroupCaptions",
+          "groupIndex": 5,
+          "widthUnits": 8,
+          "layout": {
+            "rows": 3,
+            "columns": 3,
+            "flow": "column-major",
+            "launcher": false
+          },
+          "controls": [
+            {
+              "label": "Insert Caption",
+              "idMso": "CaptionInsert",
+              "type": "button",
+              "size": "large",
+              "row": 1,
+              "column": 1,
+              "rowSpan": 3,
+              "colSpan": 2,
+              "image": "CaptionInsert.png",
+              "idStatus": "confirmed"
+            },
+            {
+              "label": "Insert Table of Figures",
+              "idMso": "TableOfFiguresInsert",
+              "type": "button",
+              "size": "small",
+              "row": 1,
+              "column": 3,
+              "rowSpan": 1,
+              "colSpan": 1,
+              "image": "TableOfFiguresInsert.png",
+              "idStatus": "confirmed"
+            },
+            {
+              "label": "Update Table",
+              "idMso": "TableOfFiguresUpdate",
+              "type": "button",
+              "size": "small",
+              "row": 2,
+              "column": 3,
+              "rowSpan": 1,
+              "colSpan": 1,
+              "image": "TableOfFiguresUpdate.png",
+              "idStatus": "confirmed"
+            },
+            {
+              "label": "Cross-reference",
+              "idMso": "CrossReferenceInsert",
+              "type": "button",
+              "size": "small",
+              "row": 3,
+              "column": 3,
+              "rowSpan": 1,
+              "colSpan": 1,
+              "image": "CrossReferenceInsert.png",
+              "idStatus": "confirmed"
+            }
+          ]
+        },
+        {
+          "label": "Index",
+          "idMso": "GroupIndex",
+          "groupIndex": 6,
+          "widthUnits": 7,
+          "layout": {
+            "rows": 3,
+            "columns": 5,
+            "flow": "column-major",
+            "launcher": false
+          },
+          "controls": [
+            {
+              "label": "Mark Entry",
+              "idMso": "IndexMarkEntry",
+              "type": "button",
+              "size": "large",
+              "row": 1,
+              "column": 1,
+              "rowSpan": 3,
+              "colSpan": 2,
+              "image": "IndexMarkEntry.png",
+              "idStatus": "confirmed"
+            },
+            {
+              "label": "Insert Index",
+              "idMso": "IndexInsert",
+              "type": "button",
+              "size": "large",
+              "row": 1,
+              "column": 3,
+              "rowSpan": 3,
+              "colSpan": 2,
+              "image": "IndexInsert.png",
+              "idStatus": "confirmed"
+            },
+            {
+              "label": "Update Index",
+              "idMso": "IndexUpdate",
+              "type": "button",
+              "size": "small",
+              "row": 1,
+              "column": 5,
+              "rowSpan": 1,
+              "colSpan": 1,
+              "image": "IndexUpdate.png",
+              "idStatus": "confirmed"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "label": "Mailings",
+      "idMso": "TabMailings",
+      "order": 6,
+      "groups": [
+        {
+          "label": "Create",
+          "idMso": "GroupCreateMailings",
+          "groupIndex": 1,
+          "widthUnits": 5,
+          "layout": {
+            "rows": 3,
+            "columns": 4,
+            "flow": "column-major",
+            "launcher": false
+          },
+          "controls": [
+            {
+              "label": "Envelopes",
+              "idMso": "EnvelopesAndLabelsDialog",
+              "type": "button",
+              "size": "large",
+              "row": 1,
+              "column": 1,
+              "rowSpan": 3,
+              "colSpan": 2,
+              "image": "EnvelopesAndLabelsDialog.png",
+              "idStatus": "confirmed"
+            },
+            {
+              "label": "Labels",
+              "idMso": "LabelsDialog",
+              "type": "button",
+              "size": "large",
+              "row": 1,
+              "column": 3,
+              "rowSpan": 3,
+              "colSpan": 2,
+              "image": "LabelsDialog.png",
+              "idStatus": "confirmed"
+            }
+          ]
+        },
+        {
+          "label": "Start Mail Merge",
+          "idMso": "GroupStartMailMerge",
+          "groupIndex": 2,
+          "widthUnits": 8,
+          "layout": {
+            "rows": 3,
+            "columns": 5,
+            "flow": "column-major",
+            "launcher": false
+          },
+          "controls": [
+            {
+              "label": "Start Mail Merge",
+              "idMso": "MailMergeStart",
+              "type": "menu",
+              "size": "large",
+              "row": 1,
+              "column": 1,
+              "rowSpan": 3,
+              "colSpan": 2,
+              "image": "MailMergeStart.png",
+              "idStatus": "confirmed"
+            },
+            {
+              "label": "Select Recipients",
+              "idMso": "MailMergeSelectRecipients",
+              "type": "menu",
+              "size": "large",
+              "row": 1,
+              "column": 3,
+              "rowSpan": 3,
+              "colSpan": 2,
+              "image": "MailMergeSelectRecipients.png",
+              "idStatus": "confirmed"
+            },
+            {
+              "label": "Edit Recipient List",
+              "idMso": "MailMergeEditRecipientList",
+              "type": "button",
+              "size": "small",
+              "row": 1,
+              "column": 5,
+              "rowSpan": 1,
+              "colSpan": 1,
+              "image": "MailMergeEditRecipientList.png",
+              "idStatus": "candidate"
+            }
+          ]
+        },
+        {
+          "label": "Write & Insert Fields",
+          "idMso": "GroupWriteInsertFields",
+          "groupIndex": 3,
+          "widthUnits": 12,
+          "layout": {
+            "rows": 3,
+            "columns": 8,
+            "flow": "column-major",
+            "launcher": false
+          },
+          "controls": [
+            {
+              "label": "Highlight Merge Fields",
+              "idMso": null,
+              "type": "toggleButton",
+              "size": "small",
+              "row": 1,
+              "column": 1,
+              "rowSpan": 1,
+              "colSpan": 1,
+              "image": null,
+              "idStatus": "needs_validation"
+            },
+            {
+              "label": "Address Block",
+              "idMso": "MailMergeAddressBlockInsert",
+              "type": "button",
+              "size": "large",
+              "row": 1,
+              "column": 2,
+              "rowSpan": 3,
+              "colSpan": 2,
+              "image": "MailMergeAddressBlockInsert.png",
+              "idStatus": "confirmed"
+            },
+            {
+              "label": "Greeting Line",
+              "idMso": "MailMergeGreetingLineInsert",
+              "type": "button",
+              "size": "large",
+              "row": 1,
+              "column": 4,
+              "rowSpan": 3,
+              "colSpan": 2,
+              "image": "MailMergeGreetingLineInsert.png",
+              "idStatus": "confirmed"
+            },
+            {
+              "label": "Insert Merge Field",
+              "idMso": "MailMergeInsertMergeField",
+              "type": "menu",
+              "size": "large",
+              "row": 1,
+              "column": 6,
+              "rowSpan": 3,
+              "colSpan": 2,
+              "image": "MailMergeInsertMergeField.png",
+              "idStatus": "candidate"
+            },
+            {
+              "label": "Rules",
+              "idMso": "MailMergeRules",
+              "type": "menu",
+              "size": "small",
+              "row": 1,
+              "column": 8,
+              "rowSpan": 1,
+              "colSpan": 1,
+              "image": "MailMergeRules.png",
+              "idStatus": "confirmed"
+            },
+            {
+              "label": "Match Fields",
+              "idMso": "MailMergeMatchFields",
+              "type": "button",
+              "size": "small",
+              "row": 2,
+              "column": 8,
+              "rowSpan": 1,
+              "colSpan": 1,
+              "image": "MailMergeMatchFields.png",
+              "idStatus": "confirmed"
+            },
+            {
+              "label": "Update Labels",
+              "idMso": "MailMergeUpdateLabels",
+              "type": "button",
+              "size": "small",
+              "row": 3,
+              "column": 8,
+              "rowSpan": 1,
+              "colSpan": 1,
+              "image": "MailMergeUpdateLabels.png",
+              "idStatus": "confirmed"
+            }
+          ]
+        },
+        {
+          "label": "Preview Results",
+          "idMso": "GroupPreviewResults",
+          "groupIndex": 4,
+          "widthUnits": 12,
+          "layout": {
+            "rows": 3,
+            "columns": 8,
+            "flow": "column-major",
+            "launcher": false
+          },
+          "controls": [
+            {
+              "label": "Preview Results",
+              "idMso": "MailMergePreviewResults",
+              "type": "toggleButton",
+              "size": "large",
+              "row": 1,
+              "column": 1,
+              "rowSpan": 3,
+              "colSpan": 2,
+              "image": "MailMergePreviewResults.png",
+              "idStatus": "candidate"
+            },
+            {
+              "label": "First Record",
+              "idMso": null,
+              "type": "button",
+              "size": "small",
+              "row": 1,
+              "column": 3,
+              "rowSpan": 1,
+              "colSpan": 1,
+              "image": null,
+              "idStatus": "needs_validation"
+            },
+            {
+              "label": "Previous Record",
+              "idMso": null,
+              "type": "button",
+              "size": "small",
+              "row": 1,
+              "column": 4,
+              "rowSpan": 1,
+              "colSpan": 1,
+              "image": null,
+              "idStatus": "needs_validation"
+            },
+            {
+              "label": "Record Number",
+              "idMso": null,
+              "type": "numericField",
+              "size": "field",
+              "row": 1,
+              "column": 5,
+              "rowSpan": 1,
+              "colSpan": 2,
+              "image": null,
+              "idStatus": "needs_validation"
+            },
+            {
+              "label": "Next Record",
+              "idMso": null,
+              "type": "button",
+              "size": "small",
+              "row": 1,
+              "column": 7,
+              "rowSpan": 1,
+              "colSpan": 1,
+              "image": null,
+              "idStatus": "needs_validation"
+            },
+            {
+              "label": "Last Record",
+              "idMso": null,
+              "type": "button",
+              "size": "small",
+              "row": 1,
+              "column": 8,
+              "rowSpan": 1,
+              "colSpan": 1,
+              "image": null,
+              "idStatus": "needs_validation"
+            },
+            {
+              "label": "Find Recipient",
+              "idMso": "MailMergeFindRecipient",
+              "type": "button",
+              "size": "small",
+              "row": 2,
+              "column": 3,
+              "rowSpan": 1,
+              "colSpan": 1,
+              "image": "MailMergeFindRecipient.png",
+              "idStatus": "confirmed"
+            },
+            {
+              "label": "Check for Errors",
+              "idMso": "MailMergeCheckForErrors",
+              "type": "button",
+              "size": "small",
+              "row": 3,
+              "column": 3,
+              "rowSpan": 1,
+              "colSpan": 1,
+              "image": "MailMergeCheckForErrors.png",
+              "idStatus": "candidate"
+            }
+          ]
+        },
+        {
+          "label": "Finish",
+          "idMso": "GroupFinishMailMerge",
+          "groupIndex": 5,
+          "widthUnits": 4,
+          "layout": {
+            "rows": 3,
+            "columns": 3,
+            "flow": "column-major",
+            "launcher": false
+          },
+          "controls": [
+            {
+              "label": "Finish & Merge",
+              "idMso": "MailMergeFinishAndMerge",
+              "type": "menu",
+              "size": "large",
+              "row": 1,
+              "column": 1,
+              "rowSpan": 3,
+              "colSpan": 3,
+              "image": "MailMergeFinishAndMerge.png",
+              "idStatus": "candidate"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "label": "Review",
+      "idMso": "TabReviewWord",
+      "order": 7,
+      "groups": [
+        {
+          "label": "Proofing",
+          "idMso": "GroupProofing",
+          "groupIndex": 1,
+          "widthUnits": 7,
+          "layout": {
+            "rows": 3,
+            "columns": 5,
+            "flow": "column-major",
+            "launcher": false
+          },
+          "controls": [
+            {
+              "label": "Spelling & Grammar",
+              "idMso": "SpellingAndGrammar",
+              "type": "button",
+              "size": "large",
+              "row": 1,
+              "column": 1,
+              "rowSpan": 3,
+              "colSpan": 2,
+              "image": "SpellingAndGrammar.png",
+              "idStatus": "confirmed"
+            },
+            {
+              "label": "Thesaurus",
+              "idMso": "Thesaurus",
+              "type": "button",
+              "size": "large",
+              "row": 1,
+              "column": 3,
+              "rowSpan": 3,
+              "colSpan": 2,
+              "image": "Thesaurus.png",
+              "idStatus": "confirmed"
+            },
+            {
+              "label": "Word Count",
+              "idMso": "WordCount",
+              "type": "button",
+              "size": "small",
+              "row": 1,
+              "column": 5,
+              "rowSpan": 1,
+              "colSpan": 1,
+              "image": "WordCount.png",
+              "idStatus": "confirmed"
+            }
+          ]
+        },
+        {
+          "label": "Speech",
+          "idMso": "GroupSpeech",
+          "groupIndex": 2,
+          "widthUnits": 4,
+          "layout": {
+            "rows": 3,
+            "columns": 3,
+            "flow": "column-major",
+            "launcher": false
+          },
+          "controls": [
+            {
+              "label": "Read Aloud",
+              "idMso": "ReadAloud",
+              "type": "button",
+              "size": "large",
+              "row": 1,
+              "column": 1,
+              "rowSpan": 3,
+              "colSpan": 3,
+              "image": "ReadAloud.png",
+              "idStatus": "candidate"
+            }
+          ]
+        },
+        {
+          "label": "Accessibility",
+          "idMso": "GroupAccessibility",
+          "groupIndex": 3,
+          "widthUnits": 4,
+          "layout": {
+            "rows": 3,
+            "columns": 3,
+            "flow": "column-major",
+            "launcher": false
+          },
+          "controls": [
+            {
+              "label": "Check Accessibility",
+              "idMso": null,
+              "type": "button",
+              "size": "large",
+              "row": 1,
+              "column": 1,
+              "rowSpan": 3,
+              "colSpan": 3,
+              "image": null,
+              "idStatus": "needs_validation"
+            }
+          ]
+        },
+        {
+          "label": "Language",
+          "idMso": "GroupLanguage",
+          "groupIndex": 4,
+          "widthUnits": 6,
+          "layout": {
+            "rows": 3,
+            "columns": 4,
+            "flow": "column-major",
+            "launcher": false
+          },
+          "controls": [
+            {
+              "label": "Translate",
+              "idMso": "Translate",
+              "type": "menu",
+              "size": "large",
+              "row": 1,
+              "column": 1,
+              "rowSpan": 3,
+              "colSpan": 2,
+              "image": "Translate.png",
+              "idStatus": "confirmed"
+            },
+            {
+              "label": "Language",
+              "idMso": "SetLanguage",
+              "type": "menu",
+              "size": "large",
+              "row": 1,
+              "column": 3,
+              "rowSpan": 3,
+              "colSpan": 2,
+              "image": "SetLanguage.png",
+              "idStatus": "confirmed"
+            }
+          ]
+        },
+        {
+          "label": "Comments",
+          "idMso": "GroupComments",
+          "groupIndex": 5,
+          "widthUnits": 8,
+          "layout": {
+            "rows": 3,
+            "columns": 4,
+            "flow": "column-major",
+            "launcher": false
+          },
+          "controls": [
+            {
+              "label": "New Comment",
+              "idMso": "NewComment",
+              "type": "button",
+              "size": "large",
+              "row": 1,
+              "column": 1,
+              "rowSpan": 3,
+              "colSpan": 2,
+              "image": "NewComment.png",
+              "idStatus": "confirmed"
+            },
+            {
+              "label": "Delete",
+              "idMso": "DeleteComment",
+              "type": "menu",
+              "size": "small",
+              "row": 1,
+              "column": 3,
+              "rowSpan": 1,
+              "colSpan": 1,
+              "image": "DeleteComment.png",
+              "idStatus": "candidate"
+            },
+            {
+              "label": "Previous",
+              "idMso": "PreviousComment",
+              "type": "button",
+              "size": "small",
+              "row": 2,
+              "column": 3,
+              "rowSpan": 1,
+              "colSpan": 1,
+              "image": "PreviousComment.png",
+              "idStatus": "candidate"
+            },
+            {
+              "label": "Next",
+              "idMso": "NextComment",
+              "type": "button",
+              "size": "small",
+              "row": 3,
+              "column": 3,
+              "rowSpan": 1,
+              "colSpan": 1,
+              "image": "NextComment.png",
+              "idStatus": "candidate"
+            },
+            {
+              "label": "Show Comments",
+              "idMso": null,
+              "type": "button",
+              "size": "small",
+              "row": 1,
+              "column": 4,
+              "rowSpan": 1,
+              "colSpan": 1,
+              "image": null,
+              "idStatus": "needs_validation"
+            }
+          ]
+        },
+        {
+          "label": "Tracking",
+          "idMso": "GroupTracking",
+          "groupIndex": 6,
+          "widthUnits": 10,
+          "layout": {
+            "rows": 3,
+            "columns": 5,
+            "flow": "column-major",
+            "launcher": false
+          },
+          "controls": [
+            {
+              "label": "Track Changes",
+              "idMso": "TrackChanges",
+              "type": "splitButton",
+              "size": "large",
+              "row": 1,
+              "column": 1,
+              "rowSpan": 3,
+              "colSpan": 2,
+              "image": "TrackChanges.png",
+              "idStatus": "candidate"
+            },
+            {
+              "label": "Display for Review",
+              "idMso": "ReviewDisplayForReview",
+              "type": "comboBox",
+              "size": "comboBox",
+              "row": 1,
+              "column": 3,
+              "rowSpan": 1,
+              "colSpan": 3,
+              "image": "ReviewDisplayForReview.png",
+              "idStatus": "confirmed"
+            },
+            {
+              "label": "Show Markup",
+              "idMso": "ReviewShowMarkup",
+              "type": "menu",
+              "size": "small",
+              "row": 2,
+              "column": 3,
+              "rowSpan": 1,
+              "colSpan": 1,
+              "image": "ReviewShowMarkup.png",
+              "idStatus": "confirmed"
+            },
+            {
+              "label": "Reviewing Pane",
+              "idMso": "ReviewingPane",
+              "type": "menu",
+              "size": "small",
+              "row": 3,
+              "column": 3,
+              "rowSpan": 1,
+              "colSpan": 1,
+              "image": "ReviewingPane.png",
+              "idStatus": "confirmed"
+            }
+          ]
+        },
+        {
+          "label": "Changes",
+          "idMso": "GroupChanges",
+          "groupIndex": 7,
+          "widthUnits": 8,
+          "layout": {
+            "rows": 3,
+            "columns": 5,
+            "flow": "column-major",
+            "launcher": false
+          },
+          "controls": [
+            {
+              "label": "Accept",
+              "idMso": "AcceptChange",
+              "type": "splitButton",
+              "size": "large",
+              "row": 1,
+              "column": 1,
+              "rowSpan": 3,
+              "colSpan": 2,
+              "image": "AcceptChange.png",
+              "idStatus": "candidate"
+            },
+            {
+              "label": "Reject",
+              "idMso": "RejectChange",
+              "type": "splitButton",
+              "size": "large",
+              "row": 1,
+              "column": 3,
+              "rowSpan": 3,
+              "colSpan": 2,
+              "image": "RejectChange.png",
+              "idStatus": "candidate"
+            },
+            {
+              "label": "Previous",
+              "idMso": "PreviousChange",
+              "type": "button",
+              "size": "small",
+              "row": 1,
+              "column": 5,
+              "rowSpan": 1,
+              "colSpan": 1,
+              "image": "PreviousChange.png",
+              "idStatus": "candidate"
+            },
+            {
+              "label": "Next",
+              "idMso": "NextChange",
+              "type": "button",
+              "size": "small",
+              "row": 2,
+              "column": 5,
+              "rowSpan": 1,
+              "colSpan": 1,
+              "image": "NextChange.png",
+              "idStatus": "candidate"
+            }
+          ]
+        },
+        {
+          "label": "Compare",
+          "idMso": "GroupCompare",
+          "groupIndex": 8,
+          "widthUnits": 4,
+          "layout": {
+            "rows": 3,
+            "columns": 3,
+            "flow": "column-major",
+            "launcher": false
+          },
+          "controls": [
+            {
+              "label": "Compare",
+              "idMso": "CompareDocuments",
+              "type": "menu",
+              "size": "large",
+              "row": 1,
+              "column": 1,
+              "rowSpan": 3,
+              "colSpan": 3,
+              "image": "CompareDocuments.png",
+              "idStatus": "candidate"
+            }
+          ]
+        },
+        {
+          "label": "Protect",
+          "idMso": "GroupProtect",
+          "groupIndex": 9,
+          "widthUnits": 4,
+          "layout": {
+            "rows": 3,
+            "columns": 3,
+            "flow": "column-major",
+            "launcher": false
+          },
+          "controls": [
+            {
+              "label": "Restrict Editing",
+              "idMso": "RestrictEditing",
+              "type": "button",
+              "size": "large",
+              "row": 1,
+              "column": 1,
+              "rowSpan": 3,
+              "colSpan": 3,
+              "image": "RestrictEditing.png",
+              "idStatus": "candidate"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "label": "View",
+      "idMso": "TabView",
+      "order": 8,
+      "groups": [
+        {
+          "label": "Views",
+          "idMso": "GroupDocumentViews",
+          "groupIndex": 1,
+          "widthUnits": 10,
+          "layout": {
+            "rows": 3,
+            "columns": 7,
+            "flow": "column-major",
+            "launcher": false
+          },
+          "controls": [
+            {
+              "label": "Read Mode",
+              "idMso": null,
+              "type": "button",
+              "size": "large",
+              "row": 1,
+              "column": 1,
+              "rowSpan": 3,
+              "colSpan": 2,
+              "image": null,
+              "idStatus": "needs_validation"
+            },
+            {
+              "label": "Print Layout",
+              "idMso": "ViewPrintLayoutView",
+              "type": "button",
+              "size": "large",
+              "row": 1,
+              "column": 3,
+              "rowSpan": 3,
+              "colSpan": 2,
+              "image": "ViewPrintLayoutView.png",
+              "idStatus": "confirmed"
+            },
+            {
+              "label": "Web Layout",
+              "idMso": "ViewWebLayoutView",
+              "type": "button",
+              "size": "large",
+              "row": 1,
+              "column": 5,
+              "rowSpan": 3,
+              "colSpan": 2,
+              "image": "ViewWebLayoutView.png",
+              "idStatus": "confirmed"
+            },
+            {
+              "label": "Outline",
+              "idMso": "ViewOutlineView",
+              "type": "button",
+              "size": "small",
+              "row": 1,
+              "column": 7,
+              "rowSpan": 1,
+              "colSpan": 1,
+              "image": "ViewOutlineView.png",
+              "idStatus": "confirmed"
+            },
+            {
+              "label": "Draft",
+              "idMso": "ViewDraftView",
+              "type": "button",
+              "size": "small",
+              "row": 2,
+              "column": 7,
+              "rowSpan": 1,
+              "colSpan": 1,
+              "image": "ViewDraftView.png",
+              "idStatus": "confirmed"
+            }
+          ]
+        },
+        {
+          "label": "Show",
+          "idMso": "GroupShow",
+          "groupIndex": 2,
+          "widthUnits": 6,
+          "layout": {
+            "rows": 3,
+            "columns": 1,
+            "flow": "column-major",
+            "launcher": false
+          },
+          "controls": [
+            {
+              "label": "Ruler",
+              "idMso": "ViewRuler",
+              "type": "checkBox",
+              "size": "small",
+              "row": 1,
+              "column": 1,
+              "rowSpan": 1,
+              "colSpan": 1,
+              "image": "ViewRuler.png",
+              "idStatus": "candidate"
+            },
+            {
+              "label": "Gridlines",
+              "idMso": "ViewGridlines",
+              "type": "checkBox",
+              "size": "small",
+              "row": 2,
+              "column": 1,
+              "rowSpan": 1,
+              "colSpan": 1,
+              "image": "ViewGridlines.png",
+              "idStatus": "confirmed"
+            },
+            {
+              "label": "Navigation Pane",
+              "idMso": "NavigationPaneShowHide",
+              "type": "checkBox",
+              "size": "small",
+              "row": 3,
+              "column": 1,
+              "rowSpan": 1,
+              "colSpan": 1,
+              "image": "NavigationPaneShowHide.png",
+              "idStatus": "confirmed"
+            }
+          ]
+        },
+        {
+          "label": "Zoom",
+          "idMso": "GroupZoom",
+          "groupIndex": 3,
+          "widthUnits": 9,
+          "layout": {
+            "rows": 3,
+            "columns": 5,
+            "flow": "column-major",
+            "launcher": false
+          },
+          "controls": [
+            {
+              "label": "Zoom",
+              "idMso": "ZoomDialog",
+              "type": "button",
+              "size": "large",
+              "row": 1,
+              "column": 1,
+              "rowSpan": 3,
+              "colSpan": 2,
+              "image": "ZoomDialog.png",
+              "idStatus": "confirmed"
+            },
+            {
+              "label": "100%",
+              "idMso": "Zoom100Percent",
+              "type": "button",
+              "size": "large",
+              "row": 1,
+              "column": 3,
+              "rowSpan": 3,
+              "colSpan": 2,
+              "image": "Zoom100Percent.png",
+              "idStatus": "candidate"
+            },
+            {
+              "label": "One Page",
+              "idMso": "ViewOnePage",
+              "type": "button",
+              "size": "small",
+              "row": 1,
+              "column": 5,
+              "rowSpan": 1,
+              "colSpan": 1,
+              "image": "ViewOnePage.png",
+              "idStatus": "candidate"
+            },
+            {
+              "label": "Multiple Pages",
+              "idMso": "ViewTwoPages",
+              "type": "button",
+              "size": "small",
+              "row": 2,
+              "column": 5,
+              "rowSpan": 1,
+              "colSpan": 1,
+              "image": "ViewTwoPages.png",
+              "idStatus": "confirmed"
+            },
+            {
+              "label": "Page Width",
+              "idMso": "ViewPageWidth",
+              "type": "button",
+              "size": "small",
+              "row": 3,
+              "column": 5,
+              "rowSpan": 1,
+              "colSpan": 1,
+              "image": "ViewPageWidth.png",
+              "idStatus": "candidate"
+            }
+          ]
+        },
+        {
+          "label": "Window",
+          "idMso": "GroupWindow",
+          "groupIndex": 4,
+          "widthUnits": 12,
+          "layout": {
+            "rows": 3,
+            "columns": 4,
+            "flow": "column-major",
+            "launcher": false
+          },
+          "controls": [
+            {
+              "label": "New Window",
+              "idMso": "WindowNew",
+              "type": "button",
+              "size": "large",
+              "row": 1,
+              "column": 1,
+              "rowSpan": 3,
+              "colSpan": 2,
+              "image": "WindowNew.png",
+              "idStatus": "confirmed"
+            },
+            {
+              "label": "Arrange All",
+              "idMso": "WindowArrangeAll",
+              "type": "button",
+              "size": "small",
+              "row": 1,
+              "column": 3,
+              "rowSpan": 1,
+              "colSpan": 1,
+              "image": "WindowArrangeAll.png",
+              "idStatus": "candidate"
+            },
+            {
+              "label": "Split",
+              "idMso": "WindowSplit",
+              "type": "button",
+              "size": "small",
+              "row": 2,
+              "column": 3,
+              "rowSpan": 1,
+              "colSpan": 1,
+              "image": "WindowSplit.png",
+              "idStatus": "confirmed"
+            },
+            {
+              "label": "View Side by Side",
+              "idMso": "WindowViewSideBySide",
+              "type": "button",
+              "size": "small",
+              "row": 3,
+              "column": 3,
+              "rowSpan": 1,
+              "colSpan": 1,
+              "image": "WindowViewSideBySide.png",
+              "idStatus": "candidate"
+            },
+            {
+              "label": "Synchronous Scrolling",
+              "idMso": "WindowSynchronousScrolling",
+              "type": "button",
+              "size": "small",
+              "row": 1,
+              "column": 4,
+              "rowSpan": 1,
+              "colSpan": 1,
+              "image": "WindowSynchronousScrolling.png",
+              "idStatus": "candidate"
+            },
+            {
+              "label": "Reset Window Position",
+              "idMso": "WindowResetPosition",
+              "type": "button",
+              "size": "small",
+              "row": 2,
+              "column": 4,
+              "rowSpan": 1,
+              "colSpan": 1,
+              "image": "WindowResetPosition.png",
+              "idStatus": "confirmed"
+            },
+            {
+              "label": "Switch Windows",
+              "idMso": "WindowSwitchWindowsMenuWord",
+              "type": "menu",
+              "size": "small",
+              "row": 3,
+              "column": 4,
+              "rowSpan": 1,
+              "colSpan": 1,
+              "image": "WindowSwitchWindowsMenuWord.png",
+              "idStatus": "confirmed"
+            }
+          ]
+        },
+        {
+          "label": "Macros",
+          "idMso": "GroupMacros",
+          "groupIndex": 5,
+          "widthUnits": 4,
+          "layout": {
+            "rows": 3,
+            "columns": 3,
+            "flow": "column-major",
+            "launcher": false
+          },
+          "controls": [
+            {
+              "label": "Macros",
+              "idMso": "ViewMacros",
+              "type": "menu",
+              "size": "large",
+              "row": 1,
+              "column": 1,
+              "rowSpan": 3,
+              "colSpan": 3,
+              "image": "ViewMacros.png",
+              "idStatus": "candidate"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "label": "Developer",
+      "idMso": "TabDeveloper",
+      "order": 9,
+      "groups": [
+        {
+          "label": "Code",
+          "idMso": "GroupCode",
+          "groupIndex": 1,
+          "widthUnits": 7,
+          "layout": {
+            "rows": 3,
+            "columns": 5,
+            "flow": "column-major",
+            "launcher": false
+          },
+          "controls": [
+            {
+              "label": "Visual Basic",
+              "idMso": "VisualBasic",
+              "type": "button",
+              "size": "large",
+              "row": 1,
+              "column": 1,
+              "rowSpan": 3,
+              "colSpan": 2,
+              "image": "VisualBasic.png",
+              "idStatus": "confirmed"
+            },
+            {
+              "label": "Macros",
+              "idMso": "Macros",
+              "type": "button",
+              "size": "large",
+              "row": 1,
+              "column": 3,
+              "rowSpan": 3,
+              "colSpan": 2,
+              "image": "Macros.png",
+              "idStatus": "candidate"
+            },
+            {
+              "label": "Record Macro",
+              "idMso": "RecordMacro",
+              "type": "button",
+              "size": "small",
+              "row": 1,
+              "column": 5,
+              "rowSpan": 1,
+              "colSpan": 1,
+              "image": "RecordMacro.png",
+              "idStatus": "candidate"
+            },
+            {
+              "label": "Macro Security",
+              "idMso": "MacroSecurity",
+              "type": "button",
+              "size": "small",
+              "row": 2,
+              "column": 5,
+              "rowSpan": 1,
+              "colSpan": 1,
+              "image": "MacroSecurity.png",
+              "idStatus": "confirmed"
+            }
+          ]
+        },
+        {
+          "label": "Add-ins",
+          "idMso": "GroupAddIns",
+          "groupIndex": 2,
+          "widthUnits": 6,
+          "layout": {
+            "rows": 3,
+            "columns": 4,
+            "flow": "column-major",
+            "launcher": false
+          },
+          "controls": [
+            {
+              "label": "Add-ins",
+              "idMso": "AddIns",
+              "type": "button",
+              "size": "large",
+              "row": 1,
+              "column": 1,
+              "rowSpan": 3,
+              "colSpan": 2,
+              "image": "AddIns.png",
+              "idStatus": "candidate"
+            },
+            {
+              "label": "COM Add-ins",
+              "idMso": "ComAddIns",
+              "type": "button",
+              "size": "large",
+              "row": 1,
+              "column": 3,
+              "rowSpan": 3,
+              "colSpan": 2,
+              "image": "ComAddIns.png",
+              "idStatus": "candidate"
+            }
+          ]
+        },
+        {
+          "label": "Controls",
+          "idMso": "GroupControls",
+          "groupIndex": 3,
+          "widthUnits": 14,
+          "layout": {
+            "rows": 3,
+            "columns": 4,
+            "flow": "column-major",
+            "launcher": false
+          },
+          "controls": [
+            {
+              "label": "Rich Text Content Control",
+              "idMso": "ContentControlRichText",
+              "type": "button",
+              "size": "small",
+              "row": 1,
+              "column": 1,
+              "rowSpan": 1,
+              "colSpan": 1,
+              "image": "ContentControlRichText.png",
+              "idStatus": "confirmed"
+            },
+            {
+              "label": "Plain Text Content Control",
+              "idMso": "ContentControlText",
+              "type": "button",
+              "size": "small",
+              "row": 2,
+              "column": 1,
+              "rowSpan": 1,
+              "colSpan": 1,
+              "image": "ContentControlText.png",
+              "idStatus": "confirmed"
+            },
+            {
+              "label": "Picture Content Control",
+              "idMso": "ContentControlPicture",
+              "type": "button",
+              "size": "small",
+              "row": 3,
+              "column": 1,
+              "rowSpan": 1,
+              "colSpan": 1,
+              "image": "ContentControlPicture.png",
+              "idStatus": "confirmed"
+            },
+            {
+              "label": "Building Block Gallery Content Control",
+              "idMso": "ContentControlBuildingBlockGallery",
+              "type": "button",
+              "size": "small",
+              "row": 1,
+              "column": 2,
+              "rowSpan": 1,
+              "colSpan": 1,
+              "image": "ContentControlBuildingBlockGallery.png",
+              "idStatus": "confirmed"
+            },
+            {
+              "label": "Check Box Content Control",
+              "idMso": "ContentControlCheckBox",
+              "type": "button",
+              "size": "small",
+              "row": 2,
+              "column": 2,
+              "rowSpan": 1,
+              "colSpan": 1,
+              "image": "ContentControlCheckBox.png",
+              "idStatus": "confirmed"
+            },
+            {
+              "label": "Combo Box Content Control",
+              "idMso": "ContentControlComboBox",
+              "type": "button",
+              "size": "small",
+              "row": 3,
+              "column": 2,
+              "rowSpan": 1,
+              "colSpan": 1,
+              "image": "ContentControlComboBox.png",
+              "idStatus": "confirmed"
+            },
+            {
+              "label": "Drop-Down List Content Control",
+              "idMso": "ContentControlDropDownList",
+              "type": "button",
+              "size": "small",
+              "row": 1,
+              "column": 3,
+              "rowSpan": 1,
+              "colSpan": 1,
+              "image": "ContentControlDropDownList.png",
+              "idStatus": "confirmed"
+            },
+            {
+              "label": "Date Picker Content Control",
+              "idMso": "ContentControlDatePicker",
+              "type": "button",
+              "size": "small",
+              "row": 2,
+              "column": 3,
+              "rowSpan": 1,
+              "colSpan": 1,
+              "image": "ContentControlDatePicker.png",
+              "idStatus": "candidate"
+            },
+            {
+              "label": "Legacy Tools",
+              "idMso": "LegacyTools",
+              "type": "menu",
+              "size": "small",
+              "row": 3,
+              "column": 3,
+              "rowSpan": 1,
+              "colSpan": 1,
+              "image": "LegacyTools.png",
+              "idStatus": "candidate"
+            },
+            {
+              "label": "Design Mode",
+              "idMso": "DesignMode",
+              "type": "toggleButton",
+              "size": "small",
+              "row": 1,
+              "column": 4,
+              "rowSpan": 1,
+              "colSpan": 1,
+              "image": "DesignMode.png",
+              "idStatus": "confirmed"
+            },
+            {
+              "label": "Properties",
+              "idMso": "ContentControlProperties",
+              "type": "button",
+              "size": "small",
+              "row": 2,
+              "column": 4,
+              "rowSpan": 1,
+              "colSpan": 1,
+              "image": "ContentControlProperties.png",
+              "idStatus": "candidate"
+            },
+            {
+              "label": "Group",
+              "idMso": "ContentControlGroup",
+              "type": "menu",
+              "size": "small",
+              "row": 3,
+              "column": 4,
+              "rowSpan": 1,
+              "colSpan": 1,
+              "image": "ContentControlGroup.png",
+              "idStatus": "candidate"
+            }
+          ]
+        },
+        {
+          "label": "Mapping",
+          "idMso": "GroupXmlMapping",
+          "groupIndex": 4,
+          "widthUnits": 5,
+          "layout": {
+            "rows": 3,
+            "columns": 3,
+            "flow": "column-major",
+            "launcher": false
+          },
+          "controls": [
+            {
+              "label": "XML Mapping Pane",
+              "idMso": "XmlMappingPane",
+              "type": "button",
+              "size": "large",
+              "row": 1,
+              "column": 1,
+              "rowSpan": 3,
+              "colSpan": 3,
+              "image": "XmlMappingPane.png",
+              "idStatus": "candidate"
+            }
+          ]
+        },
+        {
+          "label": "Protect",
+          "idMso": "GroupProtectDeveloper",
+          "groupIndex": 5,
+          "widthUnits": 5,
+          "layout": {
+            "rows": 3,
+            "columns": 3,
+            "flow": "column-major",
+            "launcher": false
+          },
+          "controls": [
+            {
+              "label": "Restrict Editing",
+              "idMso": "RestrictEditing",
+              "type": "button",
+              "size": "large",
+              "row": 1,
+              "column": 1,
+              "rowSpan": 3,
+              "colSpan": 3,
+              "image": "RestrictEditing.png",
+              "idStatus": "candidate"
+            }
+          ]
+        },
+        {
+          "label": "Templates",
+          "idMso": "GroupTemplates",
+          "groupIndex": 6,
+          "widthUnits": 5,
+          "layout": {
+            "rows": 3,
+            "columns": 3,
+            "flow": "column-major",
+            "launcher": false
+          },
+          "controls": [
+            {
+              "label": "Document Template",
+              "idMso": "DocumentTemplate",
+              "type": "button",
+              "size": "large",
+              "row": 1,
+              "column": 1,
+              "rowSpan": 3,
+              "colSpan": 3,
+              "image": "DocumentTemplate.png",
+              "idStatus": "confirmed"
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

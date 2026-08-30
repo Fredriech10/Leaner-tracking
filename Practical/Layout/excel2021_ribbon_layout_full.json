@@ -1,0 +1,3320 @@
+{
+  "schemaVersion": "1.0",
+  "application": "Microsoft Excel",
+  "targetVersion": "Office 2021",
+  "layoutProfile": {
+    "name": "wide-desktop-reference",
+    "description": "Approximate wide-window Excel 2021 ribbon layout for visual reconstruction and quiz rendering.",
+    "coordinateSystem": {
+      "groupOrder": "left-to-right",
+      "rowCount": 3,
+      "rowMeaning": "Small controls normally occupy one of three vertical rows. Large controls generally span all three rows.",
+      "columnMeaning": "Logical position within each group, not pixel coordinates.",
+      "responsive": false
+    },
+    "assetPolicy": {
+      "originalIconFolder": "assets/excel2021/original",
+      "quizIconFolder": "assets/excel2021/quiz_black",
+      "ribbonIconFolder": "assets/excel2021/ribbon"
+    },
+    "importantNote": "This is a renderer-oriented model, not an official Microsoft ribbon export. Excel's actual ribbon is responsive and may rearrange, hide, or collapse controls depending on build, window width, selected object, enabled services, and licensing."
+  },
+  "tabs": [
+    {
+      "label": "Home",
+      "idMso": "TabHome",
+      "order": 1,
+      "groups": [
+        {
+          "label": "Clipboard",
+          "idMso": "GroupClipboard",
+          "groupIndex": 1,
+          "widthUnits": 5,
+          "layout": {
+            "rows": 3,
+            "columns": 3,
+            "flow": "column-major",
+            "launcher": false
+          },
+          "controls": [
+            {
+              "label": "Paste",
+              "idMso": "Paste",
+              "type": "splitButton",
+              "size": "large",
+              "row": 1,
+              "column": 1,
+              "rowSpan": 3,
+              "colSpan": 2,
+              "image": "Paste.png",
+              "idStatus": "candidate"
+            },
+            {
+              "label": "Cut",
+              "idMso": "Cut",
+              "type": "button",
+              "size": "small",
+              "row": 1,
+              "column": 3,
+              "rowSpan": 1,
+              "colSpan": 1,
+              "image": "Cut.png",
+              "idStatus": "candidate"
+            },
+            {
+              "label": "Copy",
+              "idMso": "Copy",
+              "type": "button",
+              "size": "small",
+              "row": 2,
+              "column": 3,
+              "rowSpan": 1,
+              "colSpan": 1,
+              "image": "Copy.png",
+              "idStatus": "candidate"
+            },
+            {
+              "label": "Format Painter",
+              "idMso": "FormatPainter",
+              "type": "button",
+              "size": "small",
+              "row": 3,
+              "column": 3,
+              "rowSpan": 1,
+              "colSpan": 1,
+              "image": "FormatPainter.png",
+              "idStatus": "candidate"
+            }
+          ]
+        },
+        {
+          "label": "Font",
+          "idMso": "GroupFont",
+          "groupIndex": 2,
+          "widthUnits": 11,
+          "layout": {
+            "rows": 3,
+            "columns": 7,
+            "flow": "column-major",
+            "launcher": true
+          },
+          "controls": [
+            {
+              "label": "Font",
+              "idMso": null,
+              "type": "comboBox",
+              "size": "comboBox",
+              "row": 1,
+              "column": 1,
+              "rowSpan": 1,
+              "colSpan": 3,
+              "image": null,
+              "idStatus": "needs_validation",
+              "notes": "Font family selector"
+            },
+            {
+              "label": "Font Size",
+              "idMso": null,
+              "type": "comboBox",
+              "size": "comboBox",
+              "row": 1,
+              "column": 4,
+              "rowSpan": 1,
+              "colSpan": 2,
+              "image": null,
+              "idStatus": "needs_validation"
+            },
+            {
+              "label": "Increase Font Size",
+              "idMso": "FontSizeIncrease",
+              "type": "button",
+              "size": "small",
+              "row": 1,
+              "column": 6,
+              "rowSpan": 1,
+              "colSpan": 1,
+              "image": "FontSizeIncrease.png",
+              "idStatus": "candidate"
+            },
+            {
+              "label": "Decrease Font Size",
+              "idMso": "FontSizeDecrease",
+              "type": "button",
+              "size": "small",
+              "row": 1,
+              "column": 7,
+              "rowSpan": 1,
+              "colSpan": 1,
+              "image": "FontSizeDecrease.png",
+              "idStatus": "candidate"
+            },
+            {
+              "label": "Bold",
+              "idMso": "Bold",
+              "type": "toggleButton",
+              "size": "small",
+              "row": 2,
+              "column": 1,
+              "rowSpan": 1,
+              "colSpan": 1,
+              "image": "Bold.png",
+              "idStatus": "candidate"
+            },
+            {
+              "label": "Italic",
+              "idMso": "Italic",
+              "type": "toggleButton",
+              "size": "small",
+              "row": 2,
+              "column": 2,
+              "rowSpan": 1,
+              "colSpan": 1,
+              "image": "Italic.png",
+              "idStatus": "candidate"
+            },
+            {
+              "label": "Underline",
+              "idMso": "Underline",
+              "type": "splitButton",
+              "size": "small",
+              "row": 2,
+              "column": 3,
+              "rowSpan": 1,
+              "colSpan": 1,
+              "image": "Underline.png",
+              "idStatus": "candidate"
+            },
+            {
+              "label": "Borders",
+              "idMso": "BordersGallery",
+              "type": "splitButton",
+              "size": "small",
+              "row": 2,
+              "column": 4,
+              "rowSpan": 1,
+              "colSpan": 1,
+              "image": "BordersGallery.png",
+              "idStatus": "candidate"
+            },
+            {
+              "label": "Fill Color",
+              "idMso": "CellFillColorPicker",
+              "type": "splitButton",
+              "size": "small",
+              "row": 2,
+              "column": 5,
+              "rowSpan": 1,
+              "colSpan": 1,
+              "image": "CellFillColorPicker.png",
+              "idStatus": "candidate"
+            },
+            {
+              "label": "Font Color",
+              "idMso": "FontColorPicker",
+              "type": "splitButton",
+              "size": "small",
+              "row": 2,
+              "column": 6,
+              "rowSpan": 1,
+              "colSpan": 1,
+              "image": "FontColorPicker.png",
+              "idStatus": "candidate"
+            }
+          ]
+        },
+        {
+          "label": "Alignment",
+          "idMso": "GroupAlignmentExcel",
+          "groupIndex": 3,
+          "widthUnits": 12,
+          "layout": {
+            "rows": 3,
+            "columns": 5,
+            "flow": "column-major",
+            "launcher": true
+          },
+          "controls": [
+            {
+              "label": "Top Align",
+              "idMso": "AlignTopExcel",
+              "type": "toggleButton",
+              "size": "small",
+              "row": 1,
+              "column": 1,
+              "rowSpan": 1,
+              "colSpan": 1,
+              "image": "AlignTopExcel.png",
+              "idStatus": "candidate"
+            },
+            {
+              "label": "Middle Align",
+              "idMso": "AlignMiddleExcel",
+              "type": "toggleButton",
+              "size": "small",
+              "row": 1,
+              "column": 2,
+              "rowSpan": 1,
+              "colSpan": 1,
+              "image": "AlignMiddleExcel.png",
+              "idStatus": "candidate"
+            },
+            {
+              "label": "Bottom Align",
+              "idMso": "AlignBottomExcel",
+              "type": "toggleButton",
+              "size": "small",
+              "row": 1,
+              "column": 3,
+              "rowSpan": 1,
+              "colSpan": 1,
+              "image": "AlignBottomExcel.png",
+              "idStatus": "candidate"
+            },
+            {
+              "label": "Orientation",
+              "idMso": "OrientationMenu",
+              "type": "menu",
+              "size": "small",
+              "row": 1,
+              "column": 4,
+              "rowSpan": 1,
+              "colSpan": 1,
+              "image": "OrientationMenu.png",
+              "idStatus": "candidate"
+            },
+            {
+              "label": "Align Left",
+              "idMso": "AlignLeft",
+              "type": "toggleButton",
+              "size": "small",
+              "row": 2,
+              "column": 1,
+              "rowSpan": 1,
+              "colSpan": 1,
+              "image": "AlignLeft.png",
+              "idStatus": "candidate"
+            },
+            {
+              "label": "Center",
+              "idMso": "AlignCenter",
+              "type": "toggleButton",
+              "size": "small",
+              "row": 2,
+              "column": 2,
+              "rowSpan": 1,
+              "colSpan": 1,
+              "image": "AlignCenter.png",
+              "idStatus": "candidate"
+            },
+            {
+              "label": "Align Right",
+              "idMso": "AlignRight",
+              "type": "toggleButton",
+              "size": "small",
+              "row": 2,
+              "column": 3,
+              "rowSpan": 1,
+              "colSpan": 1,
+              "image": "AlignRight.png",
+              "idStatus": "candidate"
+            },
+            {
+              "label": "Decrease Indent",
+              "idMso": "IndentDecreaseExcel",
+              "type": "button",
+              "size": "small",
+              "row": 2,
+              "column": 4,
+              "rowSpan": 1,
+              "colSpan": 1,
+              "image": "IndentDecreaseExcel.png",
+              "idStatus": "candidate"
+            },
+            {
+              "label": "Increase Indent",
+              "idMso": "IndentIncreaseExcel",
+              "type": "button",
+              "size": "small",
+              "row": 2,
+              "column": 5,
+              "rowSpan": 1,
+              "colSpan": 1,
+              "image": "IndentIncreaseExcel.png",
+              "idStatus": "candidate"
+            },
+            {
+              "label": "Wrap Text",
+              "idMso": "WrapText",
+              "type": "toggleButton",
+              "size": "small",
+              "row": 3,
+              "column": 1,
+              "rowSpan": 1,
+              "colSpan": 1,
+              "image": "WrapText.png",
+              "idStatus": "candidate"
+            },
+            {
+              "label": "Merge & Center",
+              "idMso": "MergeAndCenter",
+              "type": "splitButton",
+              "size": "small",
+              "row": 3,
+              "column": 2,
+              "rowSpan": 1,
+              "colSpan": 1,
+              "image": "MergeAndCenter.png",
+              "idStatus": "candidate"
+            }
+          ]
+        },
+        {
+          "label": "Number",
+          "idMso": "GroupNumber",
+          "groupIndex": 4,
+          "widthUnits": 12,
+          "layout": {
+            "rows": 3,
+            "columns": 5,
+            "flow": "column-major",
+            "launcher": true
+          },
+          "controls": [
+            {
+              "label": "Number Format",
+              "idMso": null,
+              "type": "comboBox",
+              "size": "comboBox",
+              "row": 1,
+              "column": 1,
+              "rowSpan": 1,
+              "colSpan": 4,
+              "image": null,
+              "idStatus": "needs_validation",
+              "notes": "General / Number / Currency etc."
+            },
+            {
+              "label": "Accounting Number Format",
+              "idMso": "AccountingNumberFormat",
+              "type": "splitButton",
+              "size": "small",
+              "row": 2,
+              "column": 1,
+              "rowSpan": 1,
+              "colSpan": 1,
+              "image": "AccountingNumberFormat.png",
+              "idStatus": "candidate"
+            },
+            {
+              "label": "Percent Style",
+              "idMso": "PercentStyle",
+              "type": "button",
+              "size": "small",
+              "row": 2,
+              "column": 2,
+              "rowSpan": 1,
+              "colSpan": 1,
+              "image": "PercentStyle.png",
+              "idStatus": "candidate"
+            },
+            {
+              "label": "Comma Style",
+              "idMso": "CommaStyle",
+              "type": "button",
+              "size": "small",
+              "row": 2,
+              "column": 3,
+              "rowSpan": 1,
+              "colSpan": 1,
+              "image": "CommaStyle.png",
+              "idStatus": "candidate"
+            },
+            {
+              "label": "Increase Decimal",
+              "idMso": "DecimalsIncrease",
+              "type": "button",
+              "size": "small",
+              "row": 2,
+              "column": 4,
+              "rowSpan": 1,
+              "colSpan": 1,
+              "image": "DecimalsIncrease.png",
+              "idStatus": "candidate"
+            },
+            {
+              "label": "Decrease Decimal",
+              "idMso": "DecimalsDecrease",
+              "type": "button",
+              "size": "small",
+              "row": 2,
+              "column": 5,
+              "rowSpan": 1,
+              "colSpan": 1,
+              "image": "DecimalsDecrease.png",
+              "idStatus": "candidate"
+            }
+          ]
+        },
+        {
+          "label": "Styles",
+          "idMso": "GroupStylesExcel",
+          "groupIndex": 5,
+          "widthUnits": 9,
+          "layout": {
+            "rows": 3,
+            "columns": 6,
+            "flow": "column-major",
+            "launcher": false
+          },
+          "controls": [
+            {
+              "label": "Conditional Formatting",
+              "idMso": "ConditionalFormattingMenu",
+              "type": "menu",
+              "size": "large",
+              "row": 1,
+              "column": 1,
+              "rowSpan": 3,
+              "colSpan": 2,
+              "image": "ConditionalFormattingMenu.png",
+              "idStatus": "candidate"
+            },
+            {
+              "label": "Format as Table",
+              "idMso": "FormatAsTableGallery",
+              "type": "gallery",
+              "size": "large",
+              "row": 1,
+              "column": 3,
+              "rowSpan": 3,
+              "colSpan": 2,
+              "image": "FormatAsTableGallery.png",
+              "idStatus": "candidate"
+            },
+            {
+              "label": "Cell Styles",
+              "idMso": "CellStylesGallery",
+              "type": "gallery",
+              "size": "large",
+              "row": 1,
+              "column": 5,
+              "rowSpan": 3,
+              "colSpan": 2,
+              "image": "CellStylesGallery.png",
+              "idStatus": "candidate"
+            }
+          ]
+        },
+        {
+          "label": "Cells",
+          "idMso": "GroupCells",
+          "groupIndex": 6,
+          "widthUnits": 8,
+          "layout": {
+            "rows": 3,
+            "columns": 6,
+            "flow": "column-major",
+            "launcher": false
+          },
+          "controls": [
+            {
+              "label": "Insert",
+              "idMso": "CellsInsertMenu",
+              "type": "menu",
+              "size": "large",
+              "row": 1,
+              "column": 1,
+              "rowSpan": 3,
+              "colSpan": 2,
+              "image": "CellsInsertMenu.png",
+              "idStatus": "candidate"
+            },
+            {
+              "label": "Delete",
+              "idMso": "CellsDeleteMenu",
+              "type": "menu",
+              "size": "large",
+              "row": 1,
+              "column": 3,
+              "rowSpan": 3,
+              "colSpan": 2,
+              "image": "CellsDeleteMenu.png",
+              "idStatus": "candidate"
+            },
+            {
+              "label": "Format",
+              "idMso": "CellsFormatMenu",
+              "type": "menu",
+              "size": "large",
+              "row": 1,
+              "column": 5,
+              "rowSpan": 3,
+              "colSpan": 2,
+              "image": "CellsFormatMenu.png",
+              "idStatus": "candidate"
+            }
+          ]
+        },
+        {
+          "label": "Editing",
+          "idMso": "GroupEditingExcel",
+          "groupIndex": 7,
+          "widthUnits": 10,
+          "layout": {
+            "rows": 3,
+            "columns": 7,
+            "flow": "column-major",
+            "launcher": false
+          },
+          "controls": [
+            {
+              "label": "AutoSum",
+              "idMso": "AutoSum",
+              "type": "splitButton",
+              "size": "large",
+              "row": 1,
+              "column": 1,
+              "rowSpan": 3,
+              "colSpan": 2,
+              "image": "AutoSum.png",
+              "idStatus": "candidate"
+            },
+            {
+              "label": "Fill",
+              "idMso": "FillMenu",
+              "type": "menu",
+              "size": "small",
+              "row": 1,
+              "column": 3,
+              "rowSpan": 1,
+              "colSpan": 1,
+              "image": "FillMenu.png",
+              "idStatus": "candidate"
+            },
+            {
+              "label": "Clear",
+              "idMso": "ClearMenu",
+              "type": "menu",
+              "size": "small",
+              "row": 2,
+              "column": 3,
+              "rowSpan": 1,
+              "colSpan": 1,
+              "image": "ClearMenu.png",
+              "idStatus": "candidate"
+            },
+            {
+              "label": "Sort & Filter",
+              "idMso": "SortFilterMenu",
+              "type": "menu",
+              "size": "large",
+              "row": 1,
+              "column": 4,
+              "rowSpan": 3,
+              "colSpan": 2,
+              "image": "SortFilterMenu.png",
+              "idStatus": "candidate"
+            },
+            {
+              "label": "Find & Select",
+              "idMso": "FindSelectMenu",
+              "type": "menu",
+              "size": "large",
+              "row": 1,
+              "column": 6,
+              "rowSpan": 3,
+              "colSpan": 2,
+              "image": "FindSelectMenu.png",
+              "idStatus": "candidate"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "label": "Insert",
+      "idMso": "TabInsert",
+      "order": 2,
+      "groups": [
+        {
+          "label": "Tables",
+          "idMso": "GroupInsertTableExcel",
+          "groupIndex": 1,
+          "widthUnits": 7,
+          "layout": {
+            "rows": 3,
+            "columns": 6,
+            "flow": "column-major",
+            "launcher": false
+          },
+          "controls": [
+            {
+              "label": "PivotTable",
+              "idMso": "PivotTableInsert",
+              "type": "button",
+              "size": "large",
+              "row": 1,
+              "column": 1,
+              "rowSpan": 3,
+              "colSpan": 2,
+              "image": "PivotTableInsert.png",
+              "idStatus": "candidate"
+            },
+            {
+              "label": "Recommended PivotTables",
+              "idMso": "RecommendedPivotTables",
+              "type": "button",
+              "size": "large",
+              "row": 1,
+              "column": 3,
+              "rowSpan": 3,
+              "colSpan": 2,
+              "image": "RecommendedPivotTables.png",
+              "idStatus": "candidate"
+            },
+            {
+              "label": "Table",
+              "idMso": "TableInsert",
+              "type": "button",
+              "size": "large",
+              "row": 1,
+              "column": 5,
+              "rowSpan": 3,
+              "colSpan": 2,
+              "image": "TableInsert.png",
+              "idStatus": "candidate"
+            }
+          ]
+        },
+        {
+          "label": "Illustrations",
+          "idMso": "GroupInsertIllustrations",
+          "groupIndex": 2,
+          "widthUnits": 9,
+          "layout": {
+            "rows": 3,
+            "columns": 8,
+            "flow": "column-major",
+            "launcher": false
+          },
+          "controls": [
+            {
+              "label": "Pictures",
+              "idMso": "PictureInsertFromFile",
+              "type": "button",
+              "size": "large",
+              "row": 1,
+              "column": 1,
+              "rowSpan": 3,
+              "colSpan": 2,
+              "image": "PictureInsertFromFile.png",
+              "idStatus": "candidate"
+            },
+            {
+              "label": "Shapes",
+              "idMso": "ShapesInsertGallery",
+              "type": "gallery",
+              "size": "large",
+              "row": 1,
+              "column": 3,
+              "rowSpan": 3,
+              "colSpan": 2,
+              "image": "ShapesInsertGallery.png",
+              "idStatus": "candidate"
+            },
+            {
+              "label": "SmartArt",
+              "idMso": "SmartArtInsert",
+              "type": "button",
+              "size": "large",
+              "row": 1,
+              "column": 5,
+              "rowSpan": 3,
+              "colSpan": 2,
+              "image": "SmartArtInsert.png",
+              "idStatus": "candidate"
+            },
+            {
+              "label": "Screenshot",
+              "idMso": "ScreenshotInsertGallery",
+              "type": "gallery",
+              "size": "large",
+              "row": 1,
+              "column": 7,
+              "rowSpan": 3,
+              "colSpan": 2,
+              "image": "ScreenshotInsertGallery.png",
+              "idStatus": "candidate"
+            }
+          ]
+        },
+        {
+          "label": "Add-ins",
+          "idMso": "GroupAddIns",
+          "groupIndex": 3,
+          "widthUnits": 6,
+          "layout": {
+            "rows": 3,
+            "columns": 4,
+            "flow": "column-major",
+            "launcher": false
+          },
+          "controls": [
+            {
+              "label": "Get Add-ins",
+              "idMso": "OfficeAddIns",
+              "type": "button",
+              "size": "large",
+              "row": 1,
+              "column": 1,
+              "rowSpan": 3,
+              "colSpan": 2,
+              "image": "OfficeAddIns.png",
+              "idStatus": "candidate"
+            },
+            {
+              "label": "My Add-ins",
+              "idMso": "OfficeAddInsDialog",
+              "type": "button",
+              "size": "large",
+              "row": 1,
+              "column": 3,
+              "rowSpan": 3,
+              "colSpan": 2,
+              "image": "OfficeAddInsDialog.png",
+              "idStatus": "candidate"
+            }
+          ]
+        },
+        {
+          "label": "Charts",
+          "idMso": "GroupInsertChartsExcel",
+          "groupIndex": 4,
+          "widthUnits": 15,
+          "layout": {
+            "rows": 3,
+            "columns": 5,
+            "flow": "column-major",
+            "launcher": false
+          },
+          "controls": [
+            {
+              "label": "Recommended Charts",
+              "idMso": "RecommendedCharts",
+              "type": "button",
+              "size": "large",
+              "row": 1,
+              "column": 1,
+              "rowSpan": 3,
+              "colSpan": 2,
+              "image": "RecommendedCharts.png",
+              "idStatus": "candidate"
+            },
+            {
+              "label": "Insert Column or Bar Chart",
+              "idMso": "ChartInsertColumn",
+              "type": "menu",
+              "size": "small",
+              "row": 1,
+              "column": 3,
+              "rowSpan": 1,
+              "colSpan": 1,
+              "image": "ChartInsertColumn.png",
+              "idStatus": "candidate"
+            },
+            {
+              "label": "Insert Line or Area Chart",
+              "idMso": "ChartInsertLine",
+              "type": "menu",
+              "size": "small",
+              "row": 2,
+              "column": 3,
+              "rowSpan": 1,
+              "colSpan": 1,
+              "image": "ChartInsertLine.png",
+              "idStatus": "candidate"
+            },
+            {
+              "label": "Insert Pie or Doughnut Chart",
+              "idMso": "ChartInsertPie",
+              "type": "menu",
+              "size": "small",
+              "row": 3,
+              "column": 3,
+              "rowSpan": 1,
+              "colSpan": 1,
+              "image": "ChartInsertPie.png",
+              "idStatus": "candidate"
+            },
+            {
+              "label": "Insert Hierarchy Chart",
+              "idMso": "ChartInsertHierarchy",
+              "type": "menu",
+              "size": "small",
+              "row": 1,
+              "column": 4,
+              "rowSpan": 1,
+              "colSpan": 1,
+              "image": "ChartInsertHierarchy.png",
+              "idStatus": "candidate"
+            },
+            {
+              "label": "Insert Statistic Chart",
+              "idMso": "ChartInsertStatistic",
+              "type": "menu",
+              "size": "small",
+              "row": 2,
+              "column": 4,
+              "rowSpan": 1,
+              "colSpan": 1,
+              "image": "ChartInsertStatistic.png",
+              "idStatus": "candidate"
+            },
+            {
+              "label": "Insert Scatter or Bubble Chart",
+              "idMso": "ChartInsertScatter",
+              "type": "menu",
+              "size": "small",
+              "row": 3,
+              "column": 4,
+              "rowSpan": 1,
+              "colSpan": 1,
+              "image": "ChartInsertScatter.png",
+              "idStatus": "candidate"
+            },
+            {
+              "label": "Insert Waterfall, Funnel, Stock, Surface or Radar",
+              "idMso": "ChartInsertWaterfall",
+              "type": "menu",
+              "size": "small",
+              "row": 1,
+              "column": 5,
+              "rowSpan": 1,
+              "colSpan": 1,
+              "image": "ChartInsertWaterfall.png",
+              "idStatus": "candidate"
+            },
+            {
+              "label": "PivotChart",
+              "idMso": "PivotChartInsert",
+              "type": "button",
+              "size": "small",
+              "row": 2,
+              "column": 5,
+              "rowSpan": 1,
+              "colSpan": 1,
+              "image": "PivotChartInsert.png",
+              "idStatus": "candidate"
+            }
+          ]
+        },
+        {
+          "label": "Sparklines",
+          "idMso": "GroupSparklines",
+          "groupIndex": 5,
+          "widthUnits": 7,
+          "layout": {
+            "rows": 3,
+            "columns": 6,
+            "flow": "column-major",
+            "launcher": false
+          },
+          "controls": [
+            {
+              "label": "Line",
+              "idMso": "SparklineLine",
+              "type": "button",
+              "size": "large",
+              "row": 1,
+              "column": 1,
+              "rowSpan": 3,
+              "colSpan": 2,
+              "image": "SparklineLine.png",
+              "idStatus": "candidate"
+            },
+            {
+              "label": "Column",
+              "idMso": "SparklineColumn",
+              "type": "button",
+              "size": "large",
+              "row": 1,
+              "column": 3,
+              "rowSpan": 3,
+              "colSpan": 2,
+              "image": "SparklineColumn.png",
+              "idStatus": "candidate"
+            },
+            {
+              "label": "Win/Loss",
+              "idMso": "SparklineWinLoss",
+              "type": "button",
+              "size": "large",
+              "row": 1,
+              "column": 5,
+              "rowSpan": 3,
+              "colSpan": 2,
+              "image": "SparklineWinLoss.png",
+              "idStatus": "candidate"
+            }
+          ]
+        },
+        {
+          "label": "Filters",
+          "idMso": "GroupFilters",
+          "groupIndex": 6,
+          "widthUnits": 6,
+          "layout": {
+            "rows": 3,
+            "columns": 4,
+            "flow": "column-major",
+            "launcher": false
+          },
+          "controls": [
+            {
+              "label": "Slicer",
+              "idMso": "SlicerInsert",
+              "type": "button",
+              "size": "large",
+              "row": 1,
+              "column": 1,
+              "rowSpan": 3,
+              "colSpan": 2,
+              "image": "SlicerInsert.png",
+              "idStatus": "candidate"
+            },
+            {
+              "label": "Timeline",
+              "idMso": "TimelineInsert",
+              "type": "button",
+              "size": "large",
+              "row": 1,
+              "column": 3,
+              "rowSpan": 3,
+              "colSpan": 2,
+              "image": "TimelineInsert.png",
+              "idStatus": "candidate"
+            }
+          ]
+        },
+        {
+          "label": "Links",
+          "idMso": "GroupLinks",
+          "groupIndex": 7,
+          "widthUnits": 4,
+          "layout": {
+            "rows": 3,
+            "columns": 3,
+            "flow": "column-major",
+            "launcher": false
+          },
+          "controls": [
+            {
+              "label": "Link",
+              "idMso": "HyperlinkInsert",
+              "type": "button",
+              "size": "large",
+              "row": 1,
+              "column": 1,
+              "rowSpan": 3,
+              "colSpan": 3,
+              "image": "HyperlinkInsert.png",
+              "idStatus": "candidate"
+            }
+          ]
+        },
+        {
+          "label": "Text",
+          "idMso": "GroupText",
+          "groupIndex": 8,
+          "widthUnits": 9,
+          "layout": {
+            "rows": 3,
+            "columns": 5,
+            "flow": "column-major",
+            "launcher": false
+          },
+          "controls": [
+            {
+              "label": "Text Box",
+              "idMso": "TextBoxInsert",
+              "type": "button",
+              "size": "large",
+              "row": 1,
+              "column": 1,
+              "rowSpan": 3,
+              "colSpan": 2,
+              "image": "TextBoxInsert.png",
+              "idStatus": "candidate"
+            },
+            {
+              "label": "Header & Footer",
+              "idMso": "HeaderFooterInsert",
+              "type": "button",
+              "size": "large",
+              "row": 1,
+              "column": 3,
+              "rowSpan": 3,
+              "colSpan": 2,
+              "image": "HeaderFooterInsert.png",
+              "idStatus": "candidate"
+            },
+            {
+              "label": "WordArt",
+              "idMso": "WordArtInsertGallery",
+              "type": "gallery",
+              "size": "small",
+              "row": 1,
+              "column": 5,
+              "rowSpan": 1,
+              "colSpan": 1,
+              "image": "WordArtInsertGallery.png",
+              "idStatus": "candidate"
+            },
+            {
+              "label": "Signature Line",
+              "idMso": "SignatureLineInsert",
+              "type": "button",
+              "size": "small",
+              "row": 2,
+              "column": 5,
+              "rowSpan": 1,
+              "colSpan": 1,
+              "image": "SignatureLineInsert.png",
+              "idStatus": "candidate"
+            },
+            {
+              "label": "Object",
+              "idMso": "ObjectInsert",
+              "type": "menu",
+              "size": "small",
+              "row": 3,
+              "column": 5,
+              "rowSpan": 1,
+              "colSpan": 1,
+              "image": "ObjectInsert.png",
+              "idStatus": "candidate"
+            }
+          ]
+        },
+        {
+          "label": "Symbols",
+          "idMso": "GroupInsertSymbols",
+          "groupIndex": 9,
+          "widthUnits": 5,
+          "layout": {
+            "rows": 3,
+            "columns": 4,
+            "flow": "column-major",
+            "launcher": false
+          },
+          "controls": [
+            {
+              "label": "Equation",
+              "idMso": "EquationInsertNew",
+              "type": "menu",
+              "size": "large",
+              "row": 1,
+              "column": 1,
+              "rowSpan": 3,
+              "colSpan": 2,
+              "image": "EquationInsertNew.png",
+              "idStatus": "candidate"
+            },
+            {
+              "label": "Symbol",
+              "idMso": "SymbolInsert",
+              "type": "gallery",
+              "size": "large",
+              "row": 1,
+              "column": 3,
+              "rowSpan": 3,
+              "colSpan": 2,
+              "image": "SymbolInsert.png",
+              "idStatus": "candidate"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "label": "Draw",
+      "idMso": "TabDrawInk",
+      "order": 3,
+      "groups": [
+        {
+          "label": "Drawing Tools",
+          "idMso": "GroupDrawInk",
+          "groupIndex": 1,
+          "widthUnits": 10,
+          "layout": {
+            "rows": 3,
+            "columns": 10,
+            "flow": "column-major",
+            "launcher": false
+          },
+          "controls": [
+            {
+              "label": "Select",
+              "idMso": "InkSelect",
+              "type": "button",
+              "size": "large",
+              "row": 1,
+              "column": 1,
+              "rowSpan": 3,
+              "colSpan": 2,
+              "image": "InkSelect.png",
+              "idStatus": "candidate"
+            },
+            {
+              "label": "Lasso Select",
+              "idMso": "InkLassoSelect",
+              "type": "button",
+              "size": "large",
+              "row": 1,
+              "column": 3,
+              "rowSpan": 3,
+              "colSpan": 2,
+              "image": "InkLassoSelect.png",
+              "idStatus": "candidate"
+            },
+            {
+              "label": "Eraser",
+              "idMso": "InkEraser",
+              "type": "menu",
+              "size": "large",
+              "row": 1,
+              "column": 5,
+              "rowSpan": 3,
+              "colSpan": 2,
+              "image": "InkEraser.png",
+              "idStatus": "candidate"
+            },
+            {
+              "label": "Pens",
+              "idMso": "InkPensGallery",
+              "type": "gallery",
+              "size": "gallery",
+              "row": 1,
+              "column": 7,
+              "rowSpan": 3,
+              "colSpan": 4,
+              "image": "InkPensGallery.png",
+              "idStatus": "candidate",
+              "notes": "Pen/highlighter gallery"
+            }
+          ]
+        },
+        {
+          "label": "Convert",
+          "idMso": "GroupInkConvert",
+          "groupIndex": 2,
+          "widthUnits": 8,
+          "layout": {
+            "rows": 3,
+            "columns": 4,
+            "flow": "column-major",
+            "launcher": false
+          },
+          "controls": [
+            {
+              "label": "Ink to Shape",
+              "idMso": "InkToShape",
+              "type": "button",
+              "size": "large",
+              "row": 1,
+              "column": 1,
+              "rowSpan": 3,
+              "colSpan": 2,
+              "image": "InkToShape.png",
+              "idStatus": "candidate"
+            },
+            {
+              "label": "Ink to Math",
+              "idMso": "InkToMath",
+              "type": "button",
+              "size": "large",
+              "row": 1,
+              "column": 3,
+              "rowSpan": 3,
+              "colSpan": 2,
+              "image": "InkToMath.png",
+              "idStatus": "candidate"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "label": "Page Layout",
+      "idMso": "TabPageLayoutExcel",
+      "order": 4,
+      "groups": [
+        {
+          "label": "Themes",
+          "idMso": "GroupThemesExcel",
+          "groupIndex": 1,
+          "widthUnits": 8,
+          "layout": {
+            "rows": 3,
+            "columns": 3,
+            "flow": "column-major",
+            "launcher": false
+          },
+          "controls": [
+            {
+              "label": "Themes",
+              "idMso": "ThemesGallery",
+              "type": "gallery",
+              "size": "large",
+              "row": 1,
+              "column": 1,
+              "rowSpan": 3,
+              "colSpan": 2,
+              "image": "ThemesGallery.png",
+              "idStatus": "candidate"
+            },
+            {
+              "label": "Colors",
+              "idMso": "ThemeColorsGallery",
+              "type": "menu",
+              "size": "small",
+              "row": 1,
+              "column": 3,
+              "rowSpan": 1,
+              "colSpan": 1,
+              "image": "ThemeColorsGallery.png",
+              "idStatus": "candidate"
+            },
+            {
+              "label": "Fonts",
+              "idMso": "ThemeFontsGallery",
+              "type": "menu",
+              "size": "small",
+              "row": 2,
+              "column": 3,
+              "rowSpan": 1,
+              "colSpan": 1,
+              "image": "ThemeFontsGallery.png",
+              "idStatus": "candidate"
+            },
+            {
+              "label": "Effects",
+              "idMso": "ThemeEffectsGallery",
+              "type": "menu",
+              "size": "small",
+              "row": 3,
+              "column": 3,
+              "rowSpan": 1,
+              "colSpan": 1,
+              "image": "ThemeEffectsGallery.png",
+              "idStatus": "candidate"
+            }
+          ]
+        },
+        {
+          "label": "Page Setup",
+          "idMso": "GroupPageSetup",
+          "groupIndex": 2,
+          "widthUnits": 12,
+          "layout": {
+            "rows": 3,
+            "columns": 8,
+            "flow": "column-major",
+            "launcher": true
+          },
+          "controls": [
+            {
+              "label": "Margins",
+              "idMso": "PageMarginsGallery",
+              "type": "gallery",
+              "size": "large",
+              "row": 1,
+              "column": 1,
+              "rowSpan": 3,
+              "colSpan": 2,
+              "image": "PageMarginsGallery.png",
+              "idStatus": "candidate"
+            },
+            {
+              "label": "Orientation",
+              "idMso": "PageOrientationGallery",
+              "type": "menu",
+              "size": "large",
+              "row": 1,
+              "column": 3,
+              "rowSpan": 3,
+              "colSpan": 2,
+              "image": "PageOrientationGallery.png",
+              "idStatus": "candidate"
+            },
+            {
+              "label": "Size",
+              "idMso": "PageSizeGallery",
+              "type": "menu",
+              "size": "large",
+              "row": 1,
+              "column": 5,
+              "rowSpan": 3,
+              "colSpan": 2,
+              "image": "PageSizeGallery.png",
+              "idStatus": "candidate"
+            },
+            {
+              "label": "Print Area",
+              "idMso": "PrintAreaMenu",
+              "type": "menu",
+              "size": "small",
+              "row": 1,
+              "column": 7,
+              "rowSpan": 1,
+              "colSpan": 1,
+              "image": "PrintAreaMenu.png",
+              "idStatus": "candidate"
+            },
+            {
+              "label": "Breaks",
+              "idMso": "BreaksGallery",
+              "type": "menu",
+              "size": "small",
+              "row": 2,
+              "column": 7,
+              "rowSpan": 1,
+              "colSpan": 1,
+              "image": "BreaksGallery.png",
+              "idStatus": "candidate"
+            },
+            {
+              "label": "Background",
+              "idMso": "SheetBackground",
+              "type": "button",
+              "size": "small",
+              "row": 3,
+              "column": 7,
+              "rowSpan": 1,
+              "colSpan": 1,
+              "image": "SheetBackground.png",
+              "idStatus": "candidate"
+            },
+            {
+              "label": "Print Titles",
+              "idMso": "PrintTitles",
+              "type": "button",
+              "size": "small",
+              "row": 1,
+              "column": 8,
+              "rowSpan": 1,
+              "colSpan": 1,
+              "image": "PrintTitles.png",
+              "idStatus": "candidate"
+            }
+          ]
+        },
+        {
+          "label": "Scale to Fit",
+          "idMso": "GroupScaleToFit",
+          "groupIndex": 3,
+          "widthUnits": 9,
+          "layout": {
+            "rows": 3,
+            "columns": 3,
+            "flow": "column-major",
+            "launcher": true
+          },
+          "controls": [
+            {
+              "label": "Width",
+              "idMso": null,
+              "type": "comboBox",
+              "size": "comboBox",
+              "row": 1,
+              "column": 1,
+              "rowSpan": 1,
+              "colSpan": 3,
+              "image": null,
+              "idStatus": "needs_validation"
+            },
+            {
+              "label": "Height",
+              "idMso": null,
+              "type": "comboBox",
+              "size": "comboBox",
+              "row": 2,
+              "column": 1,
+              "rowSpan": 1,
+              "colSpan": 3,
+              "image": null,
+              "idStatus": "needs_validation"
+            },
+            {
+              "label": "Scale",
+              "idMso": null,
+              "type": "numericField",
+              "size": "numericField",
+              "row": 3,
+              "column": 1,
+              "rowSpan": 1,
+              "colSpan": 3,
+              "image": null,
+              "idStatus": "needs_validation"
+            }
+          ]
+        },
+        {
+          "label": "Sheet Options",
+          "idMso": "GroupSheetOptions",
+          "groupIndex": 4,
+          "widthUnits": 9,
+          "layout": {
+            "rows": 3,
+            "columns": 2,
+            "flow": "column-major",
+            "launcher": true
+          },
+          "controls": [
+            {
+              "label": "Gridlines View",
+              "idMso": "GridlinesViewExcel",
+              "type": "checkBox",
+              "size": "small",
+              "row": 1,
+              "column": 1,
+              "rowSpan": 1,
+              "colSpan": 1,
+              "image": "GridlinesViewExcel.png",
+              "idStatus": "candidate"
+            },
+            {
+              "label": "Gridlines Print",
+              "idMso": "GridlinesPrintExcel",
+              "type": "checkBox",
+              "size": "small",
+              "row": 2,
+              "column": 1,
+              "rowSpan": 1,
+              "colSpan": 1,
+              "image": "GridlinesPrintExcel.png",
+              "idStatus": "candidate"
+            },
+            {
+              "label": "Headings View",
+              "idMso": "HeadingsViewExcel",
+              "type": "checkBox",
+              "size": "small",
+              "row": 1,
+              "column": 2,
+              "rowSpan": 1,
+              "colSpan": 1,
+              "image": "HeadingsViewExcel.png",
+              "idStatus": "candidate"
+            },
+            {
+              "label": "Headings Print",
+              "idMso": "HeadingsPrintExcel",
+              "type": "checkBox",
+              "size": "small",
+              "row": 2,
+              "column": 2,
+              "rowSpan": 1,
+              "colSpan": 1,
+              "image": "HeadingsPrintExcel.png",
+              "idStatus": "candidate"
+            }
+          ]
+        },
+        {
+          "label": "Arrange",
+          "idMso": "GroupArrange",
+          "groupIndex": 5,
+          "widthUnits": 12,
+          "layout": {
+            "rows": 3,
+            "columns": 2,
+            "flow": "column-major",
+            "launcher": false
+          },
+          "controls": [
+            {
+              "label": "Bring Forward",
+              "idMso": "ObjectBringForward",
+              "type": "splitButton",
+              "size": "small",
+              "row": 1,
+              "column": 1,
+              "rowSpan": 1,
+              "colSpan": 1,
+              "image": "ObjectBringForward.png",
+              "idStatus": "candidate"
+            },
+            {
+              "label": "Send Backward",
+              "idMso": "ObjectSendBackward",
+              "type": "splitButton",
+              "size": "small",
+              "row": 2,
+              "column": 1,
+              "rowSpan": 1,
+              "colSpan": 1,
+              "image": "ObjectSendBackward.png",
+              "idStatus": "candidate"
+            },
+            {
+              "label": "Selection Pane",
+              "idMso": "SelectionPane",
+              "type": "button",
+              "size": "small",
+              "row": 3,
+              "column": 1,
+              "rowSpan": 1,
+              "colSpan": 1,
+              "image": "SelectionPane.png",
+              "idStatus": "candidate"
+            },
+            {
+              "label": "Align",
+              "idMso": "ObjectsAlignMenu",
+              "type": "menu",
+              "size": "small",
+              "row": 1,
+              "column": 2,
+              "rowSpan": 1,
+              "colSpan": 1,
+              "image": "ObjectsAlignMenu.png",
+              "idStatus": "candidate"
+            },
+            {
+              "label": "Group",
+              "idMso": "ObjectsGroupMenu",
+              "type": "menu",
+              "size": "small",
+              "row": 2,
+              "column": 2,
+              "rowSpan": 1,
+              "colSpan": 1,
+              "image": "ObjectsGroupMenu.png",
+              "idStatus": "candidate"
+            },
+            {
+              "label": "Rotate",
+              "idMso": "ObjectRotateGallery",
+              "type": "menu",
+              "size": "small",
+              "row": 3,
+              "column": 2,
+              "rowSpan": 1,
+              "colSpan": 1,
+              "image": "ObjectRotateGallery.png",
+              "idStatus": "candidate"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "label": "Formulas",
+      "idMso": "TabFormulas",
+      "order": 5,
+      "groups": [
+        {
+          "label": "Function Library",
+          "idMso": "GroupFunctionLibrary",
+          "groupIndex": 1,
+          "widthUnits": 20,
+          "layout": {
+            "rows": 3,
+            "columns": 20,
+            "flow": "column-major",
+            "launcher": false
+          },
+          "controls": [
+            {
+              "label": "Insert Function",
+              "idMso": "InsertFunction",
+              "type": "button",
+              "size": "large",
+              "row": 1,
+              "column": 1,
+              "rowSpan": 3,
+              "colSpan": 2,
+              "image": "InsertFunction.png",
+              "idStatus": "candidate"
+            },
+            {
+              "label": "AutoSum",
+              "idMso": "AutoSum",
+              "type": "splitButton",
+              "size": "large",
+              "row": 1,
+              "column": 3,
+              "rowSpan": 3,
+              "colSpan": 2,
+              "image": "AutoSum.png",
+              "idStatus": "candidate"
+            },
+            {
+              "label": "Recently Used",
+              "idMso": "RecentlyUsedFunctions",
+              "type": "menu",
+              "size": "large",
+              "row": 1,
+              "column": 5,
+              "rowSpan": 3,
+              "colSpan": 2,
+              "image": "RecentlyUsedFunctions.png",
+              "idStatus": "candidate"
+            },
+            {
+              "label": "Financial",
+              "idMso": "FinancialFunctions",
+              "type": "menu",
+              "size": "large",
+              "row": 1,
+              "column": 7,
+              "rowSpan": 3,
+              "colSpan": 2,
+              "image": "FinancialFunctions.png",
+              "idStatus": "candidate"
+            },
+            {
+              "label": "Logical",
+              "idMso": "LogicalFunctions",
+              "type": "menu",
+              "size": "large",
+              "row": 1,
+              "column": 9,
+              "rowSpan": 3,
+              "colSpan": 2,
+              "image": "LogicalFunctions.png",
+              "idStatus": "candidate"
+            },
+            {
+              "label": "Text",
+              "idMso": "TextFunctions",
+              "type": "menu",
+              "size": "large",
+              "row": 1,
+              "column": 11,
+              "rowSpan": 3,
+              "colSpan": 2,
+              "image": "TextFunctions.png",
+              "idStatus": "candidate"
+            },
+            {
+              "label": "Date & Time",
+              "idMso": "DateTimeFunctions",
+              "type": "menu",
+              "size": "large",
+              "row": 1,
+              "column": 13,
+              "rowSpan": 3,
+              "colSpan": 2,
+              "image": "DateTimeFunctions.png",
+              "idStatus": "candidate"
+            },
+            {
+              "label": "Lookup & Reference",
+              "idMso": "LookupReferenceFunctions",
+              "type": "menu",
+              "size": "large",
+              "row": 1,
+              "column": 15,
+              "rowSpan": 3,
+              "colSpan": 2,
+              "image": "LookupReferenceFunctions.png",
+              "idStatus": "candidate"
+            },
+            {
+              "label": "Math & Trig",
+              "idMso": "MathTrigFunctions",
+              "type": "menu",
+              "size": "large",
+              "row": 1,
+              "column": 17,
+              "rowSpan": 3,
+              "colSpan": 2,
+              "image": "MathTrigFunctions.png",
+              "idStatus": "candidate"
+            },
+            {
+              "label": "More Functions",
+              "idMso": "MoreFunctions",
+              "type": "menu",
+              "size": "large",
+              "row": 1,
+              "column": 19,
+              "rowSpan": 3,
+              "colSpan": 2,
+              "image": "MoreFunctions.png",
+              "idStatus": "candidate"
+            }
+          ]
+        },
+        {
+          "label": "Defined Names",
+          "idMso": "GroupDefinedNames",
+          "groupIndex": 2,
+          "widthUnits": 10,
+          "layout": {
+            "rows": 3,
+            "columns": 3,
+            "flow": "column-major",
+            "launcher": false
+          },
+          "controls": [
+            {
+              "label": "Name Manager",
+              "idMso": "NameManager",
+              "type": "button",
+              "size": "large",
+              "row": 1,
+              "column": 1,
+              "rowSpan": 3,
+              "colSpan": 2,
+              "image": "NameManager.png",
+              "idStatus": "candidate"
+            },
+            {
+              "label": "Define Name",
+              "idMso": "DefineName",
+              "type": "menu",
+              "size": "small",
+              "row": 1,
+              "column": 3,
+              "rowSpan": 1,
+              "colSpan": 1,
+              "image": "DefineName.png",
+              "idStatus": "candidate"
+            },
+            {
+              "label": "Use in Formula",
+              "idMso": "UseInFormula",
+              "type": "menu",
+              "size": "small",
+              "row": 2,
+              "column": 3,
+              "rowSpan": 1,
+              "colSpan": 1,
+              "image": "UseInFormula.png",
+              "idStatus": "candidate"
+            },
+            {
+              "label": "Create from Selection",
+              "idMso": "CreateNamesFromSelection",
+              "type": "button",
+              "size": "small",
+              "row": 3,
+              "column": 3,
+              "rowSpan": 1,
+              "colSpan": 1,
+              "image": "CreateNamesFromSelection.png",
+              "idStatus": "candidate"
+            }
+          ]
+        },
+        {
+          "label": "Formula Auditing",
+          "idMso": "GroupFormulaAuditing",
+          "groupIndex": 3,
+          "widthUnits": 12,
+          "layout": {
+            "rows": 3,
+            "columns": 8,
+            "flow": "column-major",
+            "launcher": false
+          },
+          "controls": [
+            {
+              "label": "Trace Precedents",
+              "idMso": "TracePrecedents",
+              "type": "button",
+              "size": "large",
+              "row": 1,
+              "column": 1,
+              "rowSpan": 3,
+              "colSpan": 2,
+              "image": "TracePrecedents.png",
+              "idStatus": "candidate"
+            },
+            {
+              "label": "Trace Dependents",
+              "idMso": "TraceDependents",
+              "type": "button",
+              "size": "large",
+              "row": 1,
+              "column": 3,
+              "rowSpan": 3,
+              "colSpan": 2,
+              "image": "TraceDependents.png",
+              "idStatus": "candidate"
+            },
+            {
+              "label": "Remove Arrows",
+              "idMso": "RemoveArrows",
+              "type": "menu",
+              "size": "small",
+              "row": 1,
+              "column": 5,
+              "rowSpan": 1,
+              "colSpan": 1,
+              "image": "RemoveArrows.png",
+              "idStatus": "candidate"
+            },
+            {
+              "label": "Show Formulas",
+              "idMso": "ShowFormulas",
+              "type": "toggleButton",
+              "size": "small",
+              "row": 1,
+              "column": 6,
+              "rowSpan": 1,
+              "colSpan": 1,
+              "image": "ShowFormulas.png",
+              "idStatus": "candidate"
+            },
+            {
+              "label": "Error Checking",
+              "idMso": "ErrorChecking",
+              "type": "menu",
+              "size": "small",
+              "row": 2,
+              "column": 6,
+              "rowSpan": 1,
+              "colSpan": 1,
+              "image": "ErrorChecking.png",
+              "idStatus": "candidate"
+            },
+            {
+              "label": "Evaluate Formula",
+              "idMso": "EvaluateFormula",
+              "type": "button",
+              "size": "small",
+              "row": 3,
+              "column": 6,
+              "rowSpan": 1,
+              "colSpan": 1,
+              "image": "EvaluateFormula.png",
+              "idStatus": "candidate"
+            },
+            {
+              "label": "Watch Window",
+              "idMso": "WatchWindow",
+              "type": "button",
+              "size": "large",
+              "row": 1,
+              "column": 7,
+              "rowSpan": 3,
+              "colSpan": 2,
+              "image": "WatchWindow.png",
+              "idStatus": "candidate"
+            }
+          ]
+        },
+        {
+          "label": "Calculation",
+          "idMso": "GroupCalculation",
+          "groupIndex": 4,
+          "widthUnits": 8,
+          "layout": {
+            "rows": 3,
+            "columns": 3,
+            "flow": "column-major",
+            "launcher": false
+          },
+          "controls": [
+            {
+              "label": "Calculation Options",
+              "idMso": "CalculationOptions",
+              "type": "menu",
+              "size": "large",
+              "row": 1,
+              "column": 1,
+              "rowSpan": 3,
+              "colSpan": 2,
+              "image": "CalculationOptions.png",
+              "idStatus": "candidate"
+            },
+            {
+              "label": "Calculate Now",
+              "idMso": "CalculateNow",
+              "type": "button",
+              "size": "small",
+              "row": 1,
+              "column": 3,
+              "rowSpan": 1,
+              "colSpan": 1,
+              "image": "CalculateNow.png",
+              "idStatus": "candidate"
+            },
+            {
+              "label": "Calculate Sheet",
+              "idMso": "CalculateSheet",
+              "type": "button",
+              "size": "small",
+              "row": 2,
+              "column": 3,
+              "rowSpan": 1,
+              "colSpan": 1,
+              "image": "CalculateSheet.png",
+              "idStatus": "candidate"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "label": "Data",
+      "idMso": "TabData",
+      "order": 6,
+      "groups": [
+        {
+          "label": "Get & Transform Data",
+          "idMso": "GroupGetExternalDataExcel",
+          "groupIndex": 1,
+          "widthUnits": 13,
+          "layout": {
+            "rows": 3,
+            "columns": 4,
+            "flow": "column-major",
+            "launcher": false
+          },
+          "controls": [
+            {
+              "label": "Get Data",
+              "idMso": "GetData",
+              "type": "menu",
+              "size": "large",
+              "row": 1,
+              "column": 1,
+              "rowSpan": 3,
+              "colSpan": 2,
+              "image": "GetData.png",
+              "idStatus": "candidate"
+            },
+            {
+              "label": "From Text/CSV",
+              "idMso": "GetDataFromText",
+              "type": "button",
+              "size": "small",
+              "row": 1,
+              "column": 3,
+              "rowSpan": 1,
+              "colSpan": 1,
+              "image": "GetDataFromText.png",
+              "idStatus": "candidate"
+            },
+            {
+              "label": "From Web",
+              "idMso": "GetDataFromWeb",
+              "type": "button",
+              "size": "small",
+              "row": 2,
+              "column": 3,
+              "rowSpan": 1,
+              "colSpan": 1,
+              "image": "GetDataFromWeb.png",
+              "idStatus": "candidate"
+            },
+            {
+              "label": "From Table/Range",
+              "idMso": "GetDataFromTable",
+              "type": "button",
+              "size": "small",
+              "row": 3,
+              "column": 3,
+              "rowSpan": 1,
+              "colSpan": 1,
+              "image": "GetDataFromTable.png",
+              "idStatus": "candidate"
+            },
+            {
+              "label": "Recent Sources",
+              "idMso": "RecentSources",
+              "type": "button",
+              "size": "small",
+              "row": 1,
+              "column": 4,
+              "rowSpan": 1,
+              "colSpan": 1,
+              "image": "RecentSources.png",
+              "idStatus": "candidate"
+            },
+            {
+              "label": "Existing Connections",
+              "idMso": "ExistingConnections",
+              "type": "button",
+              "size": "small",
+              "row": 2,
+              "column": 4,
+              "rowSpan": 1,
+              "colSpan": 1,
+              "image": "ExistingConnections.png",
+              "idStatus": "candidate"
+            }
+          ]
+        },
+        {
+          "label": "Queries & Connections",
+          "idMso": "GroupQueriesConnections",
+          "groupIndex": 2,
+          "widthUnits": 8,
+          "layout": {
+            "rows": 3,
+            "columns": 5,
+            "flow": "column-major",
+            "launcher": false
+          },
+          "controls": [
+            {
+              "label": "Refresh All",
+              "idMso": "RefreshAll",
+              "type": "splitButton",
+              "size": "large",
+              "row": 1,
+              "column": 1,
+              "rowSpan": 3,
+              "colSpan": 2,
+              "image": "RefreshAll.png",
+              "idStatus": "candidate"
+            },
+            {
+              "label": "Queries & Connections",
+              "idMso": "QueriesConnections",
+              "type": "button",
+              "size": "large",
+              "row": 1,
+              "column": 3,
+              "rowSpan": 3,
+              "colSpan": 2,
+              "image": "QueriesConnections.png",
+              "idStatus": "candidate"
+            },
+            {
+              "label": "Properties",
+              "idMso": "ConnectionProperties",
+              "type": "button",
+              "size": "small",
+              "row": 1,
+              "column": 5,
+              "rowSpan": 1,
+              "colSpan": 1,
+              "image": "ConnectionProperties.png",
+              "idStatus": "candidate"
+            },
+            {
+              "label": "Edit Links",
+              "idMso": "EditLinks",
+              "type": "button",
+              "size": "small",
+              "row": 2,
+              "column": 5,
+              "rowSpan": 1,
+              "colSpan": 1,
+              "image": "EditLinks.png",
+              "idStatus": "candidate"
+            }
+          ]
+        },
+        {
+          "label": "Sort & Filter",
+          "idMso": "GroupSortFilter",
+          "groupIndex": 3,
+          "widthUnits": 12,
+          "layout": {
+            "rows": 3,
+            "columns": 9,
+            "flow": "column-major",
+            "launcher": false
+          },
+          "controls": [
+            {
+              "label": "Sort A to Z",
+              "idMso": "SortAscendingExcel",
+              "type": "button",
+              "size": "large",
+              "row": 1,
+              "column": 1,
+              "rowSpan": 3,
+              "colSpan": 2,
+              "image": "SortAscendingExcel.png",
+              "idStatus": "candidate"
+            },
+            {
+              "label": "Sort Z to A",
+              "idMso": "SortDescendingExcel",
+              "type": "button",
+              "size": "large",
+              "row": 1,
+              "column": 3,
+              "rowSpan": 3,
+              "colSpan": 2,
+              "image": "SortDescendingExcel.png",
+              "idStatus": "candidate"
+            },
+            {
+              "label": "Sort",
+              "idMso": "SortDialog",
+              "type": "button",
+              "size": "large",
+              "row": 1,
+              "column": 5,
+              "rowSpan": 3,
+              "colSpan": 2,
+              "image": "SortDialog.png",
+              "idStatus": "candidate"
+            },
+            {
+              "label": "Filter",
+              "idMso": "Filter",
+              "type": "toggleButton",
+              "size": "large",
+              "row": 1,
+              "column": 7,
+              "rowSpan": 3,
+              "colSpan": 2,
+              "image": "Filter.png",
+              "idStatus": "candidate"
+            },
+            {
+              "label": "Clear",
+              "idMso": "ClearFilter",
+              "type": "button",
+              "size": "small",
+              "row": 1,
+              "column": 9,
+              "rowSpan": 1,
+              "colSpan": 1,
+              "image": "ClearFilter.png",
+              "idStatus": "candidate"
+            },
+            {
+              "label": "Reapply",
+              "idMso": "ReapplyFilter",
+              "type": "button",
+              "size": "small",
+              "row": 2,
+              "column": 9,
+              "rowSpan": 1,
+              "colSpan": 1,
+              "image": "ReapplyFilter.png",
+              "idStatus": "candidate"
+            },
+            {
+              "label": "Advanced",
+              "idMso": "AdvancedFilterDialog",
+              "type": "button",
+              "size": "small",
+              "row": 3,
+              "column": 9,
+              "rowSpan": 1,
+              "colSpan": 1,
+              "image": "AdvancedFilterDialog.png",
+              "idStatus": "candidate"
+            }
+          ]
+        },
+        {
+          "label": "Data Tools",
+          "idMso": "GroupDataTools",
+          "groupIndex": 4,
+          "widthUnits": 13,
+          "layout": {
+            "rows": 3,
+            "columns": 9,
+            "flow": "column-major",
+            "launcher": false
+          },
+          "controls": [
+            {
+              "label": "Text to Columns",
+              "idMso": "TextToColumns",
+              "type": "button",
+              "size": "large",
+              "row": 1,
+              "column": 1,
+              "rowSpan": 3,
+              "colSpan": 2,
+              "image": "TextToColumns.png",
+              "idStatus": "candidate"
+            },
+            {
+              "label": "Flash Fill",
+              "idMso": "FlashFill",
+              "type": "button",
+              "size": "large",
+              "row": 1,
+              "column": 3,
+              "rowSpan": 3,
+              "colSpan": 2,
+              "image": "FlashFill.png",
+              "idStatus": "candidate"
+            },
+            {
+              "label": "Remove Duplicates",
+              "idMso": "RemoveDuplicates",
+              "type": "button",
+              "size": "large",
+              "row": 1,
+              "column": 5,
+              "rowSpan": 3,
+              "colSpan": 2,
+              "image": "RemoveDuplicates.png",
+              "idStatus": "candidate"
+            },
+            {
+              "label": "Data Validation",
+              "idMso": "DataValidation",
+              "type": "menu",
+              "size": "large",
+              "row": 1,
+              "column": 7,
+              "rowSpan": 3,
+              "colSpan": 2,
+              "image": "DataValidation.png",
+              "idStatus": "candidate"
+            },
+            {
+              "label": "Consolidate",
+              "idMso": "Consolidate",
+              "type": "button",
+              "size": "small",
+              "row": 1,
+              "column": 9,
+              "rowSpan": 1,
+              "colSpan": 1,
+              "image": "Consolidate.png",
+              "idStatus": "candidate"
+            },
+            {
+              "label": "Relationships",
+              "idMso": "Relationships",
+              "type": "button",
+              "size": "small",
+              "row": 2,
+              "column": 9,
+              "rowSpan": 1,
+              "colSpan": 1,
+              "image": "Relationships.png",
+              "idStatus": "candidate"
+            }
+          ]
+        },
+        {
+          "label": "Forecast",
+          "idMso": "GroupForecast",
+          "groupIndex": 5,
+          "widthUnits": 7,
+          "layout": {
+            "rows": 3,
+            "columns": 4,
+            "flow": "column-major",
+            "launcher": false
+          },
+          "controls": [
+            {
+              "label": "What-If Analysis",
+              "idMso": "WhatIfAnalysis",
+              "type": "menu",
+              "size": "large",
+              "row": 1,
+              "column": 1,
+              "rowSpan": 3,
+              "colSpan": 2,
+              "image": "WhatIfAnalysis.png",
+              "idStatus": "candidate"
+            },
+            {
+              "label": "Forecast Sheet",
+              "idMso": "ForecastSheet",
+              "type": "button",
+              "size": "large",
+              "row": 1,
+              "column": 3,
+              "rowSpan": 3,
+              "colSpan": 2,
+              "image": "ForecastSheet.png",
+              "idStatus": "candidate"
+            }
+          ]
+        },
+        {
+          "label": "Outline",
+          "idMso": "GroupOutline",
+          "groupIndex": 6,
+          "widthUnits": 8,
+          "layout": {
+            "rows": 3,
+            "columns": 6,
+            "flow": "column-major",
+            "launcher": false
+          },
+          "controls": [
+            {
+              "label": "Group",
+              "idMso": "GroupRowsColumns",
+              "type": "menu",
+              "size": "large",
+              "row": 1,
+              "column": 1,
+              "rowSpan": 3,
+              "colSpan": 2,
+              "image": "GroupRowsColumns.png",
+              "idStatus": "candidate"
+            },
+            {
+              "label": "Ungroup",
+              "idMso": "UngroupRowsColumns",
+              "type": "menu",
+              "size": "large",
+              "row": 1,
+              "column": 3,
+              "rowSpan": 3,
+              "colSpan": 2,
+              "image": "UngroupRowsColumns.png",
+              "idStatus": "candidate"
+            },
+            {
+              "label": "Subtotal",
+              "idMso": "Subtotal",
+              "type": "button",
+              "size": "large",
+              "row": 1,
+              "column": 5,
+              "rowSpan": 3,
+              "colSpan": 2,
+              "image": "Subtotal.png",
+              "idStatus": "candidate"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "label": "Review",
+      "idMso": "TabReview",
+      "order": 7,
+      "groups": [
+        {
+          "label": "Proofing",
+          "idMso": "GroupProofing",
+          "groupIndex": 1,
+          "widthUnits": 7,
+          "layout": {
+            "rows": 3,
+            "columns": 4,
+            "flow": "column-major",
+            "launcher": false
+          },
+          "controls": [
+            {
+              "label": "Spelling",
+              "idMso": "Spelling",
+              "type": "button",
+              "size": "large",
+              "row": 1,
+              "column": 1,
+              "rowSpan": 3,
+              "colSpan": 2,
+              "image": "Spelling.png",
+              "idStatus": "candidate"
+            },
+            {
+              "label": "Thesaurus",
+              "idMso": "Thesaurus",
+              "type": "button",
+              "size": "large",
+              "row": 1,
+              "column": 3,
+              "rowSpan": 3,
+              "colSpan": 2,
+              "image": "Thesaurus.png",
+              "idStatus": "candidate"
+            }
+          ]
+        },
+        {
+          "label": "Accessibility",
+          "idMso": "GroupAccessibility",
+          "groupIndex": 2,
+          "widthUnits": 4,
+          "layout": {
+            "rows": 3,
+            "columns": 3,
+            "flow": "column-major",
+            "launcher": false
+          },
+          "controls": [
+            {
+              "label": "Check Accessibility",
+              "idMso": "AccessibilityChecker",
+              "type": "button",
+              "size": "large",
+              "row": 1,
+              "column": 1,
+              "rowSpan": 3,
+              "colSpan": 3,
+              "image": "AccessibilityChecker.png",
+              "idStatus": "candidate"
+            }
+          ]
+        },
+        {
+          "label": "Insights",
+          "idMso": "GroupInsights",
+          "groupIndex": 3,
+          "widthUnits": 4,
+          "layout": {
+            "rows": 3,
+            "columns": 3,
+            "flow": "column-major",
+            "launcher": false
+          },
+          "controls": [
+            {
+              "label": "Smart Lookup",
+              "idMso": "SmartLookup",
+              "type": "button",
+              "size": "large",
+              "row": 1,
+              "column": 1,
+              "rowSpan": 3,
+              "colSpan": 3,
+              "image": "SmartLookup.png",
+              "idStatus": "candidate"
+            }
+          ]
+        },
+        {
+          "label": "Language",
+          "idMso": "GroupLanguage",
+          "groupIndex": 4,
+          "widthUnits": 5,
+          "layout": {
+            "rows": 3,
+            "columns": 2,
+            "flow": "column-major",
+            "launcher": false
+          },
+          "controls": [
+            {
+              "label": "Translate",
+              "idMso": "Translate",
+              "type": "menu",
+              "size": "large",
+              "row": 1,
+              "column": 1,
+              "rowSpan": 3,
+              "colSpan": 2,
+              "image": "Translate.png",
+              "idStatus": "candidate"
+            }
+          ]
+        },
+        {
+          "label": "Comments",
+          "idMso": "GroupComments",
+          "groupIndex": 5,
+          "widthUnits": 10,
+          "layout": {
+            "rows": 3,
+            "columns": 4,
+            "flow": "column-major",
+            "launcher": false
+          },
+          "controls": [
+            {
+              "label": "New Comment",
+              "idMso": "NewComment",
+              "type": "button",
+              "size": "large",
+              "row": 1,
+              "column": 1,
+              "rowSpan": 3,
+              "colSpan": 2,
+              "image": "NewComment.png",
+              "idStatus": "candidate"
+            },
+            {
+              "label": "Delete",
+              "idMso": "DeleteComment",
+              "type": "menu",
+              "size": "small",
+              "row": 1,
+              "column": 3,
+              "rowSpan": 1,
+              "colSpan": 1,
+              "image": "DeleteComment.png",
+              "idStatus": "candidate"
+            },
+            {
+              "label": "Previous",
+              "idMso": "PreviousComment",
+              "type": "button",
+              "size": "small",
+              "row": 2,
+              "column": 3,
+              "rowSpan": 1,
+              "colSpan": 1,
+              "image": "PreviousComment.png",
+              "idStatus": "candidate"
+            },
+            {
+              "label": "Next",
+              "idMso": "NextComment",
+              "type": "button",
+              "size": "small",
+              "row": 3,
+              "column": 3,
+              "rowSpan": 1,
+              "colSpan": 1,
+              "image": "NextComment.png",
+              "idStatus": "candidate"
+            },
+            {
+              "label": "Show Comments",
+              "idMso": "ShowComments",
+              "type": "button",
+              "size": "small",
+              "row": 1,
+              "column": 4,
+              "rowSpan": 1,
+              "colSpan": 1,
+              "image": "ShowComments.png",
+              "idStatus": "candidate"
+            }
+          ]
+        },
+        {
+          "label": "Notes",
+          "idMso": "GroupNotes",
+          "groupIndex": 6,
+          "widthUnits": 6,
+          "layout": {
+            "rows": 3,
+            "columns": 3,
+            "flow": "column-major",
+            "launcher": false
+          },
+          "controls": [
+            {
+              "label": "New Note",
+              "idMso": "NewNote",
+              "type": "button",
+              "size": "large",
+              "row": 1,
+              "column": 1,
+              "rowSpan": 3,
+              "colSpan": 2,
+              "image": "NewNote.png",
+              "idStatus": "candidate"
+            },
+            {
+              "label": "Previous Note",
+              "idMso": "PreviousNote",
+              "type": "button",
+              "size": "small",
+              "row": 1,
+              "column": 3,
+              "rowSpan": 1,
+              "colSpan": 1,
+              "image": "PreviousNote.png",
+              "idStatus": "candidate"
+            },
+            {
+              "label": "Next Note",
+              "idMso": "NextNote",
+              "type": "button",
+              "size": "small",
+              "row": 2,
+              "column": 3,
+              "rowSpan": 1,
+              "colSpan": 1,
+              "image": "NextNote.png",
+              "idStatus": "candidate"
+            },
+            {
+              "label": "Show/Hide Note",
+              "idMso": "ShowHideNote",
+              "type": "button",
+              "size": "small",
+              "row": 3,
+              "column": 3,
+              "rowSpan": 1,
+              "colSpan": 1,
+              "image": "ShowHideNote.png",
+              "idStatus": "candidate"
+            }
+          ]
+        },
+        {
+          "label": "Protect",
+          "idMso": "GroupProtect",
+          "groupIndex": 7,
+          "widthUnits": 9,
+          "layout": {
+            "rows": 3,
+            "columns": 5,
+            "flow": "column-major",
+            "launcher": false
+          },
+          "controls": [
+            {
+              "label": "Protect Sheet",
+              "idMso": "ProtectSheet",
+              "type": "button",
+              "size": "large",
+              "row": 1,
+              "column": 1,
+              "rowSpan": 3,
+              "colSpan": 2,
+              "image": "ProtectSheet.png",
+              "idStatus": "candidate"
+            },
+            {
+              "label": "Protect Workbook",
+              "idMso": "ProtectWorkbook",
+              "type": "button",
+              "size": "large",
+              "row": 1,
+              "column": 3,
+              "rowSpan": 3,
+              "colSpan": 2,
+              "image": "ProtectWorkbook.png",
+              "idStatus": "candidate"
+            },
+            {
+              "label": "Allow Edit Ranges",
+              "idMso": "AllowEditRanges",
+              "type": "button",
+              "size": "small",
+              "row": 1,
+              "column": 5,
+              "rowSpan": 1,
+              "colSpan": 1,
+              "image": "AllowEditRanges.png",
+              "idStatus": "candidate"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "label": "View",
+      "idMso": "TabView",
+      "order": 8,
+      "groups": [
+        {
+          "label": "Workbook Views",
+          "idMso": "GroupWorkbookViews",
+          "groupIndex": 1,
+          "widthUnits": 10,
+          "layout": {
+            "rows": 3,
+            "columns": 7,
+            "flow": "column-major",
+            "launcher": false
+          },
+          "controls": [
+            {
+              "label": "Normal",
+              "idMso": "ViewNormalViewExcel",
+              "type": "button",
+              "size": "large",
+              "row": 1,
+              "column": 1,
+              "rowSpan": 3,
+              "colSpan": 2,
+              "image": "ViewNormalViewExcel.png",
+              "idStatus": "candidate"
+            },
+            {
+              "label": "Page Break Preview",
+              "idMso": "ViewPageBreakPreviewView",
+              "type": "button",
+              "size": "large",
+              "row": 1,
+              "column": 3,
+              "rowSpan": 3,
+              "colSpan": 2,
+              "image": "ViewPageBreakPreviewView.png",
+              "idStatus": "candidate"
+            },
+            {
+              "label": "Page Layout",
+              "idMso": "ViewPageLayoutView",
+              "type": "button",
+              "size": "large",
+              "row": 1,
+              "column": 5,
+              "rowSpan": 3,
+              "colSpan": 2,
+              "image": "ViewPageLayoutView.png",
+              "idStatus": "candidate"
+            },
+            {
+              "label": "Custom Views",
+              "idMso": "CustomViews",
+              "type": "button",
+              "size": "small",
+              "row": 1,
+              "column": 7,
+              "rowSpan": 1,
+              "colSpan": 1,
+              "image": "CustomViews.png",
+              "idStatus": "candidate"
+            }
+          ]
+        },
+        {
+          "label": "Show",
+          "idMso": "GroupShow",
+          "groupIndex": 2,
+          "widthUnits": 8,
+          "layout": {
+            "rows": 3,
+            "columns": 2,
+            "flow": "column-major",
+            "launcher": false
+          },
+          "controls": [
+            {
+              "label": "Ruler",
+              "idMso": "ViewRuler",
+              "type": "checkBox",
+              "size": "small",
+              "row": 1,
+              "column": 1,
+              "rowSpan": 1,
+              "colSpan": 1,
+              "image": "ViewRuler.png",
+              "idStatus": "candidate"
+            },
+            {
+              "label": "Gridlines",
+              "idMso": "ViewGridlinesExcel",
+              "type": "checkBox",
+              "size": "small",
+              "row": 2,
+              "column": 1,
+              "rowSpan": 1,
+              "colSpan": 1,
+              "image": "ViewGridlinesExcel.png",
+              "idStatus": "candidate"
+            },
+            {
+              "label": "Formula Bar",
+              "idMso": "ViewFormulaBar",
+              "type": "checkBox",
+              "size": "small",
+              "row": 3,
+              "column": 1,
+              "rowSpan": 1,
+              "colSpan": 1,
+              "image": "ViewFormulaBar.png",
+              "idStatus": "candidate"
+            },
+            {
+              "label": "Headings",
+              "idMso": "ViewHeadingsExcel",
+              "type": "checkBox",
+              "size": "small",
+              "row": 1,
+              "column": 2,
+              "rowSpan": 1,
+              "colSpan": 1,
+              "image": "ViewHeadingsExcel.png",
+              "idStatus": "candidate"
+            }
+          ]
+        },
+        {
+          "label": "Zoom",
+          "idMso": "GroupZoom",
+          "groupIndex": 3,
+          "widthUnits": 8,
+          "layout": {
+            "rows": 3,
+            "columns": 6,
+            "flow": "column-major",
+            "launcher": false
+          },
+          "controls": [
+            {
+              "label": "Zoom",
+              "idMso": "ZoomDialog",
+              "type": "button",
+              "size": "large",
+              "row": 1,
+              "column": 1,
+              "rowSpan": 3,
+              "colSpan": 2,
+              "image": "ZoomDialog.png",
+              "idStatus": "candidate"
+            },
+            {
+              "label": "100%",
+              "idMso": "Zoom100Percent",
+              "type": "button",
+              "size": "large",
+              "row": 1,
+              "column": 3,
+              "rowSpan": 3,
+              "colSpan": 2,
+              "image": "Zoom100Percent.png",
+              "idStatus": "candidate"
+            },
+            {
+              "label": "Zoom to Selection",
+              "idMso": "ZoomToSelection",
+              "type": "button",
+              "size": "large",
+              "row": 1,
+              "column": 5,
+              "rowSpan": 3,
+              "colSpan": 2,
+              "image": "ZoomToSelection.png",
+              "idStatus": "candidate"
+            }
+          ]
+        },
+        {
+          "label": "Window",
+          "idMso": "GroupWindow",
+          "groupIndex": 4,
+          "widthUnits": 14,
+          "layout": {
+            "rows": 3,
+            "columns": 6,
+            "flow": "column-major",
+            "launcher": false
+          },
+          "controls": [
+            {
+              "label": "New Window",
+              "idMso": "WindowNew",
+              "type": "button",
+              "size": "large",
+              "row": 1,
+              "column": 1,
+              "rowSpan": 3,
+              "colSpan": 2,
+              "image": "WindowNew.png",
+              "idStatus": "candidate"
+            },
+            {
+              "label": "Arrange All",
+              "idMso": "WindowArrangeAll",
+              "type": "button",
+              "size": "small",
+              "row": 1,
+              "column": 3,
+              "rowSpan": 1,
+              "colSpan": 1,
+              "image": "WindowArrangeAll.png",
+              "idStatus": "candidate"
+            },
+            {
+              "label": "Freeze Panes",
+              "idMso": "FreezePanes",
+              "type": "menu",
+              "size": "small",
+              "row": 2,
+              "column": 3,
+              "rowSpan": 1,
+              "colSpan": 1,
+              "image": "FreezePanes.png",
+              "idStatus": "candidate"
+            },
+            {
+              "label": "Split",
+              "idMso": "WindowSplit",
+              "type": "toggleButton",
+              "size": "small",
+              "row": 3,
+              "column": 3,
+              "rowSpan": 1,
+              "colSpan": 1,
+              "image": "WindowSplit.png",
+              "idStatus": "candidate"
+            },
+            {
+              "label": "Hide",
+              "idMso": "WindowHide",
+              "type": "button",
+              "size": "small",
+              "row": 1,
+              "column": 4,
+              "rowSpan": 1,
+              "colSpan": 1,
+              "image": "WindowHide.png",
+              "idStatus": "candidate"
+            },
+            {
+              "label": "Unhide",
+              "idMso": "WindowUnhide",
+              "type": "button",
+              "size": "small",
+              "row": 2,
+              "column": 4,
+              "rowSpan": 1,
+              "colSpan": 1,
+              "image": "WindowUnhide.png",
+              "idStatus": "candidate"
+            },
+            {
+              "label": "View Side by Side",
+              "idMso": "WindowViewSideBySide",
+              "type": "button",
+              "size": "small",
+              "row": 1,
+              "column": 5,
+              "rowSpan": 1,
+              "colSpan": 1,
+              "image": "WindowViewSideBySide.png",
+              "idStatus": "candidate"
+            },
+            {
+              "label": "Synchronous Scrolling",
+              "idMso": "WindowSynchronousScrolling",
+              "type": "button",
+              "size": "small",
+              "row": 2,
+              "column": 5,
+              "rowSpan": 1,
+              "colSpan": 1,
+              "image": "WindowSynchronousScrolling.png",
+              "idStatus": "candidate"
+            },
+            {
+              "label": "Reset Window Position",
+              "idMso": "WindowResetPosition",
+              "type": "button",
+              "size": "small",
+              "row": 3,
+              "column": 5,
+              "rowSpan": 1,
+              "colSpan": 1,
+              "image": "WindowResetPosition.png",
+              "idStatus": "candidate"
+            },
+            {
+              "label": "Switch Windows",
+              "idMso": "WindowSwitchWindowsMenuExcel",
+              "type": "menu",
+              "size": "small",
+              "row": 1,
+              "column": 6,
+              "rowSpan": 1,
+              "colSpan": 1,
+              "image": "WindowSwitchWindowsMenuExcel.png",
+              "idStatus": "candidate"
+            }
+          ]
+        },
+        {
+          "label": "Macros",
+          "idMso": "GroupMacros",
+          "groupIndex": 5,
+          "widthUnits": 5,
+          "layout": {
+            "rows": 3,
+            "columns": 3,
+            "flow": "column-major",
+            "launcher": false
+          },
+          "controls": [
+            {
+              "label": "Macros",
+              "idMso": "ViewMacros",
+              "type": "menu",
+              "size": "large",
+              "row": 1,
+              "column": 1,
+              "rowSpan": 3,
+              "colSpan": 3,
+              "image": "ViewMacros.png",
+              "idStatus": "candidate"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "label": "Developer",
+      "idMso": "TabDeveloper",
+      "order": 9,
+      "groups": [
+        {
+          "label": "Code",
+          "idMso": "GroupCode",
+          "groupIndex": 1,
+          "widthUnits": 8,
+          "layout": {
+            "rows": 3,
+            "columns": 5,
+            "flow": "column-major",
+            "launcher": false
+          },
+          "controls": [
+            {
+              "label": "Visual Basic",
+              "idMso": "VisualBasic",
+              "type": "button",
+              "size": "large",
+              "row": 1,
+              "column": 1,
+              "rowSpan": 3,
+              "colSpan": 2,
+              "image": "VisualBasic.png",
+              "idStatus": "candidate"
+            },
+            {
+              "label": "Macros",
+              "idMso": "Macros",
+              "type": "button",
+              "size": "large",
+              "row": 1,
+              "column": 3,
+              "rowSpan": 3,
+              "colSpan": 2,
+              "image": "Macros.png",
+              "idStatus": "candidate"
+            },
+            {
+              "label": "Record Macro",
+              "idMso": "RecordMacro",
+              "type": "button",
+              "size": "small",
+              "row": 1,
+              "column": 5,
+              "rowSpan": 1,
+              "colSpan": 1,
+              "image": "RecordMacro.png",
+              "idStatus": "candidate"
+            },
+            {
+              "label": "Use Relative References",
+              "idMso": "UseRelativeReferences",
+              "type": "toggleButton",
+              "size": "small",
+              "row": 2,
+              "column": 5,
+              "rowSpan": 1,
+              "colSpan": 1,
+              "image": "UseRelativeReferences.png",
+              "idStatus": "candidate"
+            },
+            {
+              "label": "Macro Security",
+              "idMso": "MacroSecurity",
+              "type": "button",
+              "size": "small",
+              "row": 3,
+              "column": 5,
+              "rowSpan": 1,
+              "colSpan": 1,
+              "image": "MacroSecurity.png",
+              "idStatus": "candidate"
+            }
+          ]
+        },
+        {
+          "label": "Add-ins",
+          "idMso": "GroupAddIns",
+          "groupIndex": 2,
+          "widthUnits": 8,
+          "layout": {
+            "rows": 3,
+            "columns": 4,
+            "flow": "column-major",
+            "launcher": false
+          },
+          "controls": [
+            {
+              "label": "Excel Add-ins",
+              "idMso": "ExcelAddIns",
+              "type": "button",
+              "size": "large",
+              "row": 1,
+              "column": 1,
+              "rowSpan": 3,
+              "colSpan": 2,
+              "image": "ExcelAddIns.png",
+              "idStatus": "candidate"
+            },
+            {
+              "label": "COM Add-ins",
+              "idMso": "ComAddIns",
+              "type": "button",
+              "size": "large",
+              "row": 1,
+              "column": 3,
+              "rowSpan": 3,
+              "colSpan": 2,
+              "image": "ComAddIns.png",
+              "idStatus": "candidate"
+            }
+          ]
+        },
+        {
+          "label": "Controls",
+          "idMso": "GroupControls",
+          "groupIndex": 3,
+          "widthUnits": 11,
+          "layout": {
+            "rows": 3,
+            "columns": 5,
+            "flow": "column-major",
+            "launcher": false
+          },
+          "controls": [
+            {
+              "label": "Insert Controls",
+              "idMso": "ControlInsert",
+              "type": "menu",
+              "size": "large",
+              "row": 1,
+              "column": 1,
+              "rowSpan": 3,
+              "colSpan": 2,
+              "image": "ControlInsert.png",
+              "idStatus": "candidate"
+            },
+            {
+              "label": "Design Mode",
+              "idMso": "DesignMode",
+              "type": "toggleButton",
+              "size": "large",
+              "row": 1,
+              "column": 3,
+              "rowSpan": 3,
+              "colSpan": 2,
+              "image": "DesignMode.png",
+              "idStatus": "candidate"
+            },
+            {
+              "label": "Properties",
+              "idMso": "ControlProperties",
+              "type": "button",
+              "size": "small",
+              "row": 1,
+              "column": 5,
+              "rowSpan": 1,
+              "colSpan": 1,
+              "image": "ControlProperties.png",
+              "idStatus": "candidate"
+            },
+            {
+              "label": "View Code",
+              "idMso": "ViewCode",
+              "type": "button",
+              "size": "small",
+              "row": 2,
+              "column": 5,
+              "rowSpan": 1,
+              "colSpan": 1,
+              "image": "ViewCode.png",
+              "idStatus": "candidate"
+            },
+            {
+              "label": "Run Dialog",
+              "idMso": "RunDialog",
+              "type": "button",
+              "size": "small",
+              "row": 3,
+              "column": 5,
+              "rowSpan": 1,
+              "colSpan": 1,
+              "image": "RunDialog.png",
+              "idStatus": "candidate"
+            }
+          ]
+        },
+        {
+          "label": "XML",
+          "idMso": "GroupXml",
+          "groupIndex": 4,
+          "widthUnits": 10,
+          "layout": {
+            "rows": 3,
+            "columns": 4,
+            "flow": "column-major",
+            "launcher": false
+          },
+          "controls": [
+            {
+              "label": "Source",
+              "idMso": "XmlSource",
+              "type": "button",
+              "size": "large",
+              "row": 1,
+              "column": 1,
+              "rowSpan": 3,
+              "colSpan": 2,
+              "image": "XmlSource.png",
+              "idStatus": "candidate"
+            },
+            {
+              "label": "Map Properties",
+              "idMso": "XmlMapProperties",
+              "type": "button",
+              "size": "small",
+              "row": 1,
+              "column": 3,
+              "rowSpan": 1,
+              "colSpan": 1,
+              "image": "XmlMapProperties.png",
+              "idStatus": "candidate"
+            },
+            {
+              "label": "Expansion Packs",
+              "idMso": "XmlExpansionPacks",
+              "type": "button",
+              "size": "small",
+              "row": 2,
+              "column": 3,
+              "rowSpan": 1,
+              "colSpan": 1,
+              "image": "XmlExpansionPacks.png",
+              "idStatus": "candidate"
+            },
+            {
+              "label": "Refresh Data",
+              "idMso": "XmlRefreshData",
+              "type": "button",
+              "size": "small",
+              "row": 3,
+              "column": 3,
+              "rowSpan": 1,
+              "colSpan": 1,
+              "image": "XmlRefreshData.png",
+              "idStatus": "candidate"
+            },
+            {
+              "label": "Import",
+              "idMso": "XmlImport",
+              "type": "button",
+              "size": "small",
+              "row": 1,
+              "column": 4,
+              "rowSpan": 1,
+              "colSpan": 1,
+              "image": "XmlImport.png",
+              "idStatus": "candidate"
+            },
+            {
+              "label": "Export",
+              "idMso": "XmlExport",
+              "type": "button",
+              "size": "small",
+              "row": 2,
+              "column": 4,
+              "rowSpan": 1,
+              "colSpan": 1,
+              "image": "XmlExport.png",
+              "idStatus": "candidate"
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

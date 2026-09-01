@@ -66,7 +66,8 @@
               "colSpan": 3,
               "image": "ViewMenu.png",
               "idStatus": "candidate",
-              "notes": "Changes available views depending on active Access object"
+              "notes": "Changes available views depending on active Access object",
+              "tooltip": "View (ViewMenu) - Home > Views"
             }
           ]
         },
@@ -92,7 +93,8 @@
               "rowSpan": 3,
               "colSpan": 2,
               "image": "Paste.png",
-              "idStatus": "candidate"
+              "idStatus": "candidate",
+              "tooltip": "Paste (Paste) - Home > Clipboard"
             },
             {
               "label": "Cut",
@@ -104,7 +106,8 @@
               "rowSpan": 1,
               "colSpan": 1,
               "image": "Cut.png",
-              "idStatus": "candidate"
+              "idStatus": "candidate",
+              "tooltip": "Cut (Cut) - Home > Clipboard"
             },
             {
               "label": "Copy",
@@ -116,7 +119,8 @@
               "rowSpan": 1,
               "colSpan": 1,
               "image": "Copy.png",
-              "idStatus": "candidate"
+              "idStatus": "candidate",
+              "tooltip": "Copy (Copy) - Home > Clipboard"
             },
             {
               "label": "Format Painter",
@@ -128,7 +132,8 @@
               "rowSpan": 1,
               "colSpan": 1,
               "image": "FormatPainter.png",
-              "idStatus": "candidate"
+              "idStatus": "candidate",
+              "tooltip": "Format Painter (FormatPainter) - Home > Clipboard"
             }
           ]
         },
@@ -154,7 +159,8 @@
               "rowSpan": 3,
               "colSpan": 2,
               "image": "SortAscending.png",
-              "idStatus": "candidate"
+              "idStatus": "candidate",
+              "tooltip": "Ascending (SortAscending) - Home > Sort & Filter"
             },
             {
               "label": "Descending",
@@ -166,7 +172,8 @@
               "rowSpan": 3,
               "colSpan": 2,
               "image": "SortDescending.png",
-              "idStatus": "candidate"
+              "idStatus": "candidate",
+              "tooltip": "Descending (SortDescending) - Home > Sort & Filter"
             },
             {
               "label": "Remove Sort",
@@ -178,7 +185,8 @@
               "rowSpan": 1,
               "colSpan": 1,
               "image": "RemoveSort.png",
-              "idStatus": "candidate"
+              "idStatus": "candidate",
+              "tooltip": "Remove Sort (RemoveSort) - Home > Sort & Filter"
             },
             {
               "label": "Selection",
@@ -190,7 +198,8 @@
               "rowSpan": 1,
               "colSpan": 1,
               "image": "FilterBySelection.png",
-              "idStatus": "candidate"
+              "idStatus": "candidate",
+              "tooltip": "Selection (FilterBySelection) - Home > Sort & Filter"
             },
             {
               "label": "Advanced",
@@ -202,7 +211,8 @@
               "rowSpan": 1,
               "colSpan": 1,
               "image": "AdvancedFilterOptions.png",
-              "idStatus": "candidate"
+              "idStatus": "candidate",
+              "tooltip": "Advanced (AdvancedFilterOptions) - Home > Sort & Filter"
             },
             {
               "label": "Toggle Filter",
@@ -214,7 +224,8 @@
               "rowSpan": 1,
               "colSpan": 1,
               "image": "ToggleFilter.png",
-              "idStatus": "candidate"
+              "idStatus": "candidate",
+              "tooltip": "Toggle Filter (ToggleFilter) - Home > Sort & Filter"
             }
           ]
         },
@@ -240,7 +251,8 @@
               "rowSpan": 3,
               "colSpan": 2,
               "image": "RefreshAll.png",
-              "idStatus": "candidate"
+              "idStatus": "candidate",
+              "tooltip": "Refresh All (RefreshAll) - Home > Records"
             },
             {
               "label": "New",
@@ -252,7 +264,8 @@
               "rowSpan": 1,
               "colSpan": 1,
               "image": "RecordsNewRecord.png",
-              "idStatus": "candidate"
+              "idStatus": "candidate",
+              "tooltip": "New (RecordsNewRecord) - Home > Records"
             },
             {
               "label": "Save",
@@ -264,7 +277,8 @@
               "rowSpan": 1,
               "colSpan": 1,
               "image": "RecordsSaveRecord.png",
-              "idStatus": "candidate"
+              "idStatus": "candidate",
+              "tooltip": "Save (RecordsSaveRecord) - Home > Records"
             },
             {
               "label": "Delete",
@@ -276,7 +290,8 @@
               "rowSpan": 1,
               "colSpan": 1,
               "image": "RecordsDeleteRecord.png",
-              "idStatus": "candidate"
+              "idStatus": "candidate",
+              "tooltip": "Delete (RecordsDeleteRecord) - Home > Records"
             },
             {
               "label": "Totals",
@@ -288,7 +303,8 @@
               "rowSpan": 1,
               "colSpan": 1,
               "image": "Totals.png",
-              "idStatus": "candidate"
+              "idStatus": "candidate",
+              "tooltip": "Totals (Totals) - Home > Records"
             },
             {
               "label": "Spelling",
@@ -300,7 +316,8 @@
               "rowSpan": 1,
               "colSpan": 1,
               "image": "Spelling.png",
-              "idStatus": "candidate"
+              "idStatus": "candidate",
+              "tooltip": "Spelling (Spelling) - Home > Records"
             },
             {
               "label": "More",
@@ -312,7 +329,8 @@
               "rowSpan": 1,
               "colSpan": 1,
               "image": "RecordsMoreMenu.png",
-              "idStatus": "candidate"
+              "idStatus": "candidate",
+              "tooltip": "More (RecordsMoreMenu) - Home > Records"
             }
           ]
         },
@@ -338,7 +356,8 @@
               "rowSpan": 3,
               "colSpan": 2,
               "image": "FindDialog.png",
-              "idStatus": "candidate"
+              "idStatus": "candidate",
+              "tooltip": "Find (FindDialog) - Home > Find"
             },
             {
               "label": "Replace",
@@ -350,7 +369,8 @@
               "rowSpan": 1,
               "colSpan": 1,
               "image": "ReplaceDialog.png",
-              "idStatus": "candidate"
+              "idStatus": "candidate",
+              "tooltip": "Replace (ReplaceDialog) - Home > Find"
             },
             {
               "label": "Go To",
@@ -362,7 +382,8 @@
               "rowSpan": 1,
               "colSpan": 1,
               "image": "GoToMenu.png",
-              "idStatus": "candidate"
+              "idStatus": "candidate",
+              "tooltip": "Go To (GoToMenu) - Home > Find"
             },
             {
               "label": "Select",
@@ -374,7 +395,8 @@
               "rowSpan": 1,
               "colSpan": 1,
               "image": "SelectMenu.png",
-              "idStatus": "candidate"
+              "idStatus": "candidate",
+              "tooltip": "Select (SelectMenu) - Home > Find"
             }
           ]
         },
@@ -400,7 +422,8 @@
               "rowSpan": 1,
               "colSpan": 3,
               "image": null,
-              "idStatus": "needs_validation"
+              "idStatus": "needs_validation",
+              "tooltip": "Font - Home > Text Formatting"
             },
             {
               "label": "Font Size",
@@ -412,7 +435,8 @@
               "rowSpan": 1,
               "colSpan": 2,
               "image": null,
-              "idStatus": "needs_validation"
+              "idStatus": "needs_validation",
+              "tooltip": "Font Size - Home > Text Formatting"
             },
             {
               "label": "Bold",
@@ -424,7 +448,8 @@
               "rowSpan": 1,
               "colSpan": 1,
               "image": "Bold.png",
-              "idStatus": "candidate"
+              "idStatus": "candidate",
+              "tooltip": "Bold (Bold) - Home > Text Formatting"
             },
             {
               "label": "Italic",
@@ -436,7 +461,8 @@
               "rowSpan": 1,
               "colSpan": 1,
               "image": "Italic.png",
-              "idStatus": "candidate"
+              "idStatus": "candidate",
+              "tooltip": "Italic (Italic) - Home > Text Formatting"
             },
             {
               "label": "Underline",
@@ -448,7 +474,8 @@
               "rowSpan": 1,
               "colSpan": 1,
               "image": "Underline.png",
-              "idStatus": "candidate"
+              "idStatus": "candidate",
+              "tooltip": "Underline (Underline) - Home > Text Formatting"
             },
             {
               "label": "Font Color",
@@ -460,7 +487,8 @@
               "rowSpan": 1,
               "colSpan": 1,
               "image": "FontColorPicker.png",
-              "idStatus": "candidate"
+              "idStatus": "candidate",
+              "tooltip": "Font Color (FontColorPicker) - Home > Text Formatting"
             },
             {
               "label": "Background Color",
@@ -472,7 +500,8 @@
               "rowSpan": 1,
               "colSpan": 1,
               "image": "BackColorPicker.png",
-              "idStatus": "candidate"
+              "idStatus": "candidate",
+              "tooltip": "Background Color (BackColorPicker) - Home > Text Formatting"
             },
             {
               "label": "Align Left",
@@ -484,7 +513,8 @@
               "rowSpan": 1,
               "colSpan": 1,
               "image": "AlignLeft.png",
-              "idStatus": "candidate"
+              "idStatus": "candidate",
+              "tooltip": "Align Left (AlignLeft) - Home > Text Formatting"
             },
             {
               "label": "Center",
@@ -496,7 +526,8 @@
               "rowSpan": 1,
               "colSpan": 1,
               "image": "AlignCenter.png",
-              "idStatus": "candidate"
+              "idStatus": "candidate",
+              "tooltip": "Center (AlignCenter) - Home > Text Formatting"
             },
             {
               "label": "Align Right",
@@ -508,7 +539,8 @@
               "rowSpan": 1,
               "colSpan": 1,
               "image": "AlignRight.png",
-              "idStatus": "candidate"
+              "idStatus": "candidate",
+              "tooltip": "Align Right (AlignRight) - Home > Text Formatting"
             },
             {
               "label": "Gridlines",
@@ -520,7 +552,8 @@
               "rowSpan": 1,
               "colSpan": 1,
               "image": "GridlinesMenu.png",
-              "idStatus": "candidate"
+              "idStatus": "candidate",
+              "tooltip": "Gridlines (GridlinesMenu) - Home > Text Formatting"
             }
           ]
         }
@@ -553,7 +586,8 @@
               "rowSpan": 3,
               "colSpan": 3,
               "image": "ApplicationPartsGallery.png",
-              "idStatus": "candidate"
+              "idStatus": "candidate",
+              "tooltip": "Application Parts (ApplicationPartsGallery) - Create > Templates"
             }
           ]
         },
@@ -579,7 +613,8 @@
               "rowSpan": 3,
               "colSpan": 2,
               "image": "TableCreate.png",
-              "idStatus": "candidate"
+              "idStatus": "candidate",
+              "tooltip": "Table (TableCreate) - Create > Tables"
             },
             {
               "label": "Table Design",
@@ -591,7 +626,8 @@
               "rowSpan": 3,
               "colSpan": 2,
               "image": "TableDesign.png",
-              "idStatus": "candidate"
+              "idStatus": "candidate",
+              "tooltip": "Table Design (TableDesign) - Create > Tables"
             },
             {
               "label": "SharePoint Lists",
@@ -603,7 +639,8 @@
               "rowSpan": 3,
               "colSpan": 2,
               "image": "SharePointLists.png",
-              "idStatus": "candidate"
+              "idStatus": "candidate",
+              "tooltip": "SharePoint Lists (SharePointLists) - Create > Tables"
             }
           ]
         },
@@ -629,7 +666,8 @@
               "rowSpan": 3,
               "colSpan": 2,
               "image": "QueryWizard.png",
-              "idStatus": "candidate"
+              "idStatus": "candidate",
+              "tooltip": "Query Wizard (QueryWizard) - Create > Queries"
             },
             {
               "label": "Query Design",
@@ -641,7 +679,8 @@
               "rowSpan": 3,
               "colSpan": 2,
               "image": "QueryDesign.png",
-              "idStatus": "candidate"
+              "idStatus": "candidate",
+              "tooltip": "Query Design (QueryDesign) - Create > Queries"
             }
           ]
         },
@@ -667,7 +706,8 @@
               "rowSpan": 3,
               "colSpan": 2,
               "image": "FormCreate.png",
-              "idStatus": "candidate"
+              "idStatus": "candidate",
+              "tooltip": "Form (FormCreate) - Create > Forms"
             },
             {
               "label": "Form Design",
@@ -679,7 +719,8 @@
               "rowSpan": 3,
               "colSpan": 2,
               "image": "FormDesign.png",
-              "idStatus": "candidate"
+              "idStatus": "candidate",
+              "tooltip": "Form Design (FormDesign) - Create > Forms"
             },
             {
               "label": "Blank Form",
@@ -691,7 +732,8 @@
               "rowSpan": 3,
               "colSpan": 2,
               "image": "BlankForm.png",
-              "idStatus": "candidate"
+              "idStatus": "candidate",
+              "tooltip": "Blank Form (BlankForm) - Create > Forms"
             },
             {
               "label": "Form Wizard",
@@ -703,7 +745,8 @@
               "rowSpan": 1,
               "colSpan": 1,
               "image": "FormWizard.png",
-              "idStatus": "candidate"
+              "idStatus": "candidate",
+              "tooltip": "Form Wizard (FormWizard) - Create > Forms"
             },
             {
               "label": "Navigation",
@@ -715,7 +758,8 @@
               "rowSpan": 1,
               "colSpan": 1,
               "image": "NavigationFormGallery.png",
-              "idStatus": "candidate"
+              "idStatus": "candidate",
+              "tooltip": "Navigation (NavigationFormGallery) - Create > Forms"
             },
             {
               "label": "More Forms",
@@ -727,7 +771,8 @@
               "rowSpan": 1,
               "colSpan": 1,
               "image": "MoreFormsGallery.png",
-              "idStatus": "candidate"
+              "idStatus": "candidate",
+              "tooltip": "More Forms (MoreFormsGallery) - Create > Forms"
             }
           ]
         },
@@ -753,7 +798,8 @@
               "rowSpan": 3,
               "colSpan": 2,
               "image": "ReportCreate.png",
-              "idStatus": "candidate"
+              "idStatus": "candidate",
+              "tooltip": "Report (ReportCreate) - Create > Reports"
             },
             {
               "label": "Report Design",
@@ -765,7 +811,8 @@
               "rowSpan": 3,
               "colSpan": 2,
               "image": "ReportDesign.png",
-              "idStatus": "candidate"
+              "idStatus": "candidate",
+              "tooltip": "Report Design (ReportDesign) - Create > Reports"
             },
             {
               "label": "Blank Report",
@@ -777,7 +824,8 @@
               "rowSpan": 3,
               "colSpan": 2,
               "image": "BlankReport.png",
-              "idStatus": "candidate"
+              "idStatus": "candidate",
+              "tooltip": "Blank Report (BlankReport) - Create > Reports"
             },
             {
               "label": "Report Wizard",
@@ -789,7 +837,8 @@
               "rowSpan": 1,
               "colSpan": 1,
               "image": "ReportWizard.png",
-              "idStatus": "candidate"
+              "idStatus": "candidate",
+              "tooltip": "Report Wizard (ReportWizard) - Create > Reports"
             },
             {
               "label": "Labels",
@@ -801,7 +850,8 @@
               "rowSpan": 1,
               "colSpan": 1,
               "image": "LabelWizard.png",
-              "idStatus": "candidate"
+              "idStatus": "candidate",
+              "tooltip": "Labels (LabelWizard) - Create > Reports"
             }
           ]
         },
@@ -827,7 +877,8 @@
               "rowSpan": 3,
               "colSpan": 2,
               "image": "MacroCreate.png",
-              "idStatus": "candidate"
+              "idStatus": "candidate",
+              "tooltip": "Macro (MacroCreate) - Create > Macros & Code"
             },
             {
               "label": "Module",
@@ -839,7 +890,8 @@
               "rowSpan": 3,
               "colSpan": 2,
               "image": "ModuleInsert.png",
-              "idStatus": "candidate"
+              "idStatus": "candidate",
+              "tooltip": "Module (ModuleInsert) - Create > Macros & Code"
             },
             {
               "label": "Class Module",
@@ -851,7 +903,8 @@
               "rowSpan": 3,
               "colSpan": 2,
               "image": "ClassModuleInsert.png",
-              "idStatus": "candidate"
+              "idStatus": "candidate",
+              "tooltip": "Class Module (ClassModuleInsert) - Create > Macros & Code"
             },
             {
               "label": "Visual Basic",
@@ -863,7 +916,8 @@
               "rowSpan": 1,
               "colSpan": 1,
               "image": "VisualBasic.png",
-              "idStatus": "candidate"
+              "idStatus": "candidate",
+              "tooltip": "Visual Basic (VisualBasic) - Create > Macros & Code"
             }
           ]
         }
@@ -896,7 +950,8 @@
               "rowSpan": 3,
               "colSpan": 2,
               "image": "ImportNewDataSource.png",
-              "idStatus": "candidate"
+              "idStatus": "candidate",
+              "tooltip": "New Data Source (ImportNewDataSource) - External Data > Import & Link"
             },
             {
               "label": "Saved Imports",
@@ -908,7 +963,8 @@
               "rowSpan": 3,
               "colSpan": 2,
               "image": "SavedImports.png",
-              "idStatus": "candidate"
+              "idStatus": "candidate",
+              "tooltip": "Saved Imports (SavedImports) - External Data > Import & Link"
             },
             {
               "label": "Excel",
@@ -920,7 +976,8 @@
               "rowSpan": 1,
               "colSpan": 1,
               "image": "ImportExcel.png",
-              "idStatus": "candidate"
+              "idStatus": "candidate",
+              "tooltip": "Excel (ImportExcel) - External Data > Import & Link"
             },
             {
               "label": "Access",
@@ -932,7 +989,8 @@
               "rowSpan": 1,
               "colSpan": 1,
               "image": "ImportAccess.png",
-              "idStatus": "candidate"
+              "idStatus": "candidate",
+              "tooltip": "Access (ImportAccess) - External Data > Import & Link"
             },
             {
               "label": "Text File",
@@ -944,7 +1002,8 @@
               "rowSpan": 1,
               "colSpan": 1,
               "image": "ImportText.png",
-              "idStatus": "candidate"
+              "idStatus": "candidate",
+              "tooltip": "Text File (ImportText) - External Data > Import & Link"
             },
             {
               "label": "XML File",
@@ -956,7 +1015,8 @@
               "rowSpan": 1,
               "colSpan": 1,
               "image": "ImportXml.png",
-              "idStatus": "candidate"
+              "idStatus": "candidate",
+              "tooltip": "XML File (ImportXml) - External Data > Import & Link"
             },
             {
               "label": "ODBC Database",
@@ -968,7 +1028,8 @@
               "rowSpan": 1,
               "colSpan": 1,
               "image": "ImportODBC.png",
-              "idStatus": "candidate"
+              "idStatus": "candidate",
+              "tooltip": "ODBC Database (ImportODBC) - External Data > Import & Link"
             },
             {
               "label": "More",
@@ -980,7 +1041,8 @@
               "rowSpan": 1,
               "colSpan": 1,
               "image": "ImportMore.png",
-              "idStatus": "candidate"
+              "idStatus": "candidate",
+              "tooltip": "More (ImportMore) - External Data > Import & Link"
             }
           ]
         },
@@ -1006,7 +1068,8 @@
               "rowSpan": 3,
               "colSpan": 2,
               "image": "ExportExcel.png",
-              "idStatus": "candidate"
+              "idStatus": "candidate",
+              "tooltip": "Excel (ExportExcel) - External Data > Export"
             },
             {
               "label": "Text File",
@@ -1018,7 +1081,8 @@
               "rowSpan": 3,
               "colSpan": 2,
               "image": "ExportText.png",
-              "idStatus": "candidate"
+              "idStatus": "candidate",
+              "tooltip": "Text File (ExportText) - External Data > Export"
             },
             {
               "label": "XML File",
@@ -1030,7 +1094,8 @@
               "rowSpan": 3,
               "colSpan": 2,
               "image": "ExportXml.png",
-              "idStatus": "candidate"
+              "idStatus": "candidate",
+              "tooltip": "XML File (ExportXml) - External Data > Export"
             },
             {
               "label": "PDF or XPS",
@@ -1042,7 +1107,8 @@
               "rowSpan": 3,
               "colSpan": 2,
               "image": "PublishToPdfOrEdoc.png",
-              "idStatus": "candidate"
+              "idStatus": "candidate",
+              "tooltip": "PDF or XPS (PublishToPdfOrEdoc) - External Data > Export"
             },
             {
               "label": "Email",
@@ -1054,7 +1120,8 @@
               "rowSpan": 1,
               "colSpan": 1,
               "image": "SendObjectAsEmailAttachment.png",
-              "idStatus": "candidate"
+              "idStatus": "candidate",
+              "tooltip": "Email (SendObjectAsEmailAttachment) - External Data > Export"
             },
             {
               "label": "Access",
@@ -1066,7 +1133,8 @@
               "rowSpan": 1,
               "colSpan": 1,
               "image": "ExportAccess.png",
-              "idStatus": "candidate"
+              "idStatus": "candidate",
+              "tooltip": "Access (ExportAccess) - External Data > Export"
             },
             {
               "label": "Word Merge",
@@ -1078,7 +1146,8 @@
               "rowSpan": 1,
               "colSpan": 1,
               "image": "WordMailMerge.png",
-              "idStatus": "candidate"
+              "idStatus": "candidate",
+              "tooltip": "Word Merge (WordMailMerge) - External Data > Export"
             },
             {
               "label": "More",
@@ -1090,7 +1159,8 @@
               "rowSpan": 1,
               "colSpan": 1,
               "image": "ExportMore.png",
-              "idStatus": "candidate"
+              "idStatus": "candidate",
+              "tooltip": "More (ExportMore) - External Data > Export"
             },
             {
               "label": "Saved Exports",
@@ -1102,7 +1172,8 @@
               "rowSpan": 1,
               "colSpan": 1,
               "image": "SavedExports.png",
-              "idStatus": "candidate"
+              "idStatus": "candidate",
+              "tooltip": "Saved Exports (SavedExports) - External Data > Export"
             }
           ]
         },
@@ -1128,7 +1199,8 @@
               "rowSpan": 3,
               "colSpan": 2,
               "image": "CollectDataByEmail.png",
-              "idStatus": "candidate"
+              "idStatus": "candidate",
+              "tooltip": "Create E-mail (CollectDataByEmail) - External Data > Collect Data"
             },
             {
               "label": "Manage Replies",
@@ -1140,7 +1212,8 @@
               "rowSpan": 3,
               "colSpan": 2,
               "image": "ManageDataCollectionMessages.png",
-              "idStatus": "candidate"
+              "idStatus": "candidate",
+              "tooltip": "Manage Replies (ManageDataCollectionMessages) - External Data > Collect Data"
             }
           ]
         }
@@ -1173,7 +1246,8 @@
               "rowSpan": 3,
               "colSpan": 2,
               "image": "CompactRepairDatabase.png",
-              "idStatus": "candidate"
+              "idStatus": "candidate",
+              "tooltip": "Compact and Repair Database (CompactRepairDatabase) - Database Tools > Tools"
             },
             {
               "label": "Encrypt with Password",
@@ -1185,7 +1259,8 @@
               "rowSpan": 3,
               "colSpan": 2,
               "image": "DatabaseEncryptWithPassword.png",
-              "idStatus": "candidate"
+              "idStatus": "candidate",
+              "tooltip": "Encrypt with Password (DatabaseEncryptWithPassword) - Database Tools > Tools"
             }
           ]
         },
@@ -1211,7 +1286,8 @@
               "rowSpan": 3,
               "colSpan": 2,
               "image": "VisualBasic.png",
-              "idStatus": "candidate"
+              "idStatus": "candidate",
+              "tooltip": "Visual Basic (VisualBasic) - Database Tools > Macro"
             },
             {
               "label": "Run Macro",
@@ -1223,7 +1299,8 @@
               "rowSpan": 3,
               "colSpan": 2,
               "image": "MacroRun.png",
-              "idStatus": "candidate"
+              "idStatus": "candidate",
+              "tooltip": "Run Macro (MacroRun) - Database Tools > Macro"
             }
           ]
         },
@@ -1249,7 +1326,8 @@
               "rowSpan": 3,
               "colSpan": 3,
               "image": "Relationships.png",
-              "idStatus": "candidate"
+              "idStatus": "candidate",
+              "tooltip": "Relationships (Relationships) - Database Tools > Relationships"
             }
           ]
         },
@@ -1275,7 +1353,8 @@
               "rowSpan": 3,
               "colSpan": 2,
               "image": "DatabaseDocumenter.png",
-              "idStatus": "candidate"
+              "idStatus": "candidate",
+              "tooltip": "Database Documenter (DatabaseDocumenter) - Database Tools > Analyze"
             },
             {
               "label": "Analyze Performance",
@@ -1287,7 +1366,8 @@
               "rowSpan": 3,
               "colSpan": 2,
               "image": "AnalyzePerformance.png",
-              "idStatus": "candidate"
+              "idStatus": "candidate",
+              "tooltip": "Analyze Performance (AnalyzePerformance) - Database Tools > Analyze"
             },
             {
               "label": "Analyze Table",
@@ -1299,7 +1379,8 @@
               "rowSpan": 3,
               "colSpan": 2,
               "image": "AnalyzeTable.png",
-              "idStatus": "candidate"
+              "idStatus": "candidate",
+              "tooltip": "Analyze Table (AnalyzeTable) - Database Tools > Analyze"
             }
           ]
         },
@@ -1325,7 +1406,8 @@
               "rowSpan": 3,
               "colSpan": 2,
               "image": "MoveToAccessDatabase.png",
-              "idStatus": "candidate"
+              "idStatus": "candidate",
+              "tooltip": "Access Database (MoveToAccessDatabase) - Database Tools > Move Data"
             },
             {
               "label": "SharePoint",
@@ -1337,7 +1419,8 @@
               "rowSpan": 3,
               "colSpan": 2,
               "image": "MoveToSharePoint.png",
-              "idStatus": "candidate"
+              "idStatus": "candidate",
+              "tooltip": "SharePoint (MoveToSharePoint) - Database Tools > Move Data"
             }
           ]
         },
@@ -1363,7 +1446,8 @@
               "rowSpan": 3,
               "colSpan": 3,
               "image": "AddIns.png",
-              "idStatus": "candidate"
+              "idStatus": "candidate",
+              "tooltip": "Add-ins (AddIns) - Database Tools > Add-ins"
             }
           ]
         }
@@ -1406,7 +1490,8 @@
                   "rowSpan": 3,
                   "colSpan": 2,
                   "image": "FieldAddMenu.png",
-                  "idStatus": "candidate"
+                  "idStatus": "candidate",
+                  "tooltip": "Add Fields (FieldAddMenu) - Fields > Add & Delete"
                 },
                 {
                   "label": "Short Text",
@@ -1418,7 +1503,8 @@
                   "rowSpan": 1,
                   "colSpan": 1,
                   "image": "FieldShortText.png",
-                  "idStatus": "candidate"
+                  "idStatus": "candidate",
+                  "tooltip": "Short Text (FieldShortText) - Fields > Add & Delete"
                 },
                 {
                   "label": "Number",
@@ -1430,7 +1516,8 @@
                   "rowSpan": 1,
                   "colSpan": 1,
                   "image": "FieldNumber.png",
-                  "idStatus": "candidate"
+                  "idStatus": "candidate",
+                  "tooltip": "Number (FieldNumber) - Fields > Add & Delete"
                 },
                 {
                   "label": "Currency",
@@ -1442,7 +1529,8 @@
                   "rowSpan": 1,
                   "colSpan": 1,
                   "image": "FieldCurrency.png",
-                  "idStatus": "candidate"
+                  "idStatus": "candidate",
+                  "tooltip": "Currency (FieldCurrency) - Fields > Add & Delete"
                 },
                 {
                   "label": "Date & Time",
@@ -1454,7 +1542,8 @@
                   "rowSpan": 1,
                   "colSpan": 1,
                   "image": "FieldDateTime.png",
-                  "idStatus": "candidate"
+                  "idStatus": "candidate",
+                  "tooltip": "Date & Time (FieldDateTime) - Fields > Add & Delete"
                 },
                 {
                   "label": "Yes/No",
@@ -1466,7 +1555,8 @@
                   "rowSpan": 1,
                   "colSpan": 1,
                   "image": "FieldYesNo.png",
-                  "idStatus": "candidate"
+                  "idStatus": "candidate",
+                  "tooltip": "Yes/No (FieldYesNo) - Fields > Add & Delete"
                 },
                 {
                   "label": "More Fields",
@@ -1478,7 +1568,8 @@
                   "rowSpan": 1,
                   "colSpan": 1,
                   "image": "FieldMoreFields.png",
-                  "idStatus": "candidate"
+                  "idStatus": "candidate",
+                  "tooltip": "More Fields (FieldMoreFields) - Fields > Add & Delete"
                 },
                 {
                   "label": "Delete",
@@ -1490,7 +1581,8 @@
                   "rowSpan": 3,
                   "colSpan": 2,
                   "image": "FieldDelete.png",
-                  "idStatus": "candidate"
+                  "idStatus": "candidate",
+                  "tooltip": "Delete (FieldDelete) - Fields > Add & Delete"
                 }
               ]
             },
@@ -1516,7 +1608,8 @@
                   "rowSpan": 3,
                   "colSpan": 2,
                   "image": "FieldNameCaption.png",
-                  "idStatus": "candidate"
+                  "idStatus": "candidate",
+                  "tooltip": "Name & Caption (FieldNameCaption) - Fields > Properties"
                 },
                 {
                   "label": "Default Value",
@@ -1528,7 +1621,8 @@
                   "rowSpan": 1,
                   "colSpan": 1,
                   "image": "FieldDefaultValue.png",
-                  "idStatus": "candidate"
+                  "idStatus": "candidate",
+                  "tooltip": "Default Value (FieldDefaultValue) - Fields > Properties"
                 },
                 {
                   "label": "Field Size",
@@ -1540,7 +1634,8 @@
                   "rowSpan": 1,
                   "colSpan": 1,
                   "image": "FieldSize.png",
-                  "idStatus": "candidate"
+                  "idStatus": "candidate",
+                  "tooltip": "Field Size (FieldSize) - Fields > Properties"
                 },
                 {
                   "label": "Data Type",
@@ -1552,7 +1647,8 @@
                   "rowSpan": 1,
                   "colSpan": 1,
                   "image": "FieldDataType.png",
-                  "idStatus": "candidate"
+                  "idStatus": "candidate",
+                  "tooltip": "Data Type (FieldDataType) - Fields > Properties"
                 },
                 {
                   "label": "Required",
@@ -1564,7 +1660,8 @@
                   "rowSpan": 1,
                   "colSpan": 1,
                   "image": "FieldRequired.png",
-                  "idStatus": "candidate"
+                  "idStatus": "candidate",
+                  "tooltip": "Required (FieldRequired) - Fields > Properties"
                 },
                 {
                   "label": "Unique",
@@ -1576,7 +1673,8 @@
                   "rowSpan": 1,
                   "colSpan": 1,
                   "image": "FieldUnique.png",
-                  "idStatus": "candidate"
+                  "idStatus": "candidate",
+                  "tooltip": "Unique (FieldUnique) - Fields > Properties"
                 },
                 {
                   "label": "Indexed",
@@ -1588,7 +1686,8 @@
                   "rowSpan": 1,
                   "colSpan": 1,
                   "image": "FieldIndexed.png",
-                  "idStatus": "candidate"
+                  "idStatus": "candidate",
+                  "tooltip": "Indexed (FieldIndexed) - Fields > Properties"
                 }
               ]
             },
@@ -1614,7 +1713,8 @@
                   "rowSpan": 1,
                   "colSpan": 3,
                   "image": "FieldFormat.png",
-                  "idStatus": "candidate"
+                  "idStatus": "candidate",
+                  "tooltip": "Format (FieldFormat) - Fields > Formatting"
                 },
                 {
                   "label": "Decimal Places",
@@ -1626,7 +1726,8 @@
                   "rowSpan": 1,
                   "colSpan": 3,
                   "image": "FieldDecimalPlaces.png",
-                  "idStatus": "candidate"
+                  "idStatus": "candidate",
+                  "tooltip": "Decimal Places (FieldDecimalPlaces) - Fields > Formatting"
                 },
                 {
                   "label": "Increase Decimals",
@@ -1638,7 +1739,8 @@
                   "rowSpan": 1,
                   "colSpan": 1,
                   "image": "DecimalsIncrease.png",
-                  "idStatus": "candidate"
+                  "idStatus": "candidate",
+                  "tooltip": "Increase Decimals (DecimalsIncrease) - Fields > Formatting"
                 },
                 {
                   "label": "Decrease Decimals",
@@ -1650,7 +1752,8 @@
                   "rowSpan": 1,
                   "colSpan": 1,
                   "image": "DecimalsDecrease.png",
-                  "idStatus": "candidate"
+                  "idStatus": "candidate",
+                  "tooltip": "Decrease Decimals (DecimalsDecrease) - Fields > Formatting"
                 }
               ]
             },
@@ -1676,7 +1779,8 @@
                   "rowSpan": 3,
                   "colSpan": 2,
                   "image": "FieldValidation.png",
-                  "idStatus": "candidate"
+                  "idStatus": "candidate",
+                  "tooltip": "Validation (FieldValidation) - Fields > Field Validation"
                 },
                 {
                   "label": "Test Validation Rules",
@@ -1688,7 +1792,8 @@
                   "rowSpan": 3,
                   "colSpan": 2,
                   "image": "TestValidationRules.png",
-                  "idStatus": "candidate"
+                  "idStatus": "candidate",
+                  "tooltip": "Test Validation Rules (TestValidationRules) - Fields > Field Validation"
                 }
               ]
             }
@@ -1721,7 +1826,8 @@
                   "rowSpan": 1,
                   "colSpan": 3,
                   "image": "TableName.png",
-                  "idStatus": "candidate"
+                  "idStatus": "candidate",
+                  "tooltip": "Table Name (TableName) - Table > Properties"
                 },
                 {
                   "label": "Description",
@@ -1733,7 +1839,8 @@
                   "rowSpan": 1,
                   "colSpan": 3,
                   "image": "TableDescription.png",
-                  "idStatus": "candidate"
+                  "idStatus": "candidate",
+                  "tooltip": "Description (TableDescription) - Table > Properties"
                 }
               ]
             },
@@ -1759,7 +1866,8 @@
                   "rowSpan": 3,
                   "colSpan": 2,
                   "image": "TableBeforeChangeMacro.png",
-                  "idStatus": "candidate"
+                  "idStatus": "candidate",
+                  "tooltip": "Before Change (TableBeforeChangeMacro) - Table > Before Events"
                 },
                 {
                   "label": "Before Delete",
@@ -1771,7 +1879,8 @@
                   "rowSpan": 3,
                   "colSpan": 2,
                   "image": "TableBeforeDeleteMacro.png",
-                  "idStatus": "candidate"
+                  "idStatus": "candidate",
+                  "tooltip": "Before Delete (TableBeforeDeleteMacro) - Table > Before Events"
                 }
               ]
             },
@@ -1797,7 +1906,8 @@
                   "rowSpan": 1,
                   "colSpan": 1,
                   "image": "TableAfterInsertMacro.png",
-                  "idStatus": "candidate"
+                  "idStatus": "candidate",
+                  "tooltip": "After Insert (TableAfterInsertMacro) - Table > After Events"
                 },
                 {
                   "label": "After Update",
@@ -1809,7 +1919,8 @@
                   "rowSpan": 1,
                   "colSpan": 1,
                   "image": "TableAfterUpdateMacro.png",
-                  "idStatus": "candidate"
+                  "idStatus": "candidate",
+                  "tooltip": "After Update (TableAfterUpdateMacro) - Table > After Events"
                 },
                 {
                   "label": "After Delete",
@@ -1821,7 +1932,8 @@
                   "rowSpan": 1,
                   "colSpan": 1,
                   "image": "TableAfterDeleteMacro.png",
-                  "idStatus": "candidate"
+                  "idStatus": "candidate",
+                  "tooltip": "After Delete (TableAfterDeleteMacro) - Table > After Events"
                 }
               ]
             },
@@ -1847,7 +1959,8 @@
                   "rowSpan": 3,
                   "colSpan": 3,
                   "image": "Relationships.png",
-                  "idStatus": "candidate"
+                  "idStatus": "candidate",
+                  "tooltip": "Relationships (Relationships) - Table > Relationships"
                 }
               ]
             }
@@ -1890,7 +2003,8 @@
                   "rowSpan": 3,
                   "colSpan": 3,
                   "image": "ViewMenu.png",
-                  "idStatus": "candidate"
+                  "idStatus": "candidate",
+                  "tooltip": "View (ViewMenu) - Design > Views"
                 }
               ]
             },
@@ -1916,7 +2030,8 @@
                   "rowSpan": 3,
                   "colSpan": 2,
                   "image": "PrimaryKey.png",
-                  "idStatus": "candidate"
+                  "idStatus": "candidate",
+                  "tooltip": "Primary Key (PrimaryKey) - Design > Tools"
                 },
                 {
                   "label": "Builder",
@@ -1928,7 +2043,8 @@
                   "rowSpan": 3,
                   "colSpan": 2,
                   "image": "Builder.png",
-                  "idStatus": "candidate"
+                  "idStatus": "candidate",
+                  "tooltip": "Builder (Builder) - Design > Tools"
                 },
                 {
                   "label": "Test Validation Rules",
@@ -1940,7 +2056,8 @@
                   "rowSpan": 3,
                   "colSpan": 2,
                   "image": "TestValidationRules.png",
-                  "idStatus": "candidate"
+                  "idStatus": "candidate",
+                  "tooltip": "Test Validation Rules (TestValidationRules) - Design > Tools"
                 }
               ]
             },
@@ -1966,7 +2083,8 @@
                   "rowSpan": 3,
                   "colSpan": 2,
                   "image": "Indexes.png",
-                  "idStatus": "candidate"
+                  "idStatus": "candidate",
+                  "tooltip": "Indexes (Indexes) - Design > Show/Hide"
                 },
                 {
                   "label": "Property Sheet",
@@ -1978,7 +2096,8 @@
                   "rowSpan": 3,
                   "colSpan": 2,
                   "image": "PropertySheet.png",
-                  "idStatus": "candidate"
+                  "idStatus": "candidate",
+                  "tooltip": "Property Sheet (PropertySheet) - Design > Show/Hide"
                 }
               ]
             },
@@ -2004,7 +2123,8 @@
                   "rowSpan": 3,
                   "colSpan": 3,
                   "image": "Relationships.png",
-                  "idStatus": "candidate"
+                  "idStatus": "candidate",
+                  "tooltip": "Relationships (Relationships) - Design > Relationships"
                 }
               ]
             }
@@ -2047,7 +2167,8 @@
                   "rowSpan": 3,
                   "colSpan": 2,
                   "image": "ViewMenu.png",
-                  "idStatus": "candidate"
+                  "idStatus": "candidate",
+                  "tooltip": "View (ViewMenu) - Query > Results"
                 },
                 {
                   "label": "Run",
@@ -2059,7 +2180,8 @@
                   "rowSpan": 3,
                   "colSpan": 2,
                   "image": "QueryRun.png",
-                  "idStatus": "candidate"
+                  "idStatus": "candidate",
+                  "tooltip": "Run (QueryRun) - Query > Results"
                 }
               ]
             },
@@ -2085,7 +2207,8 @@
                   "rowSpan": 3,
                   "colSpan": 2,
                   "image": "RefreshAll.png",
-                  "idStatus": "candidate"
+                  "idStatus": "candidate",
+                  "tooltip": "Refresh All (RefreshAll) - Query > Records"
                 },
                 {
                   "label": "Totals",
@@ -2097,7 +2220,8 @@
                   "rowSpan": 3,
                   "colSpan": 2,
                   "image": "Totals.png",
-                  "idStatus": "candidate"
+                  "idStatus": "candidate",
+                  "tooltip": "Totals (Totals) - Query > Records"
                 }
               ]
             }
@@ -2140,7 +2264,8 @@
                   "rowSpan": 3,
                   "colSpan": 2,
                   "image": "ViewMenu.png",
-                  "idStatus": "candidate"
+                  "idStatus": "candidate",
+                  "tooltip": "View (ViewMenu) - Design > Results"
                 },
                 {
                   "label": "Run",
@@ -2152,7 +2277,8 @@
                   "rowSpan": 3,
                   "colSpan": 2,
                   "image": "QueryRun.png",
-                  "idStatus": "candidate"
+                  "idStatus": "candidate",
+                  "tooltip": "Run (QueryRun) - Design > Results"
                 }
               ]
             },
@@ -2178,7 +2304,8 @@
                   "rowSpan": 3,
                   "colSpan": 2,
                   "image": "QueryTypeSelect.png",
-                  "idStatus": "candidate"
+                  "idStatus": "candidate",
+                  "tooltip": "Select (QueryTypeSelect) - Design > Query Type"
                 },
                 {
                   "label": "Make Table",
@@ -2190,7 +2317,8 @@
                   "rowSpan": 3,
                   "colSpan": 2,
                   "image": "QueryTypeMakeTable.png",
-                  "idStatus": "candidate"
+                  "idStatus": "candidate",
+                  "tooltip": "Make Table (QueryTypeMakeTable) - Design > Query Type"
                 },
                 {
                   "label": "Append",
@@ -2202,7 +2330,8 @@
                   "rowSpan": 3,
                   "colSpan": 2,
                   "image": "QueryTypeAppend.png",
-                  "idStatus": "candidate"
+                  "idStatus": "candidate",
+                  "tooltip": "Append (QueryTypeAppend) - Design > Query Type"
                 },
                 {
                   "label": "Update",
@@ -2214,7 +2343,8 @@
                   "rowSpan": 3,
                   "colSpan": 2,
                   "image": "QueryTypeUpdate.png",
-                  "idStatus": "candidate"
+                  "idStatus": "candidate",
+                  "tooltip": "Update (QueryTypeUpdate) - Design > Query Type"
                 },
                 {
                   "label": "Crosstab",
@@ -2226,7 +2356,8 @@
                   "rowSpan": 3,
                   "colSpan": 2,
                   "image": "QueryTypeCrosstab.png",
-                  "idStatus": "candidate"
+                  "idStatus": "candidate",
+                  "tooltip": "Crosstab (QueryTypeCrosstab) - Design > Query Type"
                 },
                 {
                   "label": "Delete",
@@ -2238,7 +2369,8 @@
                   "rowSpan": 3,
                   "colSpan": 2,
                   "image": "QueryTypeDelete.png",
-                  "idStatus": "candidate"
+                  "idStatus": "candidate",
+                  "tooltip": "Delete (QueryTypeDelete) - Design > Query Type"
                 },
                 {
                   "label": "Union",
@@ -2250,7 +2382,8 @@
                   "rowSpan": 1,
                   "colSpan": 1,
                   "image": "QueryTypeUnion.png",
-                  "idStatus": "candidate"
+                  "idStatus": "candidate",
+                  "tooltip": "Union (QueryTypeUnion) - Design > Query Type"
                 },
                 {
                   "label": "Pass-Through",
@@ -2262,7 +2395,8 @@
                   "rowSpan": 1,
                   "colSpan": 1,
                   "image": "QueryTypePassThrough.png",
-                  "idStatus": "candidate"
+                  "idStatus": "candidate",
+                  "tooltip": "Pass-Through (QueryTypePassThrough) - Design > Query Type"
                 },
                 {
                   "label": "Data Definition",
@@ -2274,7 +2408,8 @@
                   "rowSpan": 1,
                   "colSpan": 1,
                   "image": "QueryTypeDataDefinition.png",
-                  "idStatus": "candidate"
+                  "idStatus": "candidate",
+                  "tooltip": "Data Definition (QueryTypeDataDefinition) - Design > Query Type"
                 }
               ]
             },
@@ -2300,7 +2435,8 @@
                   "rowSpan": 3,
                   "colSpan": 2,
                   "image": "QueryShowTable.png",
-                  "idStatus": "candidate"
+                  "idStatus": "candidate",
+                  "tooltip": "Show Table (QueryShowTable) - Design > Query Setup"
                 },
                 {
                   "label": "Insert Rows",
@@ -2312,7 +2448,8 @@
                   "rowSpan": 1,
                   "colSpan": 1,
                   "image": "QueryInsertRows.png",
-                  "idStatus": "candidate"
+                  "idStatus": "candidate",
+                  "tooltip": "Insert Rows (QueryInsertRows) - Design > Query Setup"
                 },
                 {
                   "label": "Delete Rows",
@@ -2324,7 +2461,8 @@
                   "rowSpan": 1,
                   "colSpan": 1,
                   "image": "QueryDeleteRows.png",
-                  "idStatus": "candidate"
+                  "idStatus": "candidate",
+                  "tooltip": "Delete Rows (QueryDeleteRows) - Design > Query Setup"
                 },
                 {
                   "label": "Builder",
@@ -2336,7 +2474,8 @@
                   "rowSpan": 1,
                   "colSpan": 1,
                   "image": "Builder.png",
-                  "idStatus": "candidate"
+                  "idStatus": "candidate",
+                  "tooltip": "Builder (Builder) - Design > Query Setup"
                 },
                 {
                   "label": "Return",
@@ -2348,7 +2487,8 @@
                   "rowSpan": 1,
                   "colSpan": 2,
                   "image": "QueryReturn.png",
-                  "idStatus": "candidate"
+                  "idStatus": "candidate",
+                  "tooltip": "Return (QueryReturn) - Design > Query Setup"
                 }
               ]
             },
@@ -2374,7 +2514,8 @@
                   "rowSpan": 3,
                   "colSpan": 2,
                   "image": "QueryTotals.png",
-                  "idStatus": "candidate"
+                  "idStatus": "candidate",
+                  "tooltip": "Totals (QueryTotals) - Design > Show/Hide"
                 },
                 {
                   "label": "Parameters",
@@ -2386,7 +2527,8 @@
                   "rowSpan": 3,
                   "colSpan": 2,
                   "image": "QueryParameters.png",
-                  "idStatus": "candidate"
+                  "idStatus": "candidate",
+                  "tooltip": "Parameters (QueryParameters) - Design > Show/Hide"
                 },
                 {
                   "label": "Property Sheet",
@@ -2398,7 +2540,8 @@
                   "rowSpan": 3,
                   "colSpan": 2,
                   "image": "PropertySheet.png",
-                  "idStatus": "candidate"
+                  "idStatus": "candidate",
+                  "tooltip": "Property Sheet (PropertySheet) - Design > Show/Hide"
                 },
                 {
                   "label": "Table Names",
@@ -2410,7 +2553,8 @@
                   "rowSpan": 1,
                   "colSpan": 1,
                   "image": "QueryTableNames.png",
-                  "idStatus": "candidate"
+                  "idStatus": "candidate",
+                  "tooltip": "Table Names (QueryTableNames) - Design > Show/Hide"
                 }
               ]
             }
@@ -2453,7 +2597,8 @@
                   "rowSpan": 3,
                   "colSpan": 3,
                   "image": "ViewMenu.png",
-                  "idStatus": "candidate"
+                  "idStatus": "candidate",
+                  "tooltip": "View (ViewMenu) - Form > Views"
                 }
               ]
             },
@@ -2479,7 +2624,8 @@
                   "rowSpan": 3,
                   "colSpan": 2,
                   "image": "RefreshAll.png",
-                  "idStatus": "candidate"
+                  "idStatus": "candidate",
+                  "tooltip": "Refresh All (RefreshAll) - Form > Records"
                 },
                 {
                   "label": "New Record",
@@ -2491,7 +2637,8 @@
                   "rowSpan": 1,
                   "colSpan": 1,
                   "image": "RecordsNewRecord.png",
-                  "idStatus": "candidate"
+                  "idStatus": "candidate",
+                  "tooltip": "New Record (RecordsNewRecord) - Form > Records"
                 },
                 {
                   "label": "Delete Record",
@@ -2503,7 +2650,8 @@
                   "rowSpan": 1,
                   "colSpan": 1,
                   "image": "RecordsDeleteRecord.png",
-                  "idStatus": "candidate"
+                  "idStatus": "candidate",
+                  "tooltip": "Delete Record (RecordsDeleteRecord) - Form > Records"
                 },
                 {
                   "label": "Save Record",
@@ -2515,7 +2663,8 @@
                   "rowSpan": 1,
                   "colSpan": 1,
                   "image": "RecordsSaveRecord.png",
-                  "idStatus": "candidate"
+                  "idStatus": "candidate",
+                  "tooltip": "Save Record (RecordsSaveRecord) - Form > Records"
                 }
               ]
             },
@@ -2541,7 +2690,8 @@
                   "rowSpan": 3,
                   "colSpan": 2,
                   "image": "FindDialog.png",
-                  "idStatus": "candidate"
+                  "idStatus": "candidate",
+                  "tooltip": "Find (FindDialog) - Form > Find"
                 },
                 {
                   "label": "Replace",
@@ -2553,7 +2703,8 @@
                   "rowSpan": 1,
                   "colSpan": 1,
                   "image": "ReplaceDialog.png",
-                  "idStatus": "candidate"
+                  "idStatus": "candidate",
+                  "tooltip": "Replace (ReplaceDialog) - Form > Find"
                 },
                 {
                   "label": "Go To",
@@ -2565,7 +2716,8 @@
                   "rowSpan": 1,
                   "colSpan": 1,
                   "image": "GoToMenu.png",
-                  "idStatus": "candidate"
+                  "idStatus": "candidate",
+                  "tooltip": "Go To (GoToMenu) - Form > Find"
                 }
               ]
             }
@@ -2608,7 +2760,8 @@
                   "rowSpan": 3,
                   "colSpan": 3,
                   "image": "ViewMenu.png",
-                  "idStatus": "candidate"
+                  "idStatus": "candidate",
+                  "tooltip": "View (ViewMenu) - Design > Views"
                 }
               ]
             },
@@ -2634,7 +2787,8 @@
                   "rowSpan": 3,
                   "colSpan": 2,
                   "image": "ThemesGallery.png",
-                  "idStatus": "candidate"
+                  "idStatus": "candidate",
+                  "tooltip": "Themes (ThemesGallery) - Design > Theme"
                 },
                 {
                   "label": "Colors",
@@ -2646,7 +2800,8 @@
                   "rowSpan": 1,
                   "colSpan": 1,
                   "image": "ThemeColorsGallery.png",
-                  "idStatus": "candidate"
+                  "idStatus": "candidate",
+                  "tooltip": "Colors (ThemeColorsGallery) - Design > Theme"
                 },
                 {
                   "label": "Fonts",
@@ -2658,7 +2813,8 @@
                   "rowSpan": 1,
                   "colSpan": 1,
                   "image": "ThemeFontsGallery.png",
-                  "idStatus": "candidate"
+                  "idStatus": "candidate",
+                  "tooltip": "Fonts (ThemeFontsGallery) - Design > Theme"
                 }
               ]
             },
@@ -2684,7 +2840,8 @@
                   "rowSpan": 3,
                   "colSpan": 2,
                   "image": "ControlSelect.png",
-                  "idStatus": "candidate"
+                  "idStatus": "candidate",
+                  "tooltip": "Select (ControlSelect) - Design > Controls"
                 },
                 {
                   "label": "Text Box",
@@ -2696,7 +2853,8 @@
                   "rowSpan": 1,
                   "colSpan": 1,
                   "image": "ControlTextBox.png",
-                  "idStatus": "candidate"
+                  "idStatus": "candidate",
+                  "tooltip": "Text Box (ControlTextBox) - Design > Controls"
                 },
                 {
                   "label": "Label",
@@ -2708,7 +2866,8 @@
                   "rowSpan": 1,
                   "colSpan": 1,
                   "image": "ControlLabel.png",
-                  "idStatus": "candidate"
+                  "idStatus": "candidate",
+                  "tooltip": "Label (ControlLabel) - Design > Controls"
                 },
                 {
                   "label": "Button",
@@ -2720,7 +2879,8 @@
                   "rowSpan": 1,
                   "colSpan": 1,
                   "image": "ControlButton.png",
-                  "idStatus": "candidate"
+                  "idStatus": "candidate",
+                  "tooltip": "Button (ControlButton) - Design > Controls"
                 },
                 {
                   "label": "Combo Box",
@@ -2732,7 +2892,8 @@
                   "rowSpan": 1,
                   "colSpan": 1,
                   "image": "ControlComboBox.png",
-                  "idStatus": "candidate"
+                  "idStatus": "candidate",
+                  "tooltip": "Combo Box (ControlComboBox) - Design > Controls"
                 },
                 {
                   "label": "List Box",
@@ -2744,7 +2905,8 @@
                   "rowSpan": 1,
                   "colSpan": 1,
                   "image": "ControlListBox.png",
-                  "idStatus": "candidate"
+                  "idStatus": "candidate",
+                  "tooltip": "List Box (ControlListBox) - Design > Controls"
                 },
                 {
                   "label": "Check Box",
@@ -2756,7 +2918,8 @@
                   "rowSpan": 1,
                   "colSpan": 1,
                   "image": "ControlCheckBox.png",
-                  "idStatus": "candidate"
+                  "idStatus": "candidate",
+                  "tooltip": "Check Box (ControlCheckBox) - Design > Controls"
                 },
                 {
                   "label": "Option Group",
@@ -2768,7 +2931,8 @@
                   "rowSpan": 1,
                   "colSpan": 1,
                   "image": "ControlOptionGroup.png",
-                  "idStatus": "candidate"
+                  "idStatus": "candidate",
+                  "tooltip": "Option Group (ControlOptionGroup) - Design > Controls"
                 },
                 {
                   "label": "Subform/Subreport",
@@ -2780,7 +2944,8 @@
                   "rowSpan": 1,
                   "colSpan": 1,
                   "image": "ControlSubformSubreport.png",
-                  "idStatus": "candidate"
+                  "idStatus": "candidate",
+                  "tooltip": "Subform/Subreport (ControlSubformSubreport) - Design > Controls"
                 },
                 {
                   "label": "More Controls",
@@ -2792,7 +2957,8 @@
                   "rowSpan": 1,
                   "colSpan": 1,
                   "image": "ControlMore.png",
-                  "idStatus": "candidate"
+                  "idStatus": "candidate",
+                  "tooltip": "More Controls (ControlMore) - Design > Controls"
                 }
               ]
             },
@@ -2818,7 +2984,8 @@
                   "rowSpan": 3,
                   "colSpan": 2,
                   "image": "LogoInsert.png",
-                  "idStatus": "candidate"
+                  "idStatus": "candidate",
+                  "tooltip": "Logo (LogoInsert) - Design > Header/Footer"
                 },
                 {
                   "label": "Title",
@@ -2830,7 +2997,8 @@
                   "rowSpan": 3,
                   "colSpan": 2,
                   "image": "TitleInsert.png",
-                  "idStatus": "candidate"
+                  "idStatus": "candidate",
+                  "tooltip": "Title (TitleInsert) - Design > Header/Footer"
                 },
                 {
                   "label": "Date and Time",
@@ -2842,7 +3010,8 @@
                   "rowSpan": 3,
                   "colSpan": 2,
                   "image": "DateTimeInsert.png",
-                  "idStatus": "candidate"
+                  "idStatus": "candidate",
+                  "tooltip": "Date and Time (DateTimeInsert) - Design > Header/Footer"
                 }
               ]
             },
@@ -2868,7 +3037,8 @@
                   "rowSpan": 3,
                   "colSpan": 2,
                   "image": "FieldList.png",
-                  "idStatus": "candidate"
+                  "idStatus": "candidate",
+                  "tooltip": "Add Existing Fields (FieldList) - Design > Tools"
                 },
                 {
                   "label": "Property Sheet",
@@ -2880,7 +3050,8 @@
                   "rowSpan": 3,
                   "colSpan": 2,
                   "image": "PropertySheet.png",
-                  "idStatus": "candidate"
+                  "idStatus": "candidate",
+                  "tooltip": "Property Sheet (PropertySheet) - Design > Tools"
                 },
                 {
                   "label": "Tab Order",
@@ -2892,7 +3063,8 @@
                   "rowSpan": 1,
                   "colSpan": 1,
                   "image": "TabOrder.png",
-                  "idStatus": "candidate"
+                  "idStatus": "candidate",
+                  "tooltip": "Tab Order (TabOrder) - Design > Tools"
                 },
                 {
                   "label": "View Code",
@@ -2904,7 +3076,8 @@
                   "rowSpan": 1,
                   "colSpan": 1,
                   "image": "ViewCode.png",
-                  "idStatus": "candidate"
+                  "idStatus": "candidate",
+                  "tooltip": "View Code (ViewCode) - Design > Tools"
                 }
               ]
             }
@@ -2937,7 +3110,8 @@
                   "rowSpan": 3,
                   "colSpan": 2,
                   "image": "ControlLayoutTabular.png",
-                  "idStatus": "candidate"
+                  "idStatus": "candidate",
+                  "tooltip": "Tabular (ControlLayoutTabular) - Arrange > Table"
                 },
                 {
                   "label": "Stacked",
@@ -2949,7 +3123,8 @@
                   "rowSpan": 3,
                   "colSpan": 2,
                   "image": "ControlLayoutStacked.png",
-                  "idStatus": "candidate"
+                  "idStatus": "candidate",
+                  "tooltip": "Stacked (ControlLayoutStacked) - Arrange > Table"
                 },
                 {
                   "label": "Remove Layout",
@@ -2961,7 +3136,8 @@
                   "rowSpan": 3,
                   "colSpan": 2,
                   "image": "ControlLayoutRemove.png",
-                  "idStatus": "candidate"
+                  "idStatus": "candidate",
+                  "tooltip": "Remove Layout (ControlLayoutRemove) - Arrange > Table"
                 }
               ]
             },
@@ -2987,7 +3163,8 @@
                   "rowSpan": 1,
                   "colSpan": 1,
                   "image": "SelectLayout.png",
-                  "idStatus": "candidate"
+                  "idStatus": "candidate",
+                  "tooltip": "Select Layout (SelectLayout) - Arrange > Rows & Columns"
                 },
                 {
                   "label": "Insert Above",
@@ -2999,7 +3176,8 @@
                   "rowSpan": 1,
                   "colSpan": 1,
                   "image": "InsertRowAbove.png",
-                  "idStatus": "candidate"
+                  "idStatus": "candidate",
+                  "tooltip": "Insert Above (InsertRowAbove) - Arrange > Rows & Columns"
                 },
                 {
                   "label": "Insert Below",
@@ -3011,7 +3189,8 @@
                   "rowSpan": 1,
                   "colSpan": 1,
                   "image": "InsertRowBelow.png",
-                  "idStatus": "candidate"
+                  "idStatus": "candidate",
+                  "tooltip": "Insert Below (InsertRowBelow) - Arrange > Rows & Columns"
                 },
                 {
                   "label": "Insert Left",
@@ -3023,7 +3202,8 @@
                   "rowSpan": 1,
                   "colSpan": 1,
                   "image": "InsertColumnLeft.png",
-                  "idStatus": "candidate"
+                  "idStatus": "candidate",
+                  "tooltip": "Insert Left (InsertColumnLeft) - Arrange > Rows & Columns"
                 },
                 {
                   "label": "Insert Right",
@@ -3035,7 +3215,8 @@
                   "rowSpan": 1,
                   "colSpan": 1,
                   "image": "InsertColumnRight.png",
-                  "idStatus": "candidate"
+                  "idStatus": "candidate",
+                  "tooltip": "Insert Right (InsertColumnRight) - Arrange > Rows & Columns"
                 },
                 {
                   "label": "Delete Row",
@@ -3047,7 +3228,8 @@
                   "rowSpan": 1,
                   "colSpan": 1,
                   "image": "DeleteLayoutRow.png",
-                  "idStatus": "candidate"
+                  "idStatus": "candidate",
+                  "tooltip": "Delete Row (DeleteLayoutRow) - Arrange > Rows & Columns"
                 },
                 {
                   "label": "Delete Column",
@@ -3059,7 +3241,8 @@
                   "rowSpan": 1,
                   "colSpan": 1,
                   "image": "DeleteLayoutColumn.png",
-                  "idStatus": "candidate"
+                  "idStatus": "candidate",
+                  "tooltip": "Delete Column (DeleteLayoutColumn) - Arrange > Rows & Columns"
                 }
               ]
             },
@@ -3085,7 +3268,8 @@
                   "rowSpan": 3,
                   "colSpan": 2,
                   "image": "ControlMargins.png",
-                  "idStatus": "candidate"
+                  "idStatus": "candidate",
+                  "tooltip": "Control Margins (ControlMargins) - Arrange > Position"
                 },
                 {
                   "label": "Control Padding",
@@ -3097,7 +3281,8 @@
                   "rowSpan": 3,
                   "colSpan": 2,
                   "image": "ControlPadding.png",
-                  "idStatus": "candidate"
+                  "idStatus": "candidate",
+                  "tooltip": "Control Padding (ControlPadding) - Arrange > Position"
                 },
                 {
                   "label": "Anchoring",
@@ -3109,7 +3294,8 @@
                   "rowSpan": 3,
                   "colSpan": 2,
                   "image": "Anchoring.png",
-                  "idStatus": "candidate"
+                  "idStatus": "candidate",
+                  "tooltip": "Anchoring (Anchoring) - Arrange > Position"
                 }
               ]
             }
@@ -3142,7 +3328,8 @@
                   "rowSpan": 1,
                   "colSpan": 3,
                   "image": null,
-                  "idStatus": "needs_validation"
+                  "idStatus": "needs_validation",
+                  "tooltip": "Font - Format > Font"
                 },
                 {
                   "label": "Font Size",
@@ -3154,7 +3341,8 @@
                   "rowSpan": 1,
                   "colSpan": 2,
                   "image": null,
-                  "idStatus": "needs_validation"
+                  "idStatus": "needs_validation",
+                  "tooltip": "Font Size - Format > Font"
                 },
                 {
                   "label": "Bold",
@@ -3166,7 +3354,8 @@
                   "rowSpan": 1,
                   "colSpan": 1,
                   "image": "Bold.png",
-                  "idStatus": "candidate"
+                  "idStatus": "candidate",
+                  "tooltip": "Bold (Bold) - Format > Font"
                 },
                 {
                   "label": "Italic",
@@ -3178,7 +3367,8 @@
                   "rowSpan": 1,
                   "colSpan": 1,
                   "image": "Italic.png",
-                  "idStatus": "candidate"
+                  "idStatus": "candidate",
+                  "tooltip": "Italic (Italic) - Format > Font"
                 },
                 {
                   "label": "Underline",
@@ -3190,7 +3380,8 @@
                   "rowSpan": 1,
                   "colSpan": 1,
                   "image": "Underline.png",
-                  "idStatus": "candidate"
+                  "idStatus": "candidate",
+                  "tooltip": "Underline (Underline) - Format > Font"
                 },
                 {
                   "label": "Font Color",
@@ -3202,7 +3393,8 @@
                   "rowSpan": 1,
                   "colSpan": 1,
                   "image": "FontColorPicker.png",
-                  "idStatus": "candidate"
+                  "idStatus": "candidate",
+                  "tooltip": "Font Color (FontColorPicker) - Format > Font"
                 }
               ]
             },
@@ -3228,7 +3420,8 @@
                   "rowSpan": 3,
                   "colSpan": 2,
                   "image": "ShapeFillColorPicker.png",
-                  "idStatus": "candidate"
+                  "idStatus": "candidate",
+                  "tooltip": "Shape Fill (ShapeFillColorPicker) - Format > Control Formatting"
                 },
                 {
                   "label": "Shape Outline",
@@ -3240,7 +3433,8 @@
                   "rowSpan": 3,
                   "colSpan": 2,
                   "image": "ShapeOutlineColorPicker.png",
-                  "idStatus": "candidate"
+                  "idStatus": "candidate",
+                  "tooltip": "Shape Outline (ShapeOutlineColorPicker) - Format > Control Formatting"
                 },
                 {
                   "label": "Conditional Formatting",
@@ -3252,7 +3446,8 @@
                   "rowSpan": 3,
                   "colSpan": 2,
                   "image": "ConditionalFormatting.png",
-                  "idStatus": "candidate"
+                  "idStatus": "candidate",
+                  "tooltip": "Conditional Formatting (ConditionalFormatting) - Format > Control Formatting"
                 }
               ]
             }
@@ -3295,7 +3490,8 @@
                   "rowSpan": 3,
                   "colSpan": 3,
                   "image": "ViewMenu.png",
-                  "idStatus": "candidate"
+                  "idStatus": "candidate",
+                  "tooltip": "View (ViewMenu) - Design > Views"
                 }
               ]
             },
@@ -3321,7 +3517,8 @@
                   "rowSpan": 3,
                   "colSpan": 2,
                   "image": "ThemesGallery.png",
-                  "idStatus": "candidate"
+                  "idStatus": "candidate",
+                  "tooltip": "Themes (ThemesGallery) - Design > Theme"
                 },
                 {
                   "label": "Colors",
@@ -3333,7 +3530,8 @@
                   "rowSpan": 1,
                   "colSpan": 1,
                   "image": "ThemeColorsGallery.png",
-                  "idStatus": "candidate"
+                  "idStatus": "candidate",
+                  "tooltip": "Colors (ThemeColorsGallery) - Design > Theme"
                 },
                 {
                   "label": "Fonts",
@@ -3345,7 +3543,8 @@
                   "rowSpan": 1,
                   "colSpan": 1,
                   "image": "ThemeFontsGallery.png",
-                  "idStatus": "candidate"
+                  "idStatus": "candidate",
+                  "tooltip": "Fonts (ThemeFontsGallery) - Design > Theme"
                 }
               ]
             },
@@ -3371,7 +3570,8 @@
                   "rowSpan": 3,
                   "colSpan": 2,
                   "image": "ControlSelect.png",
-                  "idStatus": "candidate"
+                  "idStatus": "candidate",
+                  "tooltip": "Select (ControlSelect) - Design > Controls"
                 },
                 {
                   "label": "Text Box",
@@ -3383,7 +3583,8 @@
                   "rowSpan": 1,
                   "colSpan": 1,
                   "image": "ControlTextBox.png",
-                  "idStatus": "candidate"
+                  "idStatus": "candidate",
+                  "tooltip": "Text Box (ControlTextBox) - Design > Controls"
                 },
                 {
                   "label": "Label",
@@ -3395,7 +3596,8 @@
                   "rowSpan": 1,
                   "colSpan": 1,
                   "image": "ControlLabel.png",
-                  "idStatus": "candidate"
+                  "idStatus": "candidate",
+                  "tooltip": "Label (ControlLabel) - Design > Controls"
                 },
                 {
                   "label": "Button",
@@ -3407,7 +3609,8 @@
                   "rowSpan": 1,
                   "colSpan": 1,
                   "image": "ControlButton.png",
-                  "idStatus": "candidate"
+                  "idStatus": "candidate",
+                  "tooltip": "Button (ControlButton) - Design > Controls"
                 },
                 {
                   "label": "Tab Control",
@@ -3419,7 +3622,8 @@
                   "rowSpan": 1,
                   "colSpan": 1,
                   "image": "ControlTab.png",
-                  "idStatus": "candidate"
+                  "idStatus": "candidate",
+                  "tooltip": "Tab Control (ControlTab) - Design > Controls"
                 },
                 {
                   "label": "Hyperlink",
@@ -3431,7 +3635,8 @@
                   "rowSpan": 1,
                   "colSpan": 1,
                   "image": "ControlHyperlink.png",
-                  "idStatus": "candidate"
+                  "idStatus": "candidate",
+                  "tooltip": "Hyperlink (ControlHyperlink) - Design > Controls"
                 },
                 {
                   "label": "Web Browser Control",
@@ -3443,7 +3648,8 @@
                   "rowSpan": 1,
                   "colSpan": 1,
                   "image": "ControlWebBrowser.png",
-                  "idStatus": "candidate"
+                  "idStatus": "candidate",
+                  "tooltip": "Web Browser Control (ControlWebBrowser) - Design > Controls"
                 },
                 {
                   "label": "Navigation Control",
@@ -3455,7 +3661,8 @@
                   "rowSpan": 1,
                   "colSpan": 1,
                   "image": "ControlNavigation.png",
-                  "idStatus": "candidate"
+                  "idStatus": "candidate",
+                  "tooltip": "Navigation Control (ControlNavigation) - Design > Controls"
                 },
                 {
                   "label": "Combo Box",
@@ -3467,7 +3674,8 @@
                   "rowSpan": 1,
                   "colSpan": 1,
                   "image": "ControlComboBox.png",
-                  "idStatus": "candidate"
+                  "idStatus": "candidate",
+                  "tooltip": "Combo Box (ControlComboBox) - Design > Controls"
                 },
                 {
                   "label": "List Box",
@@ -3479,7 +3687,8 @@
                   "rowSpan": 1,
                   "colSpan": 1,
                   "image": "ControlListBox.png",
-                  "idStatus": "candidate"
+                  "idStatus": "candidate",
+                  "tooltip": "List Box (ControlListBox) - Design > Controls"
                 },
                 {
                   "label": "Check Box",
@@ -3491,7 +3700,8 @@
                   "rowSpan": 1,
                   "colSpan": 1,
                   "image": "ControlCheckBox.png",
-                  "idStatus": "candidate"
+                  "idStatus": "candidate",
+                  "tooltip": "Check Box (ControlCheckBox) - Design > Controls"
                 },
                 {
                   "label": "Option Group",
@@ -3503,7 +3713,8 @@
                   "rowSpan": 1,
                   "colSpan": 1,
                   "image": "ControlOptionGroup.png",
-                  "idStatus": "candidate"
+                  "idStatus": "candidate",
+                  "tooltip": "Option Group (ControlOptionGroup) - Design > Controls"
                 },
                 {
                   "label": "Subform/Subreport",
@@ -3515,7 +3726,8 @@
                   "rowSpan": 1,
                   "colSpan": 1,
                   "image": "ControlSubformSubreport.png",
-                  "idStatus": "candidate"
+                  "idStatus": "candidate",
+                  "tooltip": "Subform/Subreport (ControlSubformSubreport) - Design > Controls"
                 },
                 {
                   "label": "More Controls",
@@ -3527,7 +3739,8 @@
                   "rowSpan": 1,
                   "colSpan": 1,
                   "image": "ControlMore.png",
-                  "idStatus": "candidate"
+                  "idStatus": "candidate",
+                  "tooltip": "More Controls (ControlMore) - Design > Controls"
                 }
               ]
             },
@@ -3553,7 +3766,8 @@
                   "rowSpan": 3,
                   "colSpan": 2,
                   "image": "LogoInsert.png",
-                  "idStatus": "candidate"
+                  "idStatus": "candidate",
+                  "tooltip": "Logo (LogoInsert) - Design > Header/Footer"
                 },
                 {
                   "label": "Title",
@@ -3565,7 +3779,8 @@
                   "rowSpan": 3,
                   "colSpan": 2,
                   "image": "TitleInsert.png",
-                  "idStatus": "candidate"
+                  "idStatus": "candidate",
+                  "tooltip": "Title (TitleInsert) - Design > Header/Footer"
                 },
                 {
                   "label": "Date and Time",
@@ -3577,7 +3792,8 @@
                   "rowSpan": 3,
                   "colSpan": 2,
                   "image": "DateTimeInsert.png",
-                  "idStatus": "candidate"
+                  "idStatus": "candidate",
+                  "tooltip": "Date and Time (DateTimeInsert) - Design > Header/Footer"
                 }
               ]
             },
@@ -3603,7 +3819,8 @@
                   "rowSpan": 3,
                   "colSpan": 2,
                   "image": "FieldList.png",
-                  "idStatus": "candidate"
+                  "idStatus": "candidate",
+                  "tooltip": "Add Existing Fields (FieldList) - Design > Tools"
                 },
                 {
                   "label": "Property Sheet",
@@ -3615,7 +3832,8 @@
                   "rowSpan": 3,
                   "colSpan": 2,
                   "image": "PropertySheet.png",
-                  "idStatus": "candidate"
+                  "idStatus": "candidate",
+                  "tooltip": "Property Sheet (PropertySheet) - Design > Tools"
                 },
                 {
                   "label": "Tab Order",
@@ -3627,7 +3845,8 @@
                   "rowSpan": 1,
                   "colSpan": 1,
                   "image": "TabOrder.png",
-                  "idStatus": "candidate"
+                  "idStatus": "candidate",
+                  "tooltip": "Tab Order (TabOrder) - Design > Tools"
                 },
                 {
                   "label": "View Code",
@@ -3639,7 +3858,8 @@
                   "rowSpan": 1,
                   "colSpan": 1,
                   "image": "ViewCode.png",
-                  "idStatus": "candidate"
+                  "idStatus": "candidate",
+                  "tooltip": "View Code (ViewCode) - Design > Tools"
                 },
                 {
                   "label": "Convert Form's Macros to Visual Basic",
@@ -3651,7 +3871,8 @@
                   "rowSpan": 1,
                   "colSpan": 1,
                   "image": "ConvertMacrosToVisualBasic.png",
-                  "idStatus": "candidate"
+                  "idStatus": "candidate",
+                  "tooltip": "Convert Form's Macros to Visual Basic (ConvertMacrosToVisualBasic) - Design > Tools"
                 }
               ]
             }
@@ -3694,7 +3915,8 @@
                   "rowSpan": 3,
                   "colSpan": 3,
                   "image": "ViewMenu.png",
-                  "idStatus": "candidate"
+                  "idStatus": "candidate",
+                  "tooltip": "View (ViewMenu) - Report > Views"
                 }
               ]
             },
@@ -3720,7 +3942,8 @@
                   "rowSpan": 3,
                   "colSpan": 2,
                   "image": "SortAscending.png",
-                  "idStatus": "candidate"
+                  "idStatus": "candidate",
+                  "tooltip": "Ascending (SortAscending) - Report > Sort & Filter"
                 },
                 {
                   "label": "Descending",
@@ -3732,7 +3955,8 @@
                   "rowSpan": 3,
                   "colSpan": 2,
                   "image": "SortDescending.png",
-                  "idStatus": "candidate"
+                  "idStatus": "candidate",
+                  "tooltip": "Descending (SortDescending) - Report > Sort & Filter"
                 },
                 {
                   "label": "Selection",
@@ -3744,7 +3968,8 @@
                   "rowSpan": 1,
                   "colSpan": 1,
                   "image": "FilterBySelection.png",
-                  "idStatus": "candidate"
+                  "idStatus": "candidate",
+                  "tooltip": "Selection (FilterBySelection) - Report > Sort & Filter"
                 },
                 {
                   "label": "Toggle Filter",
@@ -3756,7 +3981,8 @@
                   "rowSpan": 1,
                   "colSpan": 1,
                   "image": "ToggleFilter.png",
-                  "idStatus": "candidate"
+                  "idStatus": "candidate",
+                  "tooltip": "Toggle Filter (ToggleFilter) - Report > Sort & Filter"
                 }
               ]
             }
@@ -3799,7 +4025,8 @@
                   "rowSpan": 3,
                   "colSpan": 2,
                   "image": "FilePrintQuick.png",
-                  "idStatus": "candidate"
+                  "idStatus": "candidate",
+                  "tooltip": "Print (FilePrintQuick) - Print Preview > Print"
                 },
                 {
                   "label": "Page Setup",
@@ -3811,7 +4038,8 @@
                   "rowSpan": 3,
                   "colSpan": 2,
                   "image": "PageSetupDialog.png",
-                  "idStatus": "candidate"
+                  "idStatus": "candidate",
+                  "tooltip": "Page Setup (PageSetupDialog) - Print Preview > Print"
                 }
               ]
             },
@@ -3837,7 +4065,8 @@
                   "rowSpan": 3,
                   "colSpan": 2,
                   "image": "PageOrientationPortrait.png",
-                  "idStatus": "candidate"
+                  "idStatus": "candidate",
+                  "tooltip": "Portrait (PageOrientationPortrait) - Print Preview > Page Layout"
                 },
                 {
                   "label": "Landscape",
@@ -3849,7 +4078,8 @@
                   "rowSpan": 3,
                   "colSpan": 2,
                   "image": "PageOrientationLandscape.png",
-                  "idStatus": "candidate"
+                  "idStatus": "candidate",
+                  "tooltip": "Landscape (PageOrientationLandscape) - Print Preview > Page Layout"
                 },
                 {
                   "label": "Size",
@@ -3861,7 +4091,8 @@
                   "rowSpan": 3,
                   "colSpan": 2,
                   "image": "PageSizeGallery.png",
-                  "idStatus": "candidate"
+                  "idStatus": "candidate",
+                  "tooltip": "Size (PageSizeGallery) - Print Preview > Page Layout"
                 },
                 {
                   "label": "Margins",
@@ -3873,7 +4104,8 @@
                   "rowSpan": 3,
                   "colSpan": 2,
                   "image": "PageMarginsGallery.png",
-                  "idStatus": "candidate"
+                  "idStatus": "candidate",
+                  "tooltip": "Margins (PageMarginsGallery) - Print Preview > Page Layout"
                 }
               ]
             },
@@ -3899,7 +4131,8 @@
                   "rowSpan": 3,
                   "colSpan": 2,
                   "image": "ZoomDialog.png",
-                  "idStatus": "candidate"
+                  "idStatus": "candidate",
+                  "tooltip": "Zoom (ZoomDialog) - Print Preview > Zoom"
                 },
                 {
                   "label": "One Page",
@@ -3911,7 +4144,8 @@
                   "rowSpan": 1,
                   "colSpan": 1,
                   "image": "ViewOnePage.png",
-                  "idStatus": "candidate"
+                  "idStatus": "candidate",
+                  "tooltip": "One Page (ViewOnePage) - Print Preview > Zoom"
                 },
                 {
                   "label": "Two Pages",
@@ -3923,7 +4157,8 @@
                   "rowSpan": 1,
                   "colSpan": 1,
                   "image": "ViewTwoPages.png",
-                  "idStatus": "candidate"
+                  "idStatus": "candidate",
+                  "tooltip": "Two Pages (ViewTwoPages) - Print Preview > Zoom"
                 },
                 {
                   "label": "More Pages",
@@ -3935,7 +4170,8 @@
                   "rowSpan": 1,
                   "colSpan": 1,
                   "image": "ViewMultiplePages.png",
-                  "idStatus": "candidate"
+                  "idStatus": "candidate",
+                  "tooltip": "More Pages (ViewMultiplePages) - Print Preview > Zoom"
                 }
               ]
             },
@@ -3961,7 +4197,8 @@
                   "rowSpan": 3,
                   "colSpan": 2,
                   "image": "ExportExcel.png",
-                  "idStatus": "candidate"
+                  "idStatus": "candidate",
+                  "tooltip": "Excel (ExportExcel) - Print Preview > Data"
                 },
                 {
                   "label": "Text File",
@@ -3973,7 +4210,8 @@
                   "rowSpan": 3,
                   "colSpan": 2,
                   "image": "ExportText.png",
-                  "idStatus": "candidate"
+                  "idStatus": "candidate",
+                  "tooltip": "Text File (ExportText) - Print Preview > Data"
                 },
                 {
                   "label": "PDF or XPS",
@@ -3985,7 +4223,8 @@
                   "rowSpan": 3,
                   "colSpan": 2,
                   "image": "PublishToPdfOrEdoc.png",
-                  "idStatus": "candidate"
+                  "idStatus": "candidate",
+                  "tooltip": "PDF or XPS (PublishToPdfOrEdoc) - Print Preview > Data"
                 }
               ]
             },
@@ -4011,7 +4250,8 @@
                   "rowSpan": 3,
                   "colSpan": 3,
                   "image": "PrintPreviewClose.png",
-                  "idStatus": "candidate"
+                  "idStatus": "candidate",
+                  "tooltip": "Close Print Preview (PrintPreviewClose) - Print Preview > Close Preview"
                 }
               ]
             }
@@ -4054,7 +4294,8 @@
                   "rowSpan": 3,
                   "colSpan": 3,
                   "image": "ViewMenu.png",
-                  "idStatus": "candidate"
+                  "idStatus": "candidate",
+                  "tooltip": "View (ViewMenu) - Design > Views"
                 }
               ]
             },
@@ -4080,7 +4321,8 @@
                   "rowSpan": 3,
                   "colSpan": 2,
                   "image": "ThemesGallery.png",
-                  "idStatus": "candidate"
+                  "idStatus": "candidate",
+                  "tooltip": "Themes (ThemesGallery) - Design > Theme"
                 },
                 {
                   "label": "Colors",
@@ -4092,7 +4334,8 @@
                   "rowSpan": 1,
                   "colSpan": 1,
                   "image": "ThemeColorsGallery.png",
-                  "idStatus": "candidate"
+                  "idStatus": "candidate",
+                  "tooltip": "Colors (ThemeColorsGallery) - Design > Theme"
                 },
                 {
                   "label": "Fonts",
@@ -4104,7 +4347,8 @@
                   "rowSpan": 1,
                   "colSpan": 1,
                   "image": "ThemeFontsGallery.png",
-                  "idStatus": "candidate"
+                  "idStatus": "candidate",
+                  "tooltip": "Fonts (ThemeFontsGallery) - Design > Theme"
                 }
               ]
             },
@@ -4130,7 +4374,8 @@
                   "rowSpan": 3,
                   "colSpan": 2,
                   "image": "GroupSortTotal.png",
-                  "idStatus": "candidate"
+                  "idStatus": "candidate",
+                  "tooltip": "Group & Sort (GroupSortTotal) - Design > Grouping & Totals"
                 },
                 {
                   "label": "Totals",
@@ -4142,7 +4387,8 @@
                   "rowSpan": 3,
                   "colSpan": 2,
                   "image": "Totals.png",
-                  "idStatus": "candidate"
+                  "idStatus": "candidate",
+                  "tooltip": "Totals (Totals) - Design > Grouping & Totals"
                 }
               ]
             },
@@ -4168,7 +4414,8 @@
                   "rowSpan": 3,
                   "colSpan": 2,
                   "image": "ControlSelect.png",
-                  "idStatus": "candidate"
+                  "idStatus": "candidate",
+                  "tooltip": "Select (ControlSelect) - Design > Controls"
                 },
                 {
                   "label": "Text Box",
@@ -4180,7 +4427,8 @@
                   "rowSpan": 1,
                   "colSpan": 1,
                   "image": "ControlTextBox.png",
-                  "idStatus": "candidate"
+                  "idStatus": "candidate",
+                  "tooltip": "Text Box (ControlTextBox) - Design > Controls"
                 },
                 {
                   "label": "Label",
@@ -4192,7 +4440,8 @@
                   "rowSpan": 1,
                   "colSpan": 1,
                   "image": "ControlLabel.png",
-                  "idStatus": "candidate"
+                  "idStatus": "candidate",
+                  "tooltip": "Label (ControlLabel) - Design > Controls"
                 },
                 {
                   "label": "Button",
@@ -4204,7 +4453,8 @@
                   "rowSpan": 1,
                   "colSpan": 1,
                   "image": "ControlButton.png",
-                  "idStatus": "candidate"
+                  "idStatus": "candidate",
+                  "tooltip": "Button (ControlButton) - Design > Controls"
                 },
                 {
                   "label": "Chart",
@@ -4216,7 +4466,8 @@
                   "rowSpan": 1,
                   "colSpan": 1,
                   "image": "ControlChart.png",
-                  "idStatus": "candidate"
+                  "idStatus": "candidate",
+                  "tooltip": "Chart (ControlChart) - Design > Controls"
                 },
                 {
                   "label": "Subform/Subreport",
@@ -4228,7 +4479,8 @@
                   "rowSpan": 1,
                   "colSpan": 1,
                   "image": "ControlSubformSubreport.png",
-                  "idStatus": "candidate"
+                  "idStatus": "candidate",
+                  "tooltip": "Subform/Subreport (ControlSubformSubreport) - Design > Controls"
                 },
                 {
                   "label": "More Controls",
@@ -4240,7 +4492,8 @@
                   "rowSpan": 1,
                   "colSpan": 1,
                   "image": "ControlMore.png",
-                  "idStatus": "candidate"
+                  "idStatus": "candidate",
+                  "tooltip": "More Controls (ControlMore) - Design > Controls"
                 }
               ]
             },
@@ -4266,7 +4519,8 @@
                   "rowSpan": 3,
                   "colSpan": 2,
                   "image": "LogoInsert.png",
-                  "idStatus": "candidate"
+                  "idStatus": "candidate",
+                  "tooltip": "Logo (LogoInsert) - Design > Header/Footer"
                 },
                 {
                   "label": "Title",
@@ -4278,7 +4532,8 @@
                   "rowSpan": 3,
                   "colSpan": 2,
                   "image": "TitleInsert.png",
-                  "idStatus": "candidate"
+                  "idStatus": "candidate",
+                  "tooltip": "Title (TitleInsert) - Design > Header/Footer"
                 },
                 {
                   "label": "Date and Time",
@@ -4290,7 +4545,8 @@
                   "rowSpan": 3,
                   "colSpan": 2,
                   "image": "DateTimeInsert.png",
-                  "idStatus": "candidate"
+                  "idStatus": "candidate",
+                  "tooltip": "Date and Time (DateTimeInsert) - Design > Header/Footer"
                 },
                 {
                   "label": "Page Numbers",
@@ -4302,7 +4558,8 @@
                   "rowSpan": 1,
                   "colSpan": 1,
                   "image": "PageNumbersInsert.png",
-                  "idStatus": "candidate"
+                  "idStatus": "candidate",
+                  "tooltip": "Page Numbers (PageNumbersInsert) - Design > Header/Footer"
                 }
               ]
             },
@@ -4328,7 +4585,8 @@
                   "rowSpan": 3,
                   "colSpan": 2,
                   "image": "FieldList.png",
-                  "idStatus": "candidate"
+                  "idStatus": "candidate",
+                  "tooltip": "Add Existing Fields (FieldList) - Design > Tools"
                 },
                 {
                   "label": "Property Sheet",
@@ -4340,7 +4598,8 @@
                   "rowSpan": 3,
                   "colSpan": 2,
                   "image": "PropertySheet.png",
-                  "idStatus": "candidate"
+                  "idStatus": "candidate",
+                  "tooltip": "Property Sheet (PropertySheet) - Design > Tools"
                 }
               ]
             }
@@ -4373,7 +4632,8 @@
                   "rowSpan": 3,
                   "colSpan": 2,
                   "image": "ControlLayoutTabular.png",
-                  "idStatus": "candidate"
+                  "idStatus": "candidate",
+                  "tooltip": "Tabular (ControlLayoutTabular) - Arrange > Table"
                 },
                 {
                   "label": "Stacked",
@@ -4385,7 +4645,8 @@
                   "rowSpan": 3,
                   "colSpan": 2,
                   "image": "ControlLayoutStacked.png",
-                  "idStatus": "candidate"
+                  "idStatus": "candidate",
+                  "tooltip": "Stacked (ControlLayoutStacked) - Arrange > Table"
                 },
                 {
                   "label": "Remove Layout",
@@ -4397,7 +4658,8 @@
                   "rowSpan": 3,
                   "colSpan": 2,
                   "image": "ControlLayoutRemove.png",
-                  "idStatus": "candidate"
+                  "idStatus": "candidate",
+                  "tooltip": "Remove Layout (ControlLayoutRemove) - Arrange > Table"
                 }
               ]
             },
@@ -4423,7 +4685,8 @@
                   "rowSpan": 1,
                   "colSpan": 1,
                   "image": "InsertRowAbove.png",
-                  "idStatus": "candidate"
+                  "idStatus": "candidate",
+                  "tooltip": "Insert Above (InsertRowAbove) - Arrange > Rows & Columns"
                 },
                 {
                   "label": "Insert Below",
@@ -4435,7 +4698,8 @@
                   "rowSpan": 1,
                   "colSpan": 1,
                   "image": "InsertRowBelow.png",
-                  "idStatus": "candidate"
+                  "idStatus": "candidate",
+                  "tooltip": "Insert Below (InsertRowBelow) - Arrange > Rows & Columns"
                 },
                 {
                   "label": "Insert Left",
@@ -4447,7 +4711,8 @@
                   "rowSpan": 1,
                   "colSpan": 1,
                   "image": "InsertColumnLeft.png",
-                  "idStatus": "candidate"
+                  "idStatus": "candidate",
+                  "tooltip": "Insert Left (InsertColumnLeft) - Arrange > Rows & Columns"
                 },
                 {
                   "label": "Insert Right",
@@ -4459,7 +4724,8 @@
                   "rowSpan": 1,
                   "colSpan": 1,
                   "image": "InsertColumnRight.png",
-                  "idStatus": "candidate"
+                  "idStatus": "candidate",
+                  "tooltip": "Insert Right (InsertColumnRight) - Arrange > Rows & Columns"
                 },
                 {
                   "label": "Delete Row",
@@ -4471,7 +4737,8 @@
                   "rowSpan": 1,
                   "colSpan": 1,
                   "image": "DeleteLayoutRow.png",
-                  "idStatus": "candidate"
+                  "idStatus": "candidate",
+                  "tooltip": "Delete Row (DeleteLayoutRow) - Arrange > Rows & Columns"
                 },
                 {
                   "label": "Delete Column",
@@ -4483,7 +4750,8 @@
                   "rowSpan": 1,
                   "colSpan": 1,
                   "image": "DeleteLayoutColumn.png",
-                  "idStatus": "candidate"
+                  "idStatus": "candidate",
+                  "tooltip": "Delete Column (DeleteLayoutColumn) - Arrange > Rows & Columns"
                 }
               ]
             },
@@ -4509,7 +4777,8 @@
                   "rowSpan": 3,
                   "colSpan": 2,
                   "image": "ControlMargins.png",
-                  "idStatus": "candidate"
+                  "idStatus": "candidate",
+                  "tooltip": "Control Margins (ControlMargins) - Arrange > Position"
                 },
                 {
                   "label": "Control Padding",
@@ -4521,7 +4790,8 @@
                   "rowSpan": 3,
                   "colSpan": 2,
                   "image": "ControlPadding.png",
-                  "idStatus": "candidate"
+                  "idStatus": "candidate",
+                  "tooltip": "Control Padding (ControlPadding) - Arrange > Position"
                 },
                 {
                   "label": "Anchoring",
@@ -4533,7 +4803,8 @@
                   "rowSpan": 3,
                   "colSpan": 2,
                   "image": "Anchoring.png",
-                  "idStatus": "candidate"
+                  "idStatus": "candidate",
+                  "tooltip": "Anchoring (Anchoring) - Arrange > Position"
                 }
               ]
             }
@@ -4566,7 +4837,8 @@
                   "rowSpan": 1,
                   "colSpan": 3,
                   "image": null,
-                  "idStatus": "needs_validation"
+                  "idStatus": "needs_validation",
+                  "tooltip": "Font - Format > Font"
                 },
                 {
                   "label": "Font Size",
@@ -4578,7 +4850,8 @@
                   "rowSpan": 1,
                   "colSpan": 2,
                   "image": null,
-                  "idStatus": "needs_validation"
+                  "idStatus": "needs_validation",
+                  "tooltip": "Font Size - Format > Font"
                 },
                 {
                   "label": "Bold",
@@ -4590,7 +4863,8 @@
                   "rowSpan": 1,
                   "colSpan": 1,
                   "image": "Bold.png",
-                  "idStatus": "candidate"
+                  "idStatus": "candidate",
+                  "tooltip": "Bold (Bold) - Format > Font"
                 },
                 {
                   "label": "Italic",
@@ -4602,7 +4876,8 @@
                   "rowSpan": 1,
                   "colSpan": 1,
                   "image": "Italic.png",
-                  "idStatus": "candidate"
+                  "idStatus": "candidate",
+                  "tooltip": "Italic (Italic) - Format > Font"
                 },
                 {
                   "label": "Underline",
@@ -4614,7 +4889,8 @@
                   "rowSpan": 1,
                   "colSpan": 1,
                   "image": "Underline.png",
-                  "idStatus": "candidate"
+                  "idStatus": "candidate",
+                  "tooltip": "Underline (Underline) - Format > Font"
                 },
                 {
                   "label": "Font Color",
@@ -4626,7 +4902,8 @@
                   "rowSpan": 1,
                   "colSpan": 1,
                   "image": "FontColorPicker.png",
-                  "idStatus": "candidate"
+                  "idStatus": "candidate",
+                  "tooltip": "Font Color (FontColorPicker) - Format > Font"
                 }
               ]
             },
@@ -4652,7 +4929,8 @@
                   "rowSpan": 3,
                   "colSpan": 2,
                   "image": "ShapeFillColorPicker.png",
-                  "idStatus": "candidate"
+                  "idStatus": "candidate",
+                  "tooltip": "Shape Fill (ShapeFillColorPicker) - Format > Control Formatting"
                 },
                 {
                   "label": "Shape Outline",
@@ -4664,7 +4942,8 @@
                   "rowSpan": 3,
                   "colSpan": 2,
                   "image": "ShapeOutlineColorPicker.png",
-                  "idStatus": "candidate"
+                  "idStatus": "candidate",
+                  "tooltip": "Shape Outline (ShapeOutlineColorPicker) - Format > Control Formatting"
                 },
                 {
                   "label": "Conditional Formatting",
@@ -4676,7 +4955,8 @@
                   "rowSpan": 3,
                   "colSpan": 2,
                   "image": "ConditionalFormatting.png",
-                  "idStatus": "candidate"
+                  "idStatus": "candidate",
+                  "tooltip": "Conditional Formatting (ConditionalFormatting) - Format > Control Formatting"
                 }
               ]
             }
@@ -4719,7 +4999,8 @@
                   "rowSpan": 3,
                   "colSpan": 3,
                   "image": "ViewMenu.png",
-                  "idStatus": "candidate"
+                  "idStatus": "candidate",
+                  "tooltip": "View (ViewMenu) - Design > Views"
                 }
               ]
             },
@@ -4745,7 +5026,8 @@
                   "rowSpan": 3,
                   "colSpan": 2,
                   "image": "ThemesGallery.png",
-                  "idStatus": "candidate"
+                  "idStatus": "candidate",
+                  "tooltip": "Themes (ThemesGallery) - Design > Theme"
                 },
                 {
                   "label": "Colors",
@@ -4757,7 +5039,8 @@
                   "rowSpan": 1,
                   "colSpan": 1,
                   "image": "ThemeColorsGallery.png",
-                  "idStatus": "candidate"
+                  "idStatus": "candidate",
+                  "tooltip": "Colors (ThemeColorsGallery) - Design > Theme"
                 },
                 {
                   "label": "Fonts",
@@ -4769,7 +5052,8 @@
                   "rowSpan": 1,
                   "colSpan": 1,
                   "image": "ThemeFontsGallery.png",
-                  "idStatus": "candidate"
+                  "idStatus": "candidate",
+                  "tooltip": "Fonts (ThemeFontsGallery) - Design > Theme"
                 }
               ]
             },
@@ -4795,7 +5079,8 @@
                   "rowSpan": 3,
                   "colSpan": 2,
                   "image": "GroupSortTotal.png",
-                  "idStatus": "candidate"
+                  "idStatus": "candidate",
+                  "tooltip": "Group & Sort (GroupSortTotal) - Design > Grouping & Totals"
                 },
                 {
                   "label": "Totals",
@@ -4807,7 +5092,8 @@
                   "rowSpan": 3,
                   "colSpan": 2,
                   "image": "Totals.png",
-                  "idStatus": "candidate"
+                  "idStatus": "candidate",
+                  "tooltip": "Totals (Totals) - Design > Grouping & Totals"
                 }
               ]
             },
@@ -4833,7 +5119,8 @@
                   "rowSpan": 3,
                   "colSpan": 2,
                   "image": "ControlSelect.png",
-                  "idStatus": "candidate"
+                  "idStatus": "candidate",
+                  "tooltip": "Select (ControlSelect) - Design > Controls"
                 },
                 {
                   "label": "Text Box",
@@ -4845,7 +5132,8 @@
                   "rowSpan": 1,
                   "colSpan": 1,
                   "image": "ControlTextBox.png",
-                  "idStatus": "candidate"
+                  "idStatus": "candidate",
+                  "tooltip": "Text Box (ControlTextBox) - Design > Controls"
                 },
                 {
                   "label": "Label",
@@ -4857,7 +5145,8 @@
                   "rowSpan": 1,
                   "colSpan": 1,
                   "image": "ControlLabel.png",
-                  "idStatus": "candidate"
+                  "idStatus": "candidate",
+                  "tooltip": "Label (ControlLabel) - Design > Controls"
                 },
                 {
                   "label": "Button",
@@ -4869,7 +5158,8 @@
                   "rowSpan": 1,
                   "colSpan": 1,
                   "image": "ControlButton.png",
-                  "idStatus": "candidate"
+                  "idStatus": "candidate",
+                  "tooltip": "Button (ControlButton) - Design > Controls"
                 },
                 {
                   "label": "Tab Control",
@@ -4881,7 +5171,8 @@
                   "rowSpan": 1,
                   "colSpan": 1,
                   "image": "ControlTab.png",
-                  "idStatus": "candidate"
+                  "idStatus": "candidate",
+                  "tooltip": "Tab Control (ControlTab) - Design > Controls"
                 },
                 {
                   "label": "Hyperlink",
@@ -4893,7 +5184,8 @@
                   "rowSpan": 1,
                   "colSpan": 1,
                   "image": "ControlHyperlink.png",
-                  "idStatus": "candidate"
+                  "idStatus": "candidate",
+                  "tooltip": "Hyperlink (ControlHyperlink) - Design > Controls"
                 },
                 {
                   "label": "Chart",
@@ -4905,7 +5197,8 @@
                   "rowSpan": 1,
                   "colSpan": 1,
                   "image": "ControlChart.png",
-                  "idStatus": "candidate"
+                  "idStatus": "candidate",
+                  "tooltip": "Chart (ControlChart) - Design > Controls"
                 },
                 {
                   "label": "Subform/Subreport",
@@ -4917,7 +5210,8 @@
                   "rowSpan": 1,
                   "colSpan": 1,
                   "image": "ControlSubformSubreport.png",
-                  "idStatus": "candidate"
+                  "idStatus": "candidate",
+                  "tooltip": "Subform/Subreport (ControlSubformSubreport) - Design > Controls"
                 },
                 {
                   "label": "Line",
@@ -4929,7 +5223,8 @@
                   "rowSpan": 1,
                   "colSpan": 1,
                   "image": "ControlLine.png",
-                  "idStatus": "candidate"
+                  "idStatus": "candidate",
+                  "tooltip": "Line (ControlLine) - Design > Controls"
                 },
                 {
                   "label": "Rectangle",
@@ -4941,7 +5236,8 @@
                   "rowSpan": 1,
                   "colSpan": 1,
                   "image": "ControlRectangle.png",
-                  "idStatus": "candidate"
+                  "idStatus": "candidate",
+                  "tooltip": "Rectangle (ControlRectangle) - Design > Controls"
                 },
                 {
                   "label": "More Controls",
@@ -4953,7 +5249,8 @@
                   "rowSpan": 1,
                   "colSpan": 1,
                   "image": "ControlMore.png",
-                  "idStatus": "candidate"
+                  "idStatus": "candidate",
+                  "tooltip": "More Controls (ControlMore) - Design > Controls"
                 }
               ]
             },
@@ -4979,7 +5276,8 @@
                   "rowSpan": 3,
                   "colSpan": 2,
                   "image": "LogoInsert.png",
-                  "idStatus": "candidate"
+                  "idStatus": "candidate",
+                  "tooltip": "Logo (LogoInsert) - Design > Header/Footer"
                 },
                 {
                   "label": "Title",
@@ -4991,7 +5289,8 @@
                   "rowSpan": 3,
                   "colSpan": 2,
                   "image": "TitleInsert.png",
-                  "idStatus": "candidate"
+                  "idStatus": "candidate",
+                  "tooltip": "Title (TitleInsert) - Design > Header/Footer"
                 },
                 {
                   "label": "Date and Time",
@@ -5003,7 +5302,8 @@
                   "rowSpan": 3,
                   "colSpan": 2,
                   "image": "DateTimeInsert.png",
-                  "idStatus": "candidate"
+                  "idStatus": "candidate",
+                  "tooltip": "Date and Time (DateTimeInsert) - Design > Header/Footer"
                 },
                 {
                   "label": "Page Numbers",
@@ -5015,7 +5315,8 @@
                   "rowSpan": 1,
                   "colSpan": 1,
                   "image": "PageNumbersInsert.png",
-                  "idStatus": "candidate"
+                  "idStatus": "candidate",
+                  "tooltip": "Page Numbers (PageNumbersInsert) - Design > Header/Footer"
                 }
               ]
             },
@@ -5041,7 +5342,8 @@
                   "rowSpan": 3,
                   "colSpan": 2,
                   "image": "FieldList.png",
-                  "idStatus": "candidate"
+                  "idStatus": "candidate",
+                  "tooltip": "Add Existing Fields (FieldList) - Design > Tools"
                 },
                 {
                   "label": "Property Sheet",
@@ -5053,7 +5355,8 @@
                   "rowSpan": 3,
                   "colSpan": 2,
                   "image": "PropertySheet.png",
-                  "idStatus": "candidate"
+                  "idStatus": "candidate",
+                  "tooltip": "Property Sheet (PropertySheet) - Design > Tools"
                 },
                 {
                   "label": "Tab Order",
@@ -5065,7 +5368,8 @@
                   "rowSpan": 1,
                   "colSpan": 1,
                   "image": "TabOrder.png",
-                  "idStatus": "candidate"
+                  "idStatus": "candidate",
+                  "tooltip": "Tab Order (TabOrder) - Design > Tools"
                 }
               ]
             }
@@ -5108,7 +5412,8 @@
                   "rowSpan": 3,
                   "colSpan": 2,
                   "image": "MacroRun.png",
-                  "idStatus": "candidate"
+                  "idStatus": "candidate",
+                  "tooltip": "Run (MacroRun) - Design > Tools"
                 },
                 {
                   "label": "Single Step",
@@ -5120,7 +5425,8 @@
                   "rowSpan": 3,
                   "colSpan": 2,
                   "image": "MacroSingleStep.png",
-                  "idStatus": "candidate"
+                  "idStatus": "candidate",
+                  "tooltip": "Single Step (MacroSingleStep) - Design > Tools"
                 },
                 {
                   "label": "Convert Macros to Visual Basic",
@@ -5132,7 +5438,8 @@
                   "rowSpan": 3,
                   "colSpan": 2,
                   "image": "ConvertMacrosToVisualBasic.png",
-                  "idStatus": "candidate"
+                  "idStatus": "candidate",
+                  "tooltip": "Convert Macros to Visual Basic (ConvertMacrosToVisualBasic) - Design > Tools"
                 }
               ]
             },
@@ -5158,7 +5465,8 @@
                   "rowSpan": 1,
                   "colSpan": 1,
                   "image": "MacroCollapseActions.png",
-                  "idStatus": "candidate"
+                  "idStatus": "candidate",
+                  "tooltip": "Collapse Actions (MacroCollapseActions) - Design > Collapse/Expand"
                 },
                 {
                   "label": "Expand Actions",
@@ -5170,7 +5478,8 @@
                   "rowSpan": 1,
                   "colSpan": 1,
                   "image": "MacroExpandActions.png",
-                  "idStatus": "candidate"
+                  "idStatus": "candidate",
+                  "tooltip": "Expand Actions (MacroExpandActions) - Design > Collapse/Expand"
                 },
                 {
                   "label": "Collapse All",
@@ -5182,7 +5491,8 @@
                   "rowSpan": 1,
                   "colSpan": 1,
                   "image": "MacroCollapseAll.png",
-                  "idStatus": "candidate"
+                  "idStatus": "candidate",
+                  "tooltip": "Collapse All (MacroCollapseAll) - Design > Collapse/Expand"
                 },
                 {
                   "label": "Expand All",
@@ -5194,7 +5504,8 @@
                   "rowSpan": 1,
                   "colSpan": 1,
                   "image": "MacroExpandAll.png",
-                  "idStatus": "candidate"
+                  "idStatus": "candidate",
+                  "tooltip": "Expand All (MacroExpandAll) - Design > Collapse/Expand"
                 }
               ]
             },
@@ -5220,7 +5531,8 @@
                   "rowSpan": 3,
                   "colSpan": 2,
                   "image": "MacroActionCatalog.png",
-                  "idStatus": "candidate"
+                  "idStatus": "candidate",
+                  "tooltip": "Action Catalog (MacroActionCatalog) - Design > Show/Hide"
                 },
                 {
                   "label": "Show All Actions",
@@ -5232,7 +5544,8 @@
                   "rowSpan": 3,
                   "colSpan": 2,
                   "image": "MacroShowAllActions.png",
-                  "idStatus": "candidate"
+                  "idStatus": "candidate",
+                  "tooltip": "Show All Actions (MacroShowAllActions) - Design > Show/Hide"
                 }
               ]
             }

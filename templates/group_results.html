@@ -484,6 +484,7 @@
 <script>
 let resultsPollTimer = null;
 let resultsPollInFlight = false;
+let lastResultsLiveHtml = "";
 
 function initSortableTable(tableId, defaultColumnIndex = 0, defaultDirection = 'asc') {
     const table = document.getElementById(tableId);
@@ -624,6 +625,7 @@ function initializeResultsPage() {
 }
 
 function refreshResultsLiveContent() {
+    if (document.visibilityState !== 'visible') return;
     if (resultsPollInFlight) return;
     if (document.getElementById('removeModal')?.classList.contains('active')) return;
 
@@ -647,6 +649,11 @@ function refreshResultsLiveContent() {
         const incoming = doc.getElementById('resultsLiveContent');
         if (!incoming) return;
 
+        if (incoming.innerHTML === lastResultsLiveHtml || incoming.innerHTML === container.innerHTML) {
+            lastResultsLiveHtml = incoming.innerHTML;
+            return;
+        }
+        lastResultsLiveHtml = incoming.innerHTML;
         container.innerHTML = incoming.innerHTML;
         initializeResultsPage();
 
@@ -665,7 +672,8 @@ function startResultsPolling() {
     if (resultsPollTimer) {
         clearInterval(resultsPollTimer);
     }
-    resultsPollTimer = window.setInterval(refreshResultsLiveContent, 5000);
+    lastResultsLiveHtml = document.getElementById('resultsLiveContent')?.innerHTML || "";
+    resultsPollTimer = window.setInterval(refreshResultsLiveContent, 15000);
 }
 
 initializeResultsPage();

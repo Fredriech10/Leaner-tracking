@@ -16,7 +16,8 @@ def _load_task_practical_questions(cursor, task_id):
     cursor.execute(
         """
         SELECT tpq.id, COALESCE(tpq.title_override, pq.title), COALESCE(tpq.prompt_override_html, pq.prompt_html),
-               COALESCE(tpq.steps_json_override, pq.steps_json), COALESCE(tpq.marks_override, pq.marks)
+               COALESCE(tpq.steps_json_override, pq.steps_json), COALESCE(tpq.metadata_json_override, pq.metadata_json),
+               COALESCE(tpq.marks_override, pq.marks)
         FROM task_practical_questions tpq
         JOIN practical_question_bank pq ON pq.id = tpq.bank_question_id
         WHERE tpq.task_id = ?
@@ -25,17 +26,22 @@ def _load_task_practical_questions(cursor, task_id):
         (task_id,),
     )
     questions = []
-    for question_id, title, prompt_html, steps_json, marks in cursor.fetchall():
+    for question_id, title, prompt_html, steps_json, metadata_json, marks in cursor.fetchall():
         try:
             steps = json.loads(steps_json or "[]")
         except Exception:
             steps = []
+        try:
+            metadata = json.loads(metadata_json or "{}")
+        except Exception:
+            metadata = {}
         questions.append(
             {
                 "id": question_id,
                 "title": title,
                 "prompt_html": prompt_html,
                 "steps": steps,
+                "metadata": metadata,
                 "marks": marks or len(steps) or 1,
             }
         )
@@ -79,6 +85,30 @@ def _score_word_caps_practical(questions, form_data):
         elif not skip_flag and question["title"] == "Font Size":
             passed = int(question_state.get("font_size", 0) or 0) == 24
             details = "Font size changed" if passed else "Font size not changed correctly"
+        elif not skip_flag and question["title"] == "Bold Text":
+            passed = bool(question_state.get("bold_applied"))
+            details = "Bold applied" if passed else "Bold not applied"
+        elif not skip_flag and question["title"] == "Italic Text":
+            passed = bool(question_state.get("italic_applied"))
+            details = "Italic applied" if passed else "Italic not applied"
+        elif not skip_flag and question["title"] == "Underline Text":
+            passed = bool(question_state.get("underline_applied"))
+            details = "Underline applied" if passed else "Underline not applied"
+        elif not skip_flag and question["title"] == "Highlight Text":
+            passed = bool(question_state.get("highlight_applied"))
+            details = "Highlight applied" if passed else "Highlight not applied"
+        elif not skip_flag and question["title"] == "Clear Formatting":
+            passed = bool(question_state.get("formatting_cleared"))
+            details = "Formatting cleared" if passed else "Formatting not cleared"
+        elif not skip_flag and question["title"] == "Copy Text":
+            passed = bool(question_state.get("copied_text"))
+            details = "Text copied" if passed else "Text not copied"
+        elif not skip_flag and question["title"] == "Paste Text":
+            passed = bool(question_state.get("pasted_text"))
+            details = "Text pasted" if passed else "Text not pasted"
+        elif not skip_flag and question["title"] == "Format Painter":
+            passed = bool(question_state.get("format_painted"))
+            details = "Format Painter applied" if passed else "Format Painter not applied"
         elif not skip_flag and question["title"] == "Font Color":
             passed = str(question_state.get("font_color", "")).lower() == "#c62828"
             details = "Font colour changed" if passed else "Font colour not changed correctly"

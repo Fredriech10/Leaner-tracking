@@ -393,7 +393,7 @@
     'screen_share_library',
     'screen_share_watch'
   ])|tojson }},
-  "autoRefreshMs": 45000
+  "autoRefreshMs": 180000
 }
 </script>
 <script>
@@ -516,11 +516,16 @@
         return tag === 'input' || tag === 'textarea' || tag === 'select' || active.isContentEditable;
     }
 
+    function pageHasBlockingWorkSurface() {
+        return Boolean(document.querySelector('form, [contenteditable="true"], .workspace, .workspace-shell, .shell'));
+    }
+
     function canAutoRefreshNow() {
         if (!topbarConfig || !topbarConfig.autoRefreshEnabled) return false;
         if (document.visibilityState !== 'visible') return false;
         if (document.body.classList.contains('slide-nav-expanded')) return false;
         if (hasBlockingInputFocus()) return false;
+        if (pageHasBlockingWorkSurface()) return false;
         return (Date.now() - lastUserActivityAt) >= (topbarConfig.autoRefreshMs || 45000);
     }
 
@@ -530,11 +535,12 @@
             autoRefreshTimer = null;
         }
         if (!topbarConfig || !topbarConfig.autoRefreshEnabled) return;
+        const intervalMs = Math.max(60000, Math.floor((topbarConfig.autoRefreshMs || 180000) / 2));
         autoRefreshTimer = setInterval(function () {
             if (!canAutoRefreshNow()) return;
             saveScrollPosition();
             window.location.reload();
-        }, 15000);
+        }, intervalMs);
     }
 
     function showTooltip(link) {

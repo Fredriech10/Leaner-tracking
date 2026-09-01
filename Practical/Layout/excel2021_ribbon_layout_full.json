@@ -47,7 +47,8 @@
               "rowSpan": 3,
               "colSpan": 2,
               "image": "Paste.png",
-              "idStatus": "candidate"
+              "idStatus": "candidate",
+              "tooltip": "Paste (Paste) - Home > Clipboard"
             },
             {
               "label": "Cut",
@@ -59,7 +60,8 @@
               "rowSpan": 1,
               "colSpan": 1,
               "image": "Cut.png",
-              "idStatus": "candidate"
+              "idStatus": "candidate",
+              "tooltip": "Cut (Cut) - Home > Clipboard"
             },
             {
               "label": "Copy",
@@ -71,7 +73,8 @@
               "rowSpan": 1,
               "colSpan": 1,
               "image": "Copy.png",
-              "idStatus": "candidate"
+              "idStatus": "candidate",
+              "tooltip": "Copy (Copy) - Home > Clipboard"
             },
             {
               "label": "Format Painter",
@@ -83,7 +86,8 @@
               "rowSpan": 1,
               "colSpan": 1,
               "image": "FormatPainter.png",
-              "idStatus": "candidate"
+              "idStatus": "candidate",
+              "tooltip": "Format Painter (FormatPainter) - Home > Clipboard"
             }
           ]
         },
@@ -110,7 +114,8 @@
               "colSpan": 3,
               "image": null,
               "idStatus": "needs_validation",
-              "notes": "Font family selector"
+              "notes": "Font family selector",
+              "tooltip": "Font - Home > Font"
             },
             {
               "label": "Font Size",
@@ -122,7 +127,8 @@
               "rowSpan": 1,
               "colSpan": 2,
               "image": null,
-              "idStatus": "needs_validation"
+              "idStatus": "needs_validation",
+              "tooltip": "Font Size - Home > Font"
             },
             {
               "label": "Increase Font Size",
@@ -134,7 +140,8 @@
               "rowSpan": 1,
               "colSpan": 1,
               "image": "FontSizeIncrease.png",
-              "idStatus": "candidate"
+              "idStatus": "candidate",
+              "tooltip": "Increase Font Size (FontSizeIncrease) - Home > Font"
             },
             {
               "label": "Decrease Font Size",
@@ -146,7 +153,8 @@
               "rowSpan": 1,
               "colSpan": 1,
               "image": "FontSizeDecrease.png",
-              "idStatus": "candidate"
+              "idStatus": "candidate",
+              "tooltip": "Decrease Font Size (FontSizeDecrease) - Home > Font"
             },
             {
               "label": "Bold",
@@ -158,7 +166,8 @@
               "rowSpan": 1,
               "colSpan": 1,
               "image": "Bold.png",
-              "idStatus": "candidate"
+              "idStatus": "candidate",
+              "tooltip": "Bold (Bold) - Home > Font"
             },
             {
               "label": "Italic",
@@ -170,7 +179,8 @@
               "rowSpan": 1,
               "colSpan": 1,
               "image": "Italic.png",
-              "idStatus": "candidate"
+              "idStatus": "candidate",
+              "tooltip": "Italic (Italic) - Home > Font"
             },
             {
               "label": "Underline",
@@ -182,7 +192,8 @@
               "rowSpan": 1,
               "colSpan": 1,
               "image": "Underline.png",
-              "idStatus": "candidate"
+              "idStatus": "candidate",
+              "tooltip": "Underline (Underline) - Home > Font"
             },
             {
               "label": "Borders",
@@ -194,7 +205,8 @@
               "rowSpan": 1,
               "colSpan": 1,
               "image": "BordersGallery.png",
-              "idStatus": "candidate"
+              "idStatus": "candidate",
+              "tooltip": "Borders (BordersGallery) - Home > Font"
             },
             {
               "label": "Fill Color",
@@ -206,7 +218,8 @@
               "rowSpan": 1,
               "colSpan": 1,
               "image": "CellFillColorPicker.png",
-              "idStatus": "candidate"
+              "idStatus": "candidate",
+              "tooltip": "Fill Color (CellFillColorPicker) - Home > Font"
             },
             {
               "label": "Font Color",
@@ -218,7 +231,8 @@
               "rowSpan": 1,
               "colSpan": 1,
               "image": "FontColorPicker.png",
-              "idStatus": "candidate"
+              "idStatus": "candidate",
+              "tooltip": "Font Color (FontColorPicker) - Home > Font"
             }
           ]
         },
@@ -244,7 +258,8 @@
               "rowSpan": 1,
               "colSpan": 1,
               "image": "AlignTopExcel.png",
-              "idStatus": "candidate"
+              "idStatus": "candidate",
+              "tooltip": "Top Align (AlignTopExcel) - Home > Alignment"
             },
             {
               "label": "Middle Align",
@@ -256,7 +271,8 @@
               "rowSpan": 1,
               "colSpan": 1,
               "image": "AlignMiddleExcel.png",
-              "idStatus": "candidate"
+              "idStatus": "candidate",
+              "tooltip": "Middle Align (AlignMiddleExcel) - Home > Alignment"
             },
             {
               "label": "Bottom Align",
@@ -268,7 +284,8 @@
               "rowSpan": 1,
               "colSpan": 1,
               "image": "AlignBottomExcel.png",
-              "idStatus": "candidate"
+              "idStatus": "candidate",
+              "tooltip": "Bottom Align (AlignBottomExcel) - Home > Alignment"
             },
             {
               "label": "Orientation",
@@ -280,7 +297,8 @@
               "rowSpan": 1,
               "colSpan": 1,
               "image": "OrientationMenu.png",
-              "idStatus": "candidate"
+              "idStatus": "candidate",
+              "tooltip": "Orientation (OrientationMenu) - Home > Alignment"
             },
             {
               "label": "Align Left",
@@ -292,7 +310,8 @@
               "rowSpan": 1,
               "colSpan": 1,
               "image": "AlignLeft.png",
-              "idStatus": "candidate"
+              "idStatus": "candidate",
+              "tooltip": "Align Left (AlignLeft) - Home > Alignment"
             },
             {
               "label": "Center",
@@ -304,7 +323,8 @@
               "rowSpan": 1,
               "colSpan": 1,
               "image": "AlignCenter.png",
-              "idStatus": "candidate"
+              "idStatus": "candidate",
+              "tooltip": "Center (AlignCenter) - Home > Alignment"
             },
             {
               "label": "Align Right",
@@ -316,7 +336,8 @@
               "rowSpan": 1,
               "colSpan": 1,
               "image": "AlignRight.png",
-              "idStatus": "candidate"
+              "idStatus": "candidate",
+              "tooltip": "Align Right (AlignRight) - Home > Alignment"
             },
             {
               "label": "Decrease Indent",
@@ -328,7 +349,8 @@
               "rowSpan": 1,
               "colSpan": 1,
               "image": "IndentDecreaseExcel.png",
-              "idStatus": "candidate"
+              "idStatus": "candidate",
+              "tooltip": "Decrease Indent (IndentDecreaseExcel) - Home > Alignment"
             },
             {
               "label": "Increase Indent",
@@ -340,7 +362,8 @@
               "rowSpan": 1,
               "colSpan": 1,
               "image": "IndentIncreaseExcel.png",
-              "idStatus": "candidate"
+              "idStatus": "candidate",
+              "tooltip": "Increase Indent (IndentIncreaseExcel) - Home > Alignment"
             },
             {
               "label": "Wrap Text",
@@ -352,7 +375,8 @@
               "rowSpan": 1,
               "colSpan": 1,
               "image": "WrapText.png",
-              "idStatus": "candidate"
+              "idStatus": "candidate",
+              "tooltip": "Wrap Text (WrapText) - Home > Alignment"
             },
             {
               "label": "Merge & Center",
@@ -364,7 +388,8 @@
               "rowSpan": 1,
               "colSpan": 1,
               "image": "MergeAndCenter.png",
-              "idStatus": "candidate"
+              "idStatus": "candidate",
+              "tooltip": "Merge & Center (MergeAndCenter) - Home > Alignment"
             }
           ]
         },
@@ -391,7 +416,8 @@
               "colSpan": 4,
               "image": null,
               "idStatus": "needs_validation",
-              "notes": "General / Number / Currency etc."
+              "notes": "General / Number / Currency etc.",
+              "tooltip": "Number Format - Home > Number"
             },
             {
               "label": "Accounting Number Format",
@@ -403,7 +429,8 @@
               "rowSpan": 1,
               "colSpan": 1,
               "image": "AccountingNumberFormat.png",
-              "idStatus": "candidate"
+              "idStatus": "candidate",
+              "tooltip": "Accounting Number Format (AccountingNumberFormat) - Home > Number"
             },
             {
               "label": "Percent Style",
@@ -415,7 +442,8 @@
               "rowSpan": 1,
               "colSpan": 1,
               "image": "PercentStyle.png",
-              "idStatus": "candidate"
+              "idStatus": "candidate",
+              "tooltip": "Percent Style (PercentStyle) - Home > Number"
             },
             {
               "label": "Comma Style",
@@ -427,7 +455,8 @@
               "rowSpan": 1,
               "colSpan": 1,
               "image": "CommaStyle.png",
-              "idStatus": "candidate"
+              "idStatus": "candidate",
+              "tooltip": "Comma Style (CommaStyle) - Home > Number"
             },
             {
               "label": "Increase Decimal",
@@ -439,7 +468,8 @@
               "rowSpan": 1,
               "colSpan": 1,
               "image": "DecimalsIncrease.png",
-              "idStatus": "candidate"
+              "idStatus": "candidate",
+              "tooltip": "Increase Decimal (DecimalsIncrease) - Home > Number"
             },
             {
               "label": "Decrease Decimal",
@@ -451,7 +481,8 @@
               "rowSpan": 1,
               "colSpan": 1,
               "image": "DecimalsDecrease.png",
-              "idStatus": "candidate"
+              "idStatus": "candidate",
+              "tooltip": "Decrease Decimal (DecimalsDecrease) - Home > Number"
             }
           ]
         },
@@ -477,7 +508,8 @@
               "rowSpan": 3,
               "colSpan": 2,
               "image": "ConditionalFormattingMenu.png",
-              "idStatus": "candidate"
+              "idStatus": "candidate",
+              "tooltip": "Conditional Formatting (ConditionalFormattingMenu) - Home > Styles"
             },
             {
               "label": "Format as Table",
@@ -489,7 +521,8 @@
               "rowSpan": 3,
               "colSpan": 2,
               "image": "FormatAsTableGallery.png",
-              "idStatus": "candidate"
+              "idStatus": "candidate",
+              "tooltip": "Format as Table (FormatAsTableGallery) - Home > Styles"
             },
             {
               "label": "Cell Styles",
@@ -501,7 +534,8 @@
               "rowSpan": 3,
               "colSpan": 2,
               "image": "CellStylesGallery.png",
-              "idStatus": "candidate"
+              "idStatus": "candidate",
+              "tooltip": "Cell Styles (CellStylesGallery) - Home > Styles"
             }
           ]
         },
@@ -527,7 +561,8 @@
               "rowSpan": 3,
               "colSpan": 2,
               "image": "CellsInsertMenu.png",
-              "idStatus": "candidate"
+              "idStatus": "candidate",
+              "tooltip": "Insert (CellsInsertMenu) - Home > Cells"
             },
             {
               "label": "Delete",
@@ -539,7 +574,8 @@
               "rowSpan": 3,
               "colSpan": 2,
               "image": "CellsDeleteMenu.png",
-              "idStatus": "candidate"
+              "idStatus": "candidate",
+              "tooltip": "Delete (CellsDeleteMenu) - Home > Cells"
             },
             {
               "label": "Format",
@@ -551,7 +587,8 @@
               "rowSpan": 3,
               "colSpan": 2,
               "image": "CellsFormatMenu.png",
-              "idStatus": "candidate"
+              "idStatus": "candidate",
+              "tooltip": "Format (CellsFormatMenu) - Home > Cells"
             }
           ]
         },
@@ -577,7 +614,8 @@
               "rowSpan": 3,
               "colSpan": 2,
               "image": "AutoSum.png",
-              "idStatus": "candidate"
+              "idStatus": "candidate",
+              "tooltip": "AutoSum (AutoSum) - Home > Editing"
             },
             {
               "label": "Fill",
@@ -589,7 +627,8 @@
               "rowSpan": 1,
               "colSpan": 1,
               "image": "FillMenu.png",
-              "idStatus": "candidate"
+              "idStatus": "candidate",
+              "tooltip": "Fill (FillMenu) - Home > Editing"
             },
             {
               "label": "Clear",
@@ -601,7 +640,8 @@
               "rowSpan": 1,
               "colSpan": 1,
               "image": "ClearMenu.png",
-              "idStatus": "candidate"
+              "idStatus": "candidate",
+              "tooltip": "Clear (ClearMenu) - Home > Editing"
             },
             {
               "label": "Sort & Filter",
@@ -613,7 +653,8 @@
               "rowSpan": 3,
               "colSpan": 2,
               "image": "SortFilterMenu.png",
-              "idStatus": "candidate"
+              "idStatus": "candidate",
+              "tooltip": "Sort & Filter (SortFilterMenu) - Home > Editing"
             },
             {
               "label": "Find & Select",
@@ -625,7 +666,8 @@
               "rowSpan": 3,
               "colSpan": 2,
               "image": "FindSelectMenu.png",
-              "idStatus": "candidate"
+              "idStatus": "candidate",
+              "tooltip": "Find & Select (FindSelectMenu) - Home > Editing"
             }
           ]
         }
@@ -658,7 +700,8 @@
               "rowSpan": 3,
               "colSpan": 2,
               "image": "PivotTableInsert.png",
-              "idStatus": "candidate"
+              "idStatus": "candidate",
+              "tooltip": "PivotTable (PivotTableInsert) - Insert > Tables"
             },
             {
               "label": "Recommended PivotTables",
@@ -670,7 +713,8 @@
               "rowSpan": 3,
               "colSpan": 2,
               "image": "RecommendedPivotTables.png",
-              "idStatus": "candidate"
+              "idStatus": "candidate",
+              "tooltip": "Recommended PivotTables (RecommendedPivotTables) - Insert > Tables"
             },
             {
               "label": "Table",
@@ -682,7 +726,8 @@
               "rowSpan": 3,
               "colSpan": 2,
               "image": "TableInsert.png",
-              "idStatus": "candidate"
+              "idStatus": "candidate",
+              "tooltip": "Table (TableInsert) - Insert > Tables"
             }
           ]
         },
@@ -708,7 +753,8 @@
               "rowSpan": 3,
               "colSpan": 2,
               "image": "PictureInsertFromFile.png",
-              "idStatus": "candidate"
+              "idStatus": "candidate",
+              "tooltip": "Pictures (PictureInsertFromFile) - Insert > Illustrations"
             },
             {
               "label": "Shapes",
@@ -720,7 +766,8 @@
               "rowSpan": 3,
               "colSpan": 2,
               "image": "ShapesInsertGallery.png",
-              "idStatus": "candidate"
+              "idStatus": "candidate",
+              "tooltip": "Shapes (ShapesInsertGallery) - Insert > Illustrations"
             },
             {
               "label": "SmartArt",
@@ -732,7 +779,8 @@
               "rowSpan": 3,
               "colSpan": 2,
               "image": "SmartArtInsert.png",
-              "idStatus": "candidate"
+              "idStatus": "candidate",
+              "tooltip": "SmartArt (SmartArtInsert) - Insert > Illustrations"
             },
             {
               "label": "Screenshot",
@@ -744,7 +792,8 @@
               "rowSpan": 3,
               "colSpan": 2,
               "image": "ScreenshotInsertGallery.png",
-              "idStatus": "candidate"
+              "idStatus": "candidate",
+              "tooltip": "Screenshot (ScreenshotInsertGallery) - Insert > Illustrations"
             }
           ]
         },
@@ -770,7 +819,8 @@
               "rowSpan": 3,
               "colSpan": 2,
               "image": "OfficeAddIns.png",
-              "idStatus": "candidate"
+              "idStatus": "candidate",
+              "tooltip": "Get Add-ins (OfficeAddIns) - Insert > Add-ins"
             },
             {
               "label": "My Add-ins",
@@ -782,7 +832,8 @@
               "rowSpan": 3,
               "colSpan": 2,
               "image": "OfficeAddInsDialog.png",
-              "idStatus": "candidate"
+              "idStatus": "candidate",
+              "tooltip": "My Add-ins (OfficeAddInsDialog) - Insert > Add-ins"
             }
           ]
         },
@@ -808,7 +859,8 @@
               "rowSpan": 3,
               "colSpan": 2,
               "image": "RecommendedCharts.png",
-              "idStatus": "candidate"
+              "idStatus": "candidate",
+              "tooltip": "Recommended Charts (RecommendedCharts) - Insert > Charts"
             },
             {
               "label": "Insert Column or Bar Chart",
@@ -820,7 +872,8 @@
               "rowSpan": 1,
               "colSpan": 1,
               "image": "ChartInsertColumn.png",
-              "idStatus": "candidate"
+              "idStatus": "candidate",
+              "tooltip": "Insert Column or Bar Chart (ChartInsertColumn) - Insert > Charts"
             },
             {
               "label": "Insert Line or Area Chart",
@@ -832,7 +885,8 @@
               "rowSpan": 1,
               "colSpan": 1,
               "image": "ChartInsertLine.png",
-              "idStatus": "candidate"
+              "idStatus": "candidate",
+              "tooltip": "Insert Line or Area Chart (ChartInsertLine) - Insert > Charts"
             },
             {
               "label": "Insert Pie or Doughnut Chart",
@@ -844,7 +898,8 @@
               "rowSpan": 1,
               "colSpan": 1,
               "image": "ChartInsertPie.png",
-              "idStatus": "candidate"
+              "idStatus": "candidate",
+              "tooltip": "Insert Pie or Doughnut Chart (ChartInsertPie) - Insert > Charts"
             },
             {
               "label": "Insert Hierarchy Chart",
@@ -856,7 +911,8 @@
               "rowSpan": 1,
               "colSpan": 1,
               "image": "ChartInsertHierarchy.png",
-              "idStatus": "candidate"
+              "idStatus": "candidate",
+              "tooltip": "Insert Hierarchy Chart (ChartInsertHierarchy) - Insert > Charts"
             },
             {
               "label": "Insert Statistic Chart",
@@ -868,7 +924,8 @@
               "rowSpan": 1,
               "colSpan": 1,
               "image": "ChartInsertStatistic.png",
-              "idStatus": "candidate"
+              "idStatus": "candidate",
+              "tooltip": "Insert Statistic Chart (ChartInsertStatistic) - Insert > Charts"
             },
             {
               "label": "Insert Scatter or Bubble Chart",
@@ -880,7 +937,8 @@
               "rowSpan": 1,
               "colSpan": 1,
               "image": "ChartInsertScatter.png",
-              "idStatus": "candidate"
+              "idStatus": "candidate",
+              "tooltip": "Insert Scatter or Bubble Chart (ChartInsertScatter) - Insert > Charts"
             },
             {
               "label": "Insert Waterfall, Funnel, Stock, Surface or Radar",
@@ -892,7 +950,8 @@
               "rowSpan": 1,
               "colSpan": 1,
               "image": "ChartInsertWaterfall.png",
-              "idStatus": "candidate"
+              "idStatus": "candidate",
+              "tooltip": "Insert Waterfall, Funnel, Stock, Surface or Radar (ChartInsertWaterfall) - Insert > Charts"
             },
             {
               "label": "PivotChart",
@@ -904,7 +963,8 @@
               "rowSpan": 1,
               "colSpan": 1,
               "image": "PivotChartInsert.png",
-              "idStatus": "candidate"
+              "idStatus": "candidate",
+              "tooltip": "PivotChart (PivotChartInsert) - Insert > Charts"
             }
           ]
         },
@@ -930,7 +990,8 @@
               "rowSpan": 3,
               "colSpan": 2,
               "image": "SparklineLine.png",
-              "idStatus": "candidate"
+              "idStatus": "candidate",
+              "tooltip": "Line (SparklineLine) - Insert > Sparklines"
             },
             {
               "label": "Column",
@@ -942,7 +1003,8 @@
               "rowSpan": 3,
               "colSpan": 2,
               "image": "SparklineColumn.png",
-              "idStatus": "candidate"
+              "idStatus": "candidate",
+              "tooltip": "Column (SparklineColumn) - Insert > Sparklines"
             },
             {
               "label": "Win/Loss",
@@ -954,7 +1016,8 @@
               "rowSpan": 3,
               "colSpan": 2,
               "image": "SparklineWinLoss.png",
-              "idStatus": "candidate"
+              "idStatus": "candidate",
+              "tooltip": "Win/Loss (SparklineWinLoss) - Insert > Sparklines"
             }
           ]
         },
@@ -980,7 +1043,8 @@
               "rowSpan": 3,
               "colSpan": 2,
               "image": "SlicerInsert.png",
-              "idStatus": "candidate"
+              "idStatus": "candidate",
+              "tooltip": "Slicer (SlicerInsert) - Insert > Filters"
             },
             {
               "label": "Timeline",
@@ -992,7 +1056,8 @@
               "rowSpan": 3,
               "colSpan": 2,
               "image": "TimelineInsert.png",
-              "idStatus": "candidate"
+              "idStatus": "candidate",
+              "tooltip": "Timeline (TimelineInsert) - Insert > Filters"
             }
           ]
         },
@@ -1018,7 +1083,8 @@
               "rowSpan": 3,
               "colSpan": 3,
               "image": "HyperlinkInsert.png",
-              "idStatus": "candidate"
+              "idStatus": "candidate",
+              "tooltip": "Link (HyperlinkInsert) - Insert > Links"
             }
           ]
         },
@@ -1044,7 +1110,8 @@
               "rowSpan": 3,
               "colSpan": 2,
               "image": "TextBoxInsert.png",
-              "idStatus": "candidate"
+              "idStatus": "candidate",
+              "tooltip": "Text Box (TextBoxInsert) - Insert > Text"
             },
             {
               "label": "Header & Footer",
@@ -1056,7 +1123,8 @@
               "rowSpan": 3,
               "colSpan": 2,
               "image": "HeaderFooterInsert.png",
-              "idStatus": "candidate"
+              "idStatus": "candidate",
+              "tooltip": "Header & Footer (HeaderFooterInsert) - Insert > Text"
             },
             {
               "label": "WordArt",
@@ -1068,7 +1136,8 @@
               "rowSpan": 1,
               "colSpan": 1,
               "image": "WordArtInsertGallery.png",
-              "idStatus": "candidate"
+              "idStatus": "candidate",
+              "tooltip": "WordArt (WordArtInsertGallery) - Insert > Text"
             },
             {
               "label": "Signature Line",
@@ -1080,7 +1149,8 @@
               "rowSpan": 1,
               "colSpan": 1,
               "image": "SignatureLineInsert.png",
-              "idStatus": "candidate"
+              "idStatus": "candidate",
+              "tooltip": "Signature Line (SignatureLineInsert) - Insert > Text"
             },
             {
               "label": "Object",
@@ -1092,7 +1162,8 @@
               "rowSpan": 1,
               "colSpan": 1,
               "image": "ObjectInsert.png",
-              "idStatus": "candidate"
+              "idStatus": "candidate",
+              "tooltip": "Object (ObjectInsert) - Insert > Text"
             }
           ]
         },
@@ -1118,7 +1189,8 @@
               "rowSpan": 3,
               "colSpan": 2,
               "image": "EquationInsertNew.png",
-              "idStatus": "candidate"
+              "idStatus": "candidate",
+              "tooltip": "Equation (EquationInsertNew) - Insert > Symbols"
             },
             {
               "label": "Symbol",
@@ -1130,7 +1202,8 @@
               "rowSpan": 3,
               "colSpan": 2,
               "image": "SymbolInsert.png",
-              "idStatus": "candidate"
+              "idStatus": "candidate",
+              "tooltip": "Symbol (SymbolInsert) - Insert > Symbols"
             }
           ]
         }
@@ -1163,7 +1236,8 @@
               "rowSpan": 3,
               "colSpan": 2,
               "image": "InkSelect.png",
-              "idStatus": "candidate"
+              "idStatus": "candidate",
+              "tooltip": "Select (InkSelect) - Draw > Drawing Tools"
             },
             {
               "label": "Lasso Select",
@@ -1175,7 +1249,8 @@
               "rowSpan": 3,
               "colSpan": 2,
               "image": "InkLassoSelect.png",
-              "idStatus": "candidate"
+              "idStatus": "candidate",
+              "tooltip": "Lasso Select (InkLassoSelect) - Draw > Drawing Tools"
             },
             {
               "label": "Eraser",
@@ -1187,7 +1262,8 @@
               "rowSpan": 3,
               "colSpan": 2,
               "image": "InkEraser.png",
-              "idStatus": "candidate"
+              "idStatus": "candidate",
+              "tooltip": "Eraser (InkEraser) - Draw > Drawing Tools"
             },
             {
               "label": "Pens",
@@ -1200,7 +1276,8 @@
               "colSpan": 4,
               "image": "InkPensGallery.png",
               "idStatus": "candidate",
-              "notes": "Pen/highlighter gallery"
+              "notes": "Pen/highlighter gallery",
+              "tooltip": "Pens (InkPensGallery) - Draw > Drawing Tools"
             }
           ]
         },
@@ -1226,7 +1303,8 @@
               "rowSpan": 3,
               "colSpan": 2,
               "image": "InkToShape.png",
-              "idStatus": "candidate"
+              "idStatus": "candidate",
+              "tooltip": "Ink to Shape (InkToShape) - Draw > Convert"
             },
             {
               "label": "Ink to Math",
@@ -1238,7 +1316,8 @@
               "rowSpan": 3,
               "colSpan": 2,
               "image": "InkToMath.png",
-              "idStatus": "candidate"
+              "idStatus": "candidate",
+              "tooltip": "Ink to Math (InkToMath) - Draw > Convert"
             }
           ]
         }
@@ -1271,7 +1350,8 @@
               "rowSpan": 3,
               "colSpan": 2,
               "image": "ThemesGallery.png",
-              "idStatus": "candidate"
+              "idStatus": "candidate",
+              "tooltip": "Themes (ThemesGallery) - Page Layout > Themes"
             },
             {
               "label": "Colors",
@@ -1283,7 +1363,8 @@
               "rowSpan": 1,
               "colSpan": 1,
               "image": "ThemeColorsGallery.png",
-              "idStatus": "candidate"
+              "idStatus": "candidate",
+              "tooltip": "Colors (ThemeColorsGallery) - Page Layout > Themes"
             },
             {
               "label": "Fonts",
@@ -1295,7 +1376,8 @@
               "rowSpan": 1,
               "colSpan": 1,
               "image": "ThemeFontsGallery.png",
-              "idStatus": "candidate"
+              "idStatus": "candidate",
+              "tooltip": "Fonts (ThemeFontsGallery) - Page Layout > Themes"
             },
             {
               "label": "Effects",
@@ -1307,7 +1389,8 @@
               "rowSpan": 1,
               "colSpan": 1,
               "image": "ThemeEffectsGallery.png",
-              "idStatus": "candidate"
+              "idStatus": "candidate",
+              "tooltip": "Effects (ThemeEffectsGallery) - Page Layout > Themes"
             }
           ]
         },
@@ -1333,7 +1416,8 @@
               "rowSpan": 3,
               "colSpan": 2,
               "image": "PageMarginsGallery.png",
-              "idStatus": "candidate"
+              "idStatus": "candidate",
+              "tooltip": "Margins (PageMarginsGallery) - Page Layout > Page Setup"
             },
             {
               "label": "Orientation",
@@ -1345,7 +1429,8 @@
               "rowSpan": 3,
               "colSpan": 2,
               "image": "PageOrientationGallery.png",
-              "idStatus": "candidate"
+              "idStatus": "candidate",
+              "tooltip": "Orientation (PageOrientationGallery) - Page Layout > Page Setup"
             },
             {
               "label": "Size",
@@ -1357,7 +1442,8 @@
               "rowSpan": 3,
               "colSpan": 2,
               "image": "PageSizeGallery.png",
-              "idStatus": "candidate"
+              "idStatus": "candidate",
+              "tooltip": "Size (PageSizeGallery) - Page Layout > Page Setup"
             },
             {
               "label": "Print Area",
@@ -1369,7 +1455,8 @@
               "rowSpan": 1,
               "colSpan": 1,
               "image": "PrintAreaMenu.png",
-              "idStatus": "candidate"
+              "idStatus": "candidate",
+              "tooltip": "Print Area (PrintAreaMenu) - Page Layout > Page Setup"
             },
             {
               "label": "Breaks",
@@ -1381,7 +1468,8 @@
               "rowSpan": 1,
               "colSpan": 1,
               "image": "BreaksGallery.png",
-              "idStatus": "candidate"
+              "idStatus": "candidate",
+              "tooltip": "Breaks (BreaksGallery) - Page Layout > Page Setup"
             },
             {
               "label": "Background",
@@ -1393,7 +1481,8 @@
               "rowSpan": 1,
               "colSpan": 1,
               "image": "SheetBackground.png",
-              "idStatus": "candidate"
+              "idStatus": "candidate",
+              "tooltip": "Background (SheetBackground) - Page Layout > Page Setup"
             },
             {
               "label": "Print Titles",
@@ -1405,7 +1494,8 @@
               "rowSpan": 1,
               "colSpan": 1,
               "image": "PrintTitles.png",
-              "idStatus": "candidate"
+              "idStatus": "candidate",
+              "tooltip": "Print Titles (PrintTitles) - Page Layout > Page Setup"
             }
           ]
         },
@@ -1431,7 +1521,8 @@
               "rowSpan": 1,
               "colSpan": 3,
               "image": null,
-              "idStatus": "needs_validation"
+              "idStatus": "needs_validation",
+              "tooltip": "Width - Page Layout > Scale to Fit"
             },
             {
               "label": "Height",
@@ -1443,7 +1534,8 @@
               "rowSpan": 1,
               "colSpan": 3,
               "image": null,
-              "idStatus": "needs_validation"
+              "idStatus": "needs_validation",
+              "tooltip": "Height - Page Layout > Scale to Fit"
             },
             {
               "label": "Scale",
@@ -1455,7 +1547,8 @@
               "rowSpan": 1,
               "colSpan": 3,
               "image": null,
-              "idStatus": "needs_validation"
+              "idStatus": "needs_validation",
+              "tooltip": "Scale - Page Layout > Scale to Fit"
             }
           ]
         },
@@ -1481,7 +1574,8 @@
               "rowSpan": 1,
               "colSpan": 1,
               "image": "GridlinesViewExcel.png",
-              "idStatus": "candidate"
+              "idStatus": "candidate",
+              "tooltip": "Gridlines View (GridlinesViewExcel) - Page Layout > Sheet Options"
             },
             {
               "label": "Gridlines Print",
@@ -1493,7 +1587,8 @@
               "rowSpan": 1,
               "colSpan": 1,
               "image": "GridlinesPrintExcel.png",
-              "idStatus": "candidate"
+              "idStatus": "candidate",
+              "tooltip": "Gridlines Print (GridlinesPrintExcel) - Page Layout > Sheet Options"
             },
             {
               "label": "Headings View",
@@ -1505,7 +1600,8 @@
               "rowSpan": 1,
               "colSpan": 1,
               "image": "HeadingsViewExcel.png",
-              "idStatus": "candidate"
+              "idStatus": "candidate",
+              "tooltip": "Headings View (HeadingsViewExcel) - Page Layout > Sheet Options"
             },
             {
               "label": "Headings Print",
@@ -1517,7 +1613,8 @@
               "rowSpan": 1,
               "colSpan": 1,
               "image": "HeadingsPrintExcel.png",
-              "idStatus": "candidate"
+              "idStatus": "candidate",
+              "tooltip": "Headings Print (HeadingsPrintExcel) - Page Layout > Sheet Options"
             }
           ]
         },
@@ -1543,7 +1640,8 @@
               "rowSpan": 1,
               "colSpan": 1,
               "image": "ObjectBringForward.png",
-              "idStatus": "candidate"
+              "idStatus": "candidate",
+              "tooltip": "Bring Forward (ObjectBringForward) - Page Layout > Arrange"
             },
             {
               "label": "Send Backward",
@@ -1555,7 +1653,8 @@
               "rowSpan": 1,
               "colSpan": 1,
               "image": "ObjectSendBackward.png",
-              "idStatus": "candidate"
+              "idStatus": "candidate",
+              "tooltip": "Send Backward (ObjectSendBackward) - Page Layout > Arrange"
             },
             {
               "label": "Selection Pane",
@@ -1567,7 +1666,8 @@
               "rowSpan": 1,
               "colSpan": 1,
               "image": "SelectionPane.png",
-              "idStatus": "candidate"
+              "idStatus": "candidate",
+              "tooltip": "Selection Pane (SelectionPane) - Page Layout > Arrange"
             },
             {
               "label": "Align",
@@ -1579,7 +1679,8 @@
               "rowSpan": 1,
               "colSpan": 1,
               "image": "ObjectsAlignMenu.png",
-              "idStatus": "candidate"
+              "idStatus": "candidate",
+              "tooltip": "Align (ObjectsAlignMenu) - Page Layout > Arrange"
             },
             {
               "label": "Group",
@@ -1591,7 +1692,8 @@
               "rowSpan": 1,
               "colSpan": 1,
               "image": "ObjectsGroupMenu.png",
-              "idStatus": "candidate"
+              "idStatus": "candidate",
+              "tooltip": "Group (ObjectsGroupMenu) - Page Layout > Arrange"
             },
             {
               "label": "Rotate",
@@ -1603,7 +1705,8 @@
               "rowSpan": 1,
               "colSpan": 1,
               "image": "ObjectRotateGallery.png",
-              "idStatus": "candidate"
+              "idStatus": "candidate",
+              "tooltip": "Rotate (ObjectRotateGallery) - Page Layout > Arrange"
             }
           ]
         }
@@ -1636,7 +1739,8 @@
               "rowSpan": 3,
               "colSpan": 2,
               "image": "InsertFunction.png",
-              "idStatus": "candidate"
+              "idStatus": "candidate",
+              "tooltip": "Insert Function (InsertFunction) - Formulas > Function Library"
             },
             {
               "label": "AutoSum",
@@ -1648,7 +1752,8 @@
               "rowSpan": 3,
               "colSpan": 2,
               "image": "AutoSum.png",
-              "idStatus": "candidate"
+              "idStatus": "candidate",
+              "tooltip": "AutoSum (AutoSum) - Formulas > Function Library"
             },
             {
               "label": "Recently Used",
@@ -1660,7 +1765,8 @@
               "rowSpan": 3,
               "colSpan": 2,
               "image": "RecentlyUsedFunctions.png",
-              "idStatus": "candidate"
+              "idStatus": "candidate",
+              "tooltip": "Recently Used (RecentlyUsedFunctions) - Formulas > Function Library"
             },
             {
               "label": "Financial",
@@ -1672,7 +1778,8 @@
               "rowSpan": 3,
               "colSpan": 2,
               "image": "FinancialFunctions.png",
-              "idStatus": "candidate"
+              "idStatus": "candidate",
+              "tooltip": "Financial (FinancialFunctions) - Formulas > Function Library"
             },
             {
               "label": "Logical",
@@ -1684,7 +1791,8 @@
               "rowSpan": 3,
               "colSpan": 2,
               "image": "LogicalFunctions.png",
-              "idStatus": "candidate"
+              "idStatus": "candidate",
+              "tooltip": "Logical (LogicalFunctions) - Formulas > Function Library"
             },
             {
               "label": "Text",
@@ -1696,7 +1804,8 @@
               "rowSpan": 3,
               "colSpan": 2,
               "image": "TextFunctions.png",
-              "idStatus": "candidate"
+              "idStatus": "candidate",
+              "tooltip": "Text (TextFunctions) - Formulas > Function Library"
             },
             {
               "label": "Date & Time",
@@ -1708,7 +1817,8 @@
               "rowSpan": 3,
               "colSpan": 2,
               "image": "DateTimeFunctions.png",
-              "idStatus": "candidate"
+              "idStatus": "candidate",
+              "tooltip": "Date & Time (DateTimeFunctions) - Formulas > Function Library"
             },
             {
               "label": "Lookup & Reference",
@@ -1720,7 +1830,8 @@
               "rowSpan": 3,
               "colSpan": 2,
               "image": "LookupReferenceFunctions.png",
-              "idStatus": "candidate"
+              "idStatus": "candidate",
+              "tooltip": "Lookup & Reference (LookupReferenceFunctions) - Formulas > Function Library"
             },
             {
               "label": "Math & Trig",
@@ -1732,7 +1843,8 @@
               "rowSpan": 3,
               "colSpan": 2,
               "image": "MathTrigFunctions.png",
-              "idStatus": "candidate"
+              "idStatus": "candidate",
+              "tooltip": "Math & Trig (MathTrigFunctions) - Formulas > Function Library"
             },
             {
               "label": "More Functions",
@@ -1744,7 +1856,8 @@
               "rowSpan": 3,
               "colSpan": 2,
               "image": "MoreFunctions.png",
-              "idStatus": "candidate"
+              "idStatus": "candidate",
+              "tooltip": "More Functions (MoreFunctions) - Formulas > Function Library"
             }
           ]
         },
@@ -1770,7 +1883,8 @@
               "rowSpan": 3,
               "colSpan": 2,
               "image": "NameManager.png",
-              "idStatus": "candidate"
+              "idStatus": "candidate",
+              "tooltip": "Name Manager (NameManager) - Formulas > Defined Names"
             },
             {
               "label": "Define Name",
@@ -1782,7 +1896,8 @@
               "rowSpan": 1,
               "colSpan": 1,
               "image": "DefineName.png",
-              "idStatus": "candidate"
+              "idStatus": "candidate",
+              "tooltip": "Define Name (DefineName) - Formulas > Defined Names"
             },
             {
               "label": "Use in Formula",
@@ -1794,7 +1909,8 @@
               "rowSpan": 1,
               "colSpan": 1,
               "image": "UseInFormula.png",
-              "idStatus": "candidate"
+              "idStatus": "candidate",
+              "tooltip": "Use in Formula (UseInFormula) - Formulas > Defined Names"
             },
             {
               "label": "Create from Selection",
@@ -1806,7 +1922,8 @@
               "rowSpan": 1,
               "colSpan": 1,
               "image": "CreateNamesFromSelection.png",
-              "idStatus": "candidate"
+              "idStatus": "candidate",
+              "tooltip": "Create from Selection (CreateNamesFromSelection) - Formulas > Defined Names"
             }
           ]
         },
@@ -1832,7 +1949,8 @@
               "rowSpan": 3,
               "colSpan": 2,
               "image": "TracePrecedents.png",
-              "idStatus": "candidate"
+              "idStatus": "candidate",
+              "tooltip": "Trace Precedents (TracePrecedents) - Formulas > Formula Auditing"
             },
             {
               "label": "Trace Dependents",
@@ -1844,7 +1962,8 @@
               "rowSpan": 3,
               "colSpan": 2,
               "image": "TraceDependents.png",
-              "idStatus": "candidate"
+              "idStatus": "candidate",
+              "tooltip": "Trace Dependents (TraceDependents) - Formulas > Formula Auditing"
             },
             {
               "label": "Remove Arrows",
@@ -1856,7 +1975,8 @@
               "rowSpan": 1,
               "colSpan": 1,
               "image": "RemoveArrows.png",
-              "idStatus": "candidate"
+              "idStatus": "candidate",
+              "tooltip": "Remove Arrows (RemoveArrows) - Formulas > Formula Auditing"
             },
             {
               "label": "Show Formulas",
@@ -1868,7 +1988,8 @@
               "rowSpan": 1,
               "colSpan": 1,
               "image": "ShowFormulas.png",
-              "idStatus": "candidate"
+              "idStatus": "candidate",
+              "tooltip": "Show Formulas (ShowFormulas) - Formulas > Formula Auditing"
             },
             {
               "label": "Error Checking",
@@ -1880,7 +2001,8 @@
               "rowSpan": 1,
               "colSpan": 1,
               "image": "ErrorChecking.png",
-              "idStatus": "candidate"
+              "idStatus": "candidate",
+              "tooltip": "Error Checking (ErrorChecking) - Formulas > Formula Auditing"
             },
             {
               "label": "Evaluate Formula",
@@ -1892,7 +2014,8 @@
               "rowSpan": 1,
               "colSpan": 1,
               "image": "EvaluateFormula.png",
-              "idStatus": "candidate"
+              "idStatus": "candidate",
+              "tooltip": "Evaluate Formula (EvaluateFormula) - Formulas > Formula Auditing"
             },
             {
               "label": "Watch Window",
@@ -1904,7 +2027,8 @@
               "rowSpan": 3,
               "colSpan": 2,
               "image": "WatchWindow.png",
-              "idStatus": "candidate"
+              "idStatus": "candidate",
+              "tooltip": "Watch Window (WatchWindow) - Formulas > Formula Auditing"
             }
           ]
         },
@@ -1930,7 +2054,8 @@
               "rowSpan": 3,
               "colSpan": 2,
               "image": "CalculationOptions.png",
-              "idStatus": "candidate"
+              "idStatus": "candidate",
+              "tooltip": "Calculation Options (CalculationOptions) - Formulas > Calculation"
             },
             {
               "label": "Calculate Now",
@@ -1942,7 +2067,8 @@
               "rowSpan": 1,
               "colSpan": 1,
               "image": "CalculateNow.png",
-              "idStatus": "candidate"
+              "idStatus": "candidate",
+              "tooltip": "Calculate Now (CalculateNow) - Formulas > Calculation"
             },
             {
               "label": "Calculate Sheet",
@@ -1954,7 +2080,8 @@
               "rowSpan": 1,
               "colSpan": 1,
               "image": "CalculateSheet.png",
-              "idStatus": "candidate"
+              "idStatus": "candidate",
+              "tooltip": "Calculate Sheet (CalculateSheet) - Formulas > Calculation"
             }
           ]
         }
@@ -1987,7 +2114,8 @@
               "rowSpan": 3,
               "colSpan": 2,
               "image": "GetData.png",
-              "idStatus": "candidate"
+              "idStatus": "candidate",
+              "tooltip": "Get Data (GetData) - Data > Get & Transform Data"
             },
             {
               "label": "From Text/CSV",
@@ -1999,7 +2127,8 @@
               "rowSpan": 1,
               "colSpan": 1,
               "image": "GetDataFromText.png",
-              "idStatus": "candidate"
+              "idStatus": "candidate",
+              "tooltip": "From Text/CSV (GetDataFromText) - Data > Get & Transform Data"
             },
             {
               "label": "From Web",
@@ -2011,7 +2140,8 @@
               "rowSpan": 1,
               "colSpan": 1,
               "image": "GetDataFromWeb.png",
-              "idStatus": "candidate"
+              "idStatus": "candidate",
+              "tooltip": "From Web (GetDataFromWeb) - Data > Get & Transform Data"
             },
             {
               "label": "From Table/Range",
@@ -2023,7 +2153,8 @@
               "rowSpan": 1,
               "colSpan": 1,
               "image": "GetDataFromTable.png",
-              "idStatus": "candidate"
+              "idStatus": "candidate",
+              "tooltip": "From Table/Range (GetDataFromTable) - Data > Get & Transform Data"
             },
             {
               "label": "Recent Sources",
@@ -2035,7 +2166,8 @@
               "rowSpan": 1,
               "colSpan": 1,
               "image": "RecentSources.png",
-              "idStatus": "candidate"
+              "idStatus": "candidate",
+              "tooltip": "Recent Sources (RecentSources) - Data > Get & Transform Data"
             },
             {
               "label": "Existing Connections",
@@ -2047,7 +2179,8 @@
               "rowSpan": 1,
               "colSpan": 1,
               "image": "ExistingConnections.png",
-              "idStatus": "candidate"
+              "idStatus": "candidate",
+              "tooltip": "Existing Connections (ExistingConnections) - Data > Get & Transform Data"
             }
           ]
         },
@@ -2073,7 +2206,8 @@
               "rowSpan": 3,
               "colSpan": 2,
               "image": "RefreshAll.png",
-              "idStatus": "candidate"
+              "idStatus": "candidate",
+              "tooltip": "Refresh All (RefreshAll) - Data > Queries & Connections"
             },
             {
               "label": "Queries & Connections",
@@ -2085,7 +2219,8 @@
               "rowSpan": 3,
               "colSpan": 2,
               "image": "QueriesConnections.png",
-              "idStatus": "candidate"
+              "idStatus": "candidate",
+              "tooltip": "Queries & Connections (QueriesConnections) - Data > Queries & Connections"
             },
             {
               "label": "Properties",
@@ -2097,7 +2232,8 @@
               "rowSpan": 1,
               "colSpan": 1,
               "image": "ConnectionProperties.png",
-              "idStatus": "candidate"
+              "idStatus": "candidate",
+              "tooltip": "Properties (ConnectionProperties) - Data > Queries & Connections"
             },
             {
               "label": "Edit Links",
@@ -2109,7 +2245,8 @@
               "rowSpan": 1,
               "colSpan": 1,
               "image": "EditLinks.png",
-              "idStatus": "candidate"
+              "idStatus": "candidate",
+              "tooltip": "Edit Links (EditLinks) - Data > Queries & Connections"
             }
           ]
         },
@@ -2135,7 +2272,8 @@
               "rowSpan": 3,
               "colSpan": 2,
               "image": "SortAscendingExcel.png",
-              "idStatus": "candidate"
+              "idStatus": "candidate",
+              "tooltip": "Sort A to Z (SortAscendingExcel) - Data > Sort & Filter"
             },
             {
               "label": "Sort Z to A",
@@ -2147,7 +2285,8 @@
               "rowSpan": 3,
               "colSpan": 2,
               "image": "SortDescendingExcel.png",
-              "idStatus": "candidate"
+              "idStatus": "candidate",
+              "tooltip": "Sort Z to A (SortDescendingExcel) - Data > Sort & Filter"
             },
             {
               "label": "Sort",
@@ -2159,7 +2298,8 @@
               "rowSpan": 3,
               "colSpan": 2,
               "image": "SortDialog.png",
-              "idStatus": "candidate"
+              "idStatus": "candidate",
+              "tooltip": "Sort (SortDialog) - Data > Sort & Filter"
             },
             {
               "label": "Filter",
@@ -2171,7 +2311,8 @@
               "rowSpan": 3,
               "colSpan": 2,
               "image": "Filter.png",
-              "idStatus": "candidate"
+              "idStatus": "candidate",
+              "tooltip": "Filter (Filter) - Data > Sort & Filter"
             },
             {
               "label": "Clear",
@@ -2183,7 +2324,8 @@
               "rowSpan": 1,
               "colSpan": 1,
               "image": "ClearFilter.png",
-              "idStatus": "candidate"
+              "idStatus": "candidate",
+              "tooltip": "Clear (ClearFilter) - Data > Sort & Filter"
             },
             {
               "label": "Reapply",
@@ -2195,7 +2337,8 @@
               "rowSpan": 1,
               "colSpan": 1,
               "image": "ReapplyFilter.png",
-              "idStatus": "candidate"
+              "idStatus": "candidate",
+              "tooltip": "Reapply (ReapplyFilter) - Data > Sort & Filter"
             },
             {
               "label": "Advanced",
@@ -2207,7 +2350,8 @@
               "rowSpan": 1,
               "colSpan": 1,
               "image": "AdvancedFilterDialog.png",
-              "idStatus": "candidate"
+              "idStatus": "candidate",
+              "tooltip": "Advanced (AdvancedFilterDialog) - Data > Sort & Filter"
             }
           ]
         },
@@ -2233,7 +2377,8 @@
               "rowSpan": 3,
               "colSpan": 2,
               "image": "TextToColumns.png",
-              "idStatus": "candidate"
+              "idStatus": "candidate",
+              "tooltip": "Text to Columns (TextToColumns) - Data > Data Tools"
             },
             {
               "label": "Flash Fill",
@@ -2245,7 +2390,8 @@
               "rowSpan": 3,
               "colSpan": 2,
               "image": "FlashFill.png",
-              "idStatus": "candidate"
+              "idStatus": "candidate",
+              "tooltip": "Flash Fill (FlashFill) - Data > Data Tools"
             },
             {
               "label": "Remove Duplicates",
@@ -2257,7 +2403,8 @@
               "rowSpan": 3,
               "colSpan": 2,
               "image": "RemoveDuplicates.png",
-              "idStatus": "candidate"
+              "idStatus": "candidate",
+              "tooltip": "Remove Duplicates (RemoveDuplicates) - Data > Data Tools"
             },
             {
               "label": "Data Validation",
@@ -2269,7 +2416,8 @@
               "rowSpan": 3,
               "colSpan": 2,
               "image": "DataValidation.png",
-              "idStatus": "candidate"
+              "idStatus": "candidate",
+              "tooltip": "Data Validation (DataValidation) - Data > Data Tools"
             },
             {
               "label": "Consolidate",
@@ -2281,7 +2429,8 @@
               "rowSpan": 1,
               "colSpan": 1,
               "image": "Consolidate.png",
-              "idStatus": "candidate"
+              "idStatus": "candidate",
+              "tooltip": "Consolidate (Consolidate) - Data > Data Tools"
             },
             {
               "label": "Relationships",
@@ -2293,7 +2442,8 @@
               "rowSpan": 1,
               "colSpan": 1,
               "image": "Relationships.png",
-              "idStatus": "candidate"
+              "idStatus": "candidate",
+              "tooltip": "Relationships (Relationships) - Data > Data Tools"
             }
           ]
         },
@@ -2319,7 +2469,8 @@
               "rowSpan": 3,
               "colSpan": 2,
               "image": "WhatIfAnalysis.png",
-              "idStatus": "candidate"
+              "idStatus": "candidate",
+              "tooltip": "What-If Analysis (WhatIfAnalysis) - Data > Forecast"
             },
             {
               "label": "Forecast Sheet",
@@ -2331,7 +2482,8 @@
               "rowSpan": 3,
               "colSpan": 2,
               "image": "ForecastSheet.png",
-              "idStatus": "candidate"
+              "idStatus": "candidate",
+              "tooltip": "Forecast Sheet (ForecastSheet) - Data > Forecast"
             }
           ]
         },
@@ -2357,7 +2509,8 @@
               "rowSpan": 3,
               "colSpan": 2,
               "image": "GroupRowsColumns.png",
-              "idStatus": "candidate"
+              "idStatus": "candidate",
+              "tooltip": "Group (GroupRowsColumns) - Data > Outline"
             },
             {
               "label": "Ungroup",
@@ -2369,7 +2522,8 @@
               "rowSpan": 3,
               "colSpan": 2,
               "image": "UngroupRowsColumns.png",
-              "idStatus": "candidate"
+              "idStatus": "candidate",
+              "tooltip": "Ungroup (UngroupRowsColumns) - Data > Outline"
             },
             {
               "label": "Subtotal",
@@ -2381,7 +2535,8 @@
               "rowSpan": 3,
               "colSpan": 2,
               "image": "Subtotal.png",
-              "idStatus": "candidate"
+              "idStatus": "candidate",
+              "tooltip": "Subtotal (Subtotal) - Data > Outline"
             }
           ]
         }
@@ -2414,7 +2569,8 @@
               "rowSpan": 3,
               "colSpan": 2,
               "image": "Spelling.png",
-              "idStatus": "candidate"
+              "idStatus": "candidate",
+              "tooltip": "Spelling (Spelling) - Review > Proofing"
             },
             {
               "label": "Thesaurus",
@@ -2426,7 +2582,8 @@
               "rowSpan": 3,
               "colSpan": 2,
               "image": "Thesaurus.png",
-              "idStatus": "candidate"
+              "idStatus": "candidate",
+              "tooltip": "Thesaurus (Thesaurus) - Review > Proofing"
             }
           ]
         },
@@ -2452,7 +2609,8 @@
               "rowSpan": 3,
               "colSpan": 3,
               "image": "AccessibilityChecker.png",
-              "idStatus": "candidate"
+              "idStatus": "candidate",
+              "tooltip": "Check Accessibility (AccessibilityChecker) - Review > Accessibility"
             }
           ]
         },
@@ -2478,7 +2636,8 @@
               "rowSpan": 3,
               "colSpan": 3,
               "image": "SmartLookup.png",
-              "idStatus": "candidate"
+              "idStatus": "candidate",
+              "tooltip": "Smart Lookup (SmartLookup) - Review > Insights"
             }
           ]
         },
@@ -2504,7 +2663,8 @@
               "rowSpan": 3,
               "colSpan": 2,
               "image": "Translate.png",
-              "idStatus": "candidate"
+              "idStatus": "candidate",
+              "tooltip": "Translate (Translate) - Review > Language"
             }
           ]
         },
@@ -2530,7 +2690,8 @@
               "rowSpan": 3,
               "colSpan": 2,
               "image": "NewComment.png",
-              "idStatus": "candidate"
+              "idStatus": "candidate",
+              "tooltip": "New Comment (NewComment) - Review > Comments"
             },
             {
               "label": "Delete",
@@ -2542,7 +2703,8 @@
               "rowSpan": 1,
               "colSpan": 1,
               "image": "DeleteComment.png",
-              "idStatus": "candidate"
+              "idStatus": "candidate",
+              "tooltip": "Delete (DeleteComment) - Review > Comments"
             },
             {
               "label": "Previous",
@@ -2554,7 +2716,8 @@
               "rowSpan": 1,
               "colSpan": 1,
               "image": "PreviousComment.png",
-              "idStatus": "candidate"
+              "idStatus": "candidate",
+              "tooltip": "Previous (PreviousComment) - Review > Comments"
             },
             {
               "label": "Next",
@@ -2566,7 +2729,8 @@
               "rowSpan": 1,
               "colSpan": 1,
               "image": "NextComment.png",
-              "idStatus": "candidate"
+              "idStatus": "candidate",
+              "tooltip": "Next (NextComment) - Review > Comments"
             },
             {
               "label": "Show Comments",
@@ -2578,7 +2742,8 @@
               "rowSpan": 1,
               "colSpan": 1,
               "image": "ShowComments.png",
-              "idStatus": "candidate"
+              "idStatus": "candidate",
+              "tooltip": "Show Comments (ShowComments) - Review > Comments"
             }
           ]
         },
@@ -2604,7 +2769,8 @@
               "rowSpan": 3,
               "colSpan": 2,
               "image": "NewNote.png",
-              "idStatus": "candidate"
+              "idStatus": "candidate",
+              "tooltip": "New Note (NewNote) - Review > Notes"
             },
             {
               "label": "Previous Note",
@@ -2616,7 +2782,8 @@
               "rowSpan": 1,
               "colSpan": 1,
               "image": "PreviousNote.png",
-              "idStatus": "candidate"
+              "idStatus": "candidate",
+              "tooltip": "Previous Note (PreviousNote) - Review > Notes"
             },
             {
               "label": "Next Note",
@@ -2628,7 +2795,8 @@
               "rowSpan": 1,
               "colSpan": 1,
               "image": "NextNote.png",
-              "idStatus": "candidate"
+              "idStatus": "candidate",
+              "tooltip": "Next Note (NextNote) - Review > Notes"
             },
             {
               "label": "Show/Hide Note",
@@ -2640,7 +2808,8 @@
               "rowSpan": 1,
               "colSpan": 1,
               "image": "ShowHideNote.png",
-              "idStatus": "candidate"
+              "idStatus": "candidate",
+              "tooltip": "Show/Hide Note (ShowHideNote) - Review > Notes"
             }
           ]
         },
@@ -2666,7 +2835,8 @@
               "rowSpan": 3,
               "colSpan": 2,
               "image": "ProtectSheet.png",
-              "idStatus": "candidate"
+              "idStatus": "candidate",
+              "tooltip": "Protect Sheet (ProtectSheet) - Review > Protect"
             },
             {
               "label": "Protect Workbook",
@@ -2678,7 +2848,8 @@
               "rowSpan": 3,
               "colSpan": 2,
               "image": "ProtectWorkbook.png",
-              "idStatus": "candidate"
+              "idStatus": "candidate",
+              "tooltip": "Protect Workbook (ProtectWorkbook) - Review > Protect"
             },
             {
               "label": "Allow Edit Ranges",
@@ -2690,7 +2861,8 @@
               "rowSpan": 1,
               "colSpan": 1,
               "image": "AllowEditRanges.png",
-              "idStatus": "candidate"
+              "idStatus": "candidate",
+              "tooltip": "Allow Edit Ranges (AllowEditRanges) - Review > Protect"
             }
           ]
         }
@@ -2723,7 +2895,8 @@
               "rowSpan": 3,
               "colSpan": 2,
               "image": "ViewNormalViewExcel.png",
-              "idStatus": "candidate"
+              "idStatus": "candidate",
+              "tooltip": "Normal (ViewNormalViewExcel) - View > Workbook Views"
             },
             {
               "label": "Page Break Preview",
@@ -2735,7 +2908,8 @@
               "rowSpan": 3,
               "colSpan": 2,
               "image": "ViewPageBreakPreviewView.png",
-              "idStatus": "candidate"
+              "idStatus": "candidate",
+              "tooltip": "Page Break Preview (ViewPageBreakPreviewView) - View > Workbook Views"
             },
             {
               "label": "Page Layout",
@@ -2747,7 +2921,8 @@
               "rowSpan": 3,
               "colSpan": 2,
               "image": "ViewPageLayoutView.png",
-              "idStatus": "candidate"
+              "idStatus": "candidate",
+              "tooltip": "Page Layout (ViewPageLayoutView) - View > Workbook Views"
             },
             {
               "label": "Custom Views",
@@ -2759,7 +2934,8 @@
               "rowSpan": 1,
               "colSpan": 1,
               "image": "CustomViews.png",
-              "idStatus": "candidate"
+              "idStatus": "candidate",
+              "tooltip": "Custom Views (CustomViews) - View > Workbook Views"
             }
           ]
         },
@@ -2785,7 +2961,8 @@
               "rowSpan": 1,
               "colSpan": 1,
               "image": "ViewRuler.png",
-              "idStatus": "candidate"
+              "idStatus": "candidate",
+              "tooltip": "Ruler (ViewRuler) - View > Show"
             },
             {
               "label": "Gridlines",
@@ -2797,7 +2974,8 @@
               "rowSpan": 1,
               "colSpan": 1,
               "image": "ViewGridlinesExcel.png",
-              "idStatus": "candidate"
+              "idStatus": "candidate",
+              "tooltip": "Gridlines (ViewGridlinesExcel) - View > Show"
             },
             {
               "label": "Formula Bar",
@@ -2809,7 +2987,8 @@
               "rowSpan": 1,
               "colSpan": 1,
               "image": "ViewFormulaBar.png",
-              "idStatus": "candidate"
+              "idStatus": "candidate",
+              "tooltip": "Formula Bar (ViewFormulaBar) - View > Show"
             },
             {
               "label": "Headings",
@@ -2821,7 +3000,8 @@
               "rowSpan": 1,
               "colSpan": 1,
               "image": "ViewHeadingsExcel.png",
-              "idStatus": "candidate"
+              "idStatus": "candidate",
+              "tooltip": "Headings (ViewHeadingsExcel) - View > Show"
             }
           ]
         },
@@ -2847,7 +3027,8 @@
               "rowSpan": 3,
               "colSpan": 2,
               "image": "ZoomDialog.png",
-              "idStatus": "candidate"
+              "idStatus": "candidate",
+              "tooltip": "Zoom (ZoomDialog) - View > Zoom"
             },
             {
               "label": "100%",
@@ -2859,7 +3040,8 @@
               "rowSpan": 3,
               "colSpan": 2,
               "image": "Zoom100Percent.png",
-              "idStatus": "candidate"
+              "idStatus": "candidate",
+              "tooltip": "100% (Zoom100Percent) - View > Zoom"
             },
             {
               "label": "Zoom to Selection",
@@ -2871,7 +3053,8 @@
               "rowSpan": 3,
               "colSpan": 2,
               "image": "ZoomToSelection.png",
-              "idStatus": "candidate"
+              "idStatus": "candidate",
+              "tooltip": "Zoom to Selection (ZoomToSelection) - View > Zoom"
             }
           ]
         },
@@ -2897,7 +3080,8 @@
               "rowSpan": 3,
               "colSpan": 2,
               "image": "WindowNew.png",
-              "idStatus": "candidate"
+              "idStatus": "candidate",
+              "tooltip": "New Window (WindowNew) - View > Window"
             },
             {
               "label": "Arrange All",
@@ -2909,7 +3093,8 @@
               "rowSpan": 1,
               "colSpan": 1,
               "image": "WindowArrangeAll.png",
-              "idStatus": "candidate"
+              "idStatus": "candidate",
+              "tooltip": "Arrange All (WindowArrangeAll) - View > Window"
             },
             {
               "label": "Freeze Panes",
@@ -2921,7 +3106,8 @@
               "rowSpan": 1,
               "colSpan": 1,
               "image": "FreezePanes.png",
-              "idStatus": "candidate"
+              "idStatus": "candidate",
+              "tooltip": "Freeze Panes (FreezePanes) - View > Window"
             },
             {
               "label": "Split",
@@ -2933,7 +3119,8 @@
               "rowSpan": 1,
               "colSpan": 1,
               "image": "WindowSplit.png",
-              "idStatus": "candidate"
+              "idStatus": "candidate",
+              "tooltip": "Split (WindowSplit) - View > Window"
             },
             {
               "label": "Hide",
@@ -2945,7 +3132,8 @@
               "rowSpan": 1,
               "colSpan": 1,
               "image": "WindowHide.png",
-              "idStatus": "candidate"
+              "idStatus": "candidate",
+              "tooltip": "Hide (WindowHide) - View > Window"
             },
             {
               "label": "Unhide",
@@ -2957,7 +3145,8 @@
               "rowSpan": 1,
               "colSpan": 1,
               "image": "WindowUnhide.png",
-              "idStatus": "candidate"
+              "idStatus": "candidate",
+              "tooltip": "Unhide (WindowUnhide) - View > Window"
             },
             {
               "label": "View Side by Side",
@@ -2969,7 +3158,8 @@
               "rowSpan": 1,
               "colSpan": 1,
               "image": "WindowViewSideBySide.png",
-              "idStatus": "candidate"
+              "idStatus": "candidate",
+              "tooltip": "View Side by Side (WindowViewSideBySide) - View > Window"
             },
             {
               "label": "Synchronous Scrolling",
@@ -2981,7 +3171,8 @@
               "rowSpan": 1,
               "colSpan": 1,
               "image": "WindowSynchronousScrolling.png",
-              "idStatus": "candidate"
+              "idStatus": "candidate",
+              "tooltip": "Synchronous Scrolling (WindowSynchronousScrolling) - View > Window"
             },
             {
               "label": "Reset Window Position",
@@ -2993,7 +3184,8 @@
               "rowSpan": 1,
               "colSpan": 1,
               "image": "WindowResetPosition.png",
-              "idStatus": "candidate"
+              "idStatus": "candidate",
+              "tooltip": "Reset Window Position (WindowResetPosition) - View > Window"
             },
             {
               "label": "Switch Windows",
@@ -3005,7 +3197,8 @@
               "rowSpan": 1,
               "colSpan": 1,
               "image": "WindowSwitchWindowsMenuExcel.png",
-              "idStatus": "candidate"
+              "idStatus": "candidate",
+              "tooltip": "Switch Windows (WindowSwitchWindowsMenuExcel) - View > Window"
             }
           ]
         },
@@ -3031,7 +3224,8 @@
               "rowSpan": 3,
               "colSpan": 3,
               "image": "ViewMacros.png",
-              "idStatus": "candidate"
+              "idStatus": "candidate",
+              "tooltip": "Macros (ViewMacros) - View > Macros"
             }
           ]
         }
@@ -3064,7 +3258,8 @@
               "rowSpan": 3,
               "colSpan": 2,
               "image": "VisualBasic.png",
-              "idStatus": "candidate"
+              "idStatus": "candidate",
+              "tooltip": "Visual Basic (VisualBasic) - Developer > Code"
             },
             {
               "label": "Macros",
@@ -3076,7 +3271,8 @@
               "rowSpan": 3,
               "colSpan": 2,
               "image": "Macros.png",
-              "idStatus": "candidate"
+              "idStatus": "candidate",
+              "tooltip": "Macros (Macros) - Developer > Code"
             },
             {
               "label": "Record Macro",
@@ -3088,7 +3284,8 @@
               "rowSpan": 1,
               "colSpan": 1,
               "image": "RecordMacro.png",
-              "idStatus": "candidate"
+              "idStatus": "candidate",
+              "tooltip": "Record Macro (RecordMacro) - Developer > Code"
             },
             {
               "label": "Use Relative References",
@@ -3100,7 +3297,8 @@
               "rowSpan": 1,
               "colSpan": 1,
               "image": "UseRelativeReferences.png",
-              "idStatus": "candidate"
+              "idStatus": "candidate",
+              "tooltip": "Use Relative References (UseRelativeReferences) - Developer > Code"
             },
             {
               "label": "Macro Security",
@@ -3112,7 +3310,8 @@
               "rowSpan": 1,
               "colSpan": 1,
               "image": "MacroSecurity.png",
-              "idStatus": "candidate"
+              "idStatus": "candidate",
+              "tooltip": "Macro Security (MacroSecurity) - Developer > Code"
             }
           ]
         },
@@ -3138,7 +3337,8 @@
               "rowSpan": 3,
               "colSpan": 2,
               "image": "ExcelAddIns.png",
-              "idStatus": "candidate"
+              "idStatus": "candidate",
+              "tooltip": "Excel Add-ins (ExcelAddIns) - Developer > Add-ins"
             },
             {
               "label": "COM Add-ins",
@@ -3150,7 +3350,8 @@
               "rowSpan": 3,
               "colSpan": 2,
               "image": "ComAddIns.png",
-              "idStatus": "candidate"
+              "idStatus": "candidate",
+              "tooltip": "COM Add-ins (ComAddIns) - Developer > Add-ins"
             }
           ]
         },
@@ -3176,7 +3377,8 @@
               "rowSpan": 3,
               "colSpan": 2,
               "image": "ControlInsert.png",
-              "idStatus": "candidate"
+              "idStatus": "candidate",
+              "tooltip": "Insert Controls (ControlInsert) - Developer > Controls"
             },
             {
               "label": "Design Mode",
@@ -3188,7 +3390,8 @@
               "rowSpan": 3,
               "colSpan": 2,
               "image": "DesignMode.png",
-              "idStatus": "candidate"
+              "idStatus": "candidate",
+              "tooltip": "Design Mode (DesignMode) - Developer > Controls"
             },
             {
               "label": "Properties",
@@ -3200,7 +3403,8 @@
               "rowSpan": 1,
               "colSpan": 1,
               "image": "ControlProperties.png",
-              "idStatus": "candidate"
+              "idStatus": "candidate",
+              "tooltip": "Properties (ControlProperties) - Developer > Controls"
             },
             {
               "label": "View Code",
@@ -3212,7 +3416,8 @@
               "rowSpan": 1,
               "colSpan": 1,
               "image": "ViewCode.png",
-              "idStatus": "candidate"
+              "idStatus": "candidate",
+              "tooltip": "View Code (ViewCode) - Developer > Controls"
             },
             {
               "label": "Run Dialog",
@@ -3224,7 +3429,8 @@
               "rowSpan": 1,
               "colSpan": 1,
               "image": "RunDialog.png",
-              "idStatus": "candidate"
+              "idStatus": "candidate",
+              "tooltip": "Run Dialog (RunDialog) - Developer > Controls"
             }
           ]
         },
@@ -3250,7 +3456,8 @@
               "rowSpan": 3,
               "colSpan": 2,
               "image": "XmlSource.png",
-              "idStatus": "candidate"
+              "idStatus": "candidate",
+              "tooltip": "Source (XmlSource) - Developer > XML"
             },
             {
               "label": "Map Properties",
@@ -3262,7 +3469,8 @@
               "rowSpan": 1,
               "colSpan": 1,
               "image": "XmlMapProperties.png",
-              "idStatus": "candidate"
+              "idStatus": "candidate",
+              "tooltip": "Map Properties (XmlMapProperties) - Developer > XML"
             },
             {
               "label": "Expansion Packs",
@@ -3274,7 +3482,8 @@
               "rowSpan": 1,
               "colSpan": 1,
               "image": "XmlExpansionPacks.png",
-              "idStatus": "candidate"
+              "idStatus": "candidate",
+              "tooltip": "Expansion Packs (XmlExpansionPacks) - Developer > XML"
             },
             {
               "label": "Refresh Data",
@@ -3286,7 +3495,8 @@
               "rowSpan": 1,
               "colSpan": 1,
               "image": "XmlRefreshData.png",
-              "idStatus": "candidate"
+              "idStatus": "candidate",
+              "tooltip": "Refresh Data (XmlRefreshData) - Developer > XML"
             },
             {
               "label": "Import",
@@ -3298,7 +3508,8 @@
               "rowSpan": 1,
               "colSpan": 1,
               "image": "XmlImport.png",
-              "idStatus": "candidate"
+              "idStatus": "candidate",
+              "tooltip": "Import (XmlImport) - Developer > XML"
             },
             {
               "label": "Export",
@@ -3310,7 +3521,8 @@
               "rowSpan": 1,
               "colSpan": 1,
               "image": "XmlExport.png",
-              "idStatus": "candidate"
+              "idStatus": "candidate",
+              "tooltip": "Export (XmlExport) - Developer > XML"
             }
           ]
         }

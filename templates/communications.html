@@ -342,7 +342,11 @@ function updateThreadCard(thread) {
     }
 }
 
+let communicationPollInFlight = false;
+
 async function pollCommunicationUpdates() {
+    if (communicationPollInFlight || document.visibilityState !== 'visible') return;
+    communicationPollInFlight = true;
     const params = new URLSearchParams(selectedFilters);
     try {
         const response = await fetch(`/communications/updates?${params.toString()}`, {
@@ -354,11 +358,13 @@ async function pollCommunicationUpdates() {
         if (!payload.ok || !Array.isArray(payload.threads)) return;
         payload.threads.forEach(updateThreadCard);
     } catch (_error) {
+    } finally {
+        communicationPollInFlight = false;
     }
 }
 
 document.querySelectorAll('.thread-toggle').forEach(bindThreadToggle);
-window.setInterval(pollCommunicationUpdates, 3000);
+window.setInterval(pollCommunicationUpdates, 10000);
 </script>
 </body>
 </html>

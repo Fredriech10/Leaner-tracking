@@ -3,6 +3,9 @@
 <head>
     <meta charset="UTF-8">
     <title>Word Practical - {{ subject_name }} {{ task_name }}</title>
+    {% for icon_url in simulator_definition.shell.icon_urls %}
+    <link rel="prefetch" as="image" href="{{ icon_url }}">
+    {% endfor %}
     <style>
         * { box-sizing: border-box; }
         body { margin: 0; font-family: "Segoe UI", Arial, sans-serif; background: #d9d9d9; color: #201f1e; }
@@ -34,6 +37,8 @@
         .ribbon-btn.primary { background: rgba(43, 87, 154, 0.08); border-color: #bfd0e7; color: #0f4fa1; }
         .ribbon-btn.active { background: rgba(43, 87, 154, 0.14); border-color: #8fb4e8; color: #0f4fa1; }
         .ribbon-btn .icon { font-size: 1rem; line-height: 1; }
+        .ribbon-btn .icon-img { width: 18px; height: 18px; object-fit: contain; display: block; }
+        .ribbon-btn[data-control-size="large"] .icon-img { width: 30px; height: 30px; }
         .ribbon-btn .label { display: none; }
         .word-ribbon[data-ribbon-tab]:not([data-ribbon-tab="home"]) .ribbon-buttons { display: grid; grid-auto-flow: column; grid-auto-columns: minmax(56px, auto); grid-template-rows: repeat(2, minmax(28px, auto)); gap: 5px 6px; width: auto; }
         .word-ribbon[data-ribbon-tab]:not([data-ribbon-tab="home"]) .ribbon-btn { width: auto; min-width: 56px; min-height: 28px; gap: 4px; }
@@ -52,7 +57,8 @@
         .ribbon-group.group-clipboard .ribbon-btn:nth-child(4) { grid-column: 2; grid-row: 3; }
         .ribbon-group.group-font { min-width: 372px; }
         .ribbon-group.group-font .ribbon-buttons { display: grid; grid-template-columns: repeat(11, 28px); grid-template-rows: 26px 26px; gap: 4px 5px; align-items: stretch; }
-        .font-select-wrap { position: relative; height: 26px; border: 1px solid #d2d0ce; background: white; border-radius: 2px; overflow: hidden; }
+        .font-select-wrap { position: relative; height: 26px; border: 1px solid #d2d0ce; background: white; border-radius: 2px; overflow: hidden; cursor: pointer; }
+        .font-select-wrap.active { background: rgba(43, 87, 154, 0.14); border-color: #8fb4e8; }
         .font-select-wrap::after { content: "▼"; position: absolute; right: 6px; top: 50%; transform: translateY(-50%); font-size: 0.55rem; color: #605e5c; pointer-events: none; }
         .font-select-wrap.family { width: auto; grid-column: 1 / span 3; grid-row: 1; }
         .font-select-wrap.size { width: auto; grid-column: 4 / span 2; grid-row: 1; }
@@ -171,10 +177,10 @@
         .preview-title { font-size: 0.78rem; color: #64748b; text-transform: uppercase; letter-spacing: .04em; font-weight: 700; margin-bottom: 8px; }
         .preview-text { color: #1f2937; line-height: 1.65; }
         .replace-hit { background: #fef3c7; padding: 2px 3px; border-radius: 4px; }
-        .word-dialog { border: 1px solid #bfc7d5; border-radius: 10px; background: #ffffff; box-shadow: 0 12px 26px rgba(15,23,42,0.08); overflow: hidden; }
+        .word-dialog { border: 1px solid #9da9b8; border-radius: 2px; background: #ffffff; box-shadow: 0 12px 26px rgba(15,23,42,0.14); overflow: hidden; }
         .dialog-layer { position: absolute; inset: 8px 0 0 0; pointer-events: none; z-index: 8; }
         .dialog-layer::before { content: ""; position: absolute; inset: 0; background: linear-gradient(180deg, rgba(255,255,255,0.0) 0%, rgba(241,245,249,0.28) 14%, rgba(241,245,249,0.42) 100%); }
-        .word-dialog-floating { width: min(560px, calc(100% - 24px)); margin-left: auto; margin-right: 12px; box-shadow: 0 24px 48px rgba(15,23,42,0.22); border-radius: 10px; pointer-events: auto; position: relative; }
+        .word-dialog-floating { width: min(560px, calc(100% - 24px)); margin-left: auto; margin-right: 12px; box-shadow: 0 24px 48px rgba(15,23,42,0.22); border-radius: 2px; pointer-events: auto; position: relative; transform: translateY(-96px); }
         .word-dialog-anchored { width: 238px; position: fixed; z-index: 40; border-radius: 4px; box-shadow: 0 20px 40px rgba(15,23,42,0.24); pointer-events: auto; }
         .word-dialog-head { background: linear-gradient(180deg, #fbfbfc 0%, #f2f4f7 100%); padding: 7px 12px; border-bottom: 1px solid #d9dfe8; font-weight: 400; color: #111827; font-size: 0.9rem; display: flex; justify-content: space-between; align-items: center; }
         .word-dialog-head::after { content: "?    ✕"; white-space: pre; font-size: 0.82rem; color: #111827; }
@@ -298,7 +304,7 @@
         .border-preview-box.all::before { width: 2px; top: 0; bottom: 0; left: 50%; transform: translateX(-50%); }
         .border-preview-box.all::after { height: 2px; left: 0; right: 0; top: 50%; transform: translateY(-50%); }
         .office-mini-tabs { display: flex; gap: 2px; border-bottom: 1px solid #d7dee8; margin-bottom: 12px; }
-        .office-mini-tab { padding: 6px 12px; border: 1px solid #d7dee8; border-bottom: none; background: #f8fafc; font-size: 0.8rem; color: #334155; }
+        .office-mini-tab { padding: 6px 12px; border: 1px solid #d7dee8; border-bottom: none; background: #f8fafc; font-size: 0.8rem; color: #334155; cursor: pointer; }
         .office-mini-tab.active { background: #fff; color: #111827; }
         .border-dialog-layout { display: grid; grid-template-columns: 1fr 160px; gap: 14px; align-items: start; }
         .border-settings { display: grid; gap: 12px; }
@@ -338,7 +344,8 @@
         .mini-document { border: 1px solid #dbe4f0; background: #fff; box-shadow: inset 0 0 0 1px #f8fafc; padding: 16px 18px; }
         .bookmark-dialog-grid { display: grid; grid-template-columns: 1fr; gap: 8px; }
         .bookmark-list { border: 1px solid #b8c0cc; background: #fff; min-height: 96px; }
-        .bookmark-list-item { padding: 5px 8px; font-size: 0.82rem; border-bottom: 1px solid #edf0f4; }
+        .bookmark-list-item { width: 100%; padding: 5px 8px; font-size: 0.82rem; border: none; border-bottom: 1px solid #edf0f4; background: #fff; text-align: left; cursor: pointer; }
+        .bookmark-list-item.selected { background: #cfe8ff; }
         .caption-object-preview { width: 100%; min-height: 130px; border: 1px solid #cfd8e3; background: linear-gradient(180deg, #f8fafc 0%, #eef2f7 100%); display: grid; place-items: center; color: #475569; }
         .dialog-two-col { display: grid; grid-template-columns: 1fr 120px; gap: 12px; align-items: start; }
         .dialog-side-actions { display: grid; gap: 8px; align-content: start; }
@@ -350,7 +357,7 @@
         .caption-preview-mini { border: 1px solid #d7dee8; background: #fff; padding: 10px; display: grid; gap: 8px; }
         .bookmark-preview-line { border: 1px solid #d7dee8; background: #fff; padding: 8px 10px; font-size: 0.82rem; color: #334155; }
         .page-setup-tabs { display: flex; gap: 2px; border-bottom: 1px solid #d7dee8; margin-bottom: 12px; }
-        .page-setup-tab { padding: 6px 12px; border: 1px solid #d7dee8; border-bottom: none; background: #f8fafc; font-size: 0.8rem; color: #334155; }
+        .page-setup-tab { padding: 6px 12px; border: 1px solid #d7dee8; border-bottom: none; background: #f8fafc; font-size: 0.8rem; color: #334155; cursor: pointer; }
         .page-setup-tab.active { background: #fff; color: #111827; }
         .page-setup-dialog-layout { display: grid; grid-template-columns: 1fr 180px; gap: 14px; align-items: start; }
         .page-setup-preview-pane { border: 1px solid #d7dee8; background: linear-gradient(180deg, #f8fafc 0%, #ffffff 100%); padding: 12px; display: grid; gap: 10px; }
@@ -464,12 +471,12 @@
                 <div class="ribbon-buttons">
                     {% for control in group.controls %}
                     {% if group.class_name == 'group-font' and control.id == 'home.font_family' %}
-                    <div class="font-select-wrap family"><select class="font-select"><option selected>Calibri (Body)</option></select></div>
+                    <div id="{{ control.id | replace('.', '_') }}" class="font-select-wrap family" data-control-id="{{ control.id }}" data-control-kind="{{ control.kind }}" title="{{ control.tooltip or control.label }}" onclick="handleControlClick(event, '{{ control.id }}')"><select class="font-select"><option selected>Calibri (Body)</option></select></div>
                     {% elif group.class_name == 'group-font' and control.id == 'home.font_size' %}
-                    <div class="font-select-wrap size"><select class="font-select"><option>11</option><option>16</option><option>24</option></select></div>
+                    <div id="{{ control.id | replace('.', '_') }}" class="font-select-wrap size" data-control-id="{{ control.id }}" data-control-kind="{{ control.kind }}" title="{{ control.tooltip or control.label }}" onclick="handleControlClick(event, '{{ control.id }}')"><select class="font-select"><option>11</option><option>16</option><option>24</option></select></div>
                     {% else %}
-                    <button type="button" id="{{ control.id | replace('.', '_') }}" class="ribbon-btn" data-control-id="{{ control.id }}" data-control-kind="{{ control.kind }}" onclick="handleControlClick(event, '{{ control.id }}')">
-                        <span class="icon">{{ control.icon }}</span>
+                    <button type="button" id="{{ control.id | replace('.', '_') }}" class="ribbon-btn" data-control-id="{{ control.id }}" data-control-kind="{{ control.kind }}" data-control-size="{{ control.size or 'small' }}" title="{{ control.tooltip or control.label }}" onclick="handleControlClick(event, '{{ control.id }}')">
+                        <span class="icon">{% if control.image_url %}<img class="icon-img" src="{{ control.image_url }}" alt="" loading="eager" decoding="async">{% else %}{{ control.icon }}{% endif %}</span>
                         <span class="label">{{ control.label }}</span>
                     </button>
                     {% endif %}
@@ -637,14 +644,14 @@ function getControlAnchorStyle(controlId, width, offsetY = 8) {
     const top = Math.round(rect.bottom + offsetY);
     return `left:${left}px;top:${top}px;width:${width}px;`;
 }
-function currentControls() { return currentQuestion().steps.filter(step => step.includes(".")); }
+function currentControls() { return currentQuestion().steps.filter(step => step !== "home" && step !== "insert" && step !== "layout" && step !== "references" && step !== "mailings"); }
 function currentTabs() {
     const tabs = new Set(["home"]);
     currentQuestion().steps.forEach(step => tabs.add(step.split(".")[0]));
     return tabs;
 }
 function updateRibbonHighlights() {
-    document.querySelectorAll('.ribbon-btn[data-control-id]').forEach(button => {
+    document.querySelectorAll('.ribbon-btn[data-control-id], .font-select-wrap[data-control-id]').forEach(button => {
         const controlId = button.dataset.controlId;
         button.classList.remove('primary');
         button.classList.toggle('active', currentState().actions.includes(controlId));
@@ -729,6 +736,14 @@ function renderCurrentQuestion() {
 function defaultDocStateForQuestion(question) {
     const t = question.title;
     if (t === "Font Size") return { font_size: 16, size_dialog_open: false, pending_size: 16 };
+    if (t === "Bold Text") return { bold_applied: false };
+    if (t === "Italic Text") return { italic_applied: false };
+    if (t === "Underline Text") return { underline_applied: false };
+    if (t === "Highlight Text") return { highlight_applied: false };
+    if (t === "Clear Formatting") return { formatting_cleared: false };
+    if (t === "Copy Text") return { copied_text: false };
+    if (t === "Paste Text") return { pasted_text: false };
+    if (t === "Format Painter") return { format_painted: false };
     if (t === "Font Color") return { font_color: "#111827", color_dialog_open: false, pending_color: "#c62828", required_color: "#c62828", required_color_name: "Red" };
     if (t === "Bullet List") return { list_type: "none", list_dialog_open: false, pending_list: "" };
     if (t === "Numbered List") return { list_type: "none", list_dialog_open: false, pending_list: "" };
@@ -737,9 +752,9 @@ function defaultDocStateForQuestion(question) {
     if (t === "Insert Table") return { table: null, picker_open: false, hover_columns: 0, hover_rows: 0 };
     if (t === "Insert Sources") return { source_dialog_open: false, source_added: false, source_type: "Book", source_author: "S. Naidoo", source_title: "Digital Research Skills", source_year: "2024" };
     if (t === "Insert Citation") return { citation_dialog_open: false, citation_inserted: false, citation_style: "Naidoo2024" };
-    if (t === "Insert Footnote") return { footnote_inserted: false, footnote_dialog_open: false, footnote_text: "Extra explanatory information inserted as a footnote." };
+    if (t === "Insert Footnote") return { footnote_inserted: false, footnote_dialog_open: false, footnote_text: "Extra explanatory information inserted as a footnote.", footnote_location: "bottom" };
     if (t === "Insert Caption") return { caption_inserted: false, caption_dialog_open: false, caption_label: "Figure", caption_text: "Learner performance chart" };
-    if (t === "Insert Bookmark") return { bookmark_inserted: false, bookmark_name: "bmResults", bookmark_dialog_open: false };
+    if (t === "Insert Bookmark") return { bookmark_inserted: false, bookmark_name: "bmResults", bookmark_dialog_open: false, selected_bookmark: "" };
     if (t === "Apply Heading") return { heading_level: "normal", styles_dialog_open: false, pending_style: "Normal" };
     if (["Align Left", "Align Center", "Align Right", "Justify Text"].includes(t)) return { alignment: "left", alignment_dialog_open: false, pending_alignment: "left" };
     if (t === "Table Borders") return { borders_dialog_open: false, table_borders: false, border_choice: "" };
@@ -879,7 +894,8 @@ function renderQuestionWorkspace() {
     }
     if (q.title === "Insert Footnote") {
         const d = s.docState;
-        root.innerHTML = `<div class="workspace-sim"><div class="mini-document"><div class="preview-title">Document Preview</div><p class="format-sample">A footnote can provide extra detail${d.footnote_inserted ? `<sup>1</sup>` : ``}.</p>${d.footnote_inserted ? `<div class="footnote-preview"><sup>1</sup> ${d.footnote_text || "Extra explanatory information inserted as a footnote."}</div>` : `<div class="doc-note">The insertion point is ready at the end of the sentence.</div>`}</div>${d.footnote_dialog_open ? `<div class="dialog-layer"><div class="word-dialog word-dialog-floating" style="max-width:470px;"><div class="word-dialog-head">Footnote and Endnote</div><div class="word-dialog-body"><div class="dialog-two-col"><div class="word-form-panel"><div class="dialog-form-grid"><label>Footnote text:</label><input id="footnoteTextInput" value="${d.footnote_text || "Extra explanatory information inserted as a footnote."}"></div><div><div class="border-setting-title">Location</div><div class="footnote-position-grid"><div class="footnote-position-chip selected">Bottom of page</div><div class="footnote-position-chip">Below text</div></div></div><div class="doc-note">Insert the footnote at the current cursor position.</div></div><div class="dialog-side-actions"><button type="button" class="mini-btn disabled">Insert</button><button type="button" class="mini-btn disabled">Apply</button><button type="button" class="mini-btn disabled">Cancel</button></div></div><div class="dialog-actions"><button type="button" class="mini-btn" id="footnoteCancelBtn">Cancel</button><button type="button" class="mini-btn primary" id="footnoteApplyBtn">Insert</button></div></div></div></div>` : ``}</div>`;
+        root.innerHTML = `<div class="workspace-sim"><div class="mini-document"><div class="preview-title">Document Preview</div><p class="format-sample">A footnote can provide extra detail${d.footnote_inserted ? `<sup>1</sup>` : ``}.</p>${d.footnote_inserted ? `<div class="footnote-preview"><sup>1</sup> ${d.footnote_text || "Extra explanatory information inserted as a footnote."}</div>` : `<div class="doc-note">The insertion point is ready at the end of the sentence.</div>`}</div>${d.footnote_dialog_open ? `<div class="dialog-layer"><div class="word-dialog word-dialog-floating" style="max-width:470px;"><div class="word-dialog-head">Footnote and Endnote</div><div class="word-dialog-body"><div class="office-mini-tabs"><button type="button" class="office-mini-tab active">Footnotes</button><button type="button" class="office-mini-tab">Endnotes</button></div><div class="dialog-two-col"><div class="word-form-panel"><div class="dialog-form-grid"><label>Footnote text:</label><input id="footnoteTextInput" value="${d.footnote_text || "Extra explanatory information inserted as a footnote."}"></div><div><div class="border-setting-title">Location</div><div class="footnote-position-grid"><button type="button" class="footnote-position-chip${(d.footnote_location || "bottom") === "bottom" ? " selected" : ""}" data-footnote-location="bottom">Bottom of page</button><button type="button" class="footnote-position-chip${d.footnote_location === "below" ? " selected" : ""}" data-footnote-location="below">Below text</button></div></div><div class="doc-note">Insert the footnote at the current cursor position.</div></div><div class="dialog-side-actions"><button type="button" class="mini-btn">Symbol...</button><button type="button" class="mini-btn">Convert...</button></div></div><div class="dialog-actions"><button type="button" class="mini-btn" id="footnoteCancelBtn">Cancel</button><button type="button" class="mini-btn primary" id="footnoteApplyBtn">Insert</button></div></div></div></div>` : ``}</div>`;
+        document.querySelectorAll("[data-footnote-location]").forEach(button => button.addEventListener("click", function(){ d.footnote_location = this.dataset.footnoteLocation || "bottom"; syncHiddenFields(activeQuestionIndex); renderQuestionWorkspace(); }));
         const input = document.getElementById("footnoteTextInput"), cancel = document.getElementById("footnoteCancelBtn"), apply = document.getElementById("footnoteApplyBtn");
         if (input) input.addEventListener("input", function(){ d.footnote_text = this.value; syncHiddenFields(activeQuestionIndex); });
         if (cancel) cancel.addEventListener("click", function(){ d.footnote_dialog_open = false; syncHiddenFields(activeQuestionIndex); renderQuestionWorkspace(); });
@@ -898,9 +914,13 @@ function renderQuestionWorkspace() {
     }
     if (q.title === "Insert Bookmark") {
         const d = s.docState;
-        root.innerHTML = `<div class="workspace-sim"><div class="preview-box"><div class="preview-title">Text Selection</div><p class="format-sample">Results Summary ${d.bookmark_inserted ? `<span class="bookmark-tag">${d.bookmark_name || "bmResults"}</span>` : ``}</p></div>${d.bookmark_dialog_open ? `<div class="dialog-layer"><div class="word-dialog word-dialog-floating bookmark-window"><div class="word-dialog-head">Bookmark</div><div class="word-dialog-body"><div class="bookmark-dialog-grid"><div class="dialog-form-grid"><label>Bookmark name:</label><input id="bookmarkNameInput" value="${d.bookmark_name || "bmResults"}"></div><div class="bookmark-preview-line">Sort by: Name</div><div class="bookmark-list"><div class="bookmark-list-item">bmSummary</div><div class="bookmark-list-item">bmCharts</div></div></div><div class="dialog-actions split"><button type="button" class="mini-btn disabled">Delete</button><div style="display:flex;gap:10px;"><button type="button" class="mini-btn disabled">Go To</button><button type="button" class="mini-btn primary" id="bookmarkApplyBtn">Add</button></div></div></div></div></div>` : `<div class="doc-note">Open the Bookmark dialog from Insert &gt; Bookmark.</div>`}</div>`;
-        const input = document.getElementById("bookmarkNameInput"), apply = document.getElementById("bookmarkApplyBtn");
+        root.innerHTML = `<div class="workspace-sim"><div class="preview-box"><div class="preview-title">Text Selection</div><p class="format-sample">Results Summary ${d.bookmark_inserted ? `<span class="bookmark-tag">${d.bookmark_name || "bmResults"}</span>` : ``}</p></div>${d.bookmark_dialog_open ? `<div class="dialog-layer"><div class="word-dialog word-dialog-floating bookmark-window"><div class="word-dialog-head">Bookmark</div><div class="word-dialog-body"><div class="bookmark-dialog-grid"><div class="dialog-form-grid"><label>Bookmark name:</label><input id="bookmarkNameInput" value="${d.bookmark_name || "bmResults"}"></div><div class="bookmark-preview-line">Sort by: <label><input type="radio" checked> Name</label> <label><input type="radio"> Location</label></div><div class="bookmark-list"><button type="button" class="bookmark-list-item${d.selected_bookmark === "bmSummary" ? " selected" : ""}" data-bookmark-item="bmSummary">bmSummary</button><button type="button" class="bookmark-list-item${d.selected_bookmark === "bmCharts" ? " selected" : ""}" data-bookmark-item="bmCharts">bmCharts</button></div></div><div class="dialog-actions split"><button type="button" class="mini-btn${d.selected_bookmark ? "" : " disabled"}" id="bookmarkDeleteBtn">Delete</button><div style="display:flex;gap:10px;"><button type="button" class="mini-btn${d.selected_bookmark ? "" : " disabled"}" id="bookmarkGoToBtn">Go To</button><button type="button" class="mini-btn" id="bookmarkCancelBtn">Cancel</button><button type="button" class="mini-btn primary" id="bookmarkApplyBtn">Add</button></div></div></div></div></div>` : `<div class="doc-note">Open the Bookmark dialog from Insert &gt; Bookmark.</div>`}</div>`;
+        document.querySelectorAll("[data-bookmark-item]").forEach(item => item.addEventListener("click", function(){ d.selected_bookmark = this.dataset.bookmarkItem || ""; syncHiddenFields(activeQuestionIndex); renderQuestionWorkspace(); }));
+        const input = document.getElementById("bookmarkNameInput"), apply = document.getElementById("bookmarkApplyBtn"), cancel = document.getElementById("bookmarkCancelBtn"), goTo = document.getElementById("bookmarkGoToBtn"), remove = document.getElementById("bookmarkDeleteBtn");
         if (input) input.addEventListener("input", function(){ d.bookmark_name = this.value; syncHiddenFields(activeQuestionIndex); });
+        if (cancel) cancel.addEventListener("click", function(){ d.bookmark_dialog_open = false; syncHiddenFields(activeQuestionIndex); renderQuestionWorkspace(); });
+        if (goTo) goTo.addEventListener("click", function(){ if (d.selected_bookmark) { d.bookmark_name = d.selected_bookmark; syncHiddenFields(activeQuestionIndex); renderQuestionWorkspace(); } });
+        if (remove) remove.addEventListener("click", function(){ if (d.selected_bookmark) { d.selected_bookmark = ""; syncHiddenFields(activeQuestionIndex); renderQuestionWorkspace(); } });
         if (apply) apply.addEventListener("click", function(){ recordAction("insert.bookmark_apply"); });
         return;
     }
@@ -1037,7 +1057,9 @@ function renderQuestionWorkspace() {
         const largeSmartArtPreview = d.smartart_choice === "cycle"
             ? `<div class="smartart-large-preview cycle"><div class="cycle-ring"><span></span><span></span><span></span></div></div>`
             : `<div class="smartart-large-preview process"><span class="node"></span><span class="node"></span><span class="node"></span></div>`;
-        root.innerHTML = `<div class="workspace-sim">${d.smartart_inserted ? `<div class="preview-box"><div class="preview-title">SmartArt Preview</div><div class="smartart-preview"><div class="smartart-node${d.smartart_edited ? " edited" : ""}">Plan</div><div class="smartart-node${d.smartart_edited ? " edited" : ""}">Create</div><div class="smartart-node${d.smartart_edited ? " edited" : ""}">Review</div></div></div>` : `<div class="illustration-box">No SmartArt inserted yet.</div>`}${d.smartart_dialog_open ? `<div class="dialog-layer"><div class="word-dialog word-dialog-floating"><div class="word-dialog-head">Choose a SmartArt Graphic</div><div class="word-dialog-body"><div class="smartart-catalog"><div class="smartart-categories"><div class="office-list-box"><div class="office-list-item">List</div><div class="office-list-item selected">Process</div><div class="office-list-item">Cycle</div><div class="office-list-item">Hierarchy</div></div></div><div class="smartart-preview-stage"><div class="gallery-grid"><div class="smartart-template${d.smartart_choice === "process" ? " selected" : ""}" data-smartart="process"><div class="smartart-template-preview"><span class="node"></span><span class="node"></span><span class="node"></span></div><div class="smartart-template-title">Basic Process</div></div><div class="smartart-template${d.smartart_choice === "cycle" ? " selected" : ""}" data-smartart="cycle"><div class="smartart-template-preview cycle"><span class="node"></span><span class="node"></span><span class="node"></span></div><div class="smartart-template-title">Basic Cycle</div></div></div>${largeSmartArtPreview}<div class="doc-note">Select the required SmartArt graphic and click OK.</div></div></div><div class="dialog-actions"><button type="button" class="mini-btn" id="smartartCancelBtn">Cancel</button><button type="button" class="mini-btn primary" id="smartartApplyBtn">OK</button></div></div></div></div>` : ``}${d.smartart_edit_open ? `<div class="word-dialog word-dialog-anchored" style="${getControlAnchorStyle("smartart_format", 300, 6)}"><div class="word-dialog-head">Change Colors</div><div class="word-dialog-body"><div class="smartart-color-strip"><button type="button" class="smartart-color-chip${d.smartart_color === "green" ? " selected" : ""}" data-smartart-color="green" style="background:linear-gradient(90deg,#16a34a 0%,#22c55e 100%);">Green</button><button type="button" class="smartart-color-chip${d.smartart_color === "blue" ? " selected" : ""}" data-smartart-color="blue" style="background:linear-gradient(90deg,#2563eb 0%,#60a5fa 100%);">Blue</button></div><div class="dialog-actions"><button type="button" class="mini-btn" id="smartartEditCancelBtn">Cancel</button><button type="button" class="mini-btn primary" id="smartartEditApplyBtn">Apply</button></div></div></div>` : ``}</div>`;
+        const smartartCategory = d.smartart_category || "Process";
+        root.innerHTML = `<div class="workspace-sim">${d.smartart_inserted ? `<div class="preview-box"><div class="preview-title">SmartArt Preview</div><div class="smartart-preview"><div class="smartart-node${d.smartart_edited ? " edited" : ""}">Plan</div><div class="smartart-node${d.smartart_edited ? " edited" : ""}">Create</div><div class="smartart-node${d.smartart_edited ? " edited" : ""}">Review</div></div></div>` : `<div class="illustration-box">No SmartArt inserted yet.</div>`}${d.smartart_dialog_open ? `<div class="dialog-layer"><div class="word-dialog word-dialog-floating"><div class="word-dialog-head">Choose a SmartArt Graphic</div><div class="word-dialog-body"><div class="smartart-catalog"><div class="smartart-categories"><div class="office-list-box">${["List", "Process", "Cycle", "Hierarchy"].map(category => `<div class="office-list-item${smartartCategory === category ? " selected" : ""}" data-smartart-category="${category}">${category}</div>`).join("")}</div></div><div class="smartart-preview-stage"><div class="gallery-grid"><div class="smartart-template${d.smartart_choice === "process" ? " selected" : ""}" data-smartart="process"><div class="smartart-template-preview"><span class="node"></span><span class="node"></span><span class="node"></span></div><div class="smartart-template-title">Basic Process</div></div><div class="smartart-template${d.smartart_choice === "cycle" ? " selected" : ""}" data-smartart="cycle"><div class="smartart-template-preview cycle"><span class="node"></span><span class="node"></span><span class="node"></span></div><div class="smartart-template-title">Basic Cycle</div></div></div>${largeSmartArtPreview}<div class="doc-note">${smartartCategory} gallery. Select the required SmartArt graphic and click OK.</div></div></div><div class="dialog-actions"><button type="button" class="mini-btn" id="smartartCancelBtn">Cancel</button><button type="button" class="mini-btn primary" id="smartartApplyBtn">OK</button></div></div></div></div>` : ``}${d.smartart_edit_open ? `<div class="word-dialog word-dialog-anchored" style="${getControlAnchorStyle("smartart_format", 300, 6)}"><div class="word-dialog-head">Change Colors</div><div class="word-dialog-body"><div class="smartart-color-strip"><button type="button" class="smartart-color-chip${d.smartart_color === "green" ? " selected" : ""}" data-smartart-color="green" style="background:linear-gradient(90deg,#16a34a 0%,#22c55e 100%);">Green</button><button type="button" class="smartart-color-chip${d.smartart_color === "blue" ? " selected" : ""}" data-smartart-color="blue" style="background:linear-gradient(90deg,#2563eb 0%,#60a5fa 100%);">Blue</button></div><div class="dialog-actions"><button type="button" class="mini-btn" id="smartartEditCancelBtn">Cancel</button><button type="button" class="mini-btn primary" id="smartartEditApplyBtn">Apply</button></div></div></div>` : ``}</div>`;
+        document.querySelectorAll("[data-smartart-category]").forEach(item => item.addEventListener("click", function(){ d.smartart_category = this.dataset.smartartCategory || "Process"; syncHiddenFields(activeQuestionIndex); renderQuestionWorkspace(); }));
         document.querySelectorAll("[data-smartart]").forEach(button => button.addEventListener("click", function(){ d.smartart_choice = this.dataset.smartart || ""; syncHiddenFields(activeQuestionIndex); renderQuestionWorkspace(); }));
         document.querySelectorAll("[data-smartart-color]").forEach(button => button.addEventListener("click", function(){ d.smartart_color = this.dataset.smartartColor || ""; syncHiddenFields(activeQuestionIndex); renderQuestionWorkspace(); }));
         const cancel = document.getElementById("smartartCancelBtn"), apply = document.getElementById("smartartApplyBtn"), ecancel = document.getElementById("smartartEditCancelBtn"), eapply = document.getElementById("smartartEditApplyBtn");
@@ -1073,12 +1095,34 @@ function renderQuestionWorkspace() {
         if (fapply) fapply.addEventListener("click", function(){ recordAction("mailings.insert_merge_field_apply"); });
         return;
     }
+    if (["Bold Text", "Italic Text", "Underline Text", "Highlight Text", "Clear Formatting", "Copy Text", "Paste Text", "Format Painter"].includes(q.title)) {
+        const d = s.docState;
+        const sampleStyle = q.title === "Format Painter" || d.format_painted ? "font-weight:700;color:#1d4ed8;" : "";
+        const selectedStyle = [
+            d.bold_applied ? "font-weight:700" : "",
+            d.italic_applied ? "font-style:italic" : "",
+            d.underline_applied ? "text-decoration:underline" : "",
+            d.highlight_applied ? "background:#fef08a" : "",
+            d.format_painted ? "font-weight:700;color:#1d4ed8" : "",
+            d.formatting_cleared ? "font-weight:400;font-style:normal;text-decoration:none;background:transparent;color:#111827" : ""
+        ].filter(Boolean).join(";");
+        root.innerHTML = `<div class="workspace-sim"><div class="doc-preview"><div class="preview-title">Document Preview</div><div class="preview-text"><p><span style="${selectedStyle}">Selected text sample</span></p><p><span style="${sampleStyle}">Sample heading format</span></p><p>${d.copied_text ? "Clipboard contains the selected sentence." : "A sentence is selected for copying."}</p><p>${d.pasted_text ? "Copied sentence" : "Blank paragraph"}</p></div></div></div>`;
+        return;
+    }
     root.innerHTML = `<div class="doc-note">Use the highlighted Word ribbon controls to complete this question.</div>`;
 }
 function evaluateQuestion(q, s) {
     if (q.title === "Replace") return !!s.docState.replace_done && (s.docState.preview_text || "").trim().toUpperCase() === "MOTOR MOTOR BUS MOTOR";
     if (q.title === "Insert Table") return !!s.docState.table && Number(s.docState.table.columns) === 3 && Number(s.docState.table.rows) === 6;
     if (q.title === "Font Size") return Number(s.docState.font_size || 0) === 24;
+    if (q.title === "Bold Text") return !!s.docState.bold_applied;
+    if (q.title === "Italic Text") return !!s.docState.italic_applied;
+    if (q.title === "Underline Text") return !!s.docState.underline_applied;
+    if (q.title === "Highlight Text") return !!s.docState.highlight_applied;
+    if (q.title === "Clear Formatting") return !!s.docState.formatting_cleared;
+    if (q.title === "Copy Text") return !!s.docState.copied_text;
+    if (q.title === "Paste Text") return !!s.docState.pasted_text;
+    if (q.title === "Format Painter") return !!s.docState.format_painted;
     if (q.title === "Font Color") return (s.docState.font_color || "").toLowerCase() === "#c62828";
     if (q.title === "Insert Chart") return !!s.docState.chart_inserted && s.docState.chart_type === "column";
     if (q.title === "Insert Picture") return !!s.docState.picture_inserted && s.docState.picture_choice === "campus";
@@ -1120,6 +1164,14 @@ function recordAction(controlId) {
         s.awarded = 0;
     }
     if (q.title === "Font Size" && controlId === "home.font_size") { s.docState.size_dialog_open = true; syncHiddenFields(activeQuestionIndex); renderAll(); return; }
+    if (q.title === "Bold Text" && controlId === "home.bold") { s.docState.bold_applied = true; }
+    if (q.title === "Italic Text" && controlId === "home.italic") { s.docState.italic_applied = true; }
+    if (q.title === "Underline Text" && controlId === "home.underline") { s.docState.underline_applied = true; }
+    if (q.title === "Highlight Text" && controlId === "home.highlight") { s.docState.highlight_applied = true; }
+    if (q.title === "Clear Formatting" && controlId === "home.clear_formatting") { s.docState.formatting_cleared = true; }
+    if (q.title === "Copy Text" && controlId === "home.copy") { s.docState.copied_text = true; }
+    if (q.title === "Paste Text" && controlId === "home.paste") { s.docState.pasted_text = true; }
+    if (q.title === "Format Painter" && controlId === "home.format_painter") { s.docState.format_painted = true; }
     if (q.title === "Font Color" && controlId === "home.font_color") { s.docState.color_dialog_open = true; syncHiddenFields(activeQuestionIndex); renderAll(); return; }
     if ((q.title === "Bullet List" && controlId === "home.bullets") || (q.title === "Numbered List" && controlId === "home.numbering")) { s.docState.list_dialog_open = true; syncHiddenFields(activeQuestionIndex); renderAll(); return; }
     if (q.title === "Insert Chart" && controlId === "insert.chart") { s.docState.chart_dialog_open = true; syncHiddenFields(activeQuestionIndex); renderAll(); return; }

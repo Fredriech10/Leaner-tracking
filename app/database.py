@@ -897,6 +897,7 @@ def init_db():
         title TEXT NOT NULL,
         prompt_html TEXT NOT NULL,
         steps_json TEXT NOT NULL,
+        metadata_json TEXT,
         marks INTEGER NOT NULL DEFAULT 1,
         caps_tags TEXT,
         created_by TEXT,
@@ -914,11 +915,22 @@ def init_db():
         title_override TEXT,
         prompt_override_html TEXT,
         steps_json_override TEXT,
+        metadata_json_override TEXT,
         marks_override INTEGER,
         FOREIGN KEY (task_id) REFERENCES tasks (id),
         FOREIGN KEY (bank_question_id) REFERENCES practical_question_bank (id)
     )
     """)
+
+    cursor.execute("PRAGMA table_info(practical_question_bank)")
+    practical_bank_columns = [col[1] for col in cursor.fetchall()]
+    if "metadata_json" not in practical_bank_columns:
+        cursor.execute("ALTER TABLE practical_question_bank ADD COLUMN metadata_json TEXT")
+
+    cursor.execute("PRAGMA table_info(task_practical_questions)")
+    task_practical_columns = [col[1] for col in cursor.fetchall()]
+    if "metadata_json_override" not in task_practical_columns:
+        cursor.execute("ALTER TABLE task_practical_questions ADD COLUMN metadata_json_override TEXT")
 
     try:
         cursor.execute("PRAGMA table_info(tasks)")
@@ -1157,14 +1169,15 @@ def init_db():
         cursor.execute(
             """
             INSERT INTO practical_question_bank (
-                seed_key, program, category, title, prompt_html, steps_json, marks, caps_tags, created_by, created_at, updated_at
-            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                seed_key, program, category, title, prompt_html, steps_json, metadata_json, marks, caps_tags, created_by, created_at, updated_at
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             ON CONFLICT(seed_key) DO UPDATE SET
                 program = excluded.program,
                 category = excluded.category,
                 title = excluded.title,
                 prompt_html = excluded.prompt_html,
                 steps_json = excluded.steps_json,
+                metadata_json = excluded.metadata_json,
                 marks = excluded.marks,
                 caps_tags = excluded.caps_tags,
                 updated_at = excluded.updated_at
@@ -1176,6 +1189,7 @@ def init_db():
                 item["title"],
                 item["prompt_html"],
                 json.dumps(item["steps"]),
+                json.dumps(item.get("metadata", {})),
                 item["marks"],
                 item["caps_tags"],
                 "system",

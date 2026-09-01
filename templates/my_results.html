@@ -216,6 +216,7 @@
 
 <script>
 let myResultsPollInFlight = false;
+let lastMyResultsLiveHtml = document.getElementById('myResultsLiveContent')?.innerHTML || "";
 
 function refreshMyResultsLiveContent() {
     if (myResultsPollInFlight) return;
@@ -237,6 +238,11 @@ function refreshMyResultsLiveContent() {
         const doc = new DOMParser().parseFromString(html, 'text/html');
         const incoming = doc.getElementById('myResultsLiveContent');
         if (!incoming) return;
+        if (incoming.innerHTML === lastMyResultsLiveHtml || incoming.innerHTML === container.innerHTML) {
+            lastMyResultsLiveHtml = incoming.innerHTML;
+            return;
+        }
+        lastMyResultsLiveHtml = incoming.innerHTML;
         container.innerHTML = incoming.innerHTML;
     })
     .catch(() => {})
@@ -245,7 +251,7 @@ function refreshMyResultsLiveContent() {
     });
 }
 
-window.setInterval(refreshMyResultsLiveContent, 5000);
+window.setInterval(refreshMyResultsLiveContent, 15000);
 </script>
 </body>
 </html>

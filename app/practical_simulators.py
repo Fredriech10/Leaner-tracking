@@ -1,5 +1,6 @@
 import json
 import re
+from pathlib import Path
 
 
 WORD_INSERT_PICTURE_SIMULATOR_KEY = "word_insert_picture"
@@ -12,45 +13,224 @@ ACCESS_FORM_SIMULATOR_KEY = "access_form_design"
 ACCESS_REPORT_SIMULATOR_KEY = "access_report_design"
 WORD_CAPS_PRACTICAL_KEY = "word_caps_practical"
 
+PROJECT_ROOT = Path(__file__).resolve().parent.parent
+WORD_RIBBON_LAYOUT_PATH = PROJECT_ROOT / "Practical" / "Layout" / "word2021_ribbon_layout_full.json"
+EXCEL_RIBBON_LAYOUT_PATH = PROJECT_ROOT / "Practical" / "Layout" / "excel2021_ribbon_layout_full.json"
+ACCESS_RIBBON_LAYOUT_PATH = PROJECT_ROOT / "Practical" / "Layout" / "access2021_ribbon_layout_contextual_full.json"
+
+WORD_TAB_IDS = {
+    "TabHome": "home",
+    "TabInsert": "insert",
+    "TabWordDesign": "design",
+    "TabPageLayoutWord": "layout",
+    "TabReferences": "references",
+    "TabMailings": "mailings",
+    "TabReviewWord": "review",
+    "TabView": "view",
+    "TabDeveloper": "developer",
+    "TabHelp": "help",
+}
+
+WORD_CONTROL_IDS = {
+    "Paste": "home.paste",
+    "Cut": "home.cut",
+    "Copy": "home.copy",
+    "FormatPainter": "home.format_painter",
+    "FontSizeIncrease": "home.grow_font",
+    "FontSizeDecrease": "home.shrink_font",
+    "ChangeCase": "home.change_case",
+    "ClearFormatting": "home.clear_formatting",
+    "Bold": "home.bold",
+    "Italic": "home.italic",
+    "Underline": "home.underline",
+    "Strikethrough": "home.strikethrough",
+    "Subscript": "home.subscript",
+    "Superscript": "home.superscript",
+    "TextEffectsGallery": "home.text_effects",
+    "TextHighlightColorPicker": "home.highlight",
+    "FontColorPicker": "home.font_color",
+    "Bullets": "home.bullets",
+    "Numbering": "home.numbering",
+    "MultilevelListGallery": "home.multilevel",
+    "IndentDecreaseWord": "home.decrease_indent",
+    "IndentIncreaseWord": "home.increase_indent",
+    "SortDialog": "home.sort",
+    "ShowHide": "home.show_marks",
+    "AlignLeft": "home.align_left",
+    "AlignCenter": "home.align_center",
+    "AlignRight": "home.align_right",
+    "AlignJustify": "home.justify",
+    "ShadingColorPicker": "home.shading",
+    "BordersGallery": "home.borders",
+    "FindDialog": "home.find",
+    "ReplaceDialog": "home.replace",
+    "SelectMenu": "home.select",
+    "CoverPageInsertGallery": "insert.cover_page",
+    "PageBreakInsertWord": "insert.page_break",
+    "TableInsertDialog": "insert.table",
+    "PictureInsertFromFile": "insert.pictures",
+    "SmartArtInsert": "insert.smartart",
+    "ChartInsert": "insert.chart",
+    "BookmarkInsert": "insert.bookmark",
+    "PageOrientationGallery": "layout.orientation",
+    "PageSizeGallery": "layout.size",
+    "BreaksGallery": "layout.breaks",
+    "FootnoteInsert": "references.insert_footnote",
+    "CitationInsert": "references.insert_citation",
+    "CitationsManageSources": "references.manage_sources",
+    "CaptionInsert": "references.caption",
+    "MailMergeStart": "mailings.start_merge",
+    "MailMergeInsertMergeField": "mailings.insert_merge_field",
+}
+
+EXCEL_TAB_IDS = {
+    "TabHome": "home",
+    "TabInsert": "insert",
+    "TabDrawInk": "draw",
+    "TabPageLayoutExcel": "page_layout",
+    "TabFormulas": "formulas",
+    "TabData": "data",
+    "TabReview": "review",
+    "TabView": "view",
+    "TabDeveloper": "developer",
+}
+
+EXCEL_CHART_CONTROL_IDS = {
+    "RecommendedCharts",
+    "ChartInsertColumn",
+    "ChartInsertLine",
+    "ChartInsertPie",
+    "ChartInsertHierarchy",
+    "ChartInsertStatistic",
+    "ChartInsertScatter",
+    "ChartInsertWaterfall",
+    "PivotChartInsert",
+}
+
 
 def _word_caps_question_bank():
     items = [
-        ("Font Size", "Change the selected text font size using the Home tab font size control.", ["home", "home.font_size"], "Formatting"),
-        ("Font Color", "Change the selected text font color to red using the Home tab font color control.", ["home", "home.font_color"], "Formatting"),
-        ("Bullet List", "Apply a bullet list to the selected paragraphs.", ["home", "home.bullets"], "Paragraph"),
-        ("Numbered List", "Apply numbering to the selected paragraphs.", ["home", "home.numbering"], "Paragraph"),
-        ("Insert Chart", "Insert a chart from the Insert tab.", ["insert", "insert.chart"], "Insert"),
-        ("Insert Picture", "Insert a picture from the Insert tab.", ["insert", "insert.pictures"], "Insert"),
-        ("Insert Table", "Insert a table with 3 columns and 6 rows into the document.", ["insert", "insert.table", "insert.table_apply"], "Insert"),
-        ("Insert Sources", "Open source management for references.", ["references", "references.manage_sources"], "References"),
-        ("Insert Citation", "Insert a citation in the current position.", ["references", "references.insert_citation"], "References"),
-        ("Insert Footnote", "Insert a footnote from the References tab.", ["references", "references.insert_footnote"], "References"),
-        ("Insert Caption", "Insert a caption for the selected object.", ["references", "references.caption"], "References"),
-        ("Insert Bookmark", "Insert a bookmark from the Insert tab.", ["insert", "insert.bookmark"], "Insert"),
-        ("Apply Heading", "Apply Heading 1 to the selected text.", ["home", "home.style_heading1"], "Styles"),
-        ("Align Left", "Align the selected paragraph to the left.", ["home", "home.align_left"], "Paragraph"),
-        ("Align Center", "Center align the selected paragraph.", ["home", "home.align_center"], "Paragraph"),
-        ("Align Right", "Right align the selected paragraph.", ["home", "home.align_right"], "Paragraph"),
-        ("Justify Text", "Justify the selected paragraph.", ["home", "home.justify"], "Paragraph"),
-        ("Table Borders", "Apply table borders from the Home tab borders menu.", ["home", "home.borders"], "Table"),
-        ("Paragraph Borders", "Apply paragraph borders from the Borders menu.", ["home", "home.borders"], "Paragraph"),
-        ("Find", "Open Find from the Home tab editing group.", ["home", "home.find"], "Editing"),
+        ("Font Size", "Format the selected sentence so that it displays at 24 pt.", ["home", "home.font_size"], "Formatting"),
+        ("Font Color", "Format the selected text so that the font colour is red.", ["home", "home.font_color"], "Formatting"),
+        ("Bullet List", "Turn the selected three lines into a bulleted list.", ["home", "home.bullets"], "Paragraph"),
+        ("Numbered List", "Turn the selected three procedure steps into a numbered list.", ["home", "home.numbering"], "Paragraph"),
+        ("Insert Chart", "Add a column chart to the document to show the supplied results.", ["insert", "insert.chart"], "Insert"),
+        ("Insert Picture", "Insert the campus photo into the document.", ["insert", "insert.pictures"], "Insert"),
+        ("Insert Table", "Create a table with exactly 3 columns and 6 rows.", ["insert", "insert.table", "insert.table_apply"], "Insert"),
+        ("Insert Sources", "Add a complete book source with an author, title, and year.", ["references", "references.manage_sources"], "References"),
+        ("Insert Citation", "Insert the Naidoo 2024 citation at the cursor position.", ["references", "references.insert_citation"], "References"),
+        ("Insert Footnote", "Add a footnote containing explanatory text for the selected word.", ["references", "references.insert_footnote"], "References"),
+        ("Insert Caption", "Add a Figure caption with caption text for the selected object.", ["references", "references.caption"], "References"),
+        ("Insert Bookmark", "Create a bookmark named bmResults at the current location.", ["insert", "insert.bookmark"], "Insert"),
+        ("Apply Heading", "Format the selected heading text with the Heading 1 style.", ["home", "home.style_heading1"], "Styles"),
+        ("Align Left", "Set the selected paragraph alignment to left.", ["home", "home.align_left"], "Paragraph"),
+        ("Align Center", "Set the selected paragraph alignment to centre.", ["home", "home.align_center"], "Paragraph"),
+        ("Align Right", "Set the selected paragraph alignment to right.", ["home", "home.align_right"], "Paragraph"),
+        ("Justify Text", "Justify the selected paragraph so both edges align evenly.", ["home", "home.justify"], "Paragraph"),
+        ("Table Borders", "Apply all borders to the selected table.", ["home", "home.borders"], "Table"),
+        ("Paragraph Borders", "Apply an outside border around the selected paragraph.", ["home", "home.borders"], "Paragraph"),
+        ("Find", "Search the document for the word TABLES.", ["home", "home.find"], "Editing"),
         ("Replace", "Use Replace to find all the words CAR and replace them with MOTOR.", ["home", "home.replace", "home.replace_apply"], "Editing"),
-        ("Shading", "Apply paragraph shading from the Home tab.", ["home", "home.shading"], "Paragraph"),
-        ("Change Orientation", "Change page orientation from the Layout tab.", ["layout", "layout.orientation"], "Layout"),
-        ("Change Page Size", "Change page size from the Layout tab.", ["layout", "layout.size"], "Layout"),
-        ("Add Page Break", "Insert a page break.", ["insert", "insert.page_break"], "Layout"),
-        ("Add Column Break", "Insert a column break from Layout > Breaks.", ["layout", "layout.breaks"], "Layout"),
-        ("Add Cover Page", "Insert a cover page from the Insert tab.", ["insert", "insert.cover_page"], "Insert"),
-        ("Insert SmartArt", "Insert SmartArt from the Insert tab.", ["insert", "insert.smartart"], "Insert"),
-        ("Edit SmartArt", "Use SmartArt tools after inserting SmartArt.", ["insert", "insert.smartart", "smartart_format"], "Insert"),
-        ("Left Indent", "Set the left indent from the Layout tab paragraph controls.", ["layout", "layout.indent_left"], "Layout"),
-        ("Right Indent", "Set the right indent from the Layout tab paragraph controls.", ["layout", "layout.indent_right"], "Layout"),
-        ("Mail Merge", "Start Mail Merge from the Mailings tab.", ["mailings", "mailings.start_merge"], "Mailings"),
-        ("Insert Merge Fields", "Insert a merge field in the specified area.", ["mailings", "mailings.insert_merge_field"], "Mailings"),
+        ("Shading", "Apply yellow shading to the selected paragraph.", ["home", "home.shading"], "Paragraph"),
+        ("Change Orientation", "Change the page orientation to landscape.", ["layout", "layout.orientation"], "Layout"),
+        ("Change Page Size", "Change the paper size to Legal.", ["layout", "layout.size"], "Layout"),
+        ("Add Page Break", "Insert a page break at the cursor position.", ["insert", "insert.page_break"], "Layout"),
+        ("Add Column Break", "Insert a column break at the cursor position.", ["layout", "layout.breaks"], "Layout"),
+        ("Add Cover Page", "Add the Annual style cover page to the front of the document.", ["insert", "insert.cover_page"], "Insert"),
+        ("Insert SmartArt", "Insert a Basic Process SmartArt graphic.", ["insert", "insert.smartart"], "Insert"),
+        ("Edit SmartArt", "Insert a Basic Process SmartArt graphic and change its colour scheme to green.", ["insert", "insert.smartart", "smartart_format"], "Insert"),
+        ("Left Indent", "Set the selected paragraph's left indent to 1.27 cm.", ["layout", "layout.indent_left"], "Layout"),
+        ("Right Indent", "Set the selected paragraph's right indent to 1.27 cm.", ["layout", "layout.indent_right"], "Layout"),
+        ("Mail Merge", "Start a letters mail merge for the document.", ["mailings", "mailings.start_merge"], "Mailings"),
+        ("Insert Merge Fields", "Insert the FirstName merge field into the document.", ["mailings", "mailings.insert_merge_field"], "Mailings"),
+        ("Font Size", "Format the selected announcement line so that it displays at 24 pt.", ["home", "home.font_size"], "Formatting"),
+        ("Font Color", "Change the selected warning text so that its font colour is red.", ["home", "home.font_color"], "Formatting"),
+        ("Bullet List", "Convert the selected list of stationery items into bullet points.", ["home", "home.bullets"], "Paragraph"),
+        ("Numbered List", "Convert the selected instructions into a numbered sequence.", ["home", "home.numbering"], "Paragraph"),
+        ("Apply Heading", "Apply the Heading 1 style to the document title.", ["home", "home.style_heading1"], "Styles"),
+        ("Shading", "Highlight the selected notice paragraph with yellow paragraph shading.", ["home", "home.shading"], "Paragraph"),
+        ("Insert Table", "Insert a 3 column by 6 row register table.", ["insert", "insert.table", "insert.table_apply"], "Insert"),
+        ("Insert Picture", "Place the campus photo in the document body.", ["insert", "insert.pictures"], "Insert"),
+        ("Insert Chart", "Insert a column chart for the selected learner totals.", ["insert", "insert.chart"], "Insert"),
+        ("Change Orientation", "Set the page layout to landscape orientation.", ["layout", "layout.orientation"], "Layout"),
+        ("Change Page Size", "Set the document paper size to Legal.", ["layout", "layout.size"], "Layout"),
+        ("Paragraph Borders", "Place an outside border around the selected notice paragraph.", ["home", "home.borders"], "Paragraph"),
+        ("Edit SmartArt", "Create a Basic Process SmartArt diagram and apply the green colour option.", ["insert", "insert.smartart", "smartart_format"], "Insert"),
+        ("Mail Merge", "Prepare the document as a letters mail merge.", ["mailings", "mailings.start_merge"], "Mailings"),
+        ("Insert Merge Fields", "Add the FirstName merge field where the greeting should appear.", ["mailings", "mailings.insert_merge_field"], "Mailings"),
+        ("Bold Text", "Make the selected keyword bold.", ["home", "home.bold"], "Formatting"),
+        ("Italic Text", "Make the selected book title italic.", ["home", "home.italic"], "Formatting"),
+        ("Underline Text", "Underline the selected subheading.", ["home", "home.underline"], "Formatting"),
+        ("Highlight Text", "Apply yellow text highlight to the selected phrase.", ["home", "home.highlight"], "Formatting"),
+        ("Clear Formatting", "Remove formatting from the selected text so it returns to normal body text.", ["home", "home.clear_formatting"], "Formatting"),
+        ("Copy Text", "Copy the selected sentence to the clipboard.", ["home", "home.copy"], "Clipboard"),
+        ("Paste Text", "Paste the copied sentence into the blank paragraph.", ["home", "home.paste"], "Clipboard"),
+        ("Format Painter", "Copy the formatting from the sample heading and apply it to the selected heading.", ["home", "home.format_painter"], "Clipboard"),
     ]
+    target_defaults = {
+        "Font Size": {"type": "text", "label": "selected sentence"},
+        "Font Color": {"type": "text", "label": "selected text"},
+        "Bold Text": {"type": "text", "label": "selected keyword"},
+        "Italic Text": {"type": "text", "label": "selected book title"},
+        "Underline Text": {"type": "text", "label": "selected subheading"},
+        "Highlight Text": {"type": "text", "label": "selected phrase"},
+        "Clear Formatting": {"type": "text", "label": "selected formatted text"},
+        "Copy Text": {"type": "text", "label": "selected sentence"},
+        "Paste Text": {"type": "paragraph", "label": "blank paragraph"},
+        "Format Painter": {"type": "text", "label": "selected heading"},
+        "Bullet List": {"type": "text", "label": "selected three lines"},
+        "Numbered List": {"type": "text", "label": "selected procedure steps"},
+        "Insert Chart": {"type": "paragraph", "label": "below the Results Summary paragraph"},
+        "Insert Picture": {"type": "paragraph", "label": "below the School Campus paragraph"},
+        "Insert Table": {"type": "paragraph", "label": "below the Learner Register heading"},
+        "Insert Sources": {"type": "document", "label": "references for the report"},
+        "Insert Citation": {"type": "cursor", "label": "end of the research sentence"},
+        "Insert Footnote": {"type": "text", "label": "selected word"},
+        "Insert Caption": {"type": "object", "label": "selected object"},
+        "Insert Bookmark": {"type": "cursor", "label": "Results section heading"},
+        "Apply Heading": {"type": "text", "label": "document title"},
+        "Align Left": {"type": "paragraph", "label": "selected paragraph"},
+        "Align Center": {"type": "paragraph", "label": "selected paragraph"},
+        "Align Right": {"type": "paragraph", "label": "selected paragraph"},
+        "Justify Text": {"type": "paragraph", "label": "selected paragraph"},
+        "Table Borders": {"type": "object", "label": "selected table"},
+        "Paragraph Borders": {"type": "paragraph", "label": "selected notice paragraph"},
+        "Find": {"type": "document", "label": "whole document"},
+        "Replace": {"type": "document", "label": "whole document"},
+        "Shading": {"type": "paragraph", "label": "selected notice paragraph"},
+        "Change Orientation": {"type": "document", "label": "whole document"},
+        "Change Page Size": {"type": "document", "label": "whole document"},
+        "Add Page Break": {"type": "cursor", "label": "cursor position after Page 1 content"},
+        "Add Column Break": {"type": "cursor", "label": "cursor position in Column 1"},
+        "Add Cover Page": {"type": "document", "label": "front of the document"},
+        "Insert SmartArt": {"type": "paragraph", "label": "below the Process heading"},
+        "Edit SmartArt": {"type": "object", "label": "selected SmartArt graphic"},
+        "Left Indent": {"type": "paragraph", "label": "selected paragraph"},
+        "Right Indent": {"type": "paragraph", "label": "selected paragraph"},
+        "Mail Merge": {"type": "document", "label": "mail merge letter"},
+        "Insert Merge Fields": {"type": "cursor", "label": "greeting line"},
+    }
+
+    def build_metadata(title, steps):
+        actionable_steps = [step for step in steps if step not in {"home", "insert", "layout", "references", "mailings", "smartart_format"}]
+        first_tab = next((step for step in steps if step in {"insert", "layout", "references", "mailings", "smartart_format"}), "home")
+        tab_clicks = 0 if first_tab == "home" else 1
+        target = target_defaults.get(title, {"type": "selection", "label": "correct item"})
+        return {
+            "start_tab": "home",
+            "ideal_clicks": 1 + tab_clicks + len(actionable_steps),
+            "target_clicks": 1,
+            "free_misclicks": 1,
+            "penalty_per_misclick": 0.5,
+            "max_misclick_penalty": 2,
+            "requires_target_selection": True,
+            "target": target,
+            "accepted_controls": [step for step in steps if step not in {"home", "insert", "layout", "references", "mailings"}],
+        }
+
     bank = []
     for idx, (title, prompt, steps, category) in enumerate(items, start=1):
+        metadata = build_metadata(title, steps)
         bank.append(
             {
                 "seed_key": f"word_caps_{idx:03d}",
@@ -61,6 +241,7 @@ def _word_caps_question_bank():
                 "steps": steps,
                 "marks": len(steps),
                 "caps_tags": "word,caps",
+                "metadata": metadata,
             }
         )
     return bank
@@ -73,9 +254,233 @@ def get_word_caps_question_bank():
     return [dict(item) for item in WORD_CAPS_QUESTION_BANK]
 
 
+def _slug(value):
+    return re.sub(r"[^a-z0-9]+", "_", (value or "").lower()).strip("_") or "item"
+
+
+def _tooltip_key(value):
+    return re.sub(r"[^a-z0-9]+", "", (value or "").lower())
+
+
+def _layout_tabs(data):
+    tabs = list(data.get("tabs", []))
+    tabs.extend(data.get("baseTabs", []))
+    for ribbon_set in data.get("contextualRibbonSets", []):
+        tabs.extend(ribbon_set.get("tabs", []))
+    return tabs
+
+
+def _load_ribbon_tooltip_map(layout_path):
+    if not layout_path.exists():
+        return {}
+    try:
+        data = json.loads(layout_path.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError):
+        return {}
+    tooltips = {}
+    for tab in _layout_tabs(data):
+        for group in tab.get("groups", []):
+            for control in group.get("controls", []):
+                tooltip = control.get("tooltip")
+                if not tooltip:
+                    continue
+                for value in (control.get("label"), control.get("idMso")):
+                    key = _tooltip_key(value)
+                    if key:
+                        tooltips.setdefault(key, tooltip)
+    return tooltips
+
+
+def _fallback_control_id(tab_id, control):
+    id_mso = control.get("idMso")
+    if id_mso:
+        return WORD_CONTROL_IDS.get(id_mso, f"{tab_id}.{_slug(id_mso)}")
+    return f"{tab_id}.{_slug(control.get('label'))}"
+
+
+def _word_icon_url(image_name):
+    if not image_name:
+        return None
+    return f"/practical_assets/Word/{image_name}"
+
+
+def _excel_icon_url(image_name):
+    if not image_name:
+        return None
+    return f"/practical_assets/Excel/{image_name}"
+
+
+def _build_excel_ribbon_from_layout():
+    if not EXCEL_RIBBON_LAYOUT_PATH.exists():
+        return None
+    try:
+        layout = json.loads(EXCEL_RIBBON_LAYOUT_PATH.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError):
+        return None
+
+    tabs = []
+    for tab in layout.get("tabs", []):
+        tab_id = EXCEL_TAB_IDS.get(tab.get("idMso"), _slug(tab.get("label")))
+        groups = []
+        for group in tab.get("groups", []):
+            controls = []
+            for control in group.get("controls", []):
+                id_mso = control.get("idMso")
+                label = control.get("label") or id_mso or "Control"
+                controls.append({
+                    "id": f"{tab_id}.{_slug(id_mso or label)}",
+                    "id_mso": id_mso,
+                    "label": label,
+                    "tooltip": control.get("tooltip") or label,
+                    "image_url": _excel_icon_url(control.get("image")),
+                    "kind": "menu" if control.get("type") in {"menu", "gallery", "splitButton", "comboBox", "numericField"} else "button",
+                    "size": control.get("size") or "small",
+                    "is_chart_insert": id_mso in EXCEL_CHART_CONTROL_IDS,
+                })
+            groups.append({
+                "title": group.get("label") or "Group",
+                "class_name": f"group-{_slug(group.get('label'))}",
+                "controls": controls,
+            })
+        tabs.append({
+            "id": tab_id,
+            "id_mso": tab.get("idMso"),
+            "label": tab.get("label") or tab_id.title(),
+            "groups": groups,
+        })
+
+    icon_urls = sorted({
+        control["image_url"]
+        for tab in tabs
+        for group in tab["groups"]
+        for control in group["controls"]
+        if control.get("image_url")
+    })
+    return {"tabs": tabs, "icon_urls": icon_urls, "default_tab": "home"}
+
+
+def _build_word_shell_from_layout(task_title, active_tabs, active_controls, shell_mode, inactive_controls_style):
+    if not WORD_RIBBON_LAYOUT_PATH.exists():
+        return None
+    try:
+        layout = json.loads(WORD_RIBBON_LAYOUT_PATH.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError):
+        return None
+
+    tabs = []
+    for tab in layout.get("tabs", []):
+        tab_id = WORD_TAB_IDS.get(tab.get("idMso"), _slug(tab.get("label")))
+        groups = []
+        for group in tab.get("groups", []):
+            group_slug = _slug(group.get("label"))
+            controls = []
+            if tab_id == "home" and group_slug == "font":
+                controls.extend([
+                    {"id": "home.font_family", "label": "Calibri", "icon": "Aa", "kind": "menu", "size": "field"},
+                    {"id": "home.font_size", "label": "11", "icon": "11", "kind": "menu", "size": "field"},
+                ])
+            for control in group.get("controls", []):
+                control_id = _fallback_control_id(tab_id, control)
+                if control_id in {"home.font_family", "home.font_size"}:
+                    continue
+                controls.append({
+                    "id": control_id,
+                    "id_mso": control.get("idMso"),
+                    "label": control.get("label") or control.get("idMso") or "Control",
+                    "tooltip": control.get("tooltip") or control.get("label") or control.get("idMso") or "Control",
+                    "icon": (control.get("label") or control.get("idMso") or "?")[:2],
+                    "image_url": _word_icon_url(control.get("image")),
+                    "kind": "menu" if control.get("type") in {"menu", "gallery", "splitButton", "comboBox", "numericField"} else "button",
+                    "size": control.get("size") or "small",
+                    "row": control.get("row"),
+                    "column": control.get("column"),
+                    "row_span": control.get("rowSpan"),
+                    "col_span": control.get("colSpan"),
+                })
+            if tab_id == "home" and group_slug == "styles" and not any(c["id"] == "home.style_heading1" for c in controls):
+                controls.append({
+                    "id": "home.style_heading1",
+                    "id_mso": None,
+                    "label": "Heading 1",
+                    "tooltip": "Heading 1 - Home > Styles",
+                    "icon": "Aa",
+                    "image_url": None,
+                    "kind": "button",
+                    "size": "large",
+                    "row": 1,
+                    "column": 3,
+                    "row_span": 3,
+                    "col_span": 1,
+                })
+            groups.append({
+                "title": group.get("label") or "Group",
+                "class_name": f"group-{group_slug}",
+                "controls": controls,
+            })
+        tabs.append({
+            "id": tab_id,
+            "id_mso": tab.get("idMso"),
+            "label": tab.get("label") or tab_id.title(),
+            "groups": groups,
+        })
+
+    if "smartart_format" in active_tabs:
+        tabs.append({
+            "id": "smartart_format",
+            "label": "SmartArt Design",
+            "groups": [{
+                "title": "SmartArt Styles",
+                "class_name": "group-smartart-styles",
+                "controls": [
+                    {"id": "smartart_format", "label": "Change Colors", "tooltip": "Change Colors - SmartArt Design > SmartArt Styles", "icon": "Aa", "kind": "menu", "image_url": None},
+                ],
+            }],
+        })
+
+    icon_urls = sorted({
+        control["image_url"]
+        for tab in tabs
+        for group in tab["groups"]
+        for control in group["controls"]
+        if control.get("image_url")
+    })
+
+    return {
+        "app": "word",
+        "mode": shell_mode,
+        "inactive_controls_style": inactive_controls_style,
+        "title": task_title,
+        "tabs": tabs,
+        "active_tabs": active_tabs,
+        "active_controls": active_controls,
+        "default_tab": "home",
+        "default_context_tab": "smartart_format" if "smartart_format" in active_tabs else None,
+        "layout_source": "word2021_ribbon_layout_full.json",
+        "asset_source": "Practical/Images/Word",
+        "icon_urls": icon_urls,
+        "menus": {
+            "insert.pictures": {
+                "title": "Insert Picture",
+                "description": "Choose an image to insert into the document."
+            },
+            "insert.table": {
+                "title": "Table",
+                "description": "Insert tables into your document. This control is visible for realism in this task."
+            },
+            "layout.wrap_text": {
+                "title": "Wrap Text",
+                "description": "Wrap text around objects. Use the Picture Format tab for this task."
+            },
+        },
+    }
+
+
 def build_word_shell(task_title, active_tabs, active_controls, shell_mode="test", inactive_controls_style=None):
     if inactive_controls_style is None:
         inactive_controls_style = "enabled" if shell_mode == "test" else "disabled"
+    layout_shell = _build_word_shell_from_layout(task_title, active_tabs, active_controls, shell_mode, inactive_controls_style)
+    if layout_shell is not None:
+        return layout_shell
     tabs = [
         {"id": "home", "label": "Home", "groups": [
             {"title": "Clipboard", "class_name": "group-clipboard", "controls": [
@@ -492,16 +897,20 @@ def build_access_shell(task_title, simulator_type, shell_mode="test"):
         "title": task_title,
         "simulator_type": simulator_type,
         "accent": "#a4373a",
+        "ribbon_tooltips": _load_ribbon_tooltip_map(ACCESS_RIBBON_LAYOUT_PATH),
     }
 
 
 def build_excel_shell(task_title, simulator_type, shell_mode="test"):
+    ribbon = _build_excel_ribbon_from_layout()
     return {
         "app": "excel",
         "mode": shell_mode,
         "title": task_title,
         "simulator_type": simulator_type,
         "accent": "#217346",
+        "ribbon": ribbon,
+        "ribbon_tooltips": _load_ribbon_tooltip_map(EXCEL_RIBBON_LAYOUT_PATH),
     }
 
 

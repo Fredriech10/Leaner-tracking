@@ -859,8 +859,22 @@
         </div>
     </form>
     <script>
+        const ribbonTooltips = {{ simulator_definition.shell.ribbon_tooltips | tojson }};
         const tableRows = [1, 2, 3];
         let activeFieldIndex = 1;
+
+        function tooltipKey(value) {
+            return String(value || "").toLowerCase().replace(/[^a-z0-9]+/g, "");
+        }
+
+        function applyRibbonTooltips() {
+            document.querySelectorAll(".ribbon-tab, .access-ribbon .ribbon-icon-card, .access-ribbon .ribbon-icon-stack > span, .access-ribbon .ribbon-select").forEach(item => {
+                const label = item.tagName === "SELECT" ? item.options[item.selectedIndex]?.textContent : item.textContent;
+                const key = tooltipKey(label);
+                const tooltip = ribbonTooltips[key];
+                if (tooltip) item.setAttribute("title", tooltip);
+            });
+        }
 
         function syncFieldPropertiesPanel() {
             const sizeSource = document.getElementById(`field_size_${activeFieldIndex}`);
@@ -903,6 +917,7 @@
         }
 
         setActiveField(1);
+        applyRibbonTooltips();
     </script>
 </body>
 </html>

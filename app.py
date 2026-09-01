@@ -1,4 +1,4 @@
-from flask import Flask, request, session, url_for
+from flask import Flask, abort, request, send_from_directory, session, url_for
 import threading
 import os
 from app.helpers import (
@@ -46,6 +46,21 @@ register_theory_learner_routes(app)
 register_theory_runtime_routes(app)
 register_review_routes(app)
 register_screen_share_routes(app)
+
+@app.route("/practical_assets/<program>/<path:filename>")
+def practical_assets(program, filename):
+    allowed_programs = {
+        "Word": "Word",
+        "Excel": "Excel",
+        "Access": "Access",
+    }
+    image_folder = allowed_programs.get(program)
+    if not image_folder:
+        abort(404)
+    directory = os.path.join(os.path.dirname(os.path.abspath(__file__)), "Practical", "Images", image_folder)
+    response = send_from_directory(directory, filename, max_age=60 * 60 * 24 * 30)
+    response.headers["Cache-Control"] = "public, max-age=2592000, immutable"
+    return response
 
 @app.after_request
 def inject_global_mobile_css(response):

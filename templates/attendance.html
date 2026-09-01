@@ -595,6 +595,7 @@
 <script>
 let attendancePollTimer = null;
 let attendancePollInFlight = false;
+let lastAttendanceLiveHtml = "";
 
 function setupAttendanceCellEditors() {
     document.querySelectorAll('.attendance-cell.editable').forEach(function (cell) {
@@ -866,6 +867,7 @@ function shouldSkipAttendancePoll() {
 }
 
 function refreshAttendanceLiveContent() {
+    if (document.visibilityState !== 'visible') return;
     if (attendancePollInFlight || shouldSkipAttendancePoll()) return;
 
     const container = document.getElementById('attendanceLiveContent');
@@ -886,6 +888,11 @@ function refreshAttendanceLiveContent() {
         const incoming = doc.getElementById('attendanceLiveContent');
         if (!incoming) return;
 
+        if (incoming.innerHTML === lastAttendanceLiveHtml || incoming.innerHTML === container.innerHTML) {
+            lastAttendanceLiveHtml = incoming.innerHTML;
+            return;
+        }
+        lastAttendanceLiveHtml = incoming.innerHTML;
         container.innerHTML = incoming.innerHTML;
         initializeAttendancePage();
     })
@@ -899,7 +906,8 @@ function startAttendancePolling() {
     if (attendancePollTimer) {
         clearInterval(attendancePollTimer);
     }
-    attendancePollTimer = window.setInterval(refreshAttendanceLiveContent, 5000);
+    lastAttendanceLiveHtml = document.getElementById('attendanceLiveContent')?.innerHTML || "";
+    attendancePollTimer = window.setInterval(refreshAttendanceLiveContent, 15000);
 }
 
 initializeAttendancePage();

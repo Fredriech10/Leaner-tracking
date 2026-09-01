@@ -18,18 +18,22 @@ from app.practical_simulators import (
 def _load_word_bank_questions(cursor):
     cursor.execute(
         """
-        SELECT id, category, title, prompt_html, steps_json, marks
+        SELECT id, category, title, prompt_html, steps_json, metadata_json, marks
         FROM practical_question_bank
         WHERE program = 'word'
         ORDER BY category, title
         """
     )
     questions = []
-    for bank_id, category, title, prompt_html, steps_json, marks in cursor.fetchall():
+    for bank_id, category, title, prompt_html, steps_json, metadata_json, marks in cursor.fetchall():
         try:
             steps = json.loads(steps_json or "[]")
         except Exception:
             steps = []
+        try:
+            metadata = json.loads(metadata_json or "{}")
+        except Exception:
+            metadata = {}
         questions.append(
             {
                 "id": bank_id,
@@ -37,6 +41,7 @@ def _load_word_bank_questions(cursor):
                 "title": title,
                 "prompt_html": prompt_html,
                 "steps": steps,
+                "metadata": metadata,
                 "marks": marks or len(steps) or 1,
             }
         )
@@ -256,8 +261,8 @@ def register_task_admin_routes(app):
                     if new_practical_mode == "simulator":
                         cursor.execute(
                             """
-                            INSERT INTO task_practical_questions (task_id, bank_question_id, order_index, title_override, prompt_override_html, steps_json_override, marks_override)
-                            SELECT ?, bank_question_id, order_index, title_override, prompt_override_html, steps_json_override, marks_override
+                            INSERT INTO task_practical_questions (task_id, bank_question_id, order_index, title_override, prompt_override_html, steps_json_override, metadata_json_override, marks_override)
+                            SELECT ?, bank_question_id, order_index, title_override, prompt_override_html, steps_json_override, metadata_json_override, marks_override
                             FROM task_practical_questions
                             WHERE task_id = ?
                             ORDER BY order_index

@@ -3,6 +3,11 @@
 <head>
     <meta charset="UTF-8">
     <title>Excel Simulator - {{ subject_name }} {{ task_name }}</title>
+    {% if simulator_definition.shell.ribbon %}
+    {% for icon_url in simulator_definition.shell.ribbon.icon_urls %}
+    <link rel="prefetch" as="image" href="{{ icon_url }}">
+    {% endfor %}
+    {% endif %}
     <style>
         * { box-sizing: border-box; }
         body { margin: 0; font-family: "Segoe UI", Arial, sans-serif; background: #eef3ef; color: #1f2937; }
@@ -198,8 +203,11 @@
             padding: 4px 2px;
         }
         .ribbon-big .ico { font-size: 1.18rem; line-height: 1; }
+        .ribbon-icon-img { width: 18px; height: 18px; object-fit: contain; display: block; }
+        .ribbon-big .ribbon-icon-img { width: 30px; height: 30px; }
         .ribbon-grid-three { display: grid; grid-template-columns: repeat(3, minmax(24px, auto)); gap: 4px 10px; align-content: start; }
-        .ribbon-mini { display: inline-flex; align-items: center; gap: 4px; white-space: nowrap; }
+        .ribbon-mini { border: 1px solid transparent; background: transparent; color: #334155; display: inline-flex; align-items: center; gap: 4px; white-space: nowrap; cursor: default; font: inherit; padding: 1px 3px; text-align: left; }
+        .ribbon-mini:hover, .ribbon-big:hover { background: rgba(33, 115, 70, 0.06); border-color: #c6d8ca; }
         .ribbon-dropdown {
             height: 24px;
             border: 1px solid #cfd8cf;
@@ -393,6 +401,38 @@
                 </div>
             </div>
 
+            {% if simulator_definition.shell.ribbon %}
+            <div class="excel-tabs">
+                {% for tab in simulator_definition.shell.ribbon.tabs %}
+                <span class="excel-tab{% if tab.id == simulator_definition.shell.ribbon.default_tab %} active{% endif %}" data-tab-id="{{ tab.id }}" title="{{ tab.label }}" onclick="switchExcelTab('{{ tab.id }}')">{{ tab.label }}</span>
+                {% endfor %}
+            </div>
+
+            {% for tab in simulator_definition.shell.ribbon.tabs %}
+            <div class="excel-ribbon excel-ribbon-panel{% if tab.id == simulator_definition.shell.ribbon.default_tab %} active{% endif %}" data-ribbon-tab="{{ tab.id }}">
+                {% for group in tab.groups %}
+                <div class="ribbon-group {{ group.class_name }}">
+                    <div class="ribbon-stack">
+                        {% for control in group.controls %}
+                        {% if control.size == 'large' %}
+                        <button type="button" class="ribbon-big" title="{{ control.tooltip }}" {% if control.is_chart_insert %}data-chart-insert="1"{% endif %}>
+                            <span class="ico">{% if control.image_url %}<img class="ribbon-icon-img" src="{{ control.image_url }}" alt="" loading="eager" decoding="async">{% else %}{{ control.label[:2] }}{% endif %}</span>
+                            <span>{{ control.label }}</span>
+                        </button>
+                        {% else %}
+                        <button type="button" class="ribbon-mini" title="{{ control.tooltip }}" {% if control.is_chart_insert %}data-chart-insert="1"{% endif %}>
+                            {% if control.image_url %}<img class="ribbon-icon-img" src="{{ control.image_url }}" alt="" loading="eager" decoding="async">{% endif %}
+                            <span>{{ control.label }}</span>
+                        </button>
+                        {% endif %}
+                        {% endfor %}
+                    </div>
+                    <div class="ribbon-group-title">{{ group.title }}</div>
+                </div>
+                {% endfor %}
+            </div>
+            {% endfor %}
+            {% else %}
             <div class="excel-tabs">
                 <span class="excel-tab" data-tab-id="file" onclick="switchExcelTab('file')">File</span>
                 <span class="excel-tab active" data-tab-id="home" onclick="switchExcelTab('home')">Home</span>
@@ -671,6 +711,8 @@
                 </div>
             </div>
 
+            {% endif %}
+
             <div class="formula-bar">
                 <div class="name-box" id="name_box">A1</div>
                 <div class="formula-btn">✕</div>
@@ -796,6 +838,7 @@
 
 <script>
     const mode = {{ simulator_definition.shell.simulator_type | tojson }};
+    const ribbonTooltips = {{ simulator_definition.shell.ribbon_tooltips | tojson }};
     const formulaSuggestions = {{ (simulator_definition.formula_suggestions or []) | tojson }};
     const formulaInput = document.getElementById("formula_input");
     const suggestionBox = document.getElementById("formula_suggestions");
@@ -804,6 +847,18 @@
     const chartInsertedInput = document.getElementById("chart_inserted");
     const nameBox = document.getElementById("name_box");
     let selectedCells = [];
+
+    function tooltipKey(value) {
+        return String(value || "").toLowerCase().replace(/[^a-z0-9]+/g, "");
+    }
+
+    function applyRibbonTooltips() {
+        document.querySelectorAll(".excel-tab, .excel-ribbon .ribbon-big, .excel-ribbon .ribbon-mini, .excel-ribbon .ribbon-dropdown, .excel-ribbon .ribbon-stack > span").forEach(item => {
+            const key = tooltipKey(item.textContent);
+            const tooltip = ribbonTooltips[key];
+            if (tooltip) item.setAttribute("title", tooltip);
+        });
+    }
 
     function switchExcelTab(tabId) {
         document.querySelectorAll(".excel-tab[data-tab-id]").forEach(tab => {
@@ -910,6 +965,7 @@
     });
 
     switchExcelTab("home");
+    applyRibbonTooltips();
 </script>
 </body>
 </html>

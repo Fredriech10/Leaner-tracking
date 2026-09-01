@@ -47,7 +47,8 @@
               "rowSpan": 3,
               "colSpan": 2,
               "image": "Paste.png",
-              "idStatus": "confirmed"
+              "idStatus": "confirmed",
+              "tooltip": "Paste (Paste) - Home > Clipboard"
             },
             {
               "label": "Cut",
@@ -59,7 +60,8 @@
               "rowSpan": 1,
               "colSpan": 1,
               "image": "Cut.png",
-              "idStatus": "confirmed"
+              "idStatus": "confirmed",
+              "tooltip": "Cut (Cut) - Home > Clipboard"
             },
             {
               "label": "Copy",
@@ -71,7 +73,8 @@
               "rowSpan": 1,
               "colSpan": 1,
               "image": "Copy.png",
-              "idStatus": "confirmed"
+              "idStatus": "confirmed",
+              "tooltip": "Copy (Copy) - Home > Clipboard"
             },
             {
               "label": "Format Painter",
@@ -83,7 +86,8 @@
               "rowSpan": 1,
               "colSpan": 1,
               "image": "FormatPainter.png",
-              "idStatus": "confirmed"
+              "idStatus": "confirmed",
+              "tooltip": "Format Painter (FormatPainter) - Home > Clipboard"
             }
           ]
         },
@@ -110,7 +114,8 @@
               "colSpan": 3,
               "image": null,
               "idStatus": "needs_validation",
-              "notes": "Font family selector"
+              "notes": "Font family selector",
+              "tooltip": "Font - Home > Font"
             },
             {
               "label": "Font Size",
@@ -122,7 +127,8 @@
               "rowSpan": 1,
               "colSpan": 2,
               "image": null,
-              "idStatus": "needs_validation"
+              "idStatus": "needs_validation",
+              "tooltip": "Font Size - Home > Font"
             },
             {
               "label": "Grow Font",
@@ -134,7 +140,8 @@
               "rowSpan": 1,
               "colSpan": 1,
               "image": "FontSizeIncrease.png",
-              "idStatus": "confirmed"
+              "idStatus": "confirmed",
+              "tooltip": "Grow Font (FontSizeIncrease) - Home > Font"
             },
             {
               "label": "Shrink Font",
@@ -146,7 +153,8 @@
               "rowSpan": 1,
               "colSpan": 1,
               "image": "FontSizeDecrease.png",
-              "idStatus": "confirmed"
+              "idStatus": "confirmed",
+              "tooltip": "Shrink Font (FontSizeDecrease) - Home > Font"
             },
             {
               "label": "Change Case",
@@ -158,7 +166,8 @@
               "rowSpan": 1,
               "colSpan": 1,
               "image": "ChangeCaseGallery.png",
-              "idStatus": "confirmed"
+              "idStatus": "confirmed",
+              "tooltip": "Change Case (ChangeCaseGallery) - Home > Font"
             },
             {
               "label": "Clear All Formatting",
@@ -170,7 +179,8 @@
               "rowSpan": 1,
               "colSpan": 1,
               "image": "ClearFormatting.png",
-              "idStatus": "confirmed"
+              "idStatus": "confirmed",
+              "tooltip": "Clear All Formatting (ClearFormatting) - Home > Font"
             },
             {
               "label": "Bold",
@@ -182,7 +192,8 @@
               "rowSpan": 1,
               "colSpan": 1,
               "image": "Bold.png",
-              "idStatus": "confirmed"
+              "idStatus": "confirmed",
+              "tooltip": "Bold (Bold) - Home > Font"
             },
             {
               "label": "Italic",
@@ -194,7 +205,8 @@
               "rowSpan": 1,
               "colSpan": 1,
               "image": "Italic.png",
-              "idStatus": "confirmed"
+              "idStatus": "confirmed",
+              "tooltip": "Italic (Italic) - Home > Font"
             },
             {
               "label": "Underline",
@@ -206,7 +218,8 @@
               "rowSpan": 1,
               "colSpan": 1,
               "image": "Underline.png",
-              "idStatus": "confirmed"
+              "idStatus": "confirmed",
+              "tooltip": "Underline (Underline) - Home > Font"
             },
             {
               "label": "Strikethrough",
@@ -218,7 +231,8 @@
               "rowSpan": 1,
               "colSpan": 1,
               "image": "Strikethrough.png",
-              "idStatus": "confirmed"
+              "idStatus": "confirmed",
+              "tooltip": "Strikethrough (Strikethrough) - Home > Font"
             },
             {
               "label": "Subscript",
@@ -230,7 +244,8 @@
               "rowSpan": 1,
               "colSpan": 1,
               "image": "Subscript.png",
-              "idStatus": "confirmed"
+              "idStatus": "confirmed",
+              "tooltip": "Subscript (Subscript) - Home > Font"
             },
             {
               "label": "Superscript",
@@ -242,7 +257,8 @@
               "rowSpan": 1,
               "colSpan": 1,
               "image": "Superscript.png",
-              "idStatus": "confirmed"
+              "idStatus": "confirmed",
+              "tooltip": "Superscript (Superscript) - Home > Font"
             },
             {
               "label": "Text Effects",
@@ -254,7 +270,8 @@
               "rowSpan": 1,
               "colSpan": 1,
               "image": "TextEffectsGallery.png",
-              "idStatus": "confirmed"
+              "idStatus": "confirmed",
+              "tooltip": "Text Effects (TextEffectsGallery) - Home > Font"
             },
             {
               "label": "Text Highlight Color",
@@ -266,7 +283,8 @@
               "rowSpan": 1,
               "colSpan": 1,
               "image": "TextHighlightColorPicker.png",
-              "idStatus": "confirmed"
+              "idStatus": "confirmed",
+              "tooltip": "Text Highlight Color (TextHighlightColorPicker) - Home > Font"
             },
             {
               "label": "Font Color",
@@ -278,7 +296,8 @@
               "rowSpan": 1,
               "colSpan": 1,
               "image": "FontColorPicker.png",
-              "idStatus": "confirmed"
+              "idStatus": "confirmed",
+              "tooltip": "Font Color (FontColorPicker) - Home > Font"
             }
           ]
         },
@@ -304,7 +323,8 @@
               "rowSpan": 1,
               "colSpan": 1,
               "image": "Bullets.png",
-              "idStatus": "confirmed"
+              "idStatus": "confirmed",
+              "tooltip": "Bullets (Bullets) - Home > Paragraph"
             },
             {
               "label": "Numbering",
@@ -316,7 +336,8 @@
               "rowSpan": 1,
               "colSpan": 1,
               "image": "Numbering.png",
-              "idStatus": "confirmed"
+              "idStatus": "confirmed",
+              "tooltip": "Numbering (Numbering) - Home > Paragraph"
             },
             {
               "label": "Multilevel List",
@@ -328,7 +349,8 @@
               "rowSpan": 1,
               "colSpan": 1,
               "image": "MultiLevelListGallery.png",
-              "idStatus": "confirmed"
+              "idStatus": "confirmed",
+              "tooltip": "Multilevel List (MultiLevelListGallery) - Home > Paragraph"
             },
             {
               "label": "Decrease Indent",
@@ -340,7 +362,8 @@
               "rowSpan": 1,
               "colSpan": 1,
               "image": "IndentDecreaseWord.png",
-              "idStatus": "confirmed"
+              "idStatus": "confirmed",
+              "tooltip": "Decrease Indent (IndentDecreaseWord) - Home > Paragraph"
             },
             {
               "label": "Increase Indent",
@@ -352,7 +375,8 @@
               "rowSpan": 1,
               "colSpan": 1,
               "image": "IndentIncreaseWord.png",
-              "idStatus": "confirmed"
+              "idStatus": "confirmed",
+              "tooltip": "Increase Indent (IndentIncreaseWord) - Home > Paragraph"
             },
             {
               "label": "Sort",
@@ -364,7 +388,8 @@
               "rowSpan": 1,
               "colSpan": 1,
               "image": "SortDialogClassic.png",
-              "idStatus": "confirmed"
+              "idStatus": "confirmed",
+              "tooltip": "Sort (SortDialogClassic) - Home > Paragraph"
             },
             {
               "label": "Show/Hide ¶",
@@ -376,7 +401,8 @@
               "rowSpan": 1,
               "colSpan": 1,
               "image": "ParagraphMarks.png",
-              "idStatus": "confirmed"
+              "idStatus": "confirmed",
+              "tooltip": "Show/Hide ¶ (ParagraphMarks) - Home > Paragraph"
             },
             {
               "label": "Align Left",
@@ -388,7 +414,8 @@
               "rowSpan": 1,
               "colSpan": 1,
               "image": "AlignLeft.png",
-              "idStatus": "confirmed"
+              "idStatus": "confirmed",
+              "tooltip": "Align Left (AlignLeft) - Home > Paragraph"
             },
             {
               "label": "Center",
@@ -400,7 +427,8 @@
               "rowSpan": 1,
               "colSpan": 1,
               "image": "AlignCenter.png",
-              "idStatus": "confirmed"
+              "idStatus": "confirmed",
+              "tooltip": "Center (AlignCenter) - Home > Paragraph"
             },
             {
               "label": "Align Right",
@@ -412,7 +440,8 @@
               "rowSpan": 1,
               "colSpan": 1,
               "image": "AlignRight.png",
-              "idStatus": "confirmed"
+              "idStatus": "confirmed",
+              "tooltip": "Align Right (AlignRight) - Home > Paragraph"
             },
             {
               "label": "Justify",
@@ -424,7 +453,8 @@
               "rowSpan": 1,
               "colSpan": 1,
               "image": "AlignJustify.png",
-              "idStatus": "confirmed"
+              "idStatus": "confirmed",
+              "tooltip": "Justify (AlignJustify) - Home > Paragraph"
             },
             {
               "label": "Line and Paragraph Spacing",
@@ -436,7 +466,8 @@
               "rowSpan": 1,
               "colSpan": 1,
               "image": "LineSpacing.png",
-              "idStatus": "confirmed"
+              "idStatus": "confirmed",
+              "tooltip": "Line and Paragraph Spacing (LineSpacing) - Home > Paragraph"
             },
             {
               "label": "Shading",
@@ -448,7 +479,8 @@
               "rowSpan": 1,
               "colSpan": 1,
               "image": "ShadingColorPicker.png",
-              "idStatus": "confirmed"
+              "idStatus": "confirmed",
+              "tooltip": "Shading (ShadingColorPicker) - Home > Paragraph"
             },
             {
               "label": "Borders",
@@ -460,7 +492,8 @@
               "rowSpan": 1,
               "colSpan": 1,
               "image": "BordersGallery.png",
-              "idStatus": "confirmed"
+              "idStatus": "confirmed",
+              "tooltip": "Borders (BordersGallery) - Home > Paragraph"
             }
           ]
         },
@@ -487,7 +520,8 @@
               "colSpan": 8,
               "image": null,
               "idStatus": "needs_validation",
-              "notes": "Horizontal Quick Styles gallery"
+              "notes": "Horizontal Quick Styles gallery",
+              "tooltip": "Styles Gallery - Home > Styles"
             },
             {
               "label": "Styles Pane",
@@ -499,7 +533,8 @@
               "rowSpan": 1,
               "colSpan": 1,
               "image": "StylesPane.png",
-              "idStatus": "confirmed"
+              "idStatus": "confirmed",
+              "tooltip": "Styles Pane (StylesPane) - Home > Styles"
             }
           ]
         },
@@ -525,7 +560,8 @@
               "rowSpan": 2,
               "colSpan": 2,
               "image": "FindDialog.png",
-              "idStatus": "confirmed"
+              "idStatus": "confirmed",
+              "tooltip": "Find (FindDialog) - Home > Editing"
             },
             {
               "label": "Replace",
@@ -537,7 +573,8 @@
               "rowSpan": 1,
               "colSpan": 1,
               "image": "ReplaceDialog.png",
-              "idStatus": "confirmed"
+              "idStatus": "confirmed",
+              "tooltip": "Replace (ReplaceDialog) - Home > Editing"
             },
             {
               "label": "Select",
@@ -549,7 +586,8 @@
               "rowSpan": 1,
               "colSpan": 1,
               "image": "SelectMenu.png",
-              "idStatus": "confirmed"
+              "idStatus": "confirmed",
+              "tooltip": "Select (SelectMenu) - Home > Editing"
             }
           ]
         }
@@ -582,7 +620,8 @@
               "rowSpan": 3,
               "colSpan": 2,
               "image": "CoverPageInsertGallery.png",
-              "idStatus": "confirmed"
+              "idStatus": "confirmed",
+              "tooltip": "Cover Page (CoverPageInsertGallery) - Insert > Pages"
             },
             {
               "label": "Blank Page",
@@ -594,7 +633,8 @@
               "rowSpan": 3,
               "colSpan": 2,
               "image": "PageInsert.png",
-              "idStatus": "confirmed"
+              "idStatus": "confirmed",
+              "tooltip": "Blank Page (PageInsert) - Insert > Pages"
             },
             {
               "label": "Page Break",
@@ -606,7 +646,8 @@
               "rowSpan": 3,
               "colSpan": 2,
               "image": "PageBreakInsertWord.png",
-              "idStatus": "confirmed"
+              "idStatus": "confirmed",
+              "tooltip": "Page Break (PageBreakInsertWord) - Insert > Pages"
             }
           ]
         },
@@ -632,7 +673,8 @@
               "rowSpan": 3,
               "colSpan": 3,
               "image": "TableInsertDialog.png",
-              "idStatus": "confirmed"
+              "idStatus": "confirmed",
+              "tooltip": "Table (TableInsertDialog) - Insert > Tables"
             }
           ]
         },
@@ -658,7 +700,8 @@
               "rowSpan": 3,
               "colSpan": 2,
               "image": "PictureInsertFromFile.png",
-              "idStatus": "confirmed"
+              "idStatus": "confirmed",
+              "tooltip": "Pictures (PictureInsertFromFile) - Insert > Illustrations"
             },
             {
               "label": "Shapes",
@@ -670,7 +713,8 @@
               "rowSpan": 3,
               "colSpan": 2,
               "image": "ShapesInsertGallery.png",
-              "idStatus": "confirmed"
+              "idStatus": "confirmed",
+              "tooltip": "Shapes (ShapesInsertGallery) - Insert > Illustrations"
             },
             {
               "label": "SmartArt",
@@ -682,7 +726,8 @@
               "rowSpan": 3,
               "colSpan": 2,
               "image": "SmartArtInsert.png",
-              "idStatus": "confirmed"
+              "idStatus": "confirmed",
+              "tooltip": "SmartArt (SmartArtInsert) - Insert > Illustrations"
             },
             {
               "label": "Chart",
@@ -694,7 +739,8 @@
               "rowSpan": 3,
               "colSpan": 2,
               "image": "ChartInsert.png",
-              "idStatus": "confirmed"
+              "idStatus": "confirmed",
+              "tooltip": "Chart (ChartInsert) - Insert > Illustrations"
             },
             {
               "label": "Screenshot",
@@ -706,7 +752,8 @@
               "rowSpan": 3,
               "colSpan": 2,
               "image": "ScreenshotInsertGallery.png",
-              "idStatus": "confirmed"
+              "idStatus": "confirmed",
+              "tooltip": "Screenshot (ScreenshotInsertGallery) - Insert > Illustrations"
             }
           ]
         },
@@ -732,7 +779,8 @@
               "rowSpan": 3,
               "colSpan": 2,
               "image": "HyperlinkInsert.png",
-              "idStatus": "confirmed"
+              "idStatus": "confirmed",
+              "tooltip": "Link (HyperlinkInsert) - Insert > Links"
             },
             {
               "label": "Bookmark",
@@ -744,7 +792,8 @@
               "rowSpan": 1,
               "colSpan": 1,
               "image": "BookmarkInsert.png",
-              "idStatus": "confirmed"
+              "idStatus": "confirmed",
+              "tooltip": "Bookmark (BookmarkInsert) - Insert > Links"
             },
             {
               "label": "Cross-reference",
@@ -756,7 +805,8 @@
               "rowSpan": 1,
               "colSpan": 1,
               "image": "CrossReferenceInsert.png",
-              "idStatus": "confirmed"
+              "idStatus": "confirmed",
+              "tooltip": "Cross-reference (CrossReferenceInsert) - Insert > Links"
             }
           ]
         },
@@ -782,7 +832,8 @@
               "rowSpan": 3,
               "colSpan": 2,
               "image": "HeaderInsertGallery.png",
-              "idStatus": "confirmed"
+              "idStatus": "confirmed",
+              "tooltip": "Header (HeaderInsertGallery) - Insert > Header & Footer"
             },
             {
               "label": "Footer",
@@ -794,7 +845,8 @@
               "rowSpan": 3,
               "colSpan": 2,
               "image": "FooterInsertGallery.png",
-              "idStatus": "confirmed"
+              "idStatus": "confirmed",
+              "tooltip": "Footer (FooterInsertGallery) - Insert > Header & Footer"
             },
             {
               "label": "Page Number",
@@ -806,7 +858,8 @@
               "rowSpan": 3,
               "colSpan": 2,
               "image": "HeaderFooterPageNumberInsert.png",
-              "idStatus": "confirmed"
+              "idStatus": "confirmed",
+              "tooltip": "Page Number (HeaderFooterPageNumberInsert) - Insert > Header & Footer"
             }
           ]
         },
@@ -832,7 +885,8 @@
               "rowSpan": 3,
               "colSpan": 2,
               "image": "TextBoxInsert.png",
-              "idStatus": "confirmed"
+              "idStatus": "confirmed",
+              "tooltip": "Text Box (TextBoxInsert) - Insert > Text"
             },
             {
               "label": "Quick Parts",
@@ -844,7 +898,8 @@
               "rowSpan": 1,
               "colSpan": 1,
               "image": "QuickPartsInsertGallery.png",
-              "idStatus": "confirmed"
+              "idStatus": "confirmed",
+              "tooltip": "Quick Parts (QuickPartsInsertGallery) - Insert > Text"
             },
             {
               "label": "WordArt",
@@ -856,7 +911,8 @@
               "rowSpan": 1,
               "colSpan": 1,
               "image": "WordArtInsertGallery.png",
-              "idStatus": "confirmed"
+              "idStatus": "confirmed",
+              "tooltip": "WordArt (WordArtInsertGallery) - Insert > Text"
             },
             {
               "label": "Drop Cap",
@@ -868,7 +924,8 @@
               "rowSpan": 1,
               "colSpan": 1,
               "image": "DropCapInsertGallery.png",
-              "idStatus": "confirmed"
+              "idStatus": "confirmed",
+              "tooltip": "Drop Cap (DropCapInsertGallery) - Insert > Text"
             },
             {
               "label": "Signature Line",
@@ -880,7 +937,8 @@
               "rowSpan": 1,
               "colSpan": 1,
               "image": "SignatureLineInsert.png",
-              "idStatus": "confirmed"
+              "idStatus": "confirmed",
+              "tooltip": "Signature Line (SignatureLineInsert) - Insert > Text"
             },
             {
               "label": "Date & Time",
@@ -892,7 +950,8 @@
               "rowSpan": 1,
               "colSpan": 1,
               "image": "DateAndTimeInsert.png",
-              "idStatus": "confirmed"
+              "idStatus": "confirmed",
+              "tooltip": "Date & Time (DateAndTimeInsert) - Insert > Text"
             },
             {
               "label": "Object",
@@ -904,7 +963,8 @@
               "rowSpan": 1,
               "colSpan": 1,
               "image": "OleObjectInsertMenu.png",
-              "idStatus": "confirmed"
+              "idStatus": "confirmed",
+              "tooltip": "Object (OleObjectInsertMenu) - Insert > Text"
             }
           ]
         },
@@ -930,7 +990,8 @@
               "rowSpan": 3,
               "colSpan": 2,
               "image": "EquationInsertNew.png",
-              "idStatus": "confirmed"
+              "idStatus": "confirmed",
+              "tooltip": "Equation (EquationInsertNew) - Insert > Symbols"
             },
             {
               "label": "Symbol",
@@ -942,7 +1003,8 @@
               "rowSpan": 3,
               "colSpan": 2,
               "image": "SymbolInsert.png",
-              "idStatus": "confirmed"
+              "idStatus": "confirmed",
+              "tooltip": "Symbol (SymbolInsert) - Insert > Symbols"
             }
           ]
         }
@@ -975,7 +1037,8 @@
               "rowSpan": 3,
               "colSpan": 2,
               "image": "ThemesGallery.png",
-              "idStatus": "confirmed"
+              "idStatus": "confirmed",
+              "tooltip": "Themes (ThemesGallery) - Design > Document Formatting"
             },
             {
               "label": "Style Set",
@@ -988,7 +1051,8 @@
               "colSpan": 10,
               "image": null,
               "idStatus": "needs_validation",
-              "notes": "Wide horizontal style-set gallery"
+              "notes": "Wide horizontal style-set gallery",
+              "tooltip": "Style Set - Design > Document Formatting"
             },
             {
               "label": "Colors",
@@ -1000,7 +1064,8 @@
               "rowSpan": 1,
               "colSpan": 1,
               "image": "ThemeColorsGallery.png",
-              "idStatus": "confirmed"
+              "idStatus": "confirmed",
+              "tooltip": "Colors (ThemeColorsGallery) - Design > Document Formatting"
             },
             {
               "label": "Fonts",
@@ -1012,7 +1077,8 @@
               "rowSpan": 1,
               "colSpan": 1,
               "image": "ThemeFontsGallery.png",
-              "idStatus": "confirmed"
+              "idStatus": "confirmed",
+              "tooltip": "Fonts (ThemeFontsGallery) - Design > Document Formatting"
             },
             {
               "label": "Paragraph Spacing",
@@ -1024,7 +1090,8 @@
               "rowSpan": 1,
               "colSpan": 1,
               "image": null,
-              "idStatus": "needs_validation"
+              "idStatus": "needs_validation",
+              "tooltip": "Paragraph Spacing - Design > Document Formatting"
             },
             {
               "label": "Effects",
@@ -1036,7 +1103,8 @@
               "rowSpan": 1,
               "colSpan": 1,
               "image": "ThemeEffectsGallery.png",
-              "idStatus": "confirmed"
+              "idStatus": "confirmed",
+              "tooltip": "Effects (ThemeEffectsGallery) - Design > Document Formatting"
             },
             {
               "label": "Set as Default",
@@ -1048,7 +1116,8 @@
               "rowSpan": 1,
               "colSpan": 1,
               "image": "SetAsDefault.png",
-              "idStatus": "confirmed"
+              "idStatus": "confirmed",
+              "tooltip": "Set as Default (SetAsDefault) - Design > Document Formatting"
             }
           ]
         },
@@ -1074,7 +1143,8 @@
               "rowSpan": 3,
               "colSpan": 2,
               "image": "WatermarkGallery.png",
-              "idStatus": "confirmed"
+              "idStatus": "confirmed",
+              "tooltip": "Watermark (WatermarkGallery) - Design > Page Background"
             },
             {
               "label": "Page Color",
@@ -1086,7 +1156,8 @@
               "rowSpan": 3,
               "colSpan": 2,
               "image": "PageColorPicker.png",
-              "idStatus": "confirmed"
+              "idStatus": "confirmed",
+              "tooltip": "Page Color (PageColorPicker) - Design > Page Background"
             },
             {
               "label": "Page Borders",
@@ -1098,7 +1169,8 @@
               "rowSpan": 3,
               "colSpan": 2,
               "image": "PageBordersDialog.png",
-              "idStatus": "candidate"
+              "idStatus": "candidate",
+              "tooltip": "Page Borders (PageBordersDialog) - Design > Page Background"
             }
           ]
         }
@@ -1131,7 +1203,8 @@
               "rowSpan": 3,
               "colSpan": 2,
               "image": "PageMarginsGallery.png",
-              "idStatus": "confirmed"
+              "idStatus": "confirmed",
+              "tooltip": "Margins (PageMarginsGallery) - Layout > Page Setup"
             },
             {
               "label": "Orientation",
@@ -1143,7 +1216,8 @@
               "rowSpan": 3,
               "colSpan": 2,
               "image": "PageOrientationGallery.png",
-              "idStatus": "confirmed"
+              "idStatus": "confirmed",
+              "tooltip": "Orientation (PageOrientationGallery) - Layout > Page Setup"
             },
             {
               "label": "Size",
@@ -1155,7 +1229,8 @@
               "rowSpan": 3,
               "colSpan": 2,
               "image": "PageSizeGallery.png",
-              "idStatus": "confirmed"
+              "idStatus": "confirmed",
+              "tooltip": "Size (PageSizeGallery) - Layout > Page Setup"
             },
             {
               "label": "Columns",
@@ -1167,7 +1242,8 @@
               "rowSpan": 3,
               "colSpan": 2,
               "image": "ColumnsGallery.png",
-              "idStatus": "candidate"
+              "idStatus": "candidate",
+              "tooltip": "Columns (ColumnsGallery) - Layout > Page Setup"
             },
             {
               "label": "Breaks",
@@ -1179,7 +1255,8 @@
               "rowSpan": 1,
               "colSpan": 1,
               "image": "BreaksGallery.png",
-              "idStatus": "confirmed"
+              "idStatus": "confirmed",
+              "tooltip": "Breaks (BreaksGallery) - Layout > Page Setup"
             },
             {
               "label": "Line Numbers",
@@ -1191,7 +1268,8 @@
               "rowSpan": 1,
               "colSpan": 1,
               "image": "LineNumberingGallery.png",
-              "idStatus": "candidate"
+              "idStatus": "candidate",
+              "tooltip": "Line Numbers (LineNumberingGallery) - Layout > Page Setup"
             },
             {
               "label": "Hyphenation",
@@ -1203,7 +1281,8 @@
               "rowSpan": 1,
               "colSpan": 1,
               "image": "HyphenationGallery.png",
-              "idStatus": "candidate"
+              "idStatus": "candidate",
+              "tooltip": "Hyphenation (HyphenationGallery) - Layout > Page Setup"
             }
           ]
         },
@@ -1229,7 +1308,8 @@
               "rowSpan": 1,
               "colSpan": 3,
               "image": null,
-              "idStatus": "needs_validation"
+              "idStatus": "needs_validation",
+              "tooltip": "Indent Left - Layout > Paragraph"
             },
             {
               "label": "Indent Right",
@@ -1241,7 +1321,8 @@
               "rowSpan": 1,
               "colSpan": 3,
               "image": null,
-              "idStatus": "needs_validation"
+              "idStatus": "needs_validation",
+              "tooltip": "Indent Right - Layout > Paragraph"
             },
             {
               "label": "Spacing Before",
@@ -1253,7 +1334,8 @@
               "rowSpan": 1,
               "colSpan": 3,
               "image": null,
-              "idStatus": "needs_validation"
+              "idStatus": "needs_validation",
+              "tooltip": "Spacing Before - Layout > Paragraph"
             },
             {
               "label": "Spacing After",
@@ -1265,7 +1347,8 @@
               "rowSpan": 1,
               "colSpan": 3,
               "image": null,
-              "idStatus": "needs_validation"
+              "idStatus": "needs_validation",
+              "tooltip": "Spacing After - Layout > Paragraph"
             }
           ]
         },
@@ -1291,7 +1374,8 @@
               "rowSpan": 3,
               "colSpan": 2,
               "image": "ObjectPositionGallery.png",
-              "idStatus": "candidate"
+              "idStatus": "candidate",
+              "tooltip": "Position (ObjectPositionGallery) - Layout > Arrange"
             },
             {
               "label": "Wrap Text",
@@ -1303,7 +1387,8 @@
               "rowSpan": 3,
               "colSpan": 2,
               "image": "TextWrappingGallery.png",
-              "idStatus": "confirmed"
+              "idStatus": "confirmed",
+              "tooltip": "Wrap Text (TextWrappingGallery) - Layout > Arrange"
             },
             {
               "label": "Bring Forward",
@@ -1315,7 +1400,8 @@
               "rowSpan": 1,
               "colSpan": 1,
               "image": "ObjectBringForward.png",
-              "idStatus": "confirmed"
+              "idStatus": "confirmed",
+              "tooltip": "Bring Forward (ObjectBringForward) - Layout > Arrange"
             },
             {
               "label": "Send Backward",
@@ -1327,7 +1413,8 @@
               "rowSpan": 1,
               "colSpan": 1,
               "image": "ObjectSendBackward.png",
-              "idStatus": "confirmed"
+              "idStatus": "confirmed",
+              "tooltip": "Send Backward (ObjectSendBackward) - Layout > Arrange"
             },
             {
               "label": "Selection Pane",
@@ -1339,7 +1426,8 @@
               "rowSpan": 1,
               "colSpan": 1,
               "image": "SelectionPane.png",
-              "idStatus": "confirmed"
+              "idStatus": "confirmed",
+              "tooltip": "Selection Pane (SelectionPane) - Layout > Arrange"
             },
             {
               "label": "Align",
@@ -1351,7 +1439,8 @@
               "rowSpan": 1,
               "colSpan": 1,
               "image": "ObjectsAlignMenu.png",
-              "idStatus": "candidate"
+              "idStatus": "candidate",
+              "tooltip": "Align (ObjectsAlignMenu) - Layout > Arrange"
             },
             {
               "label": "Group",
@@ -1363,7 +1452,8 @@
               "rowSpan": 1,
               "colSpan": 1,
               "image": "ObjectsGroupMenu.png",
-              "idStatus": "confirmed"
+              "idStatus": "confirmed",
+              "tooltip": "Group (ObjectsGroupMenu) - Layout > Arrange"
             },
             {
               "label": "Rotate",
@@ -1375,7 +1465,8 @@
               "rowSpan": 1,
               "colSpan": 1,
               "image": "ObjectRotateGallery.png",
-              "idStatus": "confirmed"
+              "idStatus": "confirmed",
+              "tooltip": "Rotate (ObjectRotateGallery) - Layout > Arrange"
             }
           ]
         }
@@ -1408,7 +1499,8 @@
               "rowSpan": 3,
               "colSpan": 2,
               "image": "TableOfContentsGallery.png",
-              "idStatus": "confirmed"
+              "idStatus": "confirmed",
+              "tooltip": "Table of Contents (TableOfContentsGallery) - References > Table of Contents"
             },
             {
               "label": "Add Text",
@@ -1420,7 +1512,8 @@
               "rowSpan": 1,
               "colSpan": 1,
               "image": "AddTextToTableOfContents.png",
-              "idStatus": "candidate"
+              "idStatus": "candidate",
+              "tooltip": "Add Text (AddTextToTableOfContents) - References > Table of Contents"
             },
             {
               "label": "Update Table",
@@ -1432,7 +1525,8 @@
               "rowSpan": 1,
               "colSpan": 1,
               "image": "TableOfContentsUpdate.png",
-              "idStatus": "confirmed"
+              "idStatus": "confirmed",
+              "tooltip": "Update Table (TableOfContentsUpdate) - References > Table of Contents"
             }
           ]
         },
@@ -1458,7 +1552,8 @@
               "rowSpan": 3,
               "colSpan": 2,
               "image": "FootnoteInsert.png",
-              "idStatus": "confirmed"
+              "idStatus": "confirmed",
+              "tooltip": "Insert Footnote (FootnoteInsert) - References > Footnotes"
             },
             {
               "label": "Insert Endnote",
@@ -1470,7 +1565,8 @@
               "rowSpan": 1,
               "colSpan": 1,
               "image": "EndnoteInsert.png",
-              "idStatus": "candidate"
+              "idStatus": "candidate",
+              "tooltip": "Insert Endnote (EndnoteInsert) - References > Footnotes"
             },
             {
               "label": "Next Footnote",
@@ -1482,7 +1578,8 @@
               "rowSpan": 1,
               "colSpan": 1,
               "image": null,
-              "idStatus": "needs_validation"
+              "idStatus": "needs_validation",
+              "tooltip": "Next Footnote - References > Footnotes"
             },
             {
               "label": "Show Notes",
@@ -1494,7 +1591,8 @@
               "rowSpan": 1,
               "colSpan": 1,
               "image": "FootnotesShow.png",
-              "idStatus": "candidate"
+              "idStatus": "candidate",
+              "tooltip": "Show Notes (FootnotesShow) - References > Footnotes"
             }
           ]
         },
@@ -1520,7 +1618,8 @@
               "rowSpan": 3,
               "colSpan": 3,
               "image": "ResearchPane.png",
-              "idStatus": "confirmed"
+              "idStatus": "confirmed",
+              "tooltip": "Research (ResearchPane) - References > Research"
             }
           ]
         },
@@ -1546,7 +1645,8 @@
               "rowSpan": 3,
               "colSpan": 2,
               "image": "CitationInsert.png",
-              "idStatus": "confirmed"
+              "idStatus": "confirmed",
+              "tooltip": "Insert Citation (CitationInsert) - References > Citations & Bibliography"
             },
             {
               "label": "Manage Sources",
@@ -1558,7 +1658,8 @@
               "rowSpan": 1,
               "colSpan": 1,
               "image": "CitationsManageSources.png",
-              "idStatus": "candidate"
+              "idStatus": "candidate",
+              "tooltip": "Manage Sources (CitationsManageSources) - References > Citations & Bibliography"
             },
             {
               "label": "Style",
@@ -1570,7 +1671,8 @@
               "rowSpan": 1,
               "colSpan": 3,
               "image": null,
-              "idStatus": "needs_validation"
+              "idStatus": "needs_validation",
+              "tooltip": "Style - References > Citations & Bibliography"
             },
             {
               "label": "Bibliography",
@@ -1582,7 +1684,8 @@
               "rowSpan": 3,
               "colSpan": 2,
               "image": "BibliographyGallery.png",
-              "idStatus": "confirmed"
+              "idStatus": "confirmed",
+              "tooltip": "Bibliography (BibliographyGallery) - References > Citations & Bibliography"
             }
           ]
         },
@@ -1608,7 +1711,8 @@
               "rowSpan": 3,
               "colSpan": 2,
               "image": "CaptionInsert.png",
-              "idStatus": "confirmed"
+              "idStatus": "confirmed",
+              "tooltip": "Insert Caption (CaptionInsert) - References > Captions"
             },
             {
               "label": "Insert Table of Figures",
@@ -1620,7 +1724,8 @@
               "rowSpan": 1,
               "colSpan": 1,
               "image": "TableOfFiguresInsert.png",
-              "idStatus": "confirmed"
+              "idStatus": "confirmed",
+              "tooltip": "Insert Table of Figures (TableOfFiguresInsert) - References > Captions"
             },
             {
               "label": "Update Table",
@@ -1632,7 +1737,8 @@
               "rowSpan": 1,
               "colSpan": 1,
               "image": "TableOfFiguresUpdate.png",
-              "idStatus": "confirmed"
+              "idStatus": "confirmed",
+              "tooltip": "Update Table (TableOfFiguresUpdate) - References > Captions"
             },
             {
               "label": "Cross-reference",
@@ -1644,7 +1750,8 @@
               "rowSpan": 1,
               "colSpan": 1,
               "image": "CrossReferenceInsert.png",
-              "idStatus": "confirmed"
+              "idStatus": "confirmed",
+              "tooltip": "Cross-reference (CrossReferenceInsert) - References > Captions"
             }
           ]
         },
@@ -1670,7 +1777,8 @@
               "rowSpan": 3,
               "colSpan": 2,
               "image": "IndexMarkEntry.png",
-              "idStatus": "confirmed"
+              "idStatus": "confirmed",
+              "tooltip": "Mark Entry (IndexMarkEntry) - References > Index"
             },
             {
               "label": "Insert Index",
@@ -1682,7 +1790,8 @@
               "rowSpan": 3,
               "colSpan": 2,
               "image": "IndexInsert.png",
-              "idStatus": "confirmed"
+              "idStatus": "confirmed",
+              "tooltip": "Insert Index (IndexInsert) - References > Index"
             },
             {
               "label": "Update Index",
@@ -1694,7 +1803,8 @@
               "rowSpan": 1,
               "colSpan": 1,
               "image": "IndexUpdate.png",
-              "idStatus": "confirmed"
+              "idStatus": "confirmed",
+              "tooltip": "Update Index (IndexUpdate) - References > Index"
             }
           ]
         }
@@ -1727,7 +1837,8 @@
               "rowSpan": 3,
               "colSpan": 2,
               "image": "EnvelopesAndLabelsDialog.png",
-              "idStatus": "confirmed"
+              "idStatus": "confirmed",
+              "tooltip": "Envelopes (EnvelopesAndLabelsDialog) - Mailings > Create"
             },
             {
               "label": "Labels",
@@ -1739,7 +1850,8 @@
               "rowSpan": 3,
               "colSpan": 2,
               "image": "LabelsDialog.png",
-              "idStatus": "confirmed"
+              "idStatus": "confirmed",
+              "tooltip": "Labels (LabelsDialog) - Mailings > Create"
             }
           ]
         },
@@ -1765,7 +1877,8 @@
               "rowSpan": 3,
               "colSpan": 2,
               "image": "MailMergeStart.png",
-              "idStatus": "confirmed"
+              "idStatus": "confirmed",
+              "tooltip": "Start Mail Merge (MailMergeStart) - Mailings > Start Mail Merge"
             },
             {
               "label": "Select Recipients",
@@ -1777,7 +1890,8 @@
               "rowSpan": 3,
               "colSpan": 2,
               "image": "MailMergeSelectRecipients.png",
-              "idStatus": "confirmed"
+              "idStatus": "confirmed",
+              "tooltip": "Select Recipients (MailMergeSelectRecipients) - Mailings > Start Mail Merge"
             },
             {
               "label": "Edit Recipient List",
@@ -1789,7 +1903,8 @@
               "rowSpan": 1,
               "colSpan": 1,
               "image": "MailMergeEditRecipientList.png",
-              "idStatus": "candidate"
+              "idStatus": "candidate",
+              "tooltip": "Edit Recipient List (MailMergeEditRecipientList) - Mailings > Start Mail Merge"
             }
           ]
         },
@@ -1815,7 +1930,8 @@
               "rowSpan": 1,
               "colSpan": 1,
               "image": null,
-              "idStatus": "needs_validation"
+              "idStatus": "needs_validation",
+              "tooltip": "Highlight Merge Fields - Mailings > Write & Insert Fields"
             },
             {
               "label": "Address Block",
@@ -1827,7 +1943,8 @@
               "rowSpan": 3,
               "colSpan": 2,
               "image": "MailMergeAddressBlockInsert.png",
-              "idStatus": "confirmed"
+              "idStatus": "confirmed",
+              "tooltip": "Address Block (MailMergeAddressBlockInsert) - Mailings > Write & Insert Fields"
             },
             {
               "label": "Greeting Line",
@@ -1839,7 +1956,8 @@
               "rowSpan": 3,
               "colSpan": 2,
               "image": "MailMergeGreetingLineInsert.png",
-              "idStatus": "confirmed"
+              "idStatus": "confirmed",
+              "tooltip": "Greeting Line (MailMergeGreetingLineInsert) - Mailings > Write & Insert Fields"
             },
             {
               "label": "Insert Merge Field",
@@ -1851,7 +1969,8 @@
               "rowSpan": 3,
               "colSpan": 2,
               "image": "MailMergeInsertMergeField.png",
-              "idStatus": "candidate"
+              "idStatus": "candidate",
+              "tooltip": "Insert Merge Field (MailMergeInsertMergeField) - Mailings > Write & Insert Fields"
             },
             {
               "label": "Rules",
@@ -1863,7 +1982,8 @@
               "rowSpan": 1,
               "colSpan": 1,
               "image": "MailMergeRules.png",
-              "idStatus": "confirmed"
+              "idStatus": "confirmed",
+              "tooltip": "Rules (MailMergeRules) - Mailings > Write & Insert Fields"
             },
             {
               "label": "Match Fields",
@@ -1875,7 +1995,8 @@
               "rowSpan": 1,
               "colSpan": 1,
               "image": "MailMergeMatchFields.png",
-              "idStatus": "confirmed"
+              "idStatus": "confirmed",
+              "tooltip": "Match Fields (MailMergeMatchFields) - Mailings > Write & Insert Fields"
             },
             {
               "label": "Update Labels",
@@ -1887,7 +2008,8 @@
               "rowSpan": 1,
               "colSpan": 1,
               "image": "MailMergeUpdateLabels.png",
-              "idStatus": "confirmed"
+              "idStatus": "confirmed",
+              "tooltip": "Update Labels (MailMergeUpdateLabels) - Mailings > Write & Insert Fields"
             }
           ]
         },
@@ -1913,7 +2035,8 @@
               "rowSpan": 3,
               "colSpan": 2,
               "image": "MailMergePreviewResults.png",
-              "idStatus": "candidate"
+              "idStatus": "candidate",
+              "tooltip": "Preview Results (MailMergePreviewResults) - Mailings > Preview Results"
             },
             {
               "label": "First Record",
@@ -1925,7 +2048,8 @@
               "rowSpan": 1,
               "colSpan": 1,
               "image": null,
-              "idStatus": "needs_validation"
+              "idStatus": "needs_validation",
+              "tooltip": "First Record - Mailings > Preview Results"
             },
             {
               "label": "Previous Record",
@@ -1937,7 +2061,8 @@
               "rowSpan": 1,
               "colSpan": 1,
               "image": null,
-              "idStatus": "needs_validation"
+              "idStatus": "needs_validation",
+              "tooltip": "Previous Record - Mailings > Preview Results"
             },
             {
               "label": "Record Number",
@@ -1949,7 +2074,8 @@
               "rowSpan": 1,
               "colSpan": 2,
               "image": null,
-              "idStatus": "needs_validation"
+              "idStatus": "needs_validation",
+              "tooltip": "Record Number - Mailings > Preview Results"
             },
             {
               "label": "Next Record",
@@ -1961,7 +2087,8 @@
               "rowSpan": 1,
               "colSpan": 1,
               "image": null,
-              "idStatus": "needs_validation"
+              "idStatus": "needs_validation",
+              "tooltip": "Next Record - Mailings > Preview Results"
             },
             {
               "label": "Last Record",
@@ -1973,7 +2100,8 @@
               "rowSpan": 1,
               "colSpan": 1,
               "image": null,
-              "idStatus": "needs_validation"
+              "idStatus": "needs_validation",
+              "tooltip": "Last Record - Mailings > Preview Results"
             },
             {
               "label": "Find Recipient",
@@ -1985,7 +2113,8 @@
               "rowSpan": 1,
               "colSpan": 1,
               "image": "MailMergeFindRecipient.png",
-              "idStatus": "confirmed"
+              "idStatus": "confirmed",
+              "tooltip": "Find Recipient (MailMergeFindRecipient) - Mailings > Preview Results"
             },
             {
               "label": "Check for Errors",
@@ -1997,7 +2126,8 @@
               "rowSpan": 1,
               "colSpan": 1,
               "image": "MailMergeCheckForErrors.png",
-              "idStatus": "candidate"
+              "idStatus": "candidate",
+              "tooltip": "Check for Errors (MailMergeCheckForErrors) - Mailings > Preview Results"
             }
           ]
         },
@@ -2023,7 +2153,8 @@
               "rowSpan": 3,
               "colSpan": 3,
               "image": "MailMergeFinishAndMerge.png",
-              "idStatus": "candidate"
+              "idStatus": "candidate",
+              "tooltip": "Finish & Merge (MailMergeFinishAndMerge) - Mailings > Finish"
             }
           ]
         }
@@ -2056,7 +2187,8 @@
               "rowSpan": 3,
               "colSpan": 2,
               "image": "SpellingAndGrammar.png",
-              "idStatus": "confirmed"
+              "idStatus": "confirmed",
+              "tooltip": "Spelling & Grammar (SpellingAndGrammar) - Review > Proofing"
             },
             {
               "label": "Thesaurus",
@@ -2068,7 +2200,8 @@
               "rowSpan": 3,
               "colSpan": 2,
               "image": "Thesaurus.png",
-              "idStatus": "confirmed"
+              "idStatus": "confirmed",
+              "tooltip": "Thesaurus (Thesaurus) - Review > Proofing"
             },
             {
               "label": "Word Count",
@@ -2080,7 +2213,8 @@
               "rowSpan": 1,
               "colSpan": 1,
               "image": "WordCount.png",
-              "idStatus": "confirmed"
+              "idStatus": "confirmed",
+              "tooltip": "Word Count (WordCount) - Review > Proofing"
             }
           ]
         },
@@ -2106,7 +2240,8 @@
               "rowSpan": 3,
               "colSpan": 3,
               "image": "ReadAloud.png",
-              "idStatus": "candidate"
+              "idStatus": "candidate",
+              "tooltip": "Read Aloud (ReadAloud) - Review > Speech"
             }
           ]
         },
@@ -2132,7 +2267,8 @@
               "rowSpan": 3,
               "colSpan": 3,
               "image": null,
-              "idStatus": "needs_validation"
+              "idStatus": "needs_validation",
+              "tooltip": "Check Accessibility - Review > Accessibility"
             }
           ]
         },
@@ -2158,7 +2294,8 @@
               "rowSpan": 3,
               "colSpan": 2,
               "image": "Translate.png",
-              "idStatus": "confirmed"
+              "idStatus": "confirmed",
+              "tooltip": "Translate (Translate) - Review > Language"
             },
             {
               "label": "Language",
@@ -2170,7 +2307,8 @@
               "rowSpan": 3,
               "colSpan": 2,
               "image": "SetLanguage.png",
-              "idStatus": "confirmed"
+              "idStatus": "confirmed",
+              "tooltip": "Language (SetLanguage) - Review > Language"
             }
           ]
         },
@@ -2196,7 +2334,8 @@
               "rowSpan": 3,
               "colSpan": 2,
               "image": "NewComment.png",
-              "idStatus": "confirmed"
+              "idStatus": "confirmed",
+              "tooltip": "New Comment (NewComment) - Review > Comments"
             },
             {
               "label": "Delete",
@@ -2208,7 +2347,8 @@
               "rowSpan": 1,
               "colSpan": 1,
               "image": "DeleteComment.png",
-              "idStatus": "candidate"
+              "idStatus": "candidate",
+              "tooltip": "Delete (DeleteComment) - Review > Comments"
             },
             {
               "label": "Previous",
@@ -2220,7 +2360,8 @@
               "rowSpan": 1,
               "colSpan": 1,
               "image": "PreviousComment.png",
-              "idStatus": "candidate"
+              "idStatus": "candidate",
+              "tooltip": "Previous (PreviousComment) - Review > Comments"
             },
             {
               "label": "Next",
@@ -2232,7 +2373,8 @@
               "rowSpan": 1,
               "colSpan": 1,
               "image": "NextComment.png",
-              "idStatus": "candidate"
+              "idStatus": "candidate",
+              "tooltip": "Next (NextComment) - Review > Comments"
             },
             {
               "label": "Show Comments",
@@ -2244,7 +2386,8 @@
               "rowSpan": 1,
               "colSpan": 1,
               "image": null,
-              "idStatus": "needs_validation"
+              "idStatus": "needs_validation",
+              "tooltip": "Show Comments - Review > Comments"
             }
           ]
         },
@@ -2270,7 +2413,8 @@
               "rowSpan": 3,
               "colSpan": 2,
               "image": "TrackChanges.png",
-              "idStatus": "candidate"
+              "idStatus": "candidate",
+              "tooltip": "Track Changes (TrackChanges) - Review > Tracking"
             },
             {
               "label": "Display for Review",
@@ -2282,7 +2426,8 @@
               "rowSpan": 1,
               "colSpan": 3,
               "image": "ReviewDisplayForReview.png",
-              "idStatus": "confirmed"
+              "idStatus": "confirmed",
+              "tooltip": "Display for Review (ReviewDisplayForReview) - Review > Tracking"
             },
             {
               "label": "Show Markup",
@@ -2294,7 +2439,8 @@
               "rowSpan": 1,
               "colSpan": 1,
               "image": "ReviewShowMarkup.png",
-              "idStatus": "confirmed"
+              "idStatus": "confirmed",
+              "tooltip": "Show Markup (ReviewShowMarkup) - Review > Tracking"
             },
             {
               "label": "Reviewing Pane",
@@ -2306,7 +2452,8 @@
               "rowSpan": 1,
               "colSpan": 1,
               "image": "ReviewingPane.png",
-              "idStatus": "confirmed"
+              "idStatus": "confirmed",
+              "tooltip": "Reviewing Pane (ReviewingPane) - Review > Tracking"
             }
           ]
         },
@@ -2332,7 +2479,8 @@
               "rowSpan": 3,
               "colSpan": 2,
               "image": "AcceptChange.png",
-              "idStatus": "candidate"
+              "idStatus": "candidate",
+              "tooltip": "Accept (AcceptChange) - Review > Changes"
             },
             {
               "label": "Reject",
@@ -2344,7 +2492,8 @@
               "rowSpan": 3,
               "colSpan": 2,
               "image": "RejectChange.png",
-              "idStatus": "candidate"
+              "idStatus": "candidate",
+              "tooltip": "Reject (RejectChange) - Review > Changes"
             },
             {
               "label": "Previous",
@@ -2356,7 +2505,8 @@
               "rowSpan": 1,
               "colSpan": 1,
               "image": "PreviousChange.png",
-              "idStatus": "candidate"
+              "idStatus": "candidate",
+              "tooltip": "Previous (PreviousChange) - Review > Changes"
             },
             {
               "label": "Next",
@@ -2368,7 +2518,8 @@
               "rowSpan": 1,
               "colSpan": 1,
               "image": "NextChange.png",
-              "idStatus": "candidate"
+              "idStatus": "candidate",
+              "tooltip": "Next (NextChange) - Review > Changes"
             }
           ]
         },
@@ -2394,7 +2545,8 @@
               "rowSpan": 3,
               "colSpan": 3,
               "image": "CompareDocuments.png",
-              "idStatus": "candidate"
+              "idStatus": "candidate",
+              "tooltip": "Compare (CompareDocuments) - Review > Compare"
             }
           ]
         },
@@ -2420,7 +2572,8 @@
               "rowSpan": 3,
               "colSpan": 3,
               "image": "RestrictEditing.png",
-              "idStatus": "candidate"
+              "idStatus": "candidate",
+              "tooltip": "Restrict Editing (RestrictEditing) - Review > Protect"
             }
           ]
         }
@@ -2453,7 +2606,8 @@
               "rowSpan": 3,
               "colSpan": 2,
               "image": null,
-              "idStatus": "needs_validation"
+              "idStatus": "needs_validation",
+              "tooltip": "Read Mode - View > Views"
             },
             {
               "label": "Print Layout",
@@ -2465,7 +2619,8 @@
               "rowSpan": 3,
               "colSpan": 2,
               "image": "ViewPrintLayoutView.png",
-              "idStatus": "confirmed"
+              "idStatus": "confirmed",
+              "tooltip": "Print Layout (ViewPrintLayoutView) - View > Views"
             },
             {
               "label": "Web Layout",
@@ -2477,7 +2632,8 @@
               "rowSpan": 3,
               "colSpan": 2,
               "image": "ViewWebLayoutView.png",
-              "idStatus": "confirmed"
+              "idStatus": "confirmed",
+              "tooltip": "Web Layout (ViewWebLayoutView) - View > Views"
             },
             {
               "label": "Outline",
@@ -2489,7 +2645,8 @@
               "rowSpan": 1,
               "colSpan": 1,
               "image": "ViewOutlineView.png",
-              "idStatus": "confirmed"
+              "idStatus": "confirmed",
+              "tooltip": "Outline (ViewOutlineView) - View > Views"
             },
             {
               "label": "Draft",
@@ -2501,7 +2658,8 @@
               "rowSpan": 1,
               "colSpan": 1,
               "image": "ViewDraftView.png",
-              "idStatus": "confirmed"
+              "idStatus": "confirmed",
+              "tooltip": "Draft (ViewDraftView) - View > Views"
             }
           ]
         },
@@ -2527,7 +2685,8 @@
               "rowSpan": 1,
               "colSpan": 1,
               "image": "ViewRuler.png",
-              "idStatus": "candidate"
+              "idStatus": "candidate",
+              "tooltip": "Ruler (ViewRuler) - View > Show"
             },
             {
               "label": "Gridlines",
@@ -2539,7 +2698,8 @@
               "rowSpan": 1,
               "colSpan": 1,
               "image": "ViewGridlines.png",
-              "idStatus": "confirmed"
+              "idStatus": "confirmed",
+              "tooltip": "Gridlines (ViewGridlines) - View > Show"
             },
             {
               "label": "Navigation Pane",
@@ -2551,7 +2711,8 @@
               "rowSpan": 1,
               "colSpan": 1,
               "image": "NavigationPaneShowHide.png",
-              "idStatus": "confirmed"
+              "idStatus": "confirmed",
+              "tooltip": "Navigation Pane (NavigationPaneShowHide) - View > Show"
             }
           ]
         },
@@ -2577,7 +2738,8 @@
               "rowSpan": 3,
               "colSpan": 2,
               "image": "ZoomDialog.png",
-              "idStatus": "confirmed"
+              "idStatus": "confirmed",
+              "tooltip": "Zoom (ZoomDialog) - View > Zoom"
             },
             {
               "label": "100%",
@@ -2589,7 +2751,8 @@
               "rowSpan": 3,
               "colSpan": 2,
               "image": "Zoom100Percent.png",
-              "idStatus": "candidate"
+              "idStatus": "candidate",
+              "tooltip": "100% (Zoom100Percent) - View > Zoom"
             },
             {
               "label": "One Page",
@@ -2601,7 +2764,8 @@
               "rowSpan": 1,
               "colSpan": 1,
               "image": "ViewOnePage.png",
-              "idStatus": "candidate"
+              "idStatus": "candidate",
+              "tooltip": "One Page (ViewOnePage) - View > Zoom"
             },
             {
               "label": "Multiple Pages",
@@ -2613,7 +2777,8 @@
               "rowSpan": 1,
               "colSpan": 1,
               "image": "ViewTwoPages.png",
-              "idStatus": "confirmed"
+              "idStatus": "confirmed",
+              "tooltip": "Multiple Pages (ViewTwoPages) - View > Zoom"
             },
             {
               "label": "Page Width",
@@ -2625,7 +2790,8 @@
               "rowSpan": 1,
               "colSpan": 1,
               "image": "ViewPageWidth.png",
-              "idStatus": "candidate"
+              "idStatus": "candidate",
+              "tooltip": "Page Width (ViewPageWidth) - View > Zoom"
             }
           ]
         },
@@ -2651,7 +2817,8 @@
               "rowSpan": 3,
               "colSpan": 2,
               "image": "WindowNew.png",
-              "idStatus": "confirmed"
+              "idStatus": "confirmed",
+              "tooltip": "New Window (WindowNew) - View > Window"
             },
             {
               "label": "Arrange All",
@@ -2663,7 +2830,8 @@
               "rowSpan": 1,
               "colSpan": 1,
               "image": "WindowArrangeAll.png",
-              "idStatus": "candidate"
+              "idStatus": "candidate",
+              "tooltip": "Arrange All (WindowArrangeAll) - View > Window"
             },
             {
               "label": "Split",
@@ -2675,7 +2843,8 @@
               "rowSpan": 1,
               "colSpan": 1,
               "image": "WindowSplit.png",
-              "idStatus": "confirmed"
+              "idStatus": "confirmed",
+              "tooltip": "Split (WindowSplit) - View > Window"
             },
             {
               "label": "View Side by Side",
@@ -2687,7 +2856,8 @@
               "rowSpan": 1,
               "colSpan": 1,
               "image": "WindowViewSideBySide.png",
-              "idStatus": "candidate"
+              "idStatus": "candidate",
+              "tooltip": "View Side by Side (WindowViewSideBySide) - View > Window"
             },
             {
               "label": "Synchronous Scrolling",
@@ -2699,7 +2869,8 @@
               "rowSpan": 1,
               "colSpan": 1,
               "image": "WindowSynchronousScrolling.png",
-              "idStatus": "candidate"
+              "idStatus": "candidate",
+              "tooltip": "Synchronous Scrolling (WindowSynchronousScrolling) - View > Window"
             },
             {
               "label": "Reset Window Position",
@@ -2711,7 +2882,8 @@
               "rowSpan": 1,
               "colSpan": 1,
               "image": "WindowResetPosition.png",
-              "idStatus": "confirmed"
+              "idStatus": "confirmed",
+              "tooltip": "Reset Window Position (WindowResetPosition) - View > Window"
             },
             {
               "label": "Switch Windows",
@@ -2723,7 +2895,8 @@
               "rowSpan": 1,
               "colSpan": 1,
               "image": "WindowSwitchWindowsMenuWord.png",
-              "idStatus": "confirmed"
+              "idStatus": "confirmed",
+              "tooltip": "Switch Windows (WindowSwitchWindowsMenuWord) - View > Window"
             }
           ]
         },
@@ -2749,7 +2922,8 @@
               "rowSpan": 3,
               "colSpan": 3,
               "image": "ViewMacros.png",
-              "idStatus": "candidate"
+              "idStatus": "candidate",
+              "tooltip": "Macros (ViewMacros) - View > Macros"
             }
           ]
         }
@@ -2782,7 +2956,8 @@
               "rowSpan": 3,
               "colSpan": 2,
               "image": "VisualBasic.png",
-              "idStatus": "confirmed"
+              "idStatus": "confirmed",
+              "tooltip": "Visual Basic (VisualBasic) - Developer > Code"
             },
             {
               "label": "Macros",
@@ -2794,7 +2969,8 @@
               "rowSpan": 3,
               "colSpan": 2,
               "image": "Macros.png",
-              "idStatus": "candidate"
+              "idStatus": "candidate",
+              "tooltip": "Macros (Macros) - Developer > Code"
             },
             {
               "label": "Record Macro",
@@ -2806,7 +2982,8 @@
               "rowSpan": 1,
               "colSpan": 1,
               "image": "RecordMacro.png",
-              "idStatus": "candidate"
+              "idStatus": "candidate",
+              "tooltip": "Record Macro (RecordMacro) - Developer > Code"
             },
             {
               "label": "Macro Security",
@@ -2818,7 +2995,8 @@
               "rowSpan": 1,
               "colSpan": 1,
               "image": "MacroSecurity.png",
-              "idStatus": "confirmed"
+              "idStatus": "confirmed",
+              "tooltip": "Macro Security (MacroSecurity) - Developer > Code"
             }
           ]
         },
@@ -2844,7 +3022,8 @@
               "rowSpan": 3,
               "colSpan": 2,
               "image": "AddIns.png",
-              "idStatus": "candidate"
+              "idStatus": "candidate",
+              "tooltip": "Add-ins (AddIns) - Developer > Add-ins"
             },
             {
               "label": "COM Add-ins",
@@ -2856,7 +3035,8 @@
               "rowSpan": 3,
               "colSpan": 2,
               "image": "ComAddIns.png",
-              "idStatus": "candidate"
+              "idStatus": "candidate",
+              "tooltip": "COM Add-ins (ComAddIns) - Developer > Add-ins"
             }
           ]
         },
@@ -2882,7 +3062,8 @@
               "rowSpan": 1,
               "colSpan": 1,
               "image": "ContentControlRichText.png",
-              "idStatus": "confirmed"
+              "idStatus": "confirmed",
+              "tooltip": "Rich Text Content Control (ContentControlRichText) - Developer > Controls"
             },
             {
               "label": "Plain Text Content Control",
@@ -2894,7 +3075,8 @@
               "rowSpan": 1,
               "colSpan": 1,
               "image": "ContentControlText.png",
-              "idStatus": "confirmed"
+              "idStatus": "confirmed",
+              "tooltip": "Plain Text Content Control (ContentControlText) - Developer > Controls"
             },
             {
               "label": "Picture Content Control",
@@ -2906,7 +3088,8 @@
               "rowSpan": 1,
               "colSpan": 1,
               "image": "ContentControlPicture.png",
-              "idStatus": "confirmed"
+              "idStatus": "confirmed",
+              "tooltip": "Picture Content Control (ContentControlPicture) - Developer > Controls"
             },
             {
               "label": "Building Block Gallery Content Control",
@@ -2918,7 +3101,8 @@
               "rowSpan": 1,
               "colSpan": 1,
               "image": "ContentControlBuildingBlockGallery.png",
-              "idStatus": "confirmed"
+              "idStatus": "confirmed",
+              "tooltip": "Building Block Gallery Content Control (ContentControlBuildingBlockGallery) - Developer > Controls"
             },
             {
               "label": "Check Box Content Control",
@@ -2930,7 +3114,8 @@
               "rowSpan": 1,
               "colSpan": 1,
               "image": "ContentControlCheckBox.png",
-              "idStatus": "confirmed"
+              "idStatus": "confirmed",
+              "tooltip": "Check Box Content Control (ContentControlCheckBox) - Developer > Controls"
             },
             {
               "label": "Combo Box Content Control",
@@ -2942,7 +3127,8 @@
               "rowSpan": 1,
               "colSpan": 1,
               "image": "ContentControlComboBox.png",
-              "idStatus": "confirmed"
+              "idStatus": "confirmed",
+              "tooltip": "Combo Box Content Control (ContentControlComboBox) - Developer > Controls"
             },
             {
               "label": "Drop-Down List Content Control",
@@ -2954,7 +3140,8 @@
               "rowSpan": 1,
               "colSpan": 1,
               "image": "ContentControlDropDownList.png",
-              "idStatus": "confirmed"
+              "idStatus": "confirmed",
+              "tooltip": "Drop-Down List Content Control (ContentControlDropDownList) - Developer > Controls"
             },
             {
               "label": "Date Picker Content Control",
@@ -2966,7 +3153,8 @@
               "rowSpan": 1,
               "colSpan": 1,
               "image": "ContentControlDatePicker.png",
-              "idStatus": "candidate"
+              "idStatus": "candidate",
+              "tooltip": "Date Picker Content Control (ContentControlDatePicker) - Developer > Controls"
             },
             {
               "label": "Legacy Tools",
@@ -2978,7 +3166,8 @@
               "rowSpan": 1,
               "colSpan": 1,
               "image": "LegacyTools.png",
-              "idStatus": "candidate"
+              "idStatus": "candidate",
+              "tooltip": "Legacy Tools (LegacyTools) - Developer > Controls"
             },
             {
               "label": "Design Mode",
@@ -2990,7 +3179,8 @@
               "rowSpan": 1,
               "colSpan": 1,
               "image": "DesignMode.png",
-              "idStatus": "confirmed"
+              "idStatus": "confirmed",
+              "tooltip": "Design Mode (DesignMode) - Developer > Controls"
             },
             {
               "label": "Properties",
@@ -3002,7 +3192,8 @@
               "rowSpan": 1,
               "colSpan": 1,
               "image": "ContentControlProperties.png",
-              "idStatus": "candidate"
+              "idStatus": "candidate",
+              "tooltip": "Properties (ContentControlProperties) - Developer > Controls"
             },
             {
               "label": "Group",
@@ -3014,7 +3205,8 @@
               "rowSpan": 1,
               "colSpan": 1,
               "image": "ContentControlGroup.png",
-              "idStatus": "candidate"
+              "idStatus": "candidate",
+              "tooltip": "Group (ContentControlGroup) - Developer > Controls"
             }
           ]
         },
@@ -3040,7 +3232,8 @@
               "rowSpan": 3,
               "colSpan": 3,
               "image": "XmlMappingPane.png",
-              "idStatus": "candidate"
+              "idStatus": "candidate",
+              "tooltip": "XML Mapping Pane (XmlMappingPane) - Developer > Mapping"
             }
           ]
         },
@@ -3066,7 +3259,8 @@
               "rowSpan": 3,
               "colSpan": 3,
               "image": "RestrictEditing.png",
-              "idStatus": "candidate"
+              "idStatus": "candidate",
+              "tooltip": "Restrict Editing (RestrictEditing) - Developer > Protect"
             }
           ]
         },
@@ -3092,7 +3286,8 @@
               "rowSpan": 3,
               "colSpan": 3,
               "image": "DocumentTemplate.png",
-              "idStatus": "confirmed"
+              "idStatus": "confirmed",
+              "tooltip": "Document Template (DocumentTemplate) - Developer > Templates"
             }
           ]
         }

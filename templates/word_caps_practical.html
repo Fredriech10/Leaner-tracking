@@ -38,6 +38,9 @@
         .ribbon-btn.active { background: rgba(43, 87, 154, 0.14); border-color: #8fb4e8; color: #0f4fa1; }
         .ribbon-btn .icon { font-size: 1rem; line-height: 1; }
         .ribbon-btn .icon-img { width: 18px; height: 18px; object-fit: contain; display: block; }
+        .ribbon-btn .icon-fallback { display: none; }
+        .ribbon-btn .icon-img.failed { display: none; }
+        .ribbon-btn .icon-img.failed + .icon-fallback { display: block; }
         .ribbon-btn[data-control-size="large"] .icon-img { width: 30px; height: 30px; }
         .ribbon-btn .label { display: none; }
         .word-ribbon[data-ribbon-tab]:not([data-ribbon-tab="home"]) .ribbon-buttons { display: grid; grid-auto-flow: column; grid-auto-columns: minmax(56px, auto); grid-template-rows: repeat(2, minmax(28px, auto)); gap: 5px 6px; width: auto; }
@@ -123,6 +126,12 @@
         .ribbon-group.group-acrobat { min-width: 112px; }
         .ribbon-group.group-pages { min-width: 106px; }
         .ribbon-group.group-table-mini { min-width: 64px; }
+        .ribbon-group.group-table-layout-rows { min-width: 216px; }
+        .ribbon-group.group-table-layout-merge { min-width: 108px; }
+        .word-tab[data-tab-id="table_layout"] { color: #9e480e; font-weight: 600; }
+        .word-tab[data-tab-id="table_layout"].active { border-bottom-color: #ed7d31; background: #fff8f2; }
+        .word-ribbon[data-ribbon-tab="table_layout"] { border-top: 3px solid #ed7d31; position: relative; }
+        .word-ribbon[data-ribbon-tab="table_layout"]::before { content: "Table Tools"; position: absolute; margin-top: -30px; color: #9e480e; font-size: 0.72rem; font-weight: 700; }
         .ribbon-group.group-illustrations { min-width: 250px; }
         .ribbon-group.group-addins { min-width: 136px; }
         .ribbon-group.group-media { min-width: 82px; }
@@ -167,6 +176,18 @@
         .question-card { padding: 0 0 6px; }
         .question-kicker { font-size: 0.76rem; color: #64748b; text-transform: uppercase; letter-spacing: .04em; font-weight: 700; margin-bottom: 6px; }
         .question-title { margin: 0 0 8px; font-size: 1.05rem; color: #163759; font-weight: 700; }
+        .selection-stage { margin: 10px 0 14px; border: 1px solid #c8c6c4; background: #fff; box-shadow: inset 0 0 0 1px #f8f8f8; padding: 14px 18px; }
+        .selection-stage-head { display: flex; justify-content: space-between; gap: 10px; align-items: center; margin-bottom: 10px; color: #605e5c; font-size: 0.76rem; }
+        .selection-stage-status { font-weight: 700; color: #a4262c; }
+        .selection-stage-status.ready { color: #107c10; }
+        .selection-line { margin: 0; min-height: 28px; line-height: 1.75; color: #323130; }
+        .document-target { border: 0; background: transparent; color: inherit; font: inherit; padding: 1px 2px; cursor: text; }
+        .document-target:hover { background: #e8f2ff; outline: 1px solid #9ec5fe; }
+        .document-target.selected { background: #cfe8ff; outline: 1px solid #5b9bd5; }
+        .document-target.cursor-target { display: inline-block; min-width: 5px; height: 21px; padding: 0; vertical-align: -5px; border-left: 2px solid #1f1f1f; }
+        .document-target.cursor-target.selected { background: #cfe8ff; border-left-color: #005a9e; }
+        .document-target.paragraph-target { display: block; width: 100%; text-align: left; padding: 3px 5px; }
+        .selection-decoy { color: #605e5c; }
         .question-feedback { margin-top: 12px; padding: 9px 12px; border-radius: 3px; font-weight: 700; display: none; }
         .question-feedback.correct { display: block; background: #e9f8ec; border: 1px solid #9ad3a6; color: #166534; }
         .question-feedback.skipped { display: block; background: #fff7e8; border: 1px solid #f1c56b; color: #9a3412; }
@@ -176,11 +197,12 @@
         .doc-preview, .preview-box, .merge-preview, .source-card { border: 1px solid #dbe4f0; border-radius: 12px; background: #fff; padding: 14px; }
         .preview-title { font-size: 0.78rem; color: #64748b; text-transform: uppercase; letter-spacing: .04em; font-weight: 700; margin-bottom: 8px; }
         .preview-text { color: #1f2937; line-height: 1.65; }
+        .preview-table .table-cell-selected { background: #cfe8ff; outline: 2px solid #5b9bd5; outline-offset: -2px; }
         .replace-hit { background: #fef3c7; padding: 2px 3px; border-radius: 4px; }
         .word-dialog { border: 1px solid #9da9b8; border-radius: 2px; background: #ffffff; box-shadow: 0 12px 26px rgba(15,23,42,0.14); overflow: hidden; }
         .dialog-layer { position: absolute; inset: 8px 0 0 0; pointer-events: none; z-index: 8; }
         .dialog-layer::before { content: ""; position: absolute; inset: 0; background: linear-gradient(180deg, rgba(255,255,255,0.0) 0%, rgba(241,245,249,0.28) 14%, rgba(241,245,249,0.42) 100%); }
-        .word-dialog-floating { width: min(560px, calc(100% - 24px)); margin-left: auto; margin-right: 12px; box-shadow: 0 24px 48px rgba(15,23,42,0.22); border-radius: 2px; pointer-events: auto; position: relative; transform: translateY(-96px); }
+        .word-dialog-floating { width: min(560px, calc(100% - 24px)); margin: 0; box-shadow: 0 24px 48px rgba(15,23,42,0.22); border-radius: 2px; pointer-events: auto; position: fixed; top: var(--floating-dialog-top, 340px); left: 50%; transform: translateX(-50%); }
         .word-dialog-anchored { width: 238px; position: fixed; z-index: 40; border-radius: 4px; box-shadow: 0 20px 40px rgba(15,23,42,0.24); pointer-events: auto; }
         .word-dialog-head { background: linear-gradient(180deg, #fbfbfc 0%, #f2f4f7 100%); padding: 7px 12px; border-bottom: 1px solid #d9dfe8; font-weight: 400; color: #111827; font-size: 0.9rem; display: flex; justify-content: space-between; align-items: center; }
         .word-dialog-head::after { content: "?    ✕"; white-space: pre; font-size: 0.82rem; color: #111827; }
@@ -473,10 +495,10 @@
                     {% if group.class_name == 'group-font' and control.id == 'home.font_family' %}
                     <div id="{{ control.id | replace('.', '_') }}" class="font-select-wrap family" data-control-id="{{ control.id }}" data-control-kind="{{ control.kind }}" title="{{ control.tooltip or control.label }}" onclick="handleControlClick(event, '{{ control.id }}')"><select class="font-select"><option selected>Calibri (Body)</option></select></div>
                     {% elif group.class_name == 'group-font' and control.id == 'home.font_size' %}
-                    <div id="{{ control.id | replace('.', '_') }}" class="font-select-wrap size" data-control-id="{{ control.id }}" data-control-kind="{{ control.kind }}" title="{{ control.tooltip or control.label }}" onclick="handleControlClick(event, '{{ control.id }}')"><select class="font-select"><option>11</option><option>16</option><option>24</option></select></div>
+                    <div id="{{ control.id | replace('.', '_') }}" class="font-select-wrap size" data-control-id="{{ control.id }}" data-control-kind="{{ control.kind }}" title="{{ control.tooltip or control.label }}"><select class="font-select" onchange="handleFontSizeChange(event)"><option>8</option><option>9</option><option>10</option><option selected>11</option><option>12</option><option>14</option><option>16</option><option>18</option><option>20</option><option>22</option><option>24</option><option>26</option><option>28</option></select></div>
                     {% else %}
                     <button type="button" id="{{ control.id | replace('.', '_') }}" class="ribbon-btn" data-control-id="{{ control.id }}" data-control-kind="{{ control.kind }}" data-control-size="{{ control.size or 'small' }}" title="{{ control.tooltip or control.label }}" onclick="handleControlClick(event, '{{ control.id }}')">
-                        <span class="icon">{% if control.image_url %}<img class="icon-img" src="{{ control.image_url }}" alt="" loading="eager" decoding="async">{% else %}{{ control.icon }}{% endif %}</span>
+                        <span class="icon">{% if control.image_url %}<img class="icon-img" src="{{ control.image_url }}" alt="" loading="eager" decoding="async" onerror="this.classList.add('failed')"><span class="icon-fallback">{{ control.icon }}</span>{% else %}{{ control.icon }}{% endif %}</span>
                         <span class="label">{{ control.label }}</span>
                     </button>
                     {% endif %}
@@ -568,6 +590,11 @@ const storageKey = `word_caps_progress_{{ learner_full_name|replace(" ", "_") }}
 
 function currentQuestion() { return questions[activeQuestionIndex]; }
 function currentState() { return state[activeQuestionIndex]; }
+function escapeHtml(value) {
+    const element = document.createElement("div");
+    element.textContent = String(value || "");
+    return element.innerHTML;
+}
 function allQuestionsResolved() {
     return state.every(item => item.complete || item.skipped);
 }
@@ -611,8 +638,10 @@ function restoreProgress() {
 function ensureDocState(index) {
     if (!state[index].docState || Object.keys(state[index].docState).length === 0) {
         state[index].docState = defaultDocStateForQuestion(questions[index]);
-        syncHiddenFields(index);
     }
+    if (state[index].docState.target_selected === undefined) state[index].docState.target_selected = false;
+    if (state[index].docState.selection_message === undefined) state[index].docState.selection_message = "";
+    syncHiddenFields(index);
 }
 function syncHiddenFields(index) {
     const q = questions[index];
@@ -624,6 +653,7 @@ function syncHiddenFields(index) {
 function switchTab(tabId) {
     document.querySelectorAll('.word-tab[data-tab-id]').forEach(tab => tab.classList.toggle('active', tab.dataset.tabId === tabId));
     document.querySelectorAll('.word-ribbon[data-ribbon-tab]').forEach(ribbon => ribbon.classList.toggle('active', ribbon.dataset.ribbonTab === tabId));
+    positionFloatingDialogs();
     closeAllMiniMenus();
 }
 function closeAllMiniMenus() { document.querySelectorAll('.mini-menu.open').forEach(menu => menu.classList.remove('open')); }
@@ -644,7 +674,12 @@ function getControlAnchorStyle(controlId, width, offsetY = 8) {
     const top = Math.round(rect.bottom + offsetY);
     return `left:${left}px;top:${top}px;width:${width}px;`;
 }
-function currentControls() { return currentQuestion().steps.filter(step => step !== "home" && step !== "insert" && step !== "layout" && step !== "references" && step !== "mailings"); }
+function positionFloatingDialogs() {
+    const ribbon = document.querySelector('.word-ribbon.active');
+    const ribbonBottom = ribbon ? ribbon.getBoundingClientRect().bottom : 240;
+    document.documentElement.style.setProperty('--floating-dialog-top', `${Math.round(ribbonBottom + 100)}px`);
+}
+function currentControls() { return currentQuestion().steps.filter(step => !["home", "insert", "layout", "references", "mailings", "smartart_format", "table_layout"].includes(step)); }
 function currentTabs() {
     const tabs = new Set(["home"]);
     currentQuestion().steps.forEach(step => tabs.add(step.split(".")[0]));
@@ -668,6 +703,14 @@ function handleControlClick(event, controlId) {
         return;
     }
     recordAction(controlId);
+}
+function handleFontSizeChange(event) {
+    event.stopPropagation();
+    const size = Number(event.currentTarget.value || 0);
+    if (!size || transitionLock) return;
+    ensureDocState(activeQuestionIndex);
+    state[activeQuestionIndex].docState.pending_size = size;
+    recordAction("home.font_size");
 }
 function renderSidebar() {
     let done = 0;
@@ -709,13 +752,33 @@ function renderSidebar() {
 function renderCurrentQuestion() {
     const q = currentQuestion();
     const s = currentState();
+    ensureDocState(activeQuestionIndex);
     document.getElementById("currentQuestionTitle").textContent = q.title;
     let promptHtml = q.prompt_html;
     if (q.title === "Font Color") {
         const requiredName = s.docState.required_color_name || "Red";
         promptHtml = `<p>Change the selected text font colour to <strong>${requiredName}</strong> using the Home tab font colour control.</p>`;
     }
-    document.getElementById("currentQuestionPrompt").innerHTML = promptHtml;
+    const target = (q.metadata && q.metadata.target) || { type: "selection", label: "required text" };
+    const targetLabel = escapeHtml(target.label || "required text");
+    const targetSelected = !!s.docState.target_selected;
+    const targetClass = targetSelected ? " selected" : "";
+    const targetControl = target.type === "cursor"
+        ? `The cursor belongs after <button type="button" class="document-target${targetClass}" data-document-target="correct">${targetLabel}</button><button type="button" class="document-target cursor-target${targetClass}" data-document-target="correct" aria-label="Place cursor here"></button>.`
+        : target.type === "paragraph" || target.type === "document"
+            ? `<button type="button" class="document-target paragraph-target${targetClass}" data-document-target="correct">${targetLabel}: Computer applications technology practical work must be completed accurately and neatly.</button>`
+            : `<span class="selection-line">Use the correct location: <button type="button" class="document-target${targetClass}" data-document-target="correct">${targetLabel}</button></span>`;
+    const selectionStage = q.metadata && q.metadata.requires_target_selection
+        ? `<div class="selection-stage"><div class="selection-stage-head"><span>Document selection area</span><span class="selection-stage-status${targetSelected ? " ready" : ""}">${targetSelected ? "Selection ready" : (s.docState.selection_message || "Select the required text or cursor position")}</span></div>${targetControl}<p class="selection-line selection-decoy"><button type="button" class="document-target" data-document-target="incorrect">Introduction</button> contains unrelated document text.</p><p class="selection-line selection-decoy"><button type="button" class="document-target" data-document-target="incorrect">Conclusion</button> contains unrelated document text.</p></div>`
+        : "";
+    document.getElementById("currentQuestionPrompt").innerHTML = `${promptHtml}${selectionStage}`;
+    document.querySelectorAll("[data-document-target]").forEach(control => control.addEventListener("click", function(){
+        const isCorrect = this.dataset.documentTarget === "correct";
+        s.docState.target_selected = isCorrect;
+        s.docState.selection_message = isCorrect ? "" : "That is not the required selection. Try again.";
+        syncHiddenFields(activeQuestionIndex);
+        renderAll();
+    }));
     document.getElementById("currentQuestionCounter").textContent = `Question ${activeQuestionIndex + 1} of ${questions.length}`;
     const skipBtn = document.getElementById("skipButton");
     const feedback = document.getElementById("questionFeedback");
@@ -744,6 +807,15 @@ function defaultDocStateForQuestion(question) {
     if (t === "Copy Text") return { copied_text: false };
     if (t === "Paste Text") return { pasted_text: false };
     if (t === "Format Painter") return { format_painted: false };
+    if (t === "Grow Font") return { font_grown: false };
+    if (t === "Shrink Font") return { font_shrunk: false };
+    if (t === "Strikethrough Text") return { strikethrough_applied: false };
+    if (t === "Superscript Text") return { superscript_applied: false };
+    if (t === "Subscript Text") return { subscript_applied: false };
+    if (t === "Add Table Row") return { table_rows: 3, table_columns: 3 };
+    if (t === "Add Table Column") return { table_rows: 3, table_columns: 3 };
+    if (t === "Delete Table Row") return { table_rows: 4, table_columns: 3 };
+    if (t === "Merge Table Cells") return { table_rows: 3, table_columns: 3, cells_merged: false };
     if (t === "Font Color") return { font_color: "#111827", color_dialog_open: false, pending_color: "#c62828", required_color: "#c62828", required_color_name: "Red" };
     if (t === "Bullet List") return { list_type: "none", list_dialog_open: false, pending_list: "" };
     if (t === "Numbered List") return { list_type: "none", list_dialog_open: false, pending_list: "" };
@@ -803,6 +875,20 @@ function renderQuestionWorkspace() {
             syncHiddenFields(activeQuestionIndex);
             if (rfs) rfs.textContent = s.docState.find_text.trim().toUpperCase() === "CAR" ? "The text CAR is ready to replace." : "Enter CAR to locate the required word.";
         });
+        return;
+    }
+    if (["Add Table Row", "Add Table Column", "Delete Table Row", "Merge Table Cells"].includes(q.title)) {
+        const d = s.docState;
+        const rows = Number(d.table_rows || 3), columns = Number(d.table_columns || 3);
+        const tableRows = Array.from({ length: rows }).map((_, rowIndex) => {
+            if (d.cells_merged && rowIndex === 0) return `<tr><td colspan="2" class="table-cell-selected">Merged cells</td><td>Item 3</td></tr>`;
+            return `<tr>${Array.from({ length: columns }).map((_, columnIndex) => `<td class="${rowIndex === 1 && columnIndex === 1 ? "table-cell-selected" : ""}">${rowIndex + 1}.${columnIndex + 1}</td>`).join("")}</tr>`;
+        }).join("");
+        const instruction = q.title === "Add Table Row" ? "Selected row: Row 2. Insert one row below it."
+            : q.title === "Add Table Column" ? "Selected column: Column 2. Insert one column to its right."
+            : q.title === "Delete Table Row" ? "Selected row: Row 2. Delete this row."
+            : "Selected cells: Row 1, Columns 1 and 2. Merge these cells.";
+        root.innerHTML = `<div class="workspace-sim"><div class="mini-document"><div class="preview-title">Table Editing Preview</div><table class="preview-table">${tableRows}</table><div class="doc-note" style="margin-top:12px;">${instruction} Use the Table Layout contextual tab.</div></div></div>`;
         return;
     }
     if (q.title === "Insert Table") {
@@ -935,12 +1021,7 @@ function renderQuestionWorkspace() {
     }
     if (["Align Left", "Align Center", "Align Right", "Justify Text"].includes(q.title)) {
         const d = s.docState;
-        const controlId = q.title === "Align Left" ? "home.align_left" : q.title === "Align Center" ? "home.align_center" : q.title === "Align Right" ? "home.align_right" : "home.justify";
-        root.innerHTML = `<div class="workspace-sim"><div class="preview-box"><div class="preview-title">Paragraph Preview</div><p class="format-sample ${d.alignment || "left"}">Computer studies practical tasks should be completed accurately and presented in a neat, readable format for assessment.</p></div>${d.alignment_dialog_open ? `<div class="word-dialog word-dialog-anchored" style="${getControlAnchorStyle(controlId, 240, 6)}"><div class="word-dialog-body" style="padding:8px;background:#fff;"><div class="office-list-box"><div class="office-list-item${d.pending_alignment === "left" ? " selected" : ""}" data-align-choice="left">Align Left</div><div class="office-list-item${d.pending_alignment === "center" ? " selected" : ""}" data-align-choice="center">Align Center</div><div class="office-list-item${d.pending_alignment === "right" ? " selected" : ""}" data-align-choice="right">Align Right</div><div class="office-list-item${d.pending_alignment === "justify" ? " selected" : ""}" data-align-choice="justify">Justify</div></div><div class="dialog-actions" style="padding-top:4px;"><button type="button" class="mini-btn" id="alignCancelBtn">Cancel</button><button type="button" class="mini-btn primary" id="alignApplyBtn">Apply</button></div></div></div>` : ``}</div>`;
-        document.querySelectorAll("[data-align-choice]").forEach(item => item.addEventListener("click", function(){ d.pending_alignment = this.dataset.alignChoice || "left"; syncHiddenFields(activeQuestionIndex); renderQuestionWorkspace(); }));
-        const cancel = document.getElementById("alignCancelBtn"), apply = document.getElementById("alignApplyBtn");
-        if (cancel) cancel.addEventListener("click", function(){ d.alignment_dialog_open = false; syncHiddenFields(activeQuestionIndex); renderQuestionWorkspace(); });
-        if (apply) apply.addEventListener("click", function(){ recordAction(`${controlId}_apply`); });
+        root.innerHTML = `<div class="workspace-sim"><div class="preview-box"><div class="preview-title">Paragraph Preview</div><p class="format-sample ${d.alignment || "left"}">Computer studies practical tasks should be completed accurately and presented in a neat, readable format for assessment.</p></div><div class="doc-note">Use the matching alignment button in the Home ribbon.</div></div>`;
         return;
     }
     if (q.title === "Table Borders" || q.title === "Paragraph Borders") {
@@ -1095,7 +1176,7 @@ function renderQuestionWorkspace() {
         if (fapply) fapply.addEventListener("click", function(){ recordAction("mailings.insert_merge_field_apply"); });
         return;
     }
-    if (["Bold Text", "Italic Text", "Underline Text", "Highlight Text", "Clear Formatting", "Copy Text", "Paste Text", "Format Painter"].includes(q.title)) {
+    if (["Bold Text", "Italic Text", "Underline Text", "Highlight Text", "Clear Formatting", "Copy Text", "Paste Text", "Format Painter", "Grow Font", "Shrink Font", "Strikethrough Text", "Superscript Text", "Subscript Text"].includes(q.title)) {
         const d = s.docState;
         const sampleStyle = q.title === "Format Painter" || d.format_painted ? "font-weight:700;color:#1d4ed8;" : "";
         const selectedStyle = [
@@ -1103,17 +1184,29 @@ function renderQuestionWorkspace() {
             d.italic_applied ? "font-style:italic" : "",
             d.underline_applied ? "text-decoration:underline" : "",
             d.highlight_applied ? "background:#fef08a" : "",
+            d.font_grown ? "font-size:20px" : "",
+            d.font_shrunk ? "font-size:12px" : "",
+            d.strikethrough_applied ? "text-decoration:line-through" : "",
+            d.superscript_applied ? "vertical-align:super;font-size:0.72em" : "",
+            d.subscript_applied ? "vertical-align:sub;font-size:0.72em" : "",
             d.format_painted ? "font-weight:700;color:#1d4ed8" : "",
             d.formatting_cleared ? "font-weight:400;font-style:normal;text-decoration:none;background:transparent;color:#111827" : ""
         ].filter(Boolean).join(";");
-        root.innerHTML = `<div class="workspace-sim"><div class="doc-preview"><div class="preview-title">Document Preview</div><div class="preview-text"><p><span style="${selectedStyle}">Selected text sample</span></p><p><span style="${sampleStyle}">Sample heading format</span></p><p>${d.copied_text ? "Clipboard contains the selected sentence." : "A sentence is selected for copying."}</p><p>${d.pasted_text ? "Copied sentence" : "Blank paragraph"}</p></div></div></div>`;
+        const selectedText = q.title === "Superscript Text" || q.title === "Subscript Text" ? "2" : q.title === "Strikethrough Text" ? "Completed task" : "Selected text sample";
+        const baseSize = q.title === "Grow Font" ? "font-size:16px" : q.title === "Shrink Font" ? "font-size:16px" : "";
+        root.innerHTML = `<div class="workspace-sim"><div class="doc-preview"><div class="preview-title">Document Preview</div><div class="preview-text"><p><span style="${baseSize};${selectedStyle}">${selectedText}</span></p><p><span style="${sampleStyle}">Sample heading format</span></p><p>${d.copied_text ? "Clipboard contains the selected sentence." : "A sentence is selected for copying."}</p><p>${d.pasted_text ? "Copied sentence" : "Blank paragraph"}</p></div></div></div>`;
         return;
     }
     root.innerHTML = `<div class="doc-note">Use the highlighted Word ribbon controls to complete this question.</div>`;
 }
 function evaluateQuestion(q, s) {
+    if (q.metadata && q.metadata.requires_target_selection && !s.docState.target_selected) return false;
     if (q.title === "Replace") return !!s.docState.replace_done && (s.docState.preview_text || "").trim().toUpperCase() === "MOTOR MOTOR BUS MOTOR";
     if (q.title === "Insert Table") return !!s.docState.table && Number(s.docState.table.columns) === 3 && Number(s.docState.table.rows) === 6;
+    if (q.title === "Add Table Row") return Number(s.docState.table_rows || 0) === 4 && Number(s.docState.table_columns || 0) === 3;
+    if (q.title === "Add Table Column") return Number(s.docState.table_rows || 0) === 3 && Number(s.docState.table_columns || 0) === 4;
+    if (q.title === "Delete Table Row") return Number(s.docState.table_rows || 0) === 3 && Number(s.docState.table_columns || 0) === 3;
+    if (q.title === "Merge Table Cells") return !!s.docState.cells_merged;
     if (q.title === "Font Size") return Number(s.docState.font_size || 0) === 24;
     if (q.title === "Bold Text") return !!s.docState.bold_applied;
     if (q.title === "Italic Text") return !!s.docState.italic_applied;
@@ -1123,6 +1216,11 @@ function evaluateQuestion(q, s) {
     if (q.title === "Copy Text") return !!s.docState.copied_text;
     if (q.title === "Paste Text") return !!s.docState.pasted_text;
     if (q.title === "Format Painter") return !!s.docState.format_painted;
+    if (q.title === "Grow Font") return !!s.docState.font_grown;
+    if (q.title === "Shrink Font") return !!s.docState.font_shrunk;
+    if (q.title === "Strikethrough Text") return !!s.docState.strikethrough_applied;
+    if (q.title === "Superscript Text") return !!s.docState.superscript_applied;
+    if (q.title === "Subscript Text") return !!s.docState.subscript_applied;
     if (q.title === "Font Color") return (s.docState.font_color || "").toLowerCase() === "#c62828";
     if (q.title === "Insert Chart") return !!s.docState.chart_inserted && s.docState.chart_type === "column";
     if (q.title === "Insert Picture") return !!s.docState.picture_inserted && s.docState.picture_choice === "campus";
@@ -1159,11 +1257,17 @@ function recordAction(controlId) {
     const q = currentQuestion(), s = currentState();
     if (s.complete || transitionLock) return;
     ensureDocState(activeQuestionIndex);
+    if (q.metadata && q.metadata.requires_target_selection && !s.docState.target_selected) {
+        s.docState.selection_message = "Select the required text or place the cursor before using a Word command.";
+        syncHiddenFields(activeQuestionIndex);
+        renderAll();
+        return;
+    }
     if (s.skipped) {
         s.skipped = false;
         s.awarded = 0;
     }
-    if (q.title === "Font Size" && controlId === "home.font_size") { s.docState.size_dialog_open = true; syncHiddenFields(activeQuestionIndex); renderAll(); return; }
+    if (q.title === "Font Size" && controlId === "home.font_size") { s.docState.font_size = Number(s.docState.pending_size || 11); s.docState.size_dialog_open = false; }
     if (q.title === "Bold Text" && controlId === "home.bold") { s.docState.bold_applied = true; }
     if (q.title === "Italic Text" && controlId === "home.italic") { s.docState.italic_applied = true; }
     if (q.title === "Underline Text" && controlId === "home.underline") { s.docState.underline_applied = true; }
@@ -1172,6 +1276,15 @@ function recordAction(controlId) {
     if (q.title === "Copy Text" && controlId === "home.copy") { s.docState.copied_text = true; }
     if (q.title === "Paste Text" && controlId === "home.paste") { s.docState.pasted_text = true; }
     if (q.title === "Format Painter" && controlId === "home.format_painter") { s.docState.format_painted = true; }
+    if (q.title === "Grow Font" && controlId === "home.grow_font") { s.docState.font_grown = true; }
+    if (q.title === "Shrink Font" && controlId === "home.shrink_font") { s.docState.font_shrunk = true; }
+    if (q.title === "Strikethrough Text" && controlId === "home.strikethrough") { s.docState.strikethrough_applied = true; }
+    if (q.title === "Superscript Text" && controlId === "home.superscript") { s.docState.superscript_applied = true; }
+    if (q.title === "Subscript Text" && controlId === "home.subscript") { s.docState.subscript_applied = true; }
+    if (q.title === "Add Table Row" && controlId === "table_layout.insert_row_below") { s.docState.table_rows = 4; }
+    if (q.title === "Add Table Column" && controlId === "table_layout.insert_column_right") { s.docState.table_columns = 4; }
+    if (q.title === "Delete Table Row" && controlId === "table_layout.delete_row") { s.docState.table_rows = 3; }
+    if (q.title === "Merge Table Cells" && controlId === "table_layout.merge_cells") { s.docState.cells_merged = true; }
     if (q.title === "Font Color" && controlId === "home.font_color") { s.docState.color_dialog_open = true; syncHiddenFields(activeQuestionIndex); renderAll(); return; }
     if ((q.title === "Bullet List" && controlId === "home.bullets") || (q.title === "Numbered List" && controlId === "home.numbering")) { s.docState.list_dialog_open = true; syncHiddenFields(activeQuestionIndex); renderAll(); return; }
     if (q.title === "Insert Chart" && controlId === "insert.chart") { s.docState.chart_dialog_open = true; syncHiddenFields(activeQuestionIndex); renderAll(); return; }
@@ -1184,10 +1297,10 @@ function recordAction(controlId) {
     if (q.title === "Apply Heading" && controlId === "home.style_heading1") { s.docState.styles_dialog_open = true; s.docState.pending_style = "Heading 1"; syncHiddenFields(activeQuestionIndex); renderAll(); return; }
     if (q.title === "Left Indent" && controlId === "layout.indent_left") { s.docState.indent_dialog_open = true; syncHiddenFields(activeQuestionIndex); renderAll(); return; }
     if (q.title === "Right Indent" && controlId === "layout.indent_right") { s.docState.indent_dialog_open = true; syncHiddenFields(activeQuestionIndex); renderAll(); return; }
-    if (q.title === "Align Left" && controlId === "home.align_left") { s.docState.alignment_dialog_open = true; s.docState.pending_alignment = "left"; syncHiddenFields(activeQuestionIndex); renderAll(); return; }
-    if (q.title === "Align Center" && controlId === "home.align_center") { s.docState.alignment_dialog_open = true; s.docState.pending_alignment = "center"; syncHiddenFields(activeQuestionIndex); renderAll(); return; }
-    if (q.title === "Align Right" && controlId === "home.align_right") { s.docState.alignment_dialog_open = true; s.docState.pending_alignment = "right"; syncHiddenFields(activeQuestionIndex); renderAll(); return; }
-    if (q.title === "Justify Text" && controlId === "home.justify") { s.docState.alignment_dialog_open = true; s.docState.pending_alignment = "justify"; syncHiddenFields(activeQuestionIndex); renderAll(); return; }
+    if (q.title === "Align Left" && controlId === "home.align_left") { s.docState.alignment = "left"; s.docState.pending_alignment = "left"; s.docState.alignment_dialog_open = false; }
+    if (q.title === "Align Center" && controlId === "home.align_center") { s.docState.alignment = "center"; s.docState.pending_alignment = "center"; s.docState.alignment_dialog_open = false; }
+    if (q.title === "Align Right" && controlId === "home.align_right") { s.docState.alignment = "right"; s.docState.pending_alignment = "right"; s.docState.alignment_dialog_open = false; }
+    if (q.title === "Justify Text" && controlId === "home.justify") { s.docState.alignment = "justify"; s.docState.pending_alignment = "justify"; s.docState.alignment_dialog_open = false; }
     if ((q.title === "Table Borders" || q.title === "Paragraph Borders") && controlId === "home.borders") { s.docState.borders_dialog_open = true; syncHiddenFields(activeQuestionIndex); renderAll(); return; }
     if (controlId === "home.replace") { s.docState.dialog_open = true; s.docState.find_dialog_mode = "replace"; syncHiddenFields(activeQuestionIndex); renderAll(); return; }
     if (controlId === "home.find") { s.docState.find_open = true; s.docState.find_dialog_mode = "find"; syncHiddenFields(activeQuestionIndex); renderAll(); return; }
@@ -1309,10 +1422,12 @@ function renderAll() {
     renderSidebar();
     renderCurrentQuestion();
     renderQuestionWorkspace();
+    positionFloatingDialogs();
     saveProgress();
 }
 document.getElementById("skipButton").addEventListener("click", skipCurrentQuestion);
 document.addEventListener("click", function (event) { if (!event.target.closest('.ribbon-group')) closeAllMiniMenus(); });
+window.addEventListener("resize", positionFloatingDialogs);
 document.getElementById("wordCapsForm").addEventListener("keydown", function (event) {
     if (event.key !== "Enter") return;
     const target = event.target;

@@ -166,6 +166,15 @@ def _word_caps_question_bank():
         ("Copy Text", "Copy the selected sentence to the clipboard.", ["home", "home.copy"], "Clipboard"),
         ("Paste Text", "Paste the copied sentence into the blank paragraph.", ["home", "home.paste"], "Clipboard"),
         ("Format Painter", "Copy the formatting from the sample heading and apply it to the selected heading.", ["home", "home.format_painter"], "Clipboard"),
+        ("Grow Font", "Increase the size of the selected heading by one font-size step.", ["home", "home.grow_font"], "Formatting"),
+        ("Shrink Font", "Decrease the size of the selected heading by one font-size step.", ["home", "home.shrink_font"], "Formatting"),
+        ("Strikethrough Text", "Apply strikethrough formatting to the selected completed item.", ["home", "home.strikethrough"], "Formatting"),
+        ("Superscript Text", "Format the selected number as superscript.", ["home", "home.superscript"], "Formatting"),
+        ("Subscript Text", "Format the selected number as subscript.", ["home", "home.subscript"], "Formatting"),
+        ("Add Table Row", "Insert one new row below the selected table row.", ["table_layout", "table_layout.insert_row_below"], "Table"),
+        ("Add Table Column", "Insert one new column to the right of the selected table column.", ["table_layout", "table_layout.insert_column_right"], "Table"),
+        ("Delete Table Row", "Delete the selected row from the table.", ["table_layout", "table_layout.delete_row"], "Table"),
+        ("Merge Table Cells", "Merge the two selected cells in the first row of the table.", ["table_layout", "table_layout.merge_cells"], "Table"),
     ]
     target_defaults = {
         "Font Size": {"type": "text", "label": "selected sentence"},
@@ -178,6 +187,15 @@ def _word_caps_question_bank():
         "Copy Text": {"type": "text", "label": "selected sentence"},
         "Paste Text": {"type": "paragraph", "label": "blank paragraph"},
         "Format Painter": {"type": "text", "label": "selected heading"},
+        "Grow Font": {"type": "text", "label": "selected heading"},
+        "Shrink Font": {"type": "text", "label": "selected heading"},
+        "Strikethrough Text": {"type": "text", "label": "selected completed item"},
+        "Superscript Text": {"type": "text", "label": "selected number"},
+        "Subscript Text": {"type": "text", "label": "selected number"},
+        "Add Table Row": {"type": "object", "label": "selected table row"},
+        "Add Table Column": {"type": "object", "label": "selected table column"},
+        "Delete Table Row": {"type": "object", "label": "selected table row"},
+        "Merge Table Cells": {"type": "object", "label": "two selected cells in the first row"},
         "Bullet List": {"type": "text", "label": "selected three lines"},
         "Numbered List": {"type": "text", "label": "selected procedure steps"},
         "Insert Chart": {"type": "paragraph", "label": "below the Results Summary paragraph"},
@@ -212,8 +230,8 @@ def _word_caps_question_bank():
     }
 
     def build_metadata(title, steps):
-        actionable_steps = [step for step in steps if step not in {"home", "insert", "layout", "references", "mailings", "smartart_format"}]
-        first_tab = next((step for step in steps if step in {"insert", "layout", "references", "mailings", "smartart_format"}), "home")
+        actionable_steps = [step for step in steps if step not in {"home", "insert", "layout", "references", "mailings", "smartart_format", "table_layout"}]
+        first_tab = next((step for step in steps if step in {"insert", "layout", "references", "mailings", "smartart_format", "table_layout"}), "home")
         tab_clicks = 0 if first_tab == "home" else 1
         target = target_defaults.get(title, {"type": "selection", "label": "correct item"})
         return {
@@ -301,13 +319,13 @@ def _fallback_control_id(tab_id, control):
 def _word_icon_url(image_name):
     if not image_name:
         return None
-    return f"/practical_assets/Word/{image_name}"
+    return f"/practical_assets/Word/{image_name}?v=word-ribbon-2"
 
 
 def _excel_icon_url(image_name):
     if not image_name:
         return None
-    return f"/practical_assets/Excel/{image_name}"
+    return f"/practical_assets/Excel/{image_name}?v=office-ribbon-2"
 
 
 def _build_excel_ribbon_from_layout():
@@ -435,6 +453,30 @@ def _build_word_shell_from_layout(task_title, active_tabs, active_controls, shel
                     {"id": "smartart_format", "label": "Change Colors", "tooltip": "Change Colors - SmartArt Design > SmartArt Styles", "icon": "Aa", "kind": "menu", "image_url": None},
                 ],
             }],
+        })
+
+    if "table_layout" in active_tabs:
+        tabs.append({
+            "id": "table_layout",
+            "label": "Table Layout",
+            "groups": [
+                {
+                    "title": "Rows & Columns",
+                    "class_name": "group-table-layout-rows",
+                    "controls": [
+                        {"id": "table_layout.insert_row_below", "label": "Insert Below", "tooltip": "Insert Below - Table Layout > Rows & Columns", "icon": "⊞", "kind": "button", "image_url": "/practical_assets/Access/InsertRowBelow.png?v=office-ribbon-2"},
+                        {"id": "table_layout.insert_column_right", "label": "Insert Right", "tooltip": "Insert Right - Table Layout > Rows & Columns", "icon": "⊟", "kind": "button", "image_url": "/practical_assets/Access/InsertColumnRight.png?v=office-ribbon-2"},
+                        {"id": "table_layout.delete_row", "label": "Delete Row", "tooltip": "Delete Rows - Table Layout > Rows & Columns", "icon": "⌫", "kind": "button", "image_url": "/practical_assets/Access/QueryDeleteRows.png?v=office-ribbon-2"},
+                    ],
+                },
+                {
+                    "title": "Merge",
+                    "class_name": "group-table-layout-merge",
+                    "controls": [
+                        {"id": "table_layout.merge_cells", "label": "Merge Cells", "tooltip": "Merge Cells - Table Layout > Merge", "icon": "⊡", "kind": "button", "image_url": "/practical_assets/Excel/MergeAndCenter.png?v=office-ribbon-2"},
+                    ],
+                },
+            ],
         })
 
     icon_urls = sorted({
@@ -929,7 +971,7 @@ def get_simulator_catalog():
             "description": "Word-style practical simulator with one question at a time.",
             "shell": build_word_shell(
                 "CAPS Word Practical",
-                active_tabs=["home", "insert", "layout", "references", "mailings", "smartart_format"],
+                active_tabs=["home", "insert", "layout", "references", "mailings", "smartart_format", "table_layout"],
                 active_controls=word_caps_active_controls,
                 shell_mode="test",
                 inactive_controls_style="enabled",

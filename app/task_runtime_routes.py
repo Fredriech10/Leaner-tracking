@@ -82,6 +82,18 @@ def _score_word_caps_practical(questions, form_data):
             table_state = question_state.get("table") or {}
             passed = int(table_state.get("columns", 0) or 0) == 3 and int(table_state.get("rows", 0) or 0) == 6
             details = "Inserted 3 x 6 table" if passed else "Table dimensions not correct"
+        elif not skip_flag and question["title"] == "Add Table Row":
+            passed = int(question_state.get("table_rows", 0) or 0) == 4 and int(question_state.get("table_columns", 0) or 0) == 3
+            details = "Table row inserted" if passed else "Table row not inserted correctly"
+        elif not skip_flag and question["title"] == "Add Table Column":
+            passed = int(question_state.get("table_rows", 0) or 0) == 3 and int(question_state.get("table_columns", 0) or 0) == 4
+            details = "Table column inserted" if passed else "Table column not inserted correctly"
+        elif not skip_flag and question["title"] == "Delete Table Row":
+            passed = int(question_state.get("table_rows", 0) or 0) == 3 and int(question_state.get("table_columns", 0) or 0) == 3
+            details = "Table row deleted" if passed else "Table row not deleted correctly"
+        elif not skip_flag and question["title"] == "Merge Table Cells":
+            passed = bool(question_state.get("cells_merged"))
+            details = "Table cells merged" if passed else "Table cells not merged"
         elif not skip_flag and question["title"] == "Font Size":
             passed = int(question_state.get("font_size", 0) or 0) == 24
             details = "Font size changed" if passed else "Font size not changed correctly"
@@ -109,6 +121,21 @@ def _score_word_caps_practical(questions, form_data):
         elif not skip_flag and question["title"] == "Format Painter":
             passed = bool(question_state.get("format_painted"))
             details = "Format Painter applied" if passed else "Format Painter not applied"
+        elif not skip_flag and question["title"] == "Grow Font":
+            passed = bool(question_state.get("font_grown"))
+            details = "Font increased" if passed else "Font not increased"
+        elif not skip_flag and question["title"] == "Shrink Font":
+            passed = bool(question_state.get("font_shrunk"))
+            details = "Font decreased" if passed else "Font not decreased"
+        elif not skip_flag and question["title"] == "Strikethrough Text":
+            passed = bool(question_state.get("strikethrough_applied"))
+            details = "Strikethrough applied" if passed else "Strikethrough not applied"
+        elif not skip_flag and question["title"] == "Superscript Text":
+            passed = bool(question_state.get("superscript_applied"))
+            details = "Superscript applied" if passed else "Superscript not applied"
+        elif not skip_flag and question["title"] == "Subscript Text":
+            passed = bool(question_state.get("subscript_applied"))
+            details = "Subscript applied" if passed else "Subscript not applied"
         elif not skip_flag and question["title"] == "Font Color":
             passed = str(question_state.get("font_color", "")).lower() == "#c62828"
             details = "Font colour changed" if passed else "Font colour not changed correctly"
@@ -202,6 +229,10 @@ def _score_word_caps_practical(questions, form_data):
         elif not skip_flag and question["title"] == "Insert Merge Fields":
             passed = bool(question_state.get("merge_field_inserted"))
             details = "Merge field inserted" if passed else "Merge field not inserted"
+
+        if passed and question.get("metadata", {}).get("requires_target_selection") and not question_state.get("target_selected"):
+            passed = False
+            details = "Correct Word action used, but the required text or cursor position was not selected"
 
         awarded = question["marks"] if passed else 0
         total_score += awarded

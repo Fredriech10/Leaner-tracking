@@ -58,8 +58,8 @@ def practical_assets(program, filename):
     if not image_folder:
         abort(404)
     directory = os.path.join(os.path.dirname(os.path.abspath(__file__)), "Practical", "Images", image_folder)
-    response = send_from_directory(directory, filename, max_age=60 * 60 * 24 * 30)
-    response.headers["Cache-Control"] = "public, max-age=2592000, immutable"
+    response = send_from_directory(directory, filename, max_age=60 * 60 * 24)
+    response.headers["Cache-Control"] = "public, max-age=86400"
     return response
 
 @app.after_request

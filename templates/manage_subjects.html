@@ -23,6 +23,10 @@
 
         .form-inline { display: flex; gap: 12px; align-items: center; flex-wrap: wrap; }
         .form-inline input[type="text"] { padding: 8px 12px; border: 1px solid #ccc; border-radius: 6px; font-size: 0.9em; min-width: 250px; }
+        .subject-filter { display: flex; gap: 8px; align-items: center; margin: 0 0 14px; }
+        .subject-filter input { flex: 1; max-width: 420px; padding: 8px 12px; border: 1px solid #bbb; border-radius: 6px; font-size: 0.9em; }
+        .subject-count { color: #666; font-size: 0.84em; }
+        .task-count { display: inline-block; min-width: 28px; padding: 3px 8px; border-radius: 999px; background: #e8f2fa; color: #005a9e; text-align: center; font-weight: bold; }
         
         .btn { padding: 8px 16px; border: none; border-radius: 6px; cursor: pointer; font-size: 0.88em; font-weight: bold; text-decoration: none; display: inline-block; }
         .btn-primary { background: #005a9e; color: white; }
@@ -83,20 +87,27 @@
 <!-- Existing Subjects -->
 <div class="card">
     <h3>📚 Existing Subjects</h3>
+    <form method="get" class="subject-filter">
+        <input type="search" name="q" value="{{ subject_filter }}" placeholder="Filter subjects by name" aria-label="Filter subjects by name">
+        <button type="submit" class="btn btn-primary btn-sm">Filter</button>
+        {% if subject_filter %}<a href="/manage_subjects" class="btn btn-sm">Clear</a>{% endif %}
+        <span class="subject-count">{{ subjects|length }} shown</span>
+    </form>
     {% if subjects %}
     <table>
         <thead>
             <tr>
                 <th>Subject Name</th>
-                <th>Tasks</th>
+                <th>Assigned Tasks</th>
                 <th>Actions</th>
             </tr>
         </thead>
         <tbody>
-        {% for subj_id, subj_name in subjects %}
+        {% for subj_id, subj_name, task_count in subjects %}
         <tr>
             <td><strong>{{ subj_name }}</strong></td>
             <td>
+                <span class="task-count" title="{{ task_count }} task{{ '' if task_count == 1 else 's' }} assigned to this subject">{{ task_count }}</span>
                 <a href="/manage_tasks/{{ subj_id }}" class="btn btn-primary btn-sm">📋 Manage Tasks</a>
             </td>
             <td>

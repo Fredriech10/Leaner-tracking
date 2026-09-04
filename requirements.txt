@@ -6,3 +6,4 @@ beautifulsoup4
 pyodbc
 python-pptx
 Pillow
+pywin32

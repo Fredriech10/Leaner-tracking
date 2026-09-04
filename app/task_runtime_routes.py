@@ -550,7 +550,7 @@ def register_task_runtime_routes(app):
                 file.save(temp_path)
 
                 try:
-                    result = mark_file(temp_path, marking_script, marking_setup_id)
+                    result = mark_file(temp_path, marking_script, marking_setup_id, learner_full_name)
                 finally:
                     if os.path.exists(temp_path):
                         os.remove(temp_path)
@@ -594,6 +594,14 @@ def register_task_runtime_routes(app):
             if row and row[0]:
                 sample_name = row[1] or f"task_{task_id}_sample"
                 sample_link_html = f'<p><a href="/tasks/{task_id}/sample_file" target="_blank">📎 Download task sample</a> ({escape(sample_name)})</p>'
+            cursor.execute("SELECT id, file_name FROM task_resources WHERE task_id = ? ORDER BY id", (task_id,))
+            resources = cursor.fetchall()
+            if resources:
+                resource_links = "".join(
+                    f'<li><a href="/tasks/{task_id}/resource/{resource_id}" target="_blank">{escape(file_name)}</a></li>'
+                    for resource_id, file_name in resources
+                )
+                sample_link_html += f"<p><strong>Support files</strong></p><ul>{resource_links}</ul>"
         finally:
             try:
                 if cursor:

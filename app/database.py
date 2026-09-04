@@ -907,6 +907,17 @@ def init_db():
     """)
 
     cursor.execute("""
+    CREATE TABLE IF NOT EXISTS task_resources (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        task_id INTEGER NOT NULL,
+        file_name TEXT NOT NULL,
+        file_blob BLOB NOT NULL,
+        created_at TEXT,
+        FOREIGN KEY (task_id) REFERENCES tasks (id)
+    )
+    """)
+
+    cursor.execute("""
     CREATE TABLE IF NOT EXISTS task_practical_questions (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         task_id INTEGER NOT NULL,

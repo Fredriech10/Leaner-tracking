@@ -71,6 +71,26 @@ def register_task_admin_routes(app):
         if role not in ["teacher", "admin"]:
             return "Access denied", 403
 
+        subject_filter = request.args.get("q", "").strip()
+
+        def load_subjects():
+            conn = get_db()
+            cursor = conn.cursor()
+            query = """
+                SELECT s.id, s.name, COUNT(t.id) AS task_count
+                FROM subjects s
+                LEFT JOIN tasks t ON t.subject_id = s.id
+            """
+            params = []
+            if subject_filter:
+                query += " WHERE LOWER(s.name) LIKE ?"
+                params.append(f"%{subject_filter.lower()}%")
+            query += " GROUP BY s.id, s.name ORDER BY s.name"
+            cursor.execute(query, params)
+            subjects = cursor.fetchall()
+            conn.close()
+            return subjects
+
         if request.method == "POST":
             action = request.form.get("action")
             if action == "create":
@@ -104,19 +124,17 @@ def register_task_admin_routes(app):
                         log_activity(username, f"deleted subject {subj[0]} and all related tasks and results")
                     conn.close()
 
-            conn = get_db()
-            cursor = conn.cursor()
-            cursor.execute("SELECT id, name FROM subjects ORDER BY name")
-            subjects = cursor.fetchall()
-            conn.close()
-            return render_template("manage_subjects.html", subjects=subjects)
+            return render_template(
+                "manage_subjects.html",
+                subjects=load_subjects(),
+                subject_filter=subject_filter,
+            )
 
-        conn = get_db()
-        cursor = conn.cursor()
-        cursor.execute("SELECT id, name FROM subjects ORDER BY name")
-        subjects = cursor.fetchall()
-        conn.close()
-        return render_template("manage_subjects.html", subjects=subjects)
+        return render_template(
+            "manage_subjects.html",
+            subjects=load_subjects(),
+            subject_filter=subject_filter,
+        )
 
     @app.route("/manage_tasks/<subject_id>", methods=["GET", "POST"])
     def manage_tasks(subject_id):
@@ -203,6 +221,13 @@ def register_task_admin_routes(app):
                             file_content = file.read()
                             file_name = file.filename
                             cursor.execute("UPDATE tasks SET sample_file = ?, sample_file_name = ? WHERE id = ?", (file_content, file_name, task_id))
+                    if practical_mode == "upload":
+                        for resource in request.files.getlist("support_files"):
+                            if resource and resource.filename:
+                                cursor.execute(
+                                    "INSERT INTO task_resources (task_id, file_name, file_blob, created_at) VALUES (?, ?, ?, ?)",
+                                    (task_id, secure_filename(resource.filename), resource.read(), datetime.now().isoformat()),
+                                )
                     for group in groups:
                         cursor.execute("INSERT INTO task_groups (task_id, group_name) VALUES (?, ?)", (task_id, group))
                     for teacher in teachers:
@@ -526,5 +551,28 @@ def register_task_admin_routes(app):
             io.BytesIO(file_content),
             as_attachment=True,
             download_name=file_name,
+            mimetype="application/octet-stream",
+        )
+
+    @app.route("/tasks/<int:task_id>/resource/<int:resource_id>")
+    def download_task_resource(task_id, resource_id):
+        username = session.get("username")
+        if not username:
+            return redirect(url_for("login"))
+
+        conn = get_db()
+        cursor = conn.cursor()
+        cursor.execute(
+            "SELECT file_name, file_blob FROM task_resources WHERE id = ? AND task_id = ?",
+            (resource_id, task_id),
+        )
+        row = cursor.fetchone()
+        conn.close()
+        if not row:
+            return "Support file not found", 404
+        return send_file(
+            io.BytesIO(row[1]),
+            as_attachment=True,
+            download_name=row[0],
             mimetype="application/octet-stream",
         )

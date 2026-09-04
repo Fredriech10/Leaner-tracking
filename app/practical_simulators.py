@@ -83,6 +83,28 @@ WORD_CONTROL_IDS = {
     "MailMergeInsertMergeField": "mailings.insert_merge_field",
 }
 
+WORD_ICON_FALLBACKS = {
+    "home.font": "FontSizeIncrease.png",
+    "home.styles_gallery": "StylesPane.png",
+    "design.style_set": "ThemesGallery.png",
+    "design.paragraph_spacing": "LineSpacing.png",
+    "layout.indent_left": "IndentDecreaseWord.png",
+    "layout.indent_right": "IndentIncreaseWord.png",
+    "layout.spacing_before": "LineSpacing.png",
+    "layout.spacing_after": "LineSpacing.png",
+    "references.next_footnote": "FootnotesShow.png",
+    "references.style": "CitationsManageSources.png",
+    "mailings.highlight_merge_fields": "TextHighlightColorPicker.png",
+    "mailings.first_record": "MailMergePreviewResults.png",
+    "mailings.previous_record": "PreviousComment.png",
+    "mailings.record_number": "MailMergeFindRecipient.png",
+    "mailings.next_record": "NextComment.png",
+    "mailings.last_record": "MailMergePreviewResults.png",
+    "review.check_accessibility": "SpellingAndGrammar.png",
+    "review.show_comments": "NewComment.png",
+    "view.read_mode": "ReadAloud.png",
+}
+
 EXCEL_TAB_IDS = {
     "TabHome": "home",
     "TabInsert": "insert",
@@ -407,7 +429,7 @@ def _build_word_shell_from_layout(task_title, active_tabs, active_controls, shel
                     "label": control.get("label") or control.get("idMso") or "Control",
                     "tooltip": control.get("tooltip") or control.get("label") or control.get("idMso") or "Control",
                     "icon": (control.get("label") or control.get("idMso") or "?")[:2],
-                    "image_url": _word_icon_url(control.get("image")),
+                    "image_url": _word_icon_url(control.get("image") or WORD_ICON_FALLBACKS.get(control_id)),
                     "kind": "menu" if control.get("type") in {"menu", "gallery", "splitButton", "comboBox", "numericField"} else "button",
                     "size": control.get("size") or "small",
                     "row": control.get("row"),
@@ -422,7 +444,7 @@ def _build_word_shell_from_layout(task_title, active_tabs, active_controls, shel
                     "label": "Heading 1",
                     "tooltip": "Heading 1 - Home > Styles",
                     "icon": "Aa",
-                    "image_url": None,
+                    "image_url": _word_icon_url("StylesPane.png"),
                     "kind": "button",
                     "size": "large",
                     "row": 1,
@@ -450,7 +472,7 @@ def _build_word_shell_from_layout(task_title, active_tabs, active_controls, shel
                 "title": "SmartArt Styles",
                 "class_name": "group-smartart-styles",
                 "controls": [
-                    {"id": "smartart_format", "label": "Change Colors", "tooltip": "Change Colors - SmartArt Design > SmartArt Styles", "icon": "Aa", "kind": "menu", "image_url": None},
+                    {"id": "smartart_format", "label": "Change Colors", "tooltip": "Change Colors - SmartArt Design > SmartArt Styles", "icon": "Aa", "kind": "menu", "image_url": _word_icon_url("SmartArtInsert.png")},
                 ],
             }],
         })

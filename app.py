@@ -21,6 +21,7 @@ from app.marking_setup_routes import register_marking_setup_routes
 from app.results_routes import register_results_routes
 from app.session_routes import register_session_routes
 from app.task_admin_routes import register_task_admin_routes
+from app.custom_word_task_routes import register_custom_word_task_routes
 from app.task_runtime_routes import register_task_runtime_routes
 from app.theory_admin_routes import register_theory_admin_routes
 from app.theory_learner_routes import register_theory_learner_routes
@@ -40,6 +41,7 @@ register_lesson_routes(app)
 register_marking_setup_routes(app)
 register_results_routes(app)
 register_task_admin_routes(app)
+register_custom_word_task_routes(app)
 register_task_runtime_routes(app)
 register_theory_admin_routes(app)
 register_theory_learner_routes(app)

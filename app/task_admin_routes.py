@@ -468,6 +468,7 @@ def register_task_admin_routes(app):
 
         return render_template(
             "manage_tasks.html",
+            subject_id=subject_id,
             subject_name=subject_name,
             script_options=script_options,
             marking_setup_options=marking_setup_options,

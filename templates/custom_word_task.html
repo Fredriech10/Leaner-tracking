@@ -1,0 +1,117 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>No-code Word Task Builder</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+  <style>
+    :root { --word-blue:#185abd; --line:#d7dce5; --soft:#f5f8fc; --ink:#1f2937; }
+    body { background:linear-gradient(135deg,#edf3fa 0%,#fafcff 48%,#e8f0fa 100%); color:var(--ink); }
+    .builder { max-width:1180px; margin:28px auto 48px; padding:0 20px; }
+    .builder-head { border-left:7px solid var(--word-blue); padding:4px 0 4px 18px; margin-bottom:22px; }
+    .builder-head h1 { margin:0; color:#123b79; font-size:1.75rem; }
+    .builder-head p { margin:7px 0 0; color:#4b5563; }
+    .panel { background:#fff; border:1px solid var(--line); border-radius:8px; box-shadow:0 5px 18px rgba(30,56,91,.08); padding:22px; margin-bottom:18px; }
+    .panel h2 { margin:0 0 5px; font-size:1.05rem; color:#123b79; }
+    .help { color:#5d6573; font-size:.9rem; margin:0 0 16px; }
+    .grid { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:14px 18px; }
+    .field { display:flex; flex-direction:column; gap:5px; }
+    .field.full { grid-column:1 / -1; }
+    label { font-weight:600; font-size:.9rem; }
+    input, textarea, select { box-sizing:border-box; width:100%; border:1px solid #aeb8c8; border-radius:3px; padding:8px 9px; font:inherit; background:#fff; }
+    textarea { min-height:105px; resize:vertical; }
+    input:focus, textarea:focus, select:focus { outline:2px solid #80b5f5; border-color:#2b72c4; }
+    .checks { display:flex; flex-wrap:wrap; gap:10px 18px; }
+    .checks label { font-weight:400; display:flex; align-items:center; gap:6px; }
+    .checks input { width:auto; }
+    .criteria { border:1px solid var(--line); border-radius:6px; overflow:hidden; }
+    .criterion { display:grid; grid-template-columns:1.05fr 1.35fr 1fr 1.2fr 70px 34px; gap:8px; align-items:end; padding:12px; border-bottom:1px solid #e4e8ef; background:linear-gradient(90deg,#fff,#f9fbfe); }
+    .criterion:last-child { border-bottom:0; }
+    .criterion .field { gap:4px; }
+    .criterion label { font-size:.76rem; color:#465367; }
+    .criterion .remove { margin-bottom:0; height:35px; padding:0; background:#fff; color:#a4262c; border:1px solid #dca5a9; border-radius:3px; cursor:pointer; font-size:1.05rem; }
+    .criterion .remove:hover { background:#fff1f1; }
+    .criterion[hidden] { display:none; }
+    .actions { display:flex; justify-content:space-between; gap:12px; align-items:center; margin-top:16px; }
+    .btn-primary { background:var(--word-blue); color:white; border:1px solid #0f438e; }
+    .btn-secondary { background:white; color:#124b96; border:1px solid #9db8de; }
+    .btn-primary, .btn-secondary { padding:9px 14px; border-radius:4px; text-decoration:none; cursor:pointer; font:inherit; }
+    .notice { padding:11px 13px; margin-bottom:16px; background:#fff4e5; color:#7a3e00; border-left:4px solid #e68a00; }
+    .criterion-note { margin-top:12px; padding:10px 12px; background:var(--soft); border-left:3px solid #5a8fd8; color:#435168; font-size:.88rem; }
+    @media (max-width:800px) { .grid { grid-template-columns:1fr; } .criterion { grid-template-columns:1fr 1fr; } .criterion .remove { grid-column:span 2; } }
+  </style>
+</head>
+<body>
+  <main class="builder">
+    <div class="builder-head">
+      <h1>Word Practical Task Builder</h1>
+      <p>Create a marked upload task for <strong>{{ subject_name }}</strong> without writing a script.</p>
+    </div>
+    {% if error %}<div class="notice">{{ error }}</div>{% endif %}
+    <form method="post" enctype="multipart/form-data" id="word-task-form">
+      <input type="hidden" name="criterion_count" id="criterion-count" value="1">
+      <section class="panel">
+        <h2>1. Task and learner files</h2>
+        <p class="help">The starter document is copied for every learner. The question paper and support files are available as downloads in the task.</p>
+        <div class="grid">
+          <div class="field"><label for="title">Task name</label><input id="title" name="title" required placeholder="e.g. Term 3 Word Practical"></div>
+          <div class="field"><label for="assign_date">Assign date</label><input id="assign_date" name="assign_date" type="date" value="{{ today }}" required></div>
+          <div class="field"><label for="starter_file">Word starter document (.docx)</label><input id="starter_file" name="starter_file" type="file" accept=".docx" required></div>
+          <div class="field"><label for="question_paper">Question paper (optional)</label><input id="question_paper" name="question_paper" type="file" accept=".docx,.pdf"></div>
+          <div class="field full"><label for="support_files">Additional support files (optional)</label><input id="support_files" name="support_files" type="file" multiple></div>
+          <div class="field full"><label for="instructions">Instructions shown to learners</label><textarea id="instructions" name="instructions" placeholder="Complete the changes in the starter document, save your work, then upload the completed .docx file."></textarea></div>
+        </div>
+      </section>
+
+      <section class="panel">
+        <h2>2. Marking criteria</h2>
+        <p class="help">Each row becomes a fixed, repeatable Word check. Use the exact text already present in the starter document to identify formatting checks.</p>
+        <div class="criteria" id="criteria"></div>
+        <div class="criterion-note">For a table-cell check, enter the table number in <strong>Locate text / table #</strong>. Enter the expected value as <strong>row, column, text</strong>, using 0 for the first row and column.</div>
+        <div class="actions">
+          <button class="btn-secondary" type="button" id="add-criterion">+ Add criterion</button>
+          <span class="help" style="margin:0;">Total marks are calculated from the criteria.</span>
+        </div>
+      </section>
+
+      <section class="panel">
+        <h2>3. Assignment</h2>
+        <div class="grid">
+          <div class="field"><label>Groups</label><div class="checks">{% for group in groups %}<label><input type="checkbox" name="groups" value="{{ group }}"> {{ group }}</label>{% endfor %}</div></div>
+          <div class="field"><label>Teachers</label><div class="checks">{% for teacher in teachers %}<label><input type="checkbox" name="teachers" value="{{ teacher[0] }}" {% if teacher[0] == username %}checked{% endif %}> {{ teacher[1] or teacher[0] }}</label>{% endfor %}</div></div>
+          <div class="field full"><label><input type="checkbox" name="is_active" checked style="width:auto; margin-right:7px;"> Make this task active immediately</label></div>
+        </div>
+      </section>
+      <div class="actions"><a class="btn-secondary" href="{{ url_for('manage_tasks', subject_id=subject_id) }}">Cancel</a><button class="btn-primary" type="submit">Create Word practical task</button></div>
+    </form>
+  </main>
+  <template id="criterion-template">
+    <div class="criterion">
+      <div class="field"><label>Check</label><select data-name="rule" required>
+        <option value="font_name">Font name</option><option value="font_size">Font size</option><option value="font_color">Font colour</option><option value="bold">Bold</option><option value="italic">Italic</option><option value="underline">Underline</option><option value="alignment">Paragraph alignment</option><option value="orientation">Page orientation</option><option value="paper_size">Page size</option><option value="table_cell_text">Table cell text</option>
+      </select></div>
+      <div class="field"><label>Criterion description</label><input data-name="description" required placeholder="e.g. Make the heading 16 pt"></div>
+      <div class="field"><label>Locate text / table #</label><input data-name="target" placeholder="e.g. Annual Report"></div>
+      <div class="field"><label>Expected value</label><input data-name="expected" required placeholder="e.g. 16, Arial, centre, A4"></div>
+      <div class="field"><label>Marks</label><input data-name="marks" type="number" min="1" value="1" required></div>
+      <button class="remove" type="button" title="Remove criterion">&times;</button>
+    </div>
+  </template>
+  <script>
+    const criteria = document.getElementById('criteria');
+    const count = document.getElementById('criterion-count');
+    const template = document.getElementById('criterion-template');
+    function addCriterion() {
+      const index = Number(count.value);
+      const row = template.content.firstElementChild.cloneNode(true);
+      row.querySelectorAll('[data-name]').forEach((element) => { element.name = `${element.dataset.name}_${index}`; });
+      row.querySelector('.remove').addEventListener('click', () => { row.querySelectorAll('input').forEach((input) => { input.required = false; input.value = ''; }); row.hidden = true; });
+      criteria.appendChild(row);
+      count.value = index + 1;
+    }
+    document.getElementById('add-criterion').addEventListener('click', addCriterion);
+    addCriterion();
+  </script>
+</body>
+</html>

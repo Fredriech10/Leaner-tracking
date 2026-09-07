@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Test Marking Setup</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+  <style>
+    body { background:#eef3f8; }
+    main { max-width:940px; margin:32px auto; padding:0 20px; }
+    .card { background:#fff; border:1px solid #d7dce5; border-radius:7px; box-shadow:0 4px 14px rgba(0,46,99,.08); padding:22px; margin-bottom:16px; }
+    h1 { color:#123b79; margin:0 0 7px; font-size:1.55rem; }
+    .muted { color:#596273; } .error { color:#a4262c; background:#fff1f1; border-left:4px solid #d13438; padding:10px; }
+    table { width:100%; border-collapse:collapse; } th, td { text-align:left; padding:9px; border-bottom:1px solid #e5e9f0; } th { background:#f4f7fa; }
+    .pass { color:#107c10; font-weight:700; } .fail { color:#a4262c; font-weight:700; }
+    .score { font-size:1.2rem; font-weight:700; color:#123b79; }
+    input { margin:12px 0; } .btn { display:inline-block; padding:8px 12px; border-radius:4px; text-decoration:none; border:1px solid #1b5ea9; background:#185abd; color:#fff; cursor:pointer; font:inherit; }
+    .back { background:#fff; color:#185abd; }
+  </style>
+</head>
+<body>
+  <main>
+    <section class="card">
+      <h1>Test Marking Setup</h1>
+      <p class="muted">{{ setup_title }}. Upload a completed sample document. This does not create or change a learner submission.</p>
+      {% if error %}<p class="error">{{ error }}</p>{% endif %}
+      <form method="post" enctype="multipart/form-data">
+        <label for="sample_submission"><strong>Completed sample Word document (.docx)</strong></label><br>
+        <input id="sample_submission" type="file" name="sample_submission" accept=".docx" required><br>
+        <button class="btn" type="submit">Run marking test</button>
+      </form>
+    </section>
+    {% if result %}
+    <section class="card">
+      <div class="score">{{ result.score }}/{{ result.total }} marks ({{ result.percentage }}%)</div>
+      <table><thead><tr><th>Criterion</th><th>Result</th><th>Marks</th></tr></thead><tbody>
+      {% for item in result.results %}<tr><td>{{ item.question }}</td><td class="{{ 'pass' if item.passed else 'fail' }}">{{ 'Pass' if item.passed else 'Fail' }}</td><td>{{ item.marks_awarded }}/{{ item.marks_available }}</td></tr>{% endfor %}
+      </tbody></table>
+    </section>
+    {% endif %}
+    <a class="btn back" href="javascript:history.back()">Back</a>
+  </main>
+</body>
+</html>

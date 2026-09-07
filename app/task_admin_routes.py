@@ -402,7 +402,7 @@ def register_task_admin_routes(app):
                 if practical_mode == "upload" and marking_setup_id:
                     setup_name = next((title for setup_id, title in available_marking_setups if setup_id == marking_setup_id), None)
                     setup_label = escape(setup_name or f"Setup {marking_setup_id}")
-                    script_label += f'<br><span style="color:#005a9e;">Setup: {setup_label}</span>'
+                    script_label += f'<br><span style="color:#005a9e;">Setup: {setup_label}</span> <a href="/marking_setups/{marking_setup_id}/test" class="icon-btn" title="Test this marking setup">🧪</a>'
 
             status_badge = '<span style="background:#c8f7c5;color:#107C10;padding:2px 8px;border-radius:10px;font-size:0.8em;">Active</span>' if is_active else '<span style="background:#f7c5c5;color:#A4262C;padding:2px 8px;border-radius:10px;font-size:0.8em;">Inactive</span>'
             toggle_label = "⏸ Deactivate" if is_active else "▶ Activate"

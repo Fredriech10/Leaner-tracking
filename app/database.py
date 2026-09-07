@@ -220,6 +220,8 @@ def init_marking_db():
             ("llm_model", "TEXT"),
             ("generation_warnings", "TEXT"),
             ("generation_error", "TEXT"),
+            ("starter_file_filename", "TEXT"),
+            ("starter_file_blob", "BLOB"),
         ]:
             if column_name not in columns:
                 cursor.execute(f"ALTER TABLE marking_setups ADD COLUMN {column_name} {definition}")

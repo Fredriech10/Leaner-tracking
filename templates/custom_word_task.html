@@ -26,20 +26,23 @@
     .checks label { font-weight:400; display:flex; align-items:center; gap:6px; }
     .checks input { width:auto; }
     .criteria { border:1px solid var(--line); border-radius:6px; overflow:hidden; }
-    .criterion { display:grid; grid-template-columns:1.05fr 1.35fr 1fr 1.2fr 70px 34px; gap:8px; align-items:end; padding:12px; border-bottom:1px solid #e4e8ef; background:linear-gradient(90deg,#fff,#f9fbfe); }
+    .criterion { display:grid; grid-template-columns:1.15fr 1.7fr 70px 34px; gap:8px; align-items:end; padding:12px; border-bottom:1px solid #e4e8ef; background:linear-gradient(90deg,#fff,#f9fbfe); }
     .criterion:last-child { border-bottom:0; }
     .criterion .field { gap:4px; }
     .criterion label { font-size:.76rem; color:#465367; }
     .criterion .remove { margin-bottom:0; height:35px; padding:0; background:#fff; color:#a4262c; border:1px solid #dca5a9; border-radius:3px; cursor:pointer; font-size:1.05rem; }
     .criterion .remove:hover { background:#fff1f1; }
     .criterion[hidden] { display:none; }
+    .criterion-target, .criterion-details { grid-column:1 / -1; display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); gap:8px; padding-top:4px; }
+    .criterion-target[hidden] { display:none; }
+    .rule-group { color:#5b6677; }
     .actions { display:flex; justify-content:space-between; gap:12px; align-items:center; margin-top:16px; }
     .btn-primary { background:var(--word-blue); color:white; border:1px solid #0f438e; }
     .btn-secondary { background:white; color:#124b96; border:1px solid #9db8de; }
     .btn-primary, .btn-secondary { padding:9px 14px; border-radius:4px; text-decoration:none; cursor:pointer; font:inherit; }
     .notice { padding:11px 13px; margin-bottom:16px; background:#fff4e5; color:#7a3e00; border-left:4px solid #e68a00; }
     .criterion-note { margin-top:12px; padding:10px 12px; background:var(--soft); border-left:3px solid #5a8fd8; color:#435168; font-size:.88rem; }
-    @media (max-width:800px) { .grid { grid-template-columns:1fr; } .criterion { grid-template-columns:1fr 1fr; } .criterion .remove { grid-column:span 2; } }
+    @media (max-width:800px) { .grid { grid-template-columns:1fr; } .criterion { grid-template-columns:1fr 1fr; } .criterion-target, .criterion-details { grid-template-columns:1fr 1fr; } .criterion .remove { grid-column:span 2; } }
   </style>
 </head>
 <body>
@@ -59,6 +62,7 @@
           <div class="field"><label for="assign_date">Assign date</label><input id="assign_date" name="assign_date" type="date" value="{{ today }}" required></div>
           <div class="field"><label for="starter_file">Word starter document (.docx)</label><input id="starter_file" name="starter_file" type="file" accept=".docx" required></div>
           <div class="field"><label for="question_paper">Question paper (optional)</label><input id="question_paper" name="question_paper" type="file" accept=".docx,.pdf"></div>
+          <div class="field"><label for="reference_image">Reference image (only for “Picture matches reference image”)</label><input id="reference_image" name="reference_image" type="file" accept="image/*"></div>
           <div class="field full"><label for="support_files">Additional support files (optional)</label><input id="support_files" name="support_files" type="file" multiple></div>
           <div class="field full"><label for="instructions">Instructions shown to learners</label><textarea id="instructions" name="instructions" placeholder="Complete the changes in the starter document, save your work, then upload the completed .docx file."></textarea></div>
         </div>
@@ -66,9 +70,10 @@
 
       <section class="panel">
         <h2>2. Marking criteria</h2>
-        <p class="help">Each row becomes a fixed, repeatable Word check. Use the exact text already present in the starter document to identify formatting checks.</p>
+        <p class="help">Choose a Word action, then complete only the settings used by that action. The selection list is grouped by the Word ribbon area and generates a fixed, repeatable marking check.</p>
+        <p class="help"><strong>Marking result label:</strong> the sentence shown with the learner's mark, for example: “Cover page author and abstract completed”. It does not determine what is marked. <strong>Expected state:</strong> Yes means the selected action must be present; No means it must be absent.</p>
         <div class="criteria" id="criteria"></div>
-        <div class="criterion-note">For a table-cell check, enter the table number in <strong>Locate text / table #</strong>. Enter the expected value as <strong>row, column, text</strong>, using 0 for the first row and column.</div>
+        <div class="criterion-note">Table numbers, row numbers and column numbers start at <strong>1</strong> in the builder. The marker converts them to the internal document position automatically.</div>
         <div class="actions">
           <button class="btn-secondary" type="button" id="add-criterion">+ Add criterion</button>
           <span class="help" style="margin:0;">Total marks are calculated from the criteria.</span>
@@ -86,29 +91,94 @@
       <div class="actions"><a class="btn-secondary" href="{{ url_for('manage_tasks', subject_id=subject_id) }}">Cancel</a><button class="btn-primary" type="submit">Create Word practical task</button></div>
     </form>
   </main>
-  <template id="criterion-template">
-    <div class="criterion">
-      <div class="field"><label>Check</label><select data-name="rule" required>
-        <option value="font_name">Font name</option><option value="font_size">Font size</option><option value="font_color">Font colour</option><option value="bold">Bold</option><option value="italic">Italic</option><option value="underline">Underline</option><option value="alignment">Paragraph alignment</option><option value="orientation">Page orientation</option><option value="paper_size">Page size</option><option value="table_cell_text">Table cell text</option>
-      </select></div>
-      <div class="field"><label>Criterion description</label><input data-name="description" required placeholder="e.g. Make the heading 16 pt"></div>
-      <div class="field"><label>Locate text / table #</label><input data-name="target" placeholder="e.g. Annual Report"></div>
-      <div class="field"><label>Expected value</label><input data-name="expected" required placeholder="e.g. 16, Arial, centre, A4"></div>
-      <div class="field"><label>Marks</label><input data-name="marks" type="number" min="1" value="1" required></div>
-      <button class="remove" type="button" title="Remove criterion">&times;</button>
-    </div>
-  </template>
   <script>
     const criteria = document.getElementById('criteria');
     const count = document.getElementById('criterion-count');
-    const template = document.getElementById('criterion-template');
+    const ruleCatalog = {{ rules|tojson }};
+    const fontNames = {{ font_names|tojson }}.map(value => [value, value]);
+    const wordColours = {{ colour_names|tojson }}.map(value => [value, value.replace(/\b\w/g, letter => letter.toUpperCase())]);
+    const borderStyles = {{ border_styles|tojson }}.map(value => [value, value.replace(/\b\w/g, letter => letter.toUpperCase())]);
+    const pageColours = {{ page_colours|tojson }}.map(value => [value, `#${value}`]);
+    const sectionBreakTypes = {{ section_break_types|tojson }}.map(value => [value, value.replace(/([A-Z])/g, ' $1').replace(/^./, letter => letter.toUpperCase())]);
+    const groups = Object.entries(ruleCatalog).reduce((all, [key, rule]) => {
+      (all[rule.group] ||= []).push([key, rule]); return all;
+    }, {});
+    function field(index, name, label, options = {}) {
+      const type = options.type || 'text';
+      const placeholder = options.placeholder || '';
+      const values = options.values;
+      const input = values
+        ? `<select name="${name}_${index}" ${options.required === false ? '' : 'required'}>${values.map(([value, text]) => `<option value="${value}">${text}</option>`).join('')}</select>`
+        : `<input name="${name}_${index}" type="${type}" placeholder="${placeholder}" ${options.required === false ? '' : 'required'}>`;
+      return `<div class="field"><label>${label}</label>${input}</div>`;
+    }
+    function detailsFor(index, rule) {
+      const yesNo = [['true', 'Yes'], ['false', 'No']];
+      const alignments = [['left', 'Left'], ['center', 'Centre'], ['right', 'Right'], ['justify', 'Justified']];
+      if (rule.check_type === 'font_name') return field(index, 'value', 'Font name', { values: fontNames });
+      if (rule.check_type === 'color') return field(index, 'value', 'Font colour', { values: wordColours });
+      if (rule.layout === 'underline_style') return field(index, 'value', 'Underline style', { values: [['single', 'Single'], ['double', 'Double']] });
+      if (rule.check_type === 'page_color') return field(index, 'value', 'Page colour', { values: pageColours });
+      if (rule.check_type === 'section_page_break_type') return field(index, 'value', 'Break type', { values: sectionBreakTypes });
+      if (rule.layout === 'boolean') return field(index, 'value', 'Expected state', { values: [['true', 'Yes - must be present'], ['false', 'No - must be absent']] });
+      if (rule.layout === 'alignment') return field(index, 'value', 'Alignment', { values: alignments });
+      if (rule.layout === 'orientation') return field(index, 'value', 'Orientation', { values: [['portrait', 'Portrait'], ['landscape', 'Landscape']] });
+      if (rule.layout === 'paper_size') return field(index, 'value', 'Paper size', { values: [['A4', 'A4']] });
+      if (rule.layout === 'line_spacing') return field(index, 'line_rule', 'Line spacing type', { values: [['exact', 'Exactly'], ['atLeast', 'At least']] }) + field(index, 'value', 'Value', { type: 'number', placeholder: 'e.g. 15' }) + field(index, 'line_unit', 'Unit', { values: [['pt', 'Points (pt)'], ['lines', 'Lines']] });
+      if (rule.layout === 'margins') return ['top', 'bottom', 'left', 'right'].map(side => field(index, side, `${side[0].toUpperCase()}${side.slice(1)} (cm)`, { type: 'number', placeholder: 'e.g. 2.54' })).join('');
+      if (rule.layout === 'page_border') return field(index, 'value', 'Border style', { values: borderStyles }) + field(index, 'value_2', 'Border colour', { values: wordColours }) + field(index, 'value_3', 'First page only?', { values: yesNo });
+      if (rule.layout === 'paragraph_border') return field(index, 'value', 'Border style', { values: borderStyles }) + field(index, 'value_2', 'Border colour', { values: wordColours }) + field(index, 'value_3', 'Width (pt)', { type: 'number', placeholder: 'e.g. 3' });
+      if (rule.layout === 'table_cell_text') return field(index, 'row', 'Row', { type: 'number', placeholder: 'e.g. 1' }) + field(index, 'column', 'Column', { type: 'number', placeholder: 'e.g. 2' }) + field(index, 'value', 'Expected cell text', { placeholder: 'e.g. Total' }) + field(index, 'tolerance', 'Accept text in row?', { values: yesNo });
+      if (rule.layout === 'table_cell_alignment') return field(index, 'row', 'Row', { type: 'number', placeholder: 'e.g. 1' }) + field(index, 'column', 'Column', { type: 'number', placeholder: 'e.g. 2' }) + field(index, 'value', 'Alignment', { values: alignments });
+      if (rule.layout === 'table_merge') return field(index, 'row', 'Row', { type: 'number', placeholder: 'e.g. 5' }) + field(index, 'column', 'First column', { type: 'number', placeholder: 'e.g. 1' }) + field(index, 'column_end', 'Last column', { type: 'number', placeholder: 'e.g. 3' });
+      if (rule.layout === 'table_dimensions') return field(index, 'row', 'Rows', { type: 'number', placeholder: 'e.g. 6' }) + field(index, 'column', 'Columns', { type: 'number', placeholder: 'e.g. 3' });
+      if (rule.layout === 'table_row_shading') return field(index, 'row', 'Row', { type: 'number', placeholder: 'e.g. 1' }) + field(index, 'value', 'Shading colour', { values: wordColours });
+      if (rule.layout === 'table_row_height') return field(index, 'row', 'Row', { type: 'number', placeholder: 'e.g. 3' }) + field(index, 'value', 'Height (cm)', { type: 'number', placeholder: 'e.g. 0.5' });
+      if (rule.layout === 'row_change') return field(index, 'value', 'Row change from starter', { type: 'number', placeholder: 'Use 1 to add one row, -1 to delete one row' });
+      if (rule.layout === 'table_vertical_alignment') return field(index, 'row', 'Row', { type: 'number', placeholder: 'e.g. 1' }) + field(index, 'column', 'Column', { type: 'number', placeholder: 'e.g. 1' }) + field(index, 'value', 'Vertical alignment', { values: [['top', 'Top'], ['center', 'Centre'], ['bottom', 'Bottom']] });
+      if (rule.layout === 'table_text_direction') return field(index, 'row', 'Row', { type: 'number', placeholder: 'e.g. 1' }) + field(index, 'column', 'Column', { type: 'number', placeholder: 'e.g. 1' }) + field(index, 'value', 'Text direction', { values: [['btLr', 'Rotate all text 90 degrees'], ['tbRl', 'Rotate all text 270 degrees'], ['lrTb', 'Horizontal']] });
+      if (rule.layout === 'image_border') return field(index, 'value', 'Border width (pt)', { type: 'number', placeholder: 'e.g. 2.25' }) + field(index, 'value_2', 'Border colour', { values: wordColours });
+      if (rule.layout === 'document_property') return field(index, 'value', 'Property', { values: [['title', 'Title'], ['subject', 'Subject'], ['author', 'Author'], ['comments', 'Comments / description'], ['keywords', 'Keywords'], ['category', 'Category']] }) + field(index, 'value_2', 'Required text', { placeholder: 'e.g. Tourism Report' });
+      if (rule.layout === 'cover_page') return field(index, 'value', 'Cover-page title', { placeholder: 'e.g. Annual Tourism Report' }) + field(index, 'value_2', 'Author text', { placeholder: 'e.g. Fredriech Pretorius' }) + field(index, 'value_3', 'Abstract text', { placeholder: 'A distinctive phrase from the abstract' });
+      if (rule.layout === 'columns') return field(index, 'value', 'Number of columns', { type: 'number', placeholder: 'e.g. 5' }) + field(index, 'value_2', 'Spacing between columns (cm)', { type: 'number', placeholder: 'e.g. 0.5' });
+      if (rule.layout === 'find_replace') return field(index, 'value', 'Find text (must no longer appear)', { placeholder: 'e.g. CAR' }) + field(index, 'value_2', 'Replacement text', { placeholder: 'e.g. MOTOR' }) + field(index, 'value_3', 'Minimum replacements', { type: 'number', placeholder: 'e.g. 3' });
+      if (rule.layout === 'style') return field(index, 'value', 'Required style', { values: [['Heading 1', 'Heading 1'], ['Heading 2', 'Heading 2'], ['Heading 3', 'Heading 3'], ['Title', 'Title'], ['Subtitle', 'Subtitle'], ['Normal', 'Normal']] });
+      if (rule.layout === 'merge_fields') return field(index, 'value', 'Required merge fields', { placeholder: 'Comma-separated, e.g. FirstName, Surname' });
+      if (rule.layout === 'control_aliases') return field(index, 'value', 'Controls that must remain', { placeholder: 'Comma-separated, normally Title, Author' });
+      if (rule.layout === 'number_format') return field(index, 'value', 'Number format', { values: [['decimal', '1, 2, 3'], ['upperLetter', 'A, B, C'], ['lowerLetter', 'a, b, c'], ['upperRoman', 'I, II, III'], ['lowerRoman', 'i, ii, iii']] });
+      if (rule.layout === 'bullet_char') return field(index, 'value', 'Bullet type', { values: [['•', 'Standard bullet'], ['wingdings', 'Wingdings picture bullet']] });
+      if (rule.layout === 'textbox_position') return field(index, 'value', 'Position', { values: [['right', 'Right side of page']] });
+      if (rule.layout === 'list_style') return field(index, 'list_type', 'List type', { values: [['bullet', 'Bulleted'], ['number', 'Numbered']] }) + field(index, 'list_level', 'List level', { type: 'number', placeholder: '0 for first level' });
+      return field(index, 'value', rule.value_label || 'Expected value', { type: rule.layout === 'number' ? 'number' : 'text', placeholder: rule.placeholder || '' });
+    }
+    function renderRule(row) {
+      const index = row.dataset.index;
+      const rule = ruleCatalog[row.querySelector(`[name="rule_${index}"]`).value];
+      const target = row.querySelector('.criterion-target');
+      target.hidden = rule.target === 'none';
+      if (rule.target === 'text') target.innerHTML = field(index, 'target', 'Text / heading to locate', { placeholder: 'Exact text already in the starter document' });
+      if (rule.target === 'table') target.innerHTML = field(index, 'target', 'Table number', { type: 'number', placeholder: 'e.g. 1' });
+      if (rule.target === 'none') target.innerHTML = '';
+      row.querySelector('.criterion-details').innerHTML = detailsFor(index, rule);
+    }
+    function renderCommands(row) {
+      const index = row.dataset.index;
+      const area = row.querySelector(`[name="area_${index}"]`).value;
+      const command = row.querySelector(`[name="rule_${index}"]`);
+      command.innerHTML = groups[area].map(([key, rule]) => `<option value="${key}">${rule.label}</option>`).join('');
+      renderRule(row);
+    }
     function addCriterion() {
       const index = Number(count.value);
-      const row = template.content.firstElementChild.cloneNode(true);
-      row.querySelectorAll('[data-name]').forEach((element) => { element.name = `${element.dataset.name}_${index}`; });
+      const row = document.createElement('div');
+      row.className = 'criterion'; row.dataset.index = index;
+      row.innerHTML = `<div class="field"><label>Word area</label><select name="area_${index}" required>${Object.keys(groups).map(area => `<option value="${area}">${area}</option>`).join('')}</select></div><div class="field"><label>Command</label><select name="rule_${index}" required></select></div><div class="field"><label>Marking result label</label><input name="description_${index}" required placeholder="Shown in results, e.g. Cover page author and abstract completed"></div><div class="field"><label>Marks</label><input name="marks_${index}" type="number" min="1" value="1" required></div><button class="remove" type="button" title="Remove criterion">&times;</button><div class="criterion-target"></div><div class="criterion-details"></div>`;
+      row.querySelector(`[name="area_${index}"]`).addEventListener('change', () => renderCommands(row));
+      row.querySelector(`[name="rule_${index}"]`).addEventListener('change', () => renderRule(row));
       row.querySelector('.remove').addEventListener('click', () => { row.querySelectorAll('input').forEach((input) => { input.required = false; input.value = ''; }); row.hidden = true; });
       criteria.appendChild(row);
       count.value = index + 1;
+      renderCommands(row);
     }
     document.getElementById('add-criterion').addEventListener('click', addCriterion);
     addCriterion();

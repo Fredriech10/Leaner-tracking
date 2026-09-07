@@ -15,6 +15,7 @@ from __future__ import annotations
 import json
 import os
 import sqlite3
+import tempfile
 
 from pathlib import Path
 from typing import Any, Dict, List, Optional
@@ -155,7 +156,7 @@ def _run_task_definition(filepath: str, task_definition: Dict[str, Any]) -> Dict
     }
 
 
-def _load_setup_task_definition(marking_setup_id: int) -> Dict[str, Any]:
+def _load_setup_task_definition(marking_setup_id: int) -> tuple[Dict[str, Any], Optional[bytes]]:
     db_path = _marking_db_path()
     if not db_path.exists():
         raise FileNotFoundError(f"marking_experiment.db not found at: {db_path}")
@@ -164,7 +165,7 @@ def _load_setup_task_definition(marking_setup_id: int) -> Dict[str, Any]:
     try:
         cursor = conn.cursor()
         cursor.execute(
-            "SELECT json_script_blob FROM marking_setups WHERE id = ?",
+            "SELECT json_script_blob, starter_file_blob FROM marking_setups WHERE id = ?",
             (marking_setup_id,),
         )
         row = cursor.fetchone()
@@ -182,7 +183,7 @@ def _load_setup_task_definition(marking_setup_id: int) -> Dict[str, Any]:
     task_definition = json.loads(text)
     if not isinstance(task_definition, dict) or "questions" not in task_definition:
         raise ValueError(f"Generated JSON for marking setup id {marking_setup_id} is not a task definition.")
-    return task_definition
+    return task_definition, row[1]
 
 
 def mark(filepath: str) -> Dict[str, Any]:
@@ -237,8 +238,23 @@ def mark_with_setup(filepath: str, marking_setup_id: int) -> Dict[str, Any]:
         }
 
     try:
-        task_definition = _load_setup_task_definition(int(marking_setup_id))
-        return _run_task_definition(filepath, task_definition)
+        task_definition, starter_blob = _load_setup_task_definition(int(marking_setup_id))
+        baseline_path = None
+        if starter_blob:
+            with tempfile.NamedTemporaryFile(delete=False, suffix=".docx") as handle:
+                handle.write(starter_blob)
+                baseline_path = handle.name
+            for question in task_definition.get("questions", []):
+                if question.get("type") in {"row_count_change", "image_changed_from_starter"}:
+                    question["target"] = dict(question.get("target") or {}, baseline_path=baseline_path)
+        try:
+            return _run_task_definition(filepath, task_definition)
+        finally:
+            if baseline_path:
+                try:
+                    os.unlink(baseline_path)
+                except OSError:
+                    pass
     except Exception as e:
         return {
             "task_name": "Marking Experiment",

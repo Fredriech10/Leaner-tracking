@@ -63,8 +63,10 @@ RULES = {
     "paper_size": {"group": "Page layout", "label": "Paper size", "domain": "document", "check_type": "paper_size", "target": "none", "layout": "paper_size"},
     "orientation": {"group": "Page layout", "label": "Page orientation", "domain": "document", "check_type": "orientation", "target": "none", "layout": "orientation"},
     "margins": {"group": "Page layout", "label": "Custom margins", "domain": "document", "check_type": "margins", "target": "none", "layout": "margins"},
+    "margin_side": {"group": "Page layout", "label": "Individual page margin", "domain": "document", "check_type": "margin_side", "target": "none", "layout": "margin_side"},
     "page_border": {"group": "Page layout", "label": "Page border", "domain": "document", "check_type": "page_border", "target": "none", "layout": "page_border"},
     "page_color": {"group": "Page layout", "label": "Page colour", "domain": "document", "check_type": "page_color", "target": "none", "layout": "value", "value_label": "Colour", "placeholder": "e.g. FFFF00"},
+    "page_background": {"group": "Page layout", "label": "Page background present", "domain": "document", "check_type": "page_background_present", "target": "none", "layout": "boolean"},
     "cover_page": {"group": "Page layout", "label": "Cover page fields", "domain": "document", "check_type": "cover_page_fields", "target": "none", "layout": "cover_page"},
     "cover_page_controls": {"group": "Page layout", "label": "Completed cover-page controls", "domain": "document", "check_type": "no_empty_content_controls", "target": "none", "layout": "boolean"},
     "cover_page_control_layout": {"group": "Page layout", "label": "Cover-page title and author controls", "domain": "document", "check_type": "cover_page_controls", "target": "none", "layout": "control_aliases"},
@@ -121,6 +123,7 @@ RULES = {
     "footnote": {"group": "References", "label": "Footnote text", "domain": "document", "check_type": "footnote_text", "target": "none", "layout": "value", "value_label": "Footnote must contain", "placeholder": "e.g. Source: Statistics SA"},
     "table_of_contents": {"group": "References", "label": "Automatic table of contents", "domain": "document", "check_type": "table_of_contents", "target": "none", "layout": "boolean"},
     "heading_style": {"group": "Styles", "label": "Heading or paragraph style", "domain": "advanced", "check_type": "style_applied", "target": "text", "layout": "style"},
+    "heading_style_count": {"group": "Styles", "label": "Minimum headings with a style", "domain": "advanced", "check_type": "style_count", "target": "none", "layout": "style_count"},
     "heading_numbering": {"group": "Styles", "label": "Heading numbering format", "domain": "document", "check_type": "heading_number_format", "target": "text", "layout": "number_format"},
     "mail_merge_fields": {"group": "Mail merge", "label": "Mail merge fields", "domain": "document", "check_type": "mail_merge_fields", "target": "none", "layout": "merge_fields"},
     "mail_merge_source": {"group": "Mail merge", "label": "Mail merge data source", "domain": "document", "check_type": "mail_merge_source", "target": "none", "layout": "value", "value_label": "Data source filename", "placeholder": "e.g. Client List.xlsx"},
@@ -138,7 +141,7 @@ def _rule_from_form(index):
     description = request.form.get(f"description_{index}", "").strip()
     target_text = request.form.get(f"target_{index}", "").strip()
     values = {name: request.form.get(f"{name}_{index}", "").strip() for name in (
-        "value", "value_2", "value_3", "row", "column", "column_end", "top", "bottom", "left", "right", "line_rule", "line_unit", "list_type", "list_level", "tolerance", "target_mode"
+        "value", "value_2", "value_3", "row", "column", "column_end", "top", "bottom", "left", "right", "line_rule", "line_unit", "list_type", "list_level", "tolerance", "target_mode", "side"
     )}
     # Each selected action is one mark. Baseline text marks are added separately.
     marks = 1
@@ -175,6 +178,10 @@ def _rule_from_form(index):
         expected = {"rule": values["line_rule"], "value": float(values["value"]), "unit": values["line_unit"]}
     elif layout == "margins":
         expected = {side: float(values[side]) for side in ("top", "bottom", "left", "right")}
+    elif layout == "margin_side":
+        expected = {"side": values["side"], "value": float(values["value"])}
+    elif layout == "style_count":
+        expected = {"style": values["value"], "minimum": int(values["value_2"]), "texts": [text.strip() for text in values["value_3"].split(",") if text.strip()]}
     elif layout == "page_border":
         expected = {"style": values["value"], "color": values["value_2"], "first_page_only": values["value_3"].lower() in {"true", "yes", "1"}}
     elif layout == "watermark":

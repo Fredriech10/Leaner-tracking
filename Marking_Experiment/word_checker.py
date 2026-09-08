@@ -1423,6 +1423,13 @@ class WordChecker(BaseChecker):
                 return CheckerResult(passed=passed, actual=actual, details={"type": check_type})
             return CheckerResult(passed=False, details={"reason": "Margins expected as dict."})
 
+        if check_type == "margin_side":
+            if not isinstance(expected, dict) or expected.get("side") not in {"top", "bottom", "left", "right"}:
+                return CheckerResult(passed=False, details={"reason": "Margin side and value are required."})
+            actual = getattr(section, f"{expected['side']}_margin") / 360000
+            passed = abs(actual - float(expected["value"])) <= 0.1
+            return CheckerResult(passed=passed, actual=actual, details={"type": check_type, "side": expected["side"]})
+
         # Aliases used by structured_expectations.json -> margins in cm
         # expected is numeric cm for these alias checks.
         if check_type in ("margin_top_bottom_cm", "margin_left_right_cm"):
@@ -1864,6 +1871,11 @@ class WordChecker(BaseChecker):
             passed = any(item["count"] == expected_count for item in actual)
             if expected_space is not None:
                 passed = passed and any(item["count"] == expected_count and abs(item["space_cm"] - float(expected_space)) <= 0.1 for item in actual)
+            return CheckerResult(passed=passed, actual=actual, details={"type": check_type})
+        if check_type == "page_background_present":
+            actual = self._page_background_color(file_path)
+            expected_bool = self._parse_boolean(expected)
+            passed = actual is not None if expected_bool is None else (actual is not None) == expected_bool
             return CheckerResult(passed=passed, actual=actual, details={"type": check_type})
         if check_type == "column_breaks":
             xml = _read_docx_part(file_path, "word/document.xml")

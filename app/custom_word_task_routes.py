@@ -16,10 +16,19 @@ FONT_NAMES = (
     "Arial", "Calibri", "Cambria", "Century Gothic", "Comic Sans MS", "Courier New",
     "Georgia", "Impact", "Tahoma", "Times New Roman", "Trebuchet MS", "Verdana",
 )
-COLOUR_NAMES = ("black", "blue", "green", "red", "yellow", "white", "grey", "light grey")
+COLOUR_NAMES = (
+    "black", "white", "grey", "light grey", "dark grey",
+    "blue", "light blue", "dark blue", "green", "light green", "dark green",
+    "red", "dark red", "orange", "yellow", "purple",
+)
 BORDER_STYLES = ("single", "double", "dotted", "dashed", "thick", "triple", "wave")
 PAGE_COLOURS = ("FFFFFF", "000000", "0000FF", "0070C0", "00B050", "FF0000", "FFFF00", "D9D9D9")
 SECTION_BREAK_TYPES = ("nextPage", "continuous", "evenPage", "oddPage")
+PAGE_NUMBER_TEMPLATES = (
+    "plain_number_1", "plain_number_2", "plain_number_3",
+    "page_x_left", "page_x_center", "page_x_right",
+    "page_x_of_y_left", "page_x_of_y_center", "page_x_of_y_right",
+)
 
 
 RULES = {
@@ -48,7 +57,9 @@ RULES = {
     "right_indent": {"group": "Paragraph", "label": "Right indent", "domain": "paragraph_formatting", "check_type": "right_indent", "target": "text", "layout": "number", "value_label": "Right indent (cm)", "placeholder": "e.g. 1.5"},
     "paragraph_border": {"group": "Paragraph", "label": "Paragraph border", "domain": "paragraph_formatting", "check_type": "border", "target": "text", "layout": "paragraph_border"},
     "paragraph_shading": {"group": "Paragraph", "label": "Paragraph shading", "domain": "paragraph_formatting", "check_type": "shading", "target": "text", "layout": "paragraph_shading", "value_label": "Shading colour", "placeholder": "e.g. light grey or yellow"},
-    "drop_cap": {"group": "Paragraph", "label": "Drop cap", "domain": "paragraph_formatting", "check_type": "drop_cap", "target": "text", "layout": "boolean"},
+    "drop_cap": {"group": "Paragraph", "label": "Drop cap applied", "domain": "paragraph_formatting", "check_type": "drop_cap", "target": "text", "layout": "drop_cap_applied"},
+    "drop_cap_position": {"group": "Paragraph", "label": "Drop cap position", "domain": "paragraph_formatting", "check_type": "drop_cap", "target": "text", "layout": "drop_cap_position"},
+    "drop_cap_lines": {"group": "Paragraph", "label": "Drop cap lines to drop", "domain": "paragraph_formatting", "check_type": "drop_cap", "target": "text", "layout": "drop_cap_lines"},
     "paper_size": {"group": "Page layout", "label": "Paper size", "domain": "document", "check_type": "paper_size", "target": "none", "layout": "paper_size"},
     "orientation": {"group": "Page layout", "label": "Page orientation", "domain": "document", "check_type": "orientation", "target": "none", "layout": "orientation"},
     "margins": {"group": "Page layout", "label": "Custom margins", "domain": "document", "check_type": "margins", "target": "none", "layout": "margins"},
@@ -62,14 +73,17 @@ RULES = {
     "columns": {"group": "Page layout", "label": "Document columns", "domain": "document", "check_type": "columns", "target": "none", "layout": "columns"},
     "column_breaks": {"group": "Page layout", "label": "Column breaks", "domain": "document", "check_type": "column_breaks", "target": "none", "layout": "number", "value_label": "Minimum column breaks", "placeholder": "e.g. 3"},
     "hyphenation": {"group": "Page layout", "label": "Automatic hyphenation", "domain": "document", "check_type": "hyphenation", "target": "none", "layout": "boolean"},
-    "watermark": {"group": "Page layout", "label": "Watermark text or layout", "domain": "document", "check_type": "watermark", "target": "none", "layout": "value", "value_label": "Watermark text, colour or layout", "placeholder": "e.g. CONFIDENTIAL, blue or diagonal"},
+    "watermark": {"group": "Page layout", "label": "Text watermark", "domain": "document", "check_type": "watermark", "target": "none", "layout": "watermark"},
     "contains_date": {"group": "Page layout", "label": "Date inserted", "domain": "document", "check_type": "contains_date", "target": "none", "layout": "boolean"},
     "header_text": {"group": "Header and footer", "label": "Header text", "domain": "document", "check_type": "header_text", "target": "none", "layout": "value", "value_label": "Header must contain", "placeholder": "e.g. Name and surname"},
     "header_alignment": {"group": "Header and footer", "label": "Header alignment", "domain": "document", "check_type": "header_alignment", "target": "none", "layout": "alignment"},
+    "header_text_alignment": {"group": "Header and footer", "label": "Header text and alignment", "domain": "document", "check_type": "header_text_alignment", "target": "none", "layout": "header_text_alignment"},
     "footer_text": {"group": "Header and footer", "label": "Footer text", "domain": "document", "check_type": "footer_text", "target": "none", "layout": "value", "value_label": "Footer must contain", "placeholder": "e.g. Page X of Y"},
     "footer_alignment": {"group": "Header and footer", "label": "Footer alignment", "domain": "document", "check_type": "footer_alignment", "target": "none", "layout": "alignment"},
     "page_number_footer": {"group": "Header and footer", "label": "Page number in footer", "domain": "document", "check_type": "page_number_in_footer", "target": "none", "layout": "boolean"},
     "page_number_header": {"group": "Header and footer", "label": "Page number in header", "domain": "document", "check_type": "page_number_in_header", "target": "none", "layout": "boolean"},
+    "page_number_template": {"group": "Header and footer", "label": "Page-number template", "domain": "document", "check_type": "page_number_template", "target": "none", "layout": "page_number_template"},
+    "page_number_format": {"group": "Header and footer", "label": "Page-number number style", "domain": "document", "check_type": "page_number_format", "target": "none", "layout": "page_number_format"},
     "document_property": {"group": "Document information", "label": "Document property", "domain": "document", "check_type": "document_property", "target": "none", "layout": "document_property"},
     "comment": {"group": "Review", "label": "Comment", "domain": "document", "check_type": "comments", "target": "none", "layout": "value", "value_label": "Comment must contain", "placeholder": "e.g. Check the source"},
     "find_replace": {"group": "Editing", "label": "Find and replace outcome", "domain": "document", "check_type": "find_replace", "target": "none", "layout": "find_replace"},
@@ -124,18 +138,25 @@ def _rule_from_form(index):
     description = request.form.get(f"description_{index}", "").strip()
     target_text = request.form.get(f"target_{index}", "").strip()
     values = {name: request.form.get(f"{name}_{index}", "").strip() for name in (
-        "value", "value_2", "value_3", "row", "column", "column_end", "top", "bottom", "left", "right", "line_rule", "line_unit", "list_type", "list_level", "tolerance"
+        "value", "value_2", "value_3", "row", "column", "column_end", "top", "bottom", "left", "right", "line_rule", "line_unit", "list_type", "list_level", "tolerance", "target_mode"
     )}
-    marks = max(1, int(request.form.get(f"marks_{index}", "1") or 1))
+    # Each selected action is one mark. Baseline text marks are added separately.
+    marks = 1
     if not description or rule_key not in RULES:
         return None
 
     definition = RULES[rule_key]
-    if definition["target"] == "text" and not target_text:
+    is_paragraph_rule = definition["domain"] == "paragraph_formatting"
+    target_mode = values["target_mode"] or "contains_text"
+    if (definition["target"] == "text" or is_paragraph_rule) and not target_text and target_mode != "any_drop_cap":
         raise ValueError(f"Criterion {index + 1} needs target text to locate the change.")
 
     target = {}
-    if definition["target"] == "text":
+    if is_paragraph_rule:
+        if target_mode not in {"contains_text", "after_heading", "any_drop_cap"}:
+            raise ValueError("Select how the paragraph should be located.")
+        target = {"locator": target_mode, "value": target_text}
+    elif definition["target"] == "text":
         target = {"locator": "contains_text", "value": target_text}
     elif definition["target"] == "table":
         target = {"locator": "table_index", "value": max(0, int(target_text or "1") - 1)}
@@ -156,6 +177,18 @@ def _rule_from_form(index):
         expected = {side: float(values[side]) for side in ("top", "bottom", "left", "right")}
     elif layout == "page_border":
         expected = {"style": values["value"], "color": values["value_2"], "first_page_only": values["value_3"].lower() in {"true", "yes", "1"}}
+    elif layout == "watermark":
+        expected = {"text": values["value"], "color": values["value_2"], "layout": values["value_3"]}
+    elif layout == "header_text_alignment":
+        expected = {"text": values["value"], "alignment": values["value_2"]}
+    elif layout == "page_number_template":
+        expected = {"template": values["value"], "location": values["value_2"] or "footer"}
+    elif layout == "drop_cap_applied":
+        expected = {"applied": values["value"].lower() not in {"false", "no", "0"}}
+    elif layout == "drop_cap_position":
+        expected = {"position": values["value"]}
+    elif layout == "drop_cap_lines":
+        expected = {"lines": int(values["value"])}
     elif layout == "paragraph_border":
         expected = {"style": values["value"], "color": values["value_2"], "width_pt": float(values["value_3"])}
     elif layout == "paragraph_shading":
@@ -205,12 +238,14 @@ def _rule_from_form(index):
     if rule_key in {"paragraph_border", "page_border"}:
         if expected.get("style", "").lower() not in BORDER_STYLES:
             raise ValueError("Select a border style from the supplied list.")
-        if expected.get("color", "").lower() not in COLOUR_NAMES:
+        if expected.get("color") and expected.get("color", "").lower() not in COLOUR_NAMES:
             raise ValueError("Select a recognised Word border colour.")
     if rule_key == "image_border" and expected.get("color", "").lower() not in COLOUR_NAMES:
         raise ValueError("Select a recognised Word picture-border colour.")
     if rule_key == "section_break" and str(expected) not in SECTION_BREAK_TYPES:
         raise ValueError("Select a section-break type from the supplied list.")
+    if rule_key == "page_number_template" and expected.get("template") not in PAGE_NUMBER_TEMPLATES:
+        raise ValueError("Select a page-number template from the supplied list.")
     elif layout == "list_style":
         expected = {"type": values["list_type"], "level": int(values["list_level"])}
     elif rule_key == "page_break":
@@ -227,7 +262,76 @@ def _rule_from_form(index):
         "target": target,
         "expected": expected,
         "marks": marks,
+        "builder_rule": rule_key,
+        "builder_values": values,
+        "builder_target": target_text,
     }
+
+
+def _add_automatic_text_marks(rules):
+    """Award one baseline mark for each distinct text target before its formatting checks."""
+    manually_marked = {
+        " ".join(str(rule.get("expected", "")).lower().split())
+        for rule in rules
+        if rule.get("type") == "contains_text"
+    }
+    added_targets = set()
+    expanded = []
+    for rule in rules:
+        target = rule.get("target") or {}
+        target_text = str(target.get("value", "")).strip() if target.get("locator") == "contains_text" else ""
+        normalized_target = " ".join(target_text.lower().split())
+        if target_text and normalized_target not in manually_marked and normalized_target not in added_targets:
+            expanded.append({
+                "description": f"Correct text: {target_text}",
+                "domain": "document",
+                "type": "contains_text",
+                "target": {},
+                "expected": target_text,
+                "marks": 1,
+            })
+            added_targets.add(normalized_target)
+        expanded.append(rule)
+
+    for number, rule in enumerate(expanded, start=1):
+        rule["question_number"] = str(number)
+    return expanded
+
+
+def _expand_composite_rules(rules):
+    """Turn compound builder actions into the one-mark rows shown in a memo."""
+    expanded = []
+    for rule in rules:
+        expected = rule["expected"]
+        description = rule["description"]
+        if rule["type"] == "margins" and isinstance(expected, dict):
+            expanded.extend((
+                {**rule, "description": f"{description}: top and bottom margins", "type": "margin_top_bottom_cm", "expected": expected["top"]},
+                {**rule, "description": f"{description}: left and right margins", "type": "margin_left_right_cm", "expected": expected["left"]},
+            ))
+        elif rule["type"] == "page_border" and isinstance(expected, dict):
+            expanded.append({**rule, "description": f"{description}: border applied", "expected": {}})
+            expanded.append({**rule, "description": f"{description}: {expected['style']} border style", "expected": {"style": expected["style"]}})
+            expanded.append({**rule, "description": f"{description}: first-page setting", "expected": {"first_page_only": expected["first_page_only"]}})
+            if expected.get("color"):
+                expanded.append({**rule, "description": f"{description}: {expected['color']} border colour", "expected": {"color": expected["color"]}})
+        elif rule["type"] == "watermark" and isinstance(expected, dict):
+            for key, label in (("text", "watermark text"), ("color", "watermark colour"), ("layout", "watermark layout")):
+                if expected.get(key):
+                    expanded.append({**rule, "description": f"{description}: {label}", "expected": expected[key]})
+        elif rule["type"] == "page_number_template" and isinstance(expected, dict):
+            template = expected["template"]
+            location = expected.get("location", "footer")
+            alignment = template.rsplit("_", 1)[-1] if template.startswith(("page_x_", "page_x_of_y_")) else {"plain_number_1": "left", "plain_number_2": "center", "plain_number_3": "right"}[template]
+            structure = "page_x_of_y" if template.startswith("page_x_of_y_") else "page_x" if template.startswith("page_x_") else "plain_number"
+            expanded.extend((
+                {**rule, "description": f"{description}: automatic page-number field", "type": f"page_number_in_{location}", "expected": True},
+                {**rule, "description": f"{description}: {structure.replace('_', ' ').title()} format", "expected": {"template": structure, "location": location}},
+                {**rule, "description": f"{description}: {alignment} alignment", "type": f"{location}_alignment", "expected": alignment},
+            ))
+        else:
+            expanded.append(rule)
+    return expanded
 
 
 def register_custom_word_task_routes(app):
@@ -273,6 +377,64 @@ def register_custom_word_task_routes(app):
 
         return render_template("test_marking_setup.html", setup_id=setup_id, setup_title=setup[0], error=error, result=result)
 
+    @app.route("/tasks/<int:task_id>/word_builder/edit", methods=["GET", "POST"])
+    def edit_custom_word_task(task_id):
+        username = session.get("username")
+        if not username or get_user_role(username) not in {"teacher", "admin"}:
+            return "Access denied", 403
+
+        conn = get_db()
+        task = conn.execute(
+            "SELECT subject_id, name, assign_date, question_text, is_active, marking_setup_id FROM tasks WHERE id = ? AND task_type = 'practical'",
+            (task_id,),
+        ).fetchone()
+        if not task or not task[5]:
+            conn.close()
+            return "This task does not have a no-code Word marking setup.", 404
+        subject_id, task_name, assign_date, instructions, is_active, setup_id = task
+        subject = conn.execute("SELECT name FROM subjects WHERE id = ?", (subject_id,)).fetchone()
+        groups = [row[0] for row in conn.execute("SELECT DISTINCT group_name FROM users WHERE group_name IS NOT NULL ORDER BY group_name")]
+
+        marking_conn = get_marking_db()
+        setup_row = marking_conn.execute("SELECT json_script_blob FROM marking_setups WHERE id = ?", (setup_id,)).fetchone()
+        if not setup_row:
+            marking_conn.close()
+            conn.close()
+            return "Marking setup not found", 404
+        setup = json.loads((setup_row[0] or b"{}").decode("utf-8"))
+        initial_criteria = setup.get("builder_criteria") or []
+        if not initial_criteria:
+            marking_conn.close()
+            conn.close()
+            return "This older task can be edited in Marking Setup, but it was created before no-code builder data was saved.", 400
+
+        error = None
+        if request.method == "POST":
+            try:
+                builder_rules = [rule for index in range(int(request.form.get("criterion_count", "0") or 0)) if (rule := _rule_from_form(index))]
+                if not builder_rules:
+                    raise ValueError("Add at least one marking criterion.")
+                rules = _add_automatic_text_marks(_expand_composite_rules(builder_rules))
+                title = request.form.get("title", "").strip()
+                if not title:
+                    raise ValueError("Task name is required.")
+                setup.update({"task_name": title, "questions": rules, "builder_criteria": builder_rules, "total_marks": sum(rule["marks"] for rule in rules)})
+                marking_conn.execute("UPDATE marking_setups SET title = ?, notes = ?, json_script_blob = ?, updated_at = ? WHERE id = ?", (title, request.form.get("instructions", ""), json.dumps(setup, ensure_ascii=False).encode("utf-8"), datetime.now().isoformat(), setup_id))
+                marking_conn.commit()
+                conn.execute("UPDATE tasks SET name = ?, assign_date = ?, question_text = ?, is_active = ? WHERE id = ?", (title, request.form.get("assign_date"), request.form.get("instructions", ""), 1 if request.form.get("is_active") else 0, task_id))
+                conn.execute("DELETE FROM task_groups WHERE task_id = ?", (task_id,))
+                conn.executemany("INSERT INTO task_groups (task_id, group_name) VALUES (?, ?)", [(task_id, group) for group in request.form.getlist("groups")])
+                conn.execute("DELETE FROM task_teachers WHERE task_id = ?", (task_id,))
+                conn.executemany("INSERT INTO task_teachers (task_id, teacher_username) VALUES (?, ?)", [(task_id, teacher) for teacher in request.form.getlist("teachers")])
+                conn.commit()
+                log_activity(username, f"edited no-code Word practical task {title}")
+                return redirect(url_for("manage_tasks", subject_id=subject_id))
+            except Exception as exc:
+                error = str(exc)
+        marking_conn.close()
+        conn.close()
+        return render_template("custom_word_task.html", subject_id=subject_id, subject_name=subject[0], groups=groups, teachers=get_teachers(), rules=RULES, font_names=FONT_NAMES, colour_names=COLOUR_NAMES, border_styles=BORDER_STYLES, page_colours=PAGE_COLOURS, section_break_types=SECTION_BREAK_TYPES, username=username, today=datetime.now().date().isoformat(), error=error, editing_task={"name": task_name, "assign_date": assign_date, "instructions": instructions, "is_active": is_active}, initial_criteria=initial_criteria)
+
     @app.route("/subjects/<int:subject_id>/custom_word_task", methods=["GET", "POST"])
     def custom_word_task(subject_id):
         username = session.get("username")
@@ -305,13 +467,14 @@ def register_custom_word_task_routes(app):
                 starter_blob = starter.read()
                 starter_name = secure_filename(starter.filename)
 
-                rules = []
+                builder_rules = []
                 for index in range(int(request.form.get("criterion_count", "0") or 0)):
                     rule = _rule_from_form(index)
                     if rule:
-                        rules.append(rule)
-                if not rules:
+                        builder_rules.append(rule)
+                if not builder_rules:
                     raise ValueError("Add at least one marking criterion.")
+                rules = _add_automatic_text_marks(_expand_composite_rules(builder_rules))
                 if any(rule["type"] == "image_matches_reference" for rule in rules):
                     if not reference_image or not reference_image.filename:
                         raise ValueError("Upload the reference image for the picture-match criterion.")
@@ -321,7 +484,14 @@ def register_custom_word_task_routes(app):
                             rule["expected"] = {"sha256": reference_hash}
 
                 now = datetime.now().isoformat()
-                setup = {"task_name": title, "program": "word", "file": "student_file.docx", "questions": rules, "total_marks": sum(rule["marks"] for rule in rules)}
+                setup = {
+                    "task_name": title,
+                    "program": "word",
+                    "file": "student_file.docx",
+                    "questions": rules,
+                    "builder_criteria": builder_rules,
+                    "total_marks": sum(rule["marks"] for rule in rules),
+                }
                 paper_blob = paper.read() if paper and paper.filename else None
                 paper_name = secure_filename(paper.filename) if paper and paper.filename else None
                 marking_conn = get_marking_db()
@@ -380,4 +550,6 @@ def register_custom_word_task_routes(app):
             username=username,
             today=datetime.now().date().isoformat(),
             error=error,
+            editing_task=None,
+            initial_criteria=[],
         )

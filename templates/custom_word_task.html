@@ -26,7 +26,7 @@
     .checks label { font-weight:400; display:flex; align-items:center; gap:6px; }
     .checks input { width:auto; }
     .criteria { border:1px solid var(--line); border-radius:6px; overflow:hidden; }
-    .criterion { display:grid; grid-template-columns:1.15fr 1.7fr 70px 34px; gap:8px; align-items:end; padding:12px; border-bottom:1px solid #e4e8ef; background:linear-gradient(90deg,#fff,#f9fbfe); }
+    .criterion { display:grid; grid-template-columns:1.15fr 1.7fr minmax(220px,1fr) 34px; gap:8px; align-items:end; padding:12px; border-bottom:1px solid #e4e8ef; background:linear-gradient(90deg,#fff,#f9fbfe); }
     .criterion:last-child { border-bottom:0; }
     .criterion .field { gap:4px; }
     .criterion label { font-size:.76rem; color:#465367; }
@@ -49,7 +49,7 @@
   <main class="builder">
     <div class="builder-head">
       <h1>Word Practical Task Builder</h1>
-      <p>Create a marked upload task for <strong>{{ subject_name }}</strong> without writing a script.</p>
+      <p>{% if editing_task %}Edit{% else %}Create{% endif %} a marked upload task for <strong>{{ subject_name }}</strong> without writing a script.</p>
     </div>
     {% if error %}<div class="notice">{{ error }}</div>{% endif %}
     <form method="post" enctype="multipart/form-data" id="word-task-form">
@@ -58,25 +58,25 @@
         <h2>1. Task and learner files</h2>
         <p class="help">The starter document is copied for every learner. The question paper and support files are available as downloads in the task.</p>
         <div class="grid">
-          <div class="field"><label for="title">Task name</label><input id="title" name="title" required placeholder="e.g. Term 3 Word Practical"></div>
-          <div class="field"><label for="assign_date">Assign date</label><input id="assign_date" name="assign_date" type="date" value="{{ today }}" required></div>
-          <div class="field"><label for="starter_file">Word starter document (.docx)</label><input id="starter_file" name="starter_file" type="file" accept=".docx" required></div>
+          <div class="field"><label for="title">Task name</label><input id="title" name="title" required placeholder="e.g. Term 3 Word Practical" value="{{ editing_task.name if editing_task else '' }}"></div>
+          <div class="field"><label for="assign_date">Assign date</label><input id="assign_date" name="assign_date" type="date" value="{{ editing_task.assign_date if editing_task else today }}" required></div>
+          <div class="field"><label for="starter_file">Word starter document (.docx){% if editing_task %} - replace optional{% endif %}</label><input id="starter_file" name="starter_file" type="file" accept=".docx" {% if not editing_task %}required{% endif %}></div>
           <div class="field"><label for="question_paper">Question paper (optional)</label><input id="question_paper" name="question_paper" type="file" accept=".docx,.pdf"></div>
           <div class="field"><label for="reference_image">Reference image (only for “Picture matches reference image”)</label><input id="reference_image" name="reference_image" type="file" accept="image/*"></div>
           <div class="field full"><label for="support_files">Additional support files (optional)</label><input id="support_files" name="support_files" type="file" multiple></div>
-          <div class="field full"><label for="instructions">Instructions shown to learners</label><textarea id="instructions" name="instructions" placeholder="Complete the changes in the starter document, save your work, then upload the completed .docx file."></textarea></div>
+          <div class="field full"><label for="instructions">Instructions shown to learners</label><textarea id="instructions" name="instructions" placeholder="Complete the changes in the starter document, save your work, then upload the completed .docx file.">{{ editing_task.instructions if editing_task else '' }}</textarea></div>
         </div>
       </section>
 
       <section class="panel">
         <h2>2. Marking criteria</h2>
-        <p class="help">Choose a Word action, then complete only the settings used by that action. The selection list is grouped by the Word ribbon area and generates a fixed, repeatable marking check.</p>
+        <p class="help">Choose a Word action, then complete only the settings used by that action. The selection list is grouped by the Word ribbon area and generates a fixed, repeatable marking check. Marks are automatic: every distinct text target receives one <strong>Correct text</strong> mark and every selected action receives one additional mark.</p>
         <p class="help"><strong>Marking result label:</strong> the sentence shown with the learner's mark, for example: “Cover page author and abstract completed”. It does not determine what is marked. <strong>Expected state:</strong> Yes means the selected action must be present; No means it must be absent.</p>
         <div class="criteria" id="criteria"></div>
         <div class="criterion-note">Table numbers, row numbers and column numbers start at <strong>1</strong> in the builder. The marker converts them to the internal document position automatically.</div>
         <div class="actions">
           <button class="btn-secondary" type="button" id="add-criterion">+ Add criterion</button>
-          <span class="help" style="margin:0;">Total marks are calculated from the criteria.</span>
+          <span class="help" style="margin:0;">Every selected action is one mark. Total marks are calculated automatically.</span>
         </div>
       </section>
 
@@ -88,7 +88,7 @@
           <div class="field full"><label><input type="checkbox" name="is_active" checked style="width:auto; margin-right:7px;"> Make this task active immediately</label></div>
         </div>
       </section>
-      <div class="actions"><a class="btn-secondary" href="{{ url_for('manage_tasks', subject_id=subject_id) }}">Cancel</a><button class="btn-primary" type="submit">Create Word practical task</button></div>
+      <div class="actions"><a class="btn-secondary" href="{{ url_for('manage_tasks', subject_id=subject_id) }}">Cancel</a><button class="btn-primary" type="submit">{% if editing_task %}Save Word practical task{% else %}Create Word practical task{% endif %}</button></div>
     </form>
   </main>
   <script>
@@ -109,7 +109,7 @@
       const values = options.values;
       const input = values
         ? `<select name="${name}_${index}" ${options.required === false ? '' : 'required'}>${values.map(([value, text]) => `<option value="${value}">${text}</option>`).join('')}</select>`
-        : `<input name="${name}_${index}" type="${type}" placeholder="${placeholder}" ${options.required === false ? '' : 'required'}>`;
+        : `<input name="${name}_${index}" type="${type}" ${type === 'number' ? 'step="any"' : ''} placeholder="${placeholder}" ${options.required === false ? '' : 'required'}>`;
       return `<div class="field"><label>${label}</label>${input}</div>`;
     }
     function detailsFor(index, rule) {
@@ -117,7 +117,11 @@
       const alignments = [['left', 'Left'], ['center', 'Centre'], ['right', 'Right'], ['justify', 'Justified']];
       if (rule.check_type === 'font_name') return field(index, 'value', 'Font name', { values: fontNames });
       if (rule.check_type === 'color') return field(index, 'value', 'Font colour', { values: wordColours });
+      if (rule.layout === 'paragraph_shading') return field(index, 'value', 'Shading colour', { values: wordColours });
       if (rule.layout === 'underline_style') return field(index, 'value', 'Underline style', { values: [['single', 'Single'], ['double', 'Double']] });
+      if (rule.layout === 'drop_cap_applied') return field(index, 'value', 'Drop cap required', { values: [['true', 'Yes - must be present'], ['false', 'No - must be absent']] });
+      if (rule.layout === 'drop_cap_position') return field(index, 'value', 'Drop cap position', { values: [['drop', 'Dropped'], ['margin', 'In margin']] });
+      if (rule.layout === 'drop_cap_lines') return field(index, 'value', 'Lines to drop', { type: 'number', placeholder: 'e.g. 3' });
       if (rule.check_type === 'page_color') return field(index, 'value', 'Page colour', { values: pageColours });
       if (rule.check_type === 'section_page_break_type') return field(index, 'value', 'Break type', { values: sectionBreakTypes });
       if (rule.layout === 'boolean') return field(index, 'value', 'Expected state', { values: [['true', 'Yes - must be present'], ['false', 'No - must be absent']] });
@@ -126,7 +130,11 @@
       if (rule.layout === 'paper_size') return field(index, 'value', 'Paper size', { values: [['A4', 'A4']] });
       if (rule.layout === 'line_spacing') return field(index, 'line_rule', 'Line spacing type', { values: [['exact', 'Exactly'], ['atLeast', 'At least']] }) + field(index, 'value', 'Value', { type: 'number', placeholder: 'e.g. 15' }) + field(index, 'line_unit', 'Unit', { values: [['pt', 'Points (pt)'], ['lines', 'Lines']] });
       if (rule.layout === 'margins') return ['top', 'bottom', 'left', 'right'].map(side => field(index, side, `${side[0].toUpperCase()}${side.slice(1)} (cm)`, { type: 'number', placeholder: 'e.g. 2.54' })).join('');
-      if (rule.layout === 'page_border') return field(index, 'value', 'Border style', { values: borderStyles }) + field(index, 'value_2', 'Border colour', { values: wordColours }) + field(index, 'value_3', 'First page only?', { values: yesNo });
+      if (rule.layout === 'page_border') return field(index, 'value', 'Border style', { values: borderStyles }) + field(index, 'value_2', 'Border colour', { values: [['', 'No colour criterion'], ...wordColours], required: false }) + field(index, 'value_3', 'First page only?', { values: yesNo });
+      if (rule.layout === 'watermark') return field(index, 'value', 'Watermark text', { placeholder: 'e.g. CAT TEST', required: false }) + field(index, 'value_2', 'Watermark colour', { values: [['', 'No colour criterion'], ...wordColours], required: false }) + field(index, 'value_3', 'Watermark layout', { values: [['', 'No layout criterion'], ['diagonal', 'Diagonal'], ['horizontal', 'Horizontal']], required: false });
+      if (rule.layout === 'header_text_alignment') return field(index, 'value', 'Header must contain', { placeholder: 'Leave blank to accept any learner name', required: false }) + field(index, 'value_2', 'Header alignment', { values: alignments });
+      if (rule.layout === 'page_number_template') return field(index, 'value', 'Page-number template', { values: [['plain_number_1', 'Plain Number 1 (left)'], ['plain_number_2', 'Plain Number 2 (centre)'], ['plain_number_3', 'Plain Number 3 (right)'], ['page_x_left', 'Page X (left)'], ['page_x_center', 'Page X (centre)'], ['page_x_right', 'Page X (right)'], ['page_x_of_y_left', 'Page X of Y (left)'], ['page_x_of_y_center', 'Page X of Y (centre)'], ['page_x_of_y_right', 'Page X of Y (right)']] }) + field(index, 'value_2', 'Insert in', { values: [['footer', 'Footer / bottom of page'], ['header', 'Header / top of page']] });
+      if (rule.layout === 'page_number_format') return field(index, 'value', 'Number style', { values: [['1', '1, 2, 3'], ['a', 'a, b, c'], ['A', 'A, B, C'], ['i', 'i, ii, iii'], ['I', 'I, II, III']] });
       if (rule.layout === 'paragraph_border') return field(index, 'value', 'Border style', { values: borderStyles }) + field(index, 'value_2', 'Border colour', { values: wordColours }) + field(index, 'value_3', 'Width (pt)', { type: 'number', placeholder: 'e.g. 3' });
       if (rule.layout === 'table_cell_text') return field(index, 'row', 'Row', { type: 'number', placeholder: 'e.g. 1' }) + field(index, 'column', 'Column', { type: 'number', placeholder: 'e.g. 2' }) + field(index, 'value', 'Expected cell text', { placeholder: 'e.g. Total' }) + field(index, 'tolerance', 'Accept text in row?', { values: yesNo });
       if (rule.layout === 'table_cell_alignment') return field(index, 'row', 'Row', { type: 'number', placeholder: 'e.g. 1' }) + field(index, 'column', 'Column', { type: 'number', placeholder: 'e.g. 2' }) + field(index, 'value', 'Alignment', { values: alignments });
@@ -156,7 +164,12 @@
       const rule = ruleCatalog[row.querySelector(`[name="rule_${index}"]`).value];
       const target = row.querySelector('.criterion-target');
       target.hidden = rule.target === 'none';
-      if (rule.target === 'text') target.innerHTML = field(index, 'target', 'Text / heading to locate', { placeholder: 'Exact text already in the starter document' });
+      if (rule.domain === 'paragraph_formatting') {
+        const modes = [['contains_text', 'Text contained in the paragraph'], ['after_heading', 'The paragraph below a heading']];
+        if (rule.check_type === 'drop_cap') modes.push(['any_drop_cap', 'Any drop cap in the document']);
+        target.innerHTML = field(index, 'target_mode', 'Locate paragraph by', { values: modes }) + field(index, 'target', 'Paragraph text or heading', { placeholder: 'Text in the paragraph, or the heading above it', required: false });
+      }
+      else if (rule.target === 'text') target.innerHTML = field(index, 'target', 'Text / heading to locate', { placeholder: 'Exact text already in the starter document' });
       if (rule.target === 'table') target.innerHTML = field(index, 'target', 'Table number', { type: 'number', placeholder: 'e.g. 1' });
       if (rule.target === 'none') target.innerHTML = '';
       row.querySelector('.criterion-details').innerHTML = detailsFor(index, rule);
@@ -168,20 +181,37 @@
       command.innerHTML = groups[area].map(([key, rule]) => `<option value="${key}">${rule.label}</option>`).join('');
       renderRule(row);
     }
-    function addCriterion() {
+    function addCriterion(initial = null) {
       const index = Number(count.value);
       const row = document.createElement('div');
       row.className = 'criterion'; row.dataset.index = index;
-      row.innerHTML = `<div class="field"><label>Word area</label><select name="area_${index}" required>${Object.keys(groups).map(area => `<option value="${area}">${area}</option>`).join('')}</select></div><div class="field"><label>Command</label><select name="rule_${index}" required></select></div><div class="field"><label>Marking result label</label><input name="description_${index}" required placeholder="Shown in results, e.g. Cover page author and abstract completed"></div><div class="field"><label>Marks</label><input name="marks_${index}" type="number" min="1" value="1" required></div><button class="remove" type="button" title="Remove criterion">&times;</button><div class="criterion-target"></div><div class="criterion-details"></div>`;
+      row.innerHTML = `<div class="field"><label>Word area</label><select name="area_${index}" required>${Object.keys(groups).map(area => `<option value="${area}">${area}</option>`).join('')}</select></div><div class="field"><label>Command</label><select name="rule_${index}" required></select></div><div class="field"><label>Marking result label</label><input name="description_${index}" required placeholder="Shown in results, e.g. Cover page author and abstract completed"></div><button class="remove" type="button" title="Remove criterion">&times;</button><div class="criterion-target"></div><div class="criterion-details"></div>`;
       row.querySelector(`[name="area_${index}"]`).addEventListener('change', () => renderCommands(row));
       row.querySelector(`[name="rule_${index}"]`).addEventListener('change', () => renderRule(row));
       row.querySelector('.remove').addEventListener('click', () => { row.querySelectorAll('input').forEach((input) => { input.required = false; input.value = ''; }); row.hidden = true; });
       criteria.appendChild(row);
       count.value = index + 1;
       renderCommands(row);
+      if (initial) {
+        const key = initial.builder_rule;
+        const rule = ruleCatalog[key];
+        if (!rule) return;
+        row.querySelector(`[name="area_${index}"]`).value = rule.group;
+        renderCommands(row);
+        row.querySelector(`[name="rule_${index}"]`).value = key;
+        renderRule(row);
+        row.querySelector(`[name="description_${index}"]`).value = initial.description || '';
+        const target = row.querySelector(`[name="target_${index}"]`);
+        if (target) target.value = initial.builder_target || '';
+        for (const [name, value] of Object.entries(initial.builder_values || {})) {
+          const input = row.querySelector(`[name="${name}_${index}"]`);
+          if (input) input.value = value;
+        }
+      }
     }
     document.getElementById('add-criterion').addEventListener('click', addCriterion);
-    addCriterion();
+    const initialCriteria = {{ initial_criteria|default([])|tojson }};
+    if (initialCriteria.length) initialCriteria.forEach(addCriterion); else addCriterion();
   </script>
 </body>
 </html>

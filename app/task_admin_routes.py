@@ -334,7 +334,11 @@ def register_task_admin_routes(app):
                         if subj_row:
                             subject_name = subj_row[0]
                             cursor.execute("DELETE FROM results WHERE subject = ? AND task = ?", (subject_name, task_name))
+                        # Remove every child record before deleting the task parent.
+                        cursor.execute("DELETE FROM task_resources WHERE task_id = ?", (task_id,))
+                        cursor.execute("DELETE FROM task_practical_questions WHERE task_id = ?", (task_id,))
                         cursor.execute("DELETE FROM task_groups WHERE task_id = ?", (task_id,))
+                        cursor.execute("DELETE FROM task_teachers WHERE task_id = ?", (task_id,))
                         cursor.execute("DELETE FROM tasks WHERE id = ?", (task_id,))
                         conn.commit()
                         log_activity(username, f"deleted task {task_name} from {subject_name} and all related results")
@@ -425,6 +429,7 @@ def register_task_admin_routes(app):
                 <td>{status_badge}</td>
                 <td style="white-space:nowrap; vertical-align:middle;">
                     {'<a href="/tasks/' + str(task_id) + '/edit" title="Edit task" class="btn btn-primary">✏️</a>' if task_type == 'practical' else ''}
+                    {'<a href="/tasks/' + str(task_id) + '/word_builder/edit" title="Edit no-code Word marking" class="btn btn-primary">🛠️</a>' if practical_mode == 'upload' and marking_script == 'marking_experiment_adapter' and marking_setup_id else ''}
                     <a href="/tasks/{task_id}/preview" class="icon-btn" title="Preview learner view">👁</a>
                     {'<button type="button" class="btn btn-success" title="Reuse: copy into a new task" onclick="openReuseTaskModal(' + str(task_id) + ', ' + repr(task_name) + ', ' + repr(marking_script or '') + ', ' + str(allow_multiple) + ', ' + str(max_attempts) + ', ' + repr(marking_setup_id or '') + ', ' + repr(practical_mode or 'upload') + ', ' + repr(simulator_key or '') + ')">📋</button>' if task_type == 'practical' else ''}
                     <form method="post" action="/tasks/{task_id}/toggle" style="display:inline-flex; margin:0;">

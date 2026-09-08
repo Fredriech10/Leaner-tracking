@@ -1,0 +1,20 @@
+/* Shared fallback stylesheet for templates that use url_for('static', filename='style.css'). */
+:root {
+  --app-blue: #185abd;
+  --app-text: #1f2937;
+  --app-border: #d7dce5;
+}
+
+* { box-sizing: border-box; }
+
+body {
+  margin: 0;
+  color: var(--app-text);
+  font-family: "Segoe UI", Tahoma, sans-serif;
+}
+
+a { color: #124b96; }
+
+button, input, select, textarea { font: inherit; }
+
+button { cursor: pointer; }

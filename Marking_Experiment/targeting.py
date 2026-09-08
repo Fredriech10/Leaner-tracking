@@ -70,32 +70,39 @@ def find_paragraphs_after_heading(
     if not heading_lower:
         return results
 
+    def next_non_empty(start_index: int) -> Optional[Paragraph]:
+        for next_index in range(start_index + 1, len(document.paragraphs)):
+            candidate = document.paragraphs[next_index]
+            if candidate.text.strip():
+                return candidate
+        return None
+
     for idx, paragraph in enumerate(document.paragraphs):
         para_text = (paragraph.text or "").strip()
         if not para_text:
             continue
 
         para_lower = para_text.lower()
+        style_name = (paragraph.style.name or "").lower() if paragraph.style else ""
+        is_heading = "heading" in style_name or para_lower == heading_lower
 
         # 1) Exact match or substring match
-        if heading_lower in para_lower:
-            if idx + 1 < len(document.paragraphs):
-                next_para = document.paragraphs[idx + 1]
-                if next_para.text.strip():
-                    results.append(next_para)
+        if is_heading and heading_lower in para_lower:
+            next_para = next_non_empty(idx)
+            if next_para is not None:
+                results.append(next_para)
             continue
 
         # 2) Fuzzy match fallback
-        if fuzzy and similarity_threshold > 0:
+        if fuzzy and is_heading and similarity_threshold > 0:
             similarity = string_similarity(heading_lower, para_lower)
             if similarity >= similarity_threshold:
-                if idx + 1 < len(document.paragraphs):
-                    next_para = document.paragraphs[idx + 1]
-                    if next_para.text.strip():
-                        results.append(next_para)
-                        logger.debug(
-                            f"Fuzzy matched heading '{raw_heading}' to '{para_text}' (similarity: {similarity:.2f})"
-                        )
+                next_para = next_non_empty(idx)
+                if next_para is not None:
+                    results.append(next_para)
+                    logger.debug(
+                        f"Fuzzy matched heading '{raw_heading}' to '{para_text}' (similarity: {similarity:.2f})"
+                    )
 
     return results
 

@@ -78,22 +78,35 @@ class WordChecker(BaseChecker):
 
     def _match_color(self, expected: Any, actual_hex: Optional[str], actual_theme_name: Optional[str]) -> bool:
         named_colors = {
-            "black": {"000000"},
-            "blue": {"0000FF", "0070C0", "4472C4", "1F497D"},
-            "green": {"008000", "00B050", "70AD47"},
-            "red": {"FF0000", "C00000"},
-            "white": {"FFFFFF"},
-            "yellow": {"FFFF00", "FFC000"},
+            "black": {"000000", "1F1F1F"},
+            "white": {"FFFFFF", "F2F2F2"},
+            "grey": {"808080", "A5A5A5", "7F7F7F"},
+            "light grey": {"D9E1F2", "D9D9D9", "E7E6E6", "F2F2F2", "EDEDED", "DDEBF7"},
+            "dark grey": {"595959", "666666", "44546A"},
+            "blue": {"0000FF", "0070C0", "4472C4", "1F497D", "5B9BD5", "2F5597"},
+            "light blue": {"5B9BD5", "9DC3E6", "BDD7EE", "DDEBF7"},
+            "dark blue": {"1F4E78", "1F497D", "2F5597", "17365D"},
+            "green": {"008000", "00B050", "70AD47", "548235"},
+            "light green": {"A9D18E", "C6E0B4", "E2F0D9"},
+            "dark green": {"375623", "548235"},
+            "red": {"FF0000", "C00000", "C55A11", "F4B183"},
+            "dark red": {"C00000", "943634", "7F0000"},
+            "orange": {"ED7D31", "F4B183", "FCE4D6", "C55A11"},
+            "yellow": {"FFFF00", "FFC000", "FFD966", "FFF2CC"},
+            "purple": {"7030A0", "8064A2", "D9EAD3", "E4DFEC"},
         }
-        if isinstance(expected, str) and actual_hex:
-            allowed = named_colors.get(expected.strip().lower())
-            if allowed and actual_hex.upper() in allowed:
+        if isinstance(expected, str):
+            expected_name = expected.strip().lower().replace("gray", "grey")
+            allowed = named_colors.get(expected_name)
+            if actual_hex and allowed and actual_hex.upper() in allowed:
                 return True
             theme_aliases = {
-                "black": {"tx1", "dk1"},
-                "white": {"bg1", "lt1"},
+                "black": {"tx1", "dk1"}, "white": {"bg1", "lt1"},
+                "light grey": {"bg2", "lt2", "accent3"}, "dark grey": {"tx2", "dk2"},
+                "blue": {"accent1", "accent5"}, "light blue": {"accent5"}, "green": {"accent6"},
+                "grey": {"accent3"}, "orange": {"accent2"}, "yellow": {"accent4"},
             }
-            if actual_hex.lower() in theme_aliases.get(expected.strip().lower(), set()):
+            if actual_theme_name and actual_theme_name.lower() in theme_aliases.get(expected_name, set()):
                 return True
         expected_value = normalize_hex_color(str(expected)) if isinstance(expected, str) else None
         if expected_value and actual_hex:
@@ -205,6 +218,22 @@ class WordChecker(BaseChecker):
                     return run
         return None
 
+    def _paragraph_alignment(self, paragraph) -> str:
+        alignment = ALIGNMENT_MAP.get(paragraph.alignment)
+        if alignment:
+            return alignment
+        try:
+            tree = etree.fromstring(paragraph._p.xml.encode("utf-8"))
+            jc = tree.find(".//w:jc", namespaces=NAMESPACES)
+            value = jc.get(qn("w:val"), "left").lower() if jc is not None else ""
+            return {"both": "justify", "distribute": "justify", "start": "left", "end": "right"}.get(value, value or "left")
+        except Exception:
+            pass
+        try:
+            return ALIGNMENT_MAP.get(paragraph.style.paragraph_format.alignment, "left")
+        except Exception:
+            return "left"
+
     def _document_text(self, document: Document, file_path: Path) -> str:
         parts = [p.text for p in document.paragraphs if p.text]
         for section in document.sections:
@@ -301,6 +330,84 @@ class WordChecker(BaseChecker):
             except Exception:
                 pass
         return "1"
+
+    def _page_number_details(self, file_path: Path) -> list[dict]:
+        """Return the functional parts of every header/footer page-number field."""
+        details = []
+        for location in ("header", "footer"):
+            for index in range(1, 7):
+                xml = _read_docx_part(file_path, f"word/{location}{index}.xml")
+                if not xml:
+                    continue
+                try:
+                    root = etree.fromstring(xml.encode("utf-8"))
+                except Exception:
+                    continue
+
+                instructions = []
+                for node in root.iter(f"{{{NAMESPACES['w']}}}instrText"):
+                    if node.text:
+                        instructions.append(node.text)
+                for node in root.findall(f".//{{{NAMESPACES['w']}}}fldSimple"):
+                    instruction = node.get(qn("w:instr"))
+                    if instruction:
+                        instructions.append(instruction)
+                instruction_text = " ".join(instructions).upper()
+                if not re.search(r"\bPAGE\b", instruction_text):
+                    continue
+
+                text = " ".join(
+                    node.text for node in root.iter(f"{{{NAMESPACES['w']}}}t") if node.text
+                )
+                alignment = "left"
+                paragraph = root.find(f".//{{{NAMESPACES['w']}}}p")
+                if paragraph is not None:
+                    jc = paragraph.find(f".//{{{NAMESPACES['w']}}}jc")
+                    if jc is not None:
+                        alignment = jc.get(qn("w:val"), "left").lower()
+                details.append({
+                    "location": location,
+                    "alignment": {"both": "justify", "distribute": "justify"}.get(alignment, alignment),
+                    "has_num_pages": bool(re.search(r"\bNUMPAGES\b", instruction_text)),
+                    "text": text,
+                })
+        return details
+
+    def _matches_page_number_template(self, file_path: Path, expected: Any) -> tuple[bool, list[dict]]:
+        template = expected.get("template", "") if isinstance(expected, dict) else str(expected)
+        expected_location = expected.get("location") if isinstance(expected, dict) else None
+        expected = {
+            "plain_number_1": ("left", False, False),
+            "plain_number_2": ("center", False, False),
+            "plain_number_3": ("right", False, False),
+            "page_x_left": ("left", False, True),
+            "page_x_center": ("center", False, True),
+            "page_x_right": ("right", False, True),
+            "page_x_of_y_left": ("left", True, True),
+            "page_x_of_y_center": ("center", True, True),
+            "page_x_of_y_right": ("right", True, True),
+            "plain_number": (None, False, False),
+            "page_x": (None, False, True),
+            "page_x_of_y": (None, True, True),
+        }.get(template)
+        details = self._page_number_details(file_path)
+        if expected is None:
+            return False, details
+        alignment, needs_num_pages, needs_page_label = expected
+        for detail in details:
+            text = re.sub(r"\s+", " ", detail["text"]).strip().lower()
+            has_page_label = bool(re.search(r"\bpage\b", text))
+            has_of_label = bool(re.search(r"\bof\b", text))
+            if expected_location and detail["location"] != expected_location:
+                continue
+            if (alignment is not None and detail["alignment"] != alignment) or detail["has_num_pages"] != needs_num_pages:
+                continue
+            if needs_page_label and not has_page_label:
+                continue
+            if needs_num_pages and not has_of_label:
+                continue
+            return True, details
+        return False, details
 
     def _section_break_type(self, section) -> str:
         if hasattr(section, "start_type"):
@@ -677,12 +784,18 @@ class WordChecker(BaseChecker):
     def _check_para_shading(self, paragraph, expected: Any) -> Tuple[bool, Any]:
         """Check paragraph shading/fill via raw XML."""
         SHADING_MAP = {
-            "light grey": ["d9d9d9", "bfbfbf", "f2f2f2", "d3d3d3"],
-            "light gray": ["d9d9d9", "bfbfbf", "f2f2f2", "d3d3d3"],
-            "grey": ["808080", "a5a5a5", "d9d9d9"],
-            "gray": ["808080", "a5a5a5", "d9d9d9"],
-            "blue": ["0070c0", "0000ff", "4472c4"],
-            "yellow": ["ffff00", "ffc000"],
+            "light grey": {"d9d9d9", "bfbfbf", "f2f2f2", "d3d3d3", "e7e6e6", "ededed", "ddebf7", "d9e1f2"},
+            "grey": {"808080", "a5a5a5", "7f7f7f", "d9d9d9"},
+            "dark grey": {"595959", "666666", "44546a"},
+            "blue": {"0070c0", "0000ff", "4472c4", "1f497d", "5b9bd5", "2f5597", "d9e2f3", "ddebf7"},
+            "light blue": {"5b9bd5", "9dc3e6", "bdd7ee", "ddebf7"},
+            "green": {"008000", "00b050", "70ad47", "548235", "e2f0d9"},
+            "red": {"ff0000", "c00000", "f4b183", "fce4d6"},
+            "orange": {"ed7d31", "f4b183", "fce4d6", "c55a11"},
+            "yellow": {"ffff00", "ffc000", "ffd966", "fff2cc"},
+            "purple": {"7030a0", "8064a2", "e4dfec"},
+            "black": {"000000", "1f1f1f"},
+            "white": {"ffffff", "f2f2f2"},
         }
         WNS = "http://schemas.openxmlformats.org/wordprocessingml/2006/main"
         try:
@@ -693,15 +806,20 @@ class WordChecker(BaseChecker):
         if shd is None:
             return False, {"reason": "No shading found"}
         fill = shd.get(f"{{{WNS}}}fill", "").lower()
-        theme_color = shd.get(f"{{{WNS}}}themeFill", "")
+        theme_color = shd.get(f"{{{WNS}}}themeFill", "").lower()
         actual = {"fill": fill, "theme": theme_color}
         if isinstance(expected, dict):
-            exp_color = expected.get("color", "any").lower()
+            exp_color = expected.get("color", "any").lower().replace("gray", "grey")
             if exp_color == "any":
                 passed = bool(fill) and fill != "auto"
             else:
-                allowed = SHADING_MAP.get(exp_color, [exp_color])
-                passed = fill in allowed or any(a in fill for a in allowed)
+                allowed = SHADING_MAP.get(exp_color, {exp_color})
+                theme_aliases = {
+                    "light grey": {"lt2", "bg2", "accent3"}, "grey": {"accent3"}, "dark grey": {"dk2", "tx2"},
+                    "blue": {"accent1", "accent5"}, "light blue": {"accent5"}, "green": {"accent6"},
+                    "orange": {"accent2"}, "yellow": {"accent4"},
+                }
+                passed = fill in allowed or theme_color in theme_aliases.get(exp_color, set())
         else:
             passed = bool(fill) and fill != "auto"
         return passed, actual
@@ -719,14 +837,19 @@ class WordChecker(BaseChecker):
         drop_cap = frame_pr.get(f"{{{WNS}}}dropCap", "")
         lines = frame_pr.get(f"{{{WNS}}}lines", "")
         actual = {"dropCap": drop_cap, "lines": lines}
-        if not drop_cap or drop_cap == "none":
+        applied = bool(drop_cap) and drop_cap != "none"
+        if isinstance(expected, dict) and expected.get("applied") is False:
+            return not applied, actual
+        if not applied:
             return False, actual
         passed = True
+        if isinstance(expected, dict) and expected.get("position"):
+            passed = passed and drop_cap == str(expected["position"]).strip().lower()
         if isinstance(expected, dict) and expected.get("lines"):
             try:
-                passed = int(lines) == int(expected["lines"])
+                passed = passed and int(lines) == int(expected["lines"])
             except Exception:
-                pass
+                passed = False
         return passed, actual
 
     def _check_bookmark(
@@ -768,6 +891,13 @@ class WordChecker(BaseChecker):
         expected: Any,
         file_path: Path,
     ) -> CheckerResult:
+        if check_type == "drop_cap" and target.get("locator") == "any_drop_cap":
+            actual = None
+            for paragraph in document.paragraphs:
+                passed, actual = self._check_drop_cap(paragraph, expected)
+                if passed:
+                    return CheckerResult(passed=True, actual=actual, details={"type": check_type})
+            return CheckerResult(passed=False, actual=actual, details={"type": check_type})
         paragraphs = self._find_paragraphs(document, target)
         if not paragraphs:
             return CheckerResult(passed=False, details={"reason": "Paragraph target not found."})
@@ -776,7 +906,7 @@ class WordChecker(BaseChecker):
         passed = False
 
         if check_type == "alignment":
-            actual = ALIGNMENT_MAP.get(paragraph.alignment, "left")
+            actual = self._paragraph_alignment(paragraph)
             passed = actual == str(expected).lower()
 
         elif check_type == "line_spacing":
@@ -1447,6 +1577,21 @@ class WordChecker(BaseChecker):
                 actual={"text": actual_text, "colour": actual_colour, "layout": actual_layout},
                 details={"type": check_type},
             )
+        if check_type == "header_text_alignment":
+            actual_text = self._gather_header_text(section)
+            actual_alignment = "left"
+            for header_part in (section.header, section.even_page_header, section.first_page_header):
+                try:
+                    paragraphs = [p for p in header_part.paragraphs if p.text.strip()]
+                    if paragraphs:
+                        actual_alignment = ALIGNMENT_MAP.get(paragraphs[0].alignment, "left")
+                        break
+                except Exception:
+                    continue
+            expected_text = str(expected.get("text", "")) if isinstance(expected, dict) else ""
+            expected_alignment = str(expected.get("alignment", "left")).lower() if isinstance(expected, dict) else "left"
+            passed = bool(actual_text.strip()) and expected_text.lower() in actual_text.lower() and actual_alignment == expected_alignment
+            return CheckerResult(passed=passed, actual={"text": actual_text, "alignment": actual_alignment}, details={"type": check_type})
         if check_type == "header_text":
             header = section.header
             actual = " ".join(p.text.strip() for p in header.paragraphs if p.text.strip()) if header else ""
@@ -1550,6 +1695,10 @@ class WordChecker(BaseChecker):
             actual = self._page_number_format(file_path)
             passed = str(actual).lower() == str(expected).strip().lower()
             return CheckerResult(passed=passed, actual=actual, details={"type": check_type})
+        if check_type == "page_number_template":
+            template = expected.get("template", "") if isinstance(expected, dict) else str(expected)
+            passed, actual = self._matches_page_number_template(file_path, expected)
+            return CheckerResult(passed=passed, actual=actual, details={"type": check_type, "template": template})
         if check_type == "page_break":
             actual_count = self._count_page_breaks(file_path)
             expected_bool = self._parse_boolean(expected)

@@ -22,7 +22,7 @@ COLOUR_NAMES = (
     "red", "dark red", "orange", "yellow", "purple",
 )
 BORDER_STYLES = ("single", "double", "dotted", "dashed", "thick", "triple", "wave")
-PAGE_COLOURS = ("FFFFFF", "000000", "0000FF", "0070C0", "00B050", "FF0000", "FFFF00", "D9D9D9")
+PAGE_COLOURS = ("FFFFFF", "000000", "0000FF", "0070C0", "00B050", "C6E0B4", "FF0000", "FFFF00", "D9D9D9")
 SECTION_BREAK_TYPES = ("nextPage", "continuous", "evenPage", "oddPage")
 PAGE_NUMBER_TEMPLATES = (
     "plain_number_1", "plain_number_2", "plain_number_3",
@@ -46,6 +46,7 @@ RULES = {
     "subscript": {"group": "Font", "label": "Subscript", "domain": "font", "check_type": "subscript", "target": "text", "layout": "boolean"},
     "all_caps": {"group": "Font", "label": "All caps", "domain": "font", "check_type": "all_caps", "target": "text", "layout": "boolean"},
     "small_caps": {"group": "Font", "label": "Small caps", "domain": "font", "check_type": "small_caps", "target": "text", "layout": "boolean"},
+    "shadow": {"group": "Font", "label": "Text shadow", "domain": "font", "check_type": "shadow", "target": "text", "layout": "boolean"},
     "character_spacing": {"group": "Font", "label": "Character spacing", "domain": "font", "check_type": "character_spacing", "target": "text", "layout": "number", "value_label": "Spacing (pt)", "placeholder": "e.g. 3"},
     "alignment": {"group": "Paragraph", "label": "Paragraph alignment", "domain": "paragraph_formatting", "check_type": "alignment", "target": "text", "layout": "alignment"},
     "line_spacing": {"group": "Paragraph", "label": "Line spacing", "domain": "paragraph_formatting", "check_type": "line_spacing", "target": "text", "layout": "line_spacing"},
@@ -70,25 +71,41 @@ RULES = {
     "cover_page": {"group": "Page layout", "label": "Cover page fields", "domain": "document", "check_type": "cover_page_fields", "target": "none", "layout": "cover_page"},
     "cover_page_controls": {"group": "Page layout", "label": "Completed cover-page controls", "domain": "document", "check_type": "no_empty_content_controls", "target": "none", "layout": "boolean"},
     "cover_page_control_layout": {"group": "Page layout", "label": "Cover-page title and author controls", "domain": "document", "check_type": "cover_page_controls", "target": "none", "layout": "control_aliases"},
+    "cover_fill": {"group": "Page layout", "label": "Cover-page shape fill colour", "domain": "document", "check_type": "cover_fill_colour", "target": "none", "layout": "value", "value_label": "Fill colour", "placeholder": "e.g. white or FFFFFF"},
+    "content_control_absent": {"group": "Page layout", "label": "Cover-page control removed", "domain": "document", "check_type": "content_control_absent", "target": "none", "layout": "value", "value_label": "Control name", "placeholder": "e.g. Subtitle"},
     "page_break": {"group": "Page layout", "label": "Page breaks", "domain": "document", "check_type": "page_break", "target": "none", "layout": "number", "value_label": "Number of page breaks", "placeholder": "e.g. 1"},
     "section_break": {"group": "Page layout", "label": "Section break", "domain": "document", "check_type": "section_page_break_type", "target": "none", "layout": "value", "value_label": "Break type", "placeholder": "e.g. nextPage or continuous"},
     "columns": {"group": "Page layout", "label": "Document columns", "domain": "document", "check_type": "columns", "target": "none", "layout": "columns"},
+    "column_spacing": {"group": "Page layout", "label": "Spacing between document columns", "domain": "document", "check_type": "column_spacing", "target": "none", "layout": "column_spacing"},
+    "column_separator": {"group": "Page layout", "label": "Line between columns", "domain": "document", "check_type": "column_separator", "target": "none", "layout": "boolean"},
     "column_breaks": {"group": "Page layout", "label": "Column breaks", "domain": "document", "check_type": "column_breaks", "target": "none", "layout": "number", "value_label": "Minimum column breaks", "placeholder": "e.g. 3"},
     "hyphenation": {"group": "Page layout", "label": "Automatic hyphenation", "domain": "document", "check_type": "hyphenation", "target": "none", "layout": "boolean"},
+    "hyphenate_caps": {"group": "Page layout", "label": "Do not hyphenate capital-letter words", "domain": "document", "check_type": "do_not_hyphenate_caps", "target": "none", "layout": "boolean"},
     "watermark": {"group": "Page layout", "label": "Text watermark", "domain": "document", "check_type": "watermark", "target": "none", "layout": "watermark"},
     "contains_date": {"group": "Page layout", "label": "Date inserted", "domain": "document", "check_type": "contains_date", "target": "none", "layout": "boolean"},
     "header_text": {"group": "Header and footer", "label": "Header text", "domain": "document", "check_type": "header_text", "target": "none", "layout": "value", "value_label": "Header must contain", "placeholder": "e.g. Name and surname"},
+    "header_learner_name": {"group": "Header and footer", "label": "Learner name in header", "domain": "document", "check_type": "header_learner_name", "target": "none", "layout": "boolean"},
+    "header_date_field": {"group": "Header and footer", "label": "Automatic header date", "domain": "document", "check_type": "header_date_field", "target": "none", "layout": "header_date"},
+    "header_date_right": {"group": "Header and footer", "label": "Header date on right", "domain": "document", "check_type": "header_date_right", "target": "none", "layout": "boolean"},
     "header_alignment": {"group": "Header and footer", "label": "Header alignment", "domain": "document", "check_type": "header_alignment", "target": "none", "layout": "alignment"},
     "header_text_alignment": {"group": "Header and footer", "label": "Header text and alignment", "domain": "document", "check_type": "header_text_alignment", "target": "none", "layout": "header_text_alignment"},
     "footer_text": {"group": "Header and footer", "label": "Footer text", "domain": "document", "check_type": "footer_text", "target": "none", "layout": "value", "value_label": "Footer must contain", "placeholder": "e.g. Page X of Y"},
     "footer_alignment": {"group": "Header and footer", "label": "Footer alignment", "domain": "document", "check_type": "footer_alignment", "target": "none", "layout": "alignment"},
+    "first_page_footer": {"group": "Header and footer", "label": "Different first-page footer", "domain": "document", "check_type": "footer_differs", "target": "none", "layout": "boolean"},
     "page_number_footer": {"group": "Header and footer", "label": "Page number in footer", "domain": "document", "check_type": "page_number_in_footer", "target": "none", "layout": "boolean"},
     "page_number_header": {"group": "Header and footer", "label": "Page number in header", "domain": "document", "check_type": "page_number_in_header", "target": "none", "layout": "boolean"},
+    "page_number_first_footer": {"group": "Header and footer", "label": "Page number in first-page footer", "domain": "document", "check_type": "page_number_in_first_footer", "target": "none", "layout": "boolean"},
     "page_number_template": {"group": "Header and footer", "label": "Page-number template", "domain": "document", "check_type": "page_number_template", "target": "none", "layout": "page_number_template"},
     "page_number_format": {"group": "Header and footer", "label": "Page-number number style", "domain": "document", "check_type": "page_number_format", "target": "none", "layout": "page_number_format"},
     "document_property": {"group": "Document information", "label": "Document property", "domain": "document", "check_type": "document_property", "target": "none", "layout": "document_property"},
-    "comment": {"group": "Review", "label": "Comment", "domain": "document", "check_type": "comments", "target": "none", "layout": "value", "value_label": "Comment must contain", "placeholder": "e.g. Check the source"},
+    "document_property_changed": {"group": "Document information", "label": "Document property changed from starter value", "domain": "document", "check_type": "document_property_changed", "target": "none", "layout": "document_property_changed"},
+    "comment_present": {"group": "Review", "label": "Comment inserted", "domain": "document", "check_type": "comments", "target": "none", "layout": "boolean"},
+    "comment": {"group": "Review", "label": "Comment text", "domain": "document", "check_type": "comments", "target": "none", "layout": "value", "value_label": "Comment must contain", "placeholder": "e.g. Check the source"},
+    "comment_on_text": {"group": "Review", "label": "Comment on specified text", "domain": "document", "check_type": "comment_on_text", "target": "none", "layout": "comment_anchor"},
     "find_replace": {"group": "Editing", "label": "Find and replace outcome", "domain": "document", "check_type": "find_replace", "target": "none", "layout": "find_replace"},
+    "text_occurrence_count": {"group": "Editing", "label": "Exact whole-word count", "domain": "document", "check_type": "text_occurrence_count", "target": "none", "layout": "text_count"},
+    "all_text_bold": {"group": "Editing", "label": "Every occurrence is bold", "domain": "document", "check_type": "all_text_bold", "target": "none", "layout": "value", "value_label": "Whole word", "placeholder": "e.g. guests"},
+    "text_underline": {"group": "Editing", "label": "An occurrence is underlined", "domain": "document", "check_type": "text_underline", "target": "none", "layout": "value", "value_label": "Whole word", "placeholder": "e.g. guests"},
     "table_cell_text": {"group": "Tables", "label": "Table cell text", "domain": "table", "check_type": "cell_text", "target": "table", "layout": "table_cell_text"},
     "table_cell_alignment": {"group": "Tables", "label": "Table cell alignment", "domain": "table", "check_type": "cell_alignment", "target": "table", "layout": "table_cell_alignment"},
     "table_merge": {"group": "Tables", "label": "Merge table cells", "domain": "table", "check_type": "merge_horizontal", "target": "table", "layout": "table_merge"},
@@ -96,14 +113,29 @@ RULES = {
     "table_borders": {"group": "Tables", "label": "Table borders", "domain": "table", "check_type": "borders", "target": "table", "layout": "boolean"},
     "table_border_details": {"group": "Tables", "label": "Table outside-border style", "domain": "table", "check_type": "border_details", "target": "table", "layout": "paragraph_border"},
     "table_row_shading": {"group": "Tables", "label": "Table row shading", "domain": "table", "check_type": "row_shading", "target": "table", "layout": "table_row_shading"},
+    "table_row_shaded": {"group": "Tables", "label": "Table row has shading", "domain": "table", "check_type": "row_shading", "target": "table", "layout": "table_row_any_shading"},
     "table_row_height": {"group": "Tables", "label": "Table row height", "domain": "table", "check_type": "row_height", "target": "table", "layout": "table_row_height"},
     "table_row_change": {"group": "Tables", "label": "Rows added or removed from starter table", "domain": "table", "check_type": "row_count_change", "target": "table", "layout": "row_change"},
+    "table_minimum_rows": {"group": "Tables", "label": "Minimum table rows", "domain": "table", "check_type": "minimum_rows", "target": "table", "layout": "number", "value_label": "Minimum rows", "placeholder": "e.g. 5"},
     "table_vertical_alignment": {"group": "Tables", "label": "Table cell vertical alignment", "domain": "table", "check_type": "cell_vertical_alignment", "target": "table", "layout": "table_vertical_alignment"},
     "table_text_direction": {"group": "Tables", "label": "Table cell text direction", "domain": "table", "check_type": "cell_text_direction", "target": "table", "layout": "table_text_direction"},
+    "table_first_column_italic": {"group": "Tables", "label": "First-column data italic", "domain": "table", "check_type": "first_column_italic", "target": "table", "layout": "boolean"},
+    "table_sorted_first_column": {"group": "Tables", "label": "Table sorted by first column", "domain": "table", "check_type": "sorted_first_column", "target": "table", "layout": "boolean"},
+    "table_total_sum": {"group": "Tables", "label": "Final table value equals column total", "domain": "table", "check_type": "final_row_sum", "target": "table", "layout": "boolean"},
     "image_count": {"group": "Pictures and objects", "label": "Inserted picture count", "domain": "object", "check_type": "image_count", "target": "none", "layout": "number", "value_label": "Minimum pictures", "placeholder": "e.g. 1"},
     "image_width": {"group": "Pictures and objects", "label": "Picture width", "domain": "object", "check_type": "image_width", "target": "none", "layout": "number", "value_label": "Width (cm)", "placeholder": "e.g. 8"},
+    "image_height": {"group": "Pictures and objects", "label": "Picture height", "domain": "object", "check_type": "image_height", "target": "none", "layout": "number", "value_label": "Height (cm)", "placeholder": "e.g. 6"},
+    "image_grayscale": {"group": "Pictures and objects", "label": "Picture is grayscale", "domain": "object", "check_type": "image_grayscale", "target": "none", "layout": "boolean"},
+    "image_reflection": {"group": "Pictures and objects", "label": "Picture reflection effect", "domain": "object", "check_type": "image_reflection", "target": "none", "layout": "boolean"},
+    "image_alt_text": {"group": "Pictures and objects", "label": "Picture alt text", "domain": "object", "check_type": "image_alt_text", "target": "none", "layout": "value", "value_label": "Alt text must contain", "placeholder": "e.g. Tourism destination"},
+    "image_alt_present": {"group": "Pictures and objects", "label": "Meaningful picture alt text", "domain": "object", "check_type": "image_alt_text", "target": "none", "layout": "boolean"},
     "image_border": {"group": "Pictures and objects", "label": "Picture border", "domain": "object", "check_type": "image_border", "target": "none", "layout": "image_border"},
     "image_caption": {"group": "Pictures and objects", "label": "Picture caption", "domain": "object", "check_type": "caption_text", "target": "none", "layout": "value", "value_label": "Caption must contain", "placeholder": "e.g. Figure 1: Tourism"},
+    "image_caption_present": {"group": "Pictures and objects", "label": "Descriptive picture caption", "domain": "object", "check_type": "caption_present", "target": "none", "layout": "boolean"},
+    "image_crop_applied": {"group": "Pictures and objects", "label": "Picture cropped", "domain": "object", "check_type": "image_crop", "target": "none", "layout": "boolean"},
+    "image_picture_style": {"group": "Pictures and objects", "label": "Picture style applied", "domain": "object", "check_type": "image_style", "target": "none", "layout": "boolean"},
+    "image_tight_wrap": {"group": "Pictures and objects", "label": "Picture text wrap: Tight", "domain": "object", "check_type": "image_wrap_tight", "target": "none", "layout": "boolean"},
+    "image_fits_layout": {"group": "Pictures and objects", "label": "Picture fits page layout", "domain": "object", "check_type": "image_fits_layout", "target": "none", "layout": "boolean"},
     "image_changed": {"group": "Pictures and objects", "label": "Starter picture replaced", "domain": "object", "check_type": "image_changed_from_starter", "target": "none", "layout": "boolean"},
     "image_matches_reference": {"group": "Pictures and objects", "label": "Picture matches reference image", "domain": "object", "check_type": "image_matches_reference", "target": "none", "layout": "boolean"},
     "textbox_count": {"group": "Pictures and objects", "label": "Inserted text box count", "domain": "object", "check_type": "textbox_count", "target": "none", "layout": "number", "value_label": "Minimum text boxes", "placeholder": "e.g. 1"},
@@ -118,17 +150,32 @@ RULES = {
     "list_number_format": {"group": "Lists", "label": "Numbered-list format", "domain": "list", "check_type": "number_format", "target": "text", "layout": "number_format"},
     "list_item_count": {"group": "Lists", "label": "Minimum list items", "domain": "list", "check_type": "item_count", "target": "text", "layout": "number", "value_label": "Minimum items", "placeholder": "e.g. 4"},
     "picture_bullet": {"group": "Lists", "label": "Picture bullet / bullet character", "domain": "list", "check_type": "bullet_char", "target": "text", "layout": "bullet_char"},
+    "list_after_heading": {"group": "Lists", "label": "Bulleted list below heading", "domain": "list", "check_type": "list_after_heading", "target": "none", "layout": "list_after_heading"},
+    "list_symbol_after_heading": {"group": "Lists", "label": "List symbol below heading", "domain": "list", "check_type": "list_symbol_after_heading", "target": "none", "layout": "list_symbol_after_heading"},
     "bookmark": {"group": "References", "label": "Bookmark", "domain": "advanced", "check_type": "bookmark", "target": "none", "layout": "value", "value_label": "Bookmark name", "placeholder": "e.g. Introduction"},
     "bibliography": {"group": "References", "label": "Sources / bibliography", "domain": "advanced", "check_type": "bibliography", "target": "none", "layout": "number", "value_label": "Minimum sources", "placeholder": "e.g. 2"},
     "footnote": {"group": "References", "label": "Footnote text", "domain": "document", "check_type": "footnote_text", "target": "none", "layout": "value", "value_label": "Footnote must contain", "placeholder": "e.g. Source: Statistics SA"},
+    "footnote_on_text": {"group": "References", "label": "Footnote attached to text", "domain": "document", "check_type": "footnote_on_text", "target": "none", "layout": "value", "value_label": "Text with footnote", "placeholder": "e.g. mobile marketing"},
+    "footnote_reference_symbol": {"group": "References", "label": "Footnote reference-mark symbol", "domain": "document", "check_type": "footnote_reference_symbol", "target": "none", "layout": "footnote_symbol"},
     "table_of_contents": {"group": "References", "label": "Automatic table of contents", "domain": "document", "check_type": "table_of_contents", "target": "none", "layout": "boolean"},
+    "toc_before_heading": {"group": "References", "label": "Table of contents before heading", "domain": "document", "check_type": "toc_before_heading", "target": "none", "layout": "value", "value_label": "Heading below the contents", "placeholder": "e.g. Introduction"},
+    "toc_levels": {"group": "References", "label": "Table-of-contents levels", "domain": "document", "check_type": "toc_levels", "target": "none", "layout": "number", "value_label": "Levels to show", "placeholder": "e.g. 2"},
+    "toc_formal": {"group": "References", "label": "Formal table-of-contents style", "domain": "document", "check_type": "toc_formal", "target": "none", "layout": "boolean"},
     "heading_style": {"group": "Styles", "label": "Heading or paragraph style", "domain": "advanced", "check_type": "style_applied", "target": "text", "layout": "style"},
+    "style_font_name": {"group": "Styles", "label": "Style font name", "domain": "advanced", "check_type": "style_font_name", "target": "none", "layout": "style_font_name"},
+    "style_underline": {"group": "Styles", "label": "Style underline", "domain": "advanced", "check_type": "style_underline", "target": "none", "layout": "style_boolean"},
+    "style_shadow": {"group": "Styles", "label": "Style text shadow", "domain": "advanced", "check_type": "style_shadow", "target": "none", "layout": "style_boolean"},
+    "style_underline_type": {"group": "Styles", "label": "Style underline type", "domain": "advanced", "check_type": "style_underline_type", "target": "none", "layout": "style_underline_type"},
+    "style_character_spacing": {"group": "Styles", "label": "Style character spacing", "domain": "advanced", "check_type": "style_character_spacing", "target": "none", "layout": "style_number"},
+    "paragraph_after_heading_style": {"group": "Styles", "label": "Paragraph below heading uses style", "domain": "advanced", "check_type": "paragraph_after_heading_style", "target": "none", "layout": "heading_followed_style"},
     "heading_style_count": {"group": "Styles", "label": "Minimum headings with a style", "domain": "advanced", "check_type": "style_count", "target": "none", "layout": "style_count"},
     "heading_numbering": {"group": "Styles", "label": "Heading numbering format", "domain": "document", "check_type": "heading_number_format", "target": "text", "layout": "number_format"},
     "mail_merge_fields": {"group": "Mail merge", "label": "Mail merge fields", "domain": "document", "check_type": "mail_merge_fields", "target": "none", "layout": "merge_fields"},
     "mail_merge_source": {"group": "Mail merge", "label": "Mail merge data source", "domain": "document", "check_type": "mail_merge_source", "target": "none", "layout": "value", "value_label": "Data source filename", "placeholder": "e.g. Client List.xlsx"},
-    "hyperlink_url": {"group": "References", "label": "Hyperlink web address", "domain": "object", "check_type": "hyperlink_url", "target": "none", "layout": "value", "value_label": "URL must contain", "placeholder": "e.g. wikipedia.org"},
+    "hyperlink_present": {"group": "References", "label": "Hyperlink inserted", "domain": "object", "check_type": "hyperlink_present", "target": "none", "layout": "boolean"},
+    "hyperlink_url": {"group": "References", "label": "Hyperlink destination", "domain": "object", "check_type": "hyperlink_url", "target": "none", "layout": "value", "value_label": "Destination must contain", "placeholder": "e.g. wikipedia.org or 1Bio_Data.docx"},
     "hyperlink_text": {"group": "References", "label": "Hyperlink display text", "domain": "object", "check_type": "hyperlink_text", "target": "none", "layout": "value", "value_label": "Link text must contain", "placeholder": "e.g. Visit the website"},
+    "hyperlink_text_destination": {"group": "References", "label": "Hyperlink text and destination", "domain": "object", "check_type": "hyperlink_text_destination", "target": "none", "layout": "hyperlink_text_destination"},
     "cross_reference": {"group": "References", "label": "Cross-reference target", "domain": "advanced", "check_type": "cross_reference", "target": "none", "layout": "value", "value_label": "Referenced bookmark", "placeholder": "e.g. Introduction"},
     "citation": {"group": "References", "label": "Citation source tag", "domain": "document", "check_type": "citation_field", "target": "none", "layout": "value", "value_label": "Citation source tag", "placeholder": "e.g. Smith2025"},
     "text_present": {"group": "Editing", "label": "Required text or symbol", "domain": "document", "check_type": "contains_text", "target": "none", "layout": "value", "value_label": "Text or symbol that must appear", "placeholder": "e.g. ®"},
@@ -182,12 +229,30 @@ def _rule_from_form(index):
         expected = {"side": values["side"], "value": float(values["value"])}
     elif layout == "style_count":
         expected = {"style": values["value"], "minimum": int(values["value_2"]), "texts": [text.strip() for text in values["value_3"].split(",") if text.strip()]}
+    elif layout == "style_font_name":
+        expected = {"style": values["value"], "font": values["value_2"]}
+    elif layout == "style_boolean":
+        expected = {"style": values["value"], "value": values["value_2"].lower() not in {"false", "no", "0"}}
+    elif layout == "text_count":
+        expected = {"text": values["value"], "count": int(values["value_2"])}
+    elif layout == "style_underline_type":
+        expected = {"style": values["value"], "underline": values["value_2"]}
+    elif layout == "style_number":
+        expected = {"style": values["value"], "value": float(values["value_2"])}
+    elif layout == "heading_followed_style":
+        expected = {"heading": values["value"], "style": values["value_2"]}
+    elif layout == "comment_anchor":
+        expected = {"text": values["value"], "comment": values["value_2"]}
+    elif layout == "hyperlink_text_destination":
+        expected = {"text": values["value"], "destination": values["value_2"]}
     elif layout == "page_border":
         expected = {"style": values["value"], "color": values["value_2"], "first_page_only": values["value_3"].lower() in {"true", "yes", "1"}}
     elif layout == "watermark":
         expected = {"text": values["value"], "color": values["value_2"], "layout": values["value_3"]}
     elif layout == "header_text_alignment":
         expected = {"text": values["value"], "alignment": values["value_2"]}
+    elif layout == "header_date":
+        expected = {"format": values["value"], "automatic": values["value_2"].lower() not in {"false", "no", "0"}}
     elif layout == "page_number_template":
         expected = {"template": values["value"], "location": values["value_2"] or "footer"}
     elif layout == "drop_cap_applied":
@@ -210,14 +275,22 @@ def _rule_from_form(index):
         expected = {"rows": int(values["row"]), "columns": int(values["column"])}
     elif layout == "table_row_shading":
         expected = {"row": int(values["row"]) - 1, "color": values["value"]}
+    elif layout == "table_row_any_shading":
+        expected = {"row": int(values["row"]) - 1, "color": "any"}
     elif layout == "image_border":
         expected = {"width_pt": float(values["value"]), "color": values["value_2"]}
     elif layout == "document_property":
         expected = {"property": values["value"], "value": values["value_2"]}
+    elif layout == "document_property_changed":
+        expected = {"property": values["value"], "starter_value": values["value_2"]}
     elif layout == "cover_page":
         expected = {name: values[name] for name in ("value", "value_2", "value_3")}
         expected = {"title": expected["value"], "author": expected["value_2"], "abstract": expected["value_3"]}
     elif layout == "columns":
+        expected = {"count": int(values["value"])}
+        if values["value_2"]:
+            expected["space_cm"] = float(values["value_2"])
+    elif layout == "column_spacing":
         expected = {"count": int(values["value"]), "space_cm": float(values["value_2"])}
     elif layout == "find_replace":
         expected = {"find": values["value"], "replace": values["value_2"], "minimum_replacements": int(values["value_3"])}
@@ -225,6 +298,12 @@ def _rule_from_form(index):
         expected = {"row": int(values["row"]) - 1, "height_cm": float(values["value"])}
     elif layout == "row_change":
         expected = {"delta": int(values["value"])}
+    elif layout == "footnote_symbol":
+        expected = {"text": values["value"], "font": values["value_2"], "character_code": values["value_3"]}
+    elif layout == "list_after_heading":
+        expected = {"heading": values["value"], "minimum": int(values["value_2"])}
+    elif layout == "list_symbol_after_heading":
+        expected = {"heading": values["value"], "font": values["value_2"], "character_code": values["value_3"]}
     elif layout == "table_vertical_alignment":
         expected = {"row": int(values["row"]) - 1, "col": int(values["column"]) - 1, "vertical": values["value"]}
     elif layout == "table_text_direction":

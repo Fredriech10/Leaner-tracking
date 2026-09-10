@@ -17,7 +17,7 @@ def mark_file(filepath, marking_script, marking_setup_id=None, learner_name=None
         if learner_name and hasattr(module, "mark_for_learner"):
             return module.mark_for_learner(filepath, learner_name)
         if marking_setup_id is not None and hasattr(module, "mark_with_setup"):
-            return module.mark_with_setup(filepath, int(marking_setup_id))
+            return module.mark_with_setup(filepath, int(marking_setup_id), learner_name=learner_name)
         return module.mark(filepath)
     except ModuleNotFoundError:
         return {

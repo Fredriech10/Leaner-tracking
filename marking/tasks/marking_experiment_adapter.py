@@ -225,23 +225,34 @@ def mark(filepath: str) -> Dict[str, Any]:
         }
 
 
-def mark_with_setup(filepath: str, marking_setup_id: int) -> Dict[str, Any]:
-    expected_extension = ".docx"
-    if not filepath.lower().endswith(expected_extension):
+def mark_with_setup(filepath: str, marking_setup_id: int, learner_name: Optional[str] = None) -> Dict[str, Any]:
+    try:
+        task_definition, starter_blob = _load_setup_task_definition(int(marking_setup_id))
+    except Exception as e:
         return {
-            "task_name": "Marking Experiment",
-            "score": 0,
-            "total": 0,
-            "percentage": 0,
-            "results": [],
-            "error": "Wrong file type submitted. Expected a Word document (.docx).",
+            "task_name": "Marking Experiment", "score": 0, "total": 0,
+            "percentage": 0, "results": [], "error": f"Marking setup failed: {e}",
+        }
+    program = str(task_definition.get("program", "word")).lower()
+    extensions = {"word": (".docx",), "html": (".html", ".htm"), "excel": (".xlsx", ".xlsm")}.get(program, (".docx",))
+    if not filepath.lower().endswith(extensions):
+        expected_label = " or ".join(extensions)
+        return {
+            "task_name": task_definition.get("task_name", "Marking Experiment"),
+            "score": 0, "total": 0, "percentage": 0, "results": [],
+            "error": f"Wrong file type submitted. Expected {expected_label}.",
         }
 
     try:
-        task_definition, starter_blob = _load_setup_task_definition(int(marking_setup_id))
+        if learner_name:
+            for question in task_definition.get("questions", []):
+                expected = question.get("expected")
+                if question.get("type") == "header_learner_name" and isinstance(expected, dict):
+                    question["expected"] = {**expected, "name": learner_name}
         baseline_path = None
         if starter_blob:
-            with tempfile.NamedTemporaryFile(delete=False, suffix=".docx") as handle:
+            suffix = {"word": ".docx", "html": ".html", "excel": ".xlsx"}.get(program, ".docx")
+            with tempfile.NamedTemporaryFile(delete=False, suffix=suffix) as handle:
                 handle.write(starter_blob)
                 baseline_path = handle.name
             for question in task_definition.get("questions", []):

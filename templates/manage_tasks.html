@@ -3,9 +3,10 @@
 <head>
     <meta charset="UTF-8">
     <title>Manage Tasks</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
     <style>
-        * { box-sizing: border-box; }
-        body { font-family: Arial, sans-serif; margin: 0; padding: 0; background: #f0f2f5; color: #222; }
+        :root { --task-blue:#185abd; --task-blue-dark:#103e7b; --task-ink:#203044; --task-muted:#627287; --task-line:#d9e1eb; --task-soft:#f5f8fc; --task-card:#fff; }
+        body { margin:0; padding:0; background:linear-gradient(135deg,#f2f6fb 0%,#fbfcfe 45%,#edf3fa 100%); color:var(--task-ink); }
         .topbar { background: #005a9e; color: white; padding: 12px 24px; display: flex; justify-content: space-between; align-items: center; flex-wrap: nowrap; gap: 10px; position: sticky; top: 0; z-index: 999; }
         .topbar h1 { margin: 0; font-size: 1.05em; white-space: nowrap; }
         .topbar-links { display: flex; gap: 10px; align-items: center; flex-wrap: nowrap; }
@@ -15,31 +16,47 @@
         .topbar-user a { color: white; text-decoration: none; font-weight: bold; }
         .topbar-user a:hover { text-decoration: underline; }
 
-        .page { padding: 20px 24px; width: 90%; max-width: 90%; margin: 0 auto; }
-        .card { background: white; border-radius: 8px; padding: 18px; border: 1px solid #ddd; margin-bottom: 16px; }
-        .card h3 { margin: 0 0 14px 0; font-size: 0.95em; color: #005a9e; border-bottom: 2px solid #f0f0f0; padding-bottom: 6px; }
+        .page { width:min(1480px, calc(100% - 36px)); margin:0 auto; padding:26px 0 42px; }
+        .page > h2 { margin:0 0 18px; color:#153f78; font-size:1.55rem; letter-spacing:-.02em; }
+        .card { background:var(--task-card); border-radius:12px; padding:22px; border:1px solid var(--task-line); box-shadow:0 8px 22px rgba(34,58,87,.07); margin-bottom:20px; }
+        .card h3 { margin:0 0 16px; font-size:1.05rem; color:#153f78; border-bottom:1px solid #e6edf5; padding-bottom:11px; }
 
-        table { width: 100%; border-collapse: collapse; font-size: 0.87em; background: white; }
-        th { background: #f5f5f5; padding: 10px; text-align: left; font-size: 0.83em; color: #555; font-weight: bold; border-bottom: 2px solid #ddd; }
-        td { padding: 10px; border-bottom: 1px solid #f0f0f0; vertical-align: top; }
+        .task-table-wrap { overflow:auto; border:1px solid var(--task-line); border-radius:9px; background:white; }
+        .task-table { width:100%; min-width:1160px; border-collapse:collapse; font-size:.86rem; background:white; }
+        th { background:#edf3fa; padding:11px 12px; text-align:left; font-size:.75rem; color:#45607e; font-weight:700; letter-spacing:.035em; text-transform:uppercase; border-bottom:1px solid #cbd9e8; white-space:nowrap; }
+        td { padding:12px; border-bottom:1px solid #e7edf4; vertical-align:top; line-height:1.35; }
         tr:last-child td { border-bottom: none; }
-        tr:hover td { background: #fafafa; }
+        tr:hover td { background:#f7fbff; }
 
-        table td:last-child { white-space: nowrap; vertical-align: middle; }
-        table td:last-child form,
-        table td:last-child a { display: inline-flex; vertical-align: middle; margin: 0; }
-        table td:last-child form { margin: 0; }
+        .task-name-cell { min-width:185px; }
+        .task-name-cell strong { display:block; color:#153f78; margin-bottom:6px; }
+        .task-date-cell { white-space:nowrap; color:var(--task-muted); }
+        .task-marker-cell { min-width:190px; }
+        .task-empty { color:#8794a5; font-style:italic; }
+        .task-type-badge, .task-status { display:inline-flex; align-items:center; border-radius:999px; padding:3px 8px; font-size:.72rem; font-weight:700; white-space:nowrap; }
+        .task-type-practical { background:#e8f7ed; color:#16733a; }
+        .task-type-theory { background:#e8f1ff; color:#185abd; }
+        .task-status-active { background:#e8f7ed; color:#16733a; }
+        .task-status-inactive { background:#ffeded; color:#a4262c; }
+        .task-marker { color:#185abd; font-weight:600; }
+        .task-marker-missing { color:#b42318; font-weight:700; }
+        .task-actions { min-width:220px; white-space:nowrap; vertical-align:middle; }
+        .task-actions form, .task-actions a { display:inline-flex; vertical-align:middle; margin:2px; }
 
-        /* Allow Groups column text to truncate (slightly aggressive) instead of wrapping */
-        /* Columns: 1 Task, 2 Assign Date, 3 Groups, 4 Marking/Test, 5 Status, 6 Actions */
-        table td:nth-child(3) { max-width: 190px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-        .btn { padding: 6px 10px; border: none; border-radius: 6px; cursor: pointer; font-size: 0.85em; font-weight: bold; text-decoration: none; display: inline-flex; align-items: center; justify-content: center; min-width: 34px; height: 32px; vertical-align: middle; }
+        .btn { padding:7px 11px; border:none; border-radius:6px; cursor:pointer; font-size:.85rem; font-weight:700; text-decoration:none; display:inline-flex; align-items:center; justify-content:center; min-width:34px; min-height:34px; vertical-align:middle; }
         .btn-primary { background: #0078D4; color: white; }
         .btn-primary:hover { background: #006dbd; }
-        .btn-secondary { background: #ccc; color: #333; }
+        .btn-secondary { background:#edf2f7; color:#29496d; border:1px solid #cbd9e8; }
         .btn-danger { background: #A4262C; color: white; }
         .btn-danger:hover { background: #8a1f24; }
-        .btn:hover { opacity: 0.88; }
+        .btn:hover { filter:brightness(.96); }
+        .task-action, .icon-btn { width:34px; min-width:34px; height:34px; padding:0; border:none; border-radius:6px; color:white; }
+        .task-action-edit, .task-action-builder, .icon-btn { background:#185abd; }
+        .task-action-copy { background:#61758c; }
+        .task-action-pause { background:#d97706; }
+        .task-action-activate { background:#218739; }
+        .task-action-clear { background:#b54708; }
+        .task-action-delete { background:#667085; }
 
         .toggle-btn { color: white; border: none; border-radius: 4px; padding: 6px 12px; cursor: pointer; font-size: 0.85em; }
         .rte-toolbar { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 8px; }
@@ -50,25 +67,26 @@
 
         .readonly-note { font-size: 0.8em; color: #888; margin-left: 6px; font-weight: normal; }
 
-        .section-title { font-size: 0.95em; font-weight: bold; color: #0078D4; border-bottom: 2px solid #eee; padding-bottom: 6px; margin-bottom: 12px; }
+        .section-title { font-size:.82rem; font-weight:700; color:#345779; border:0; padding:0; margin:0 0 7px; }
 
         .form-row { display: flex; gap: 10px; flex-wrap: wrap; align-items: flex-end; }
-        input[type="text"], input[type="date"], select { padding: 8px; border: 1px solid #ccc; border-radius: 4px; }
-        input[type="text"] { width: 320px; }
+        input[type="text"], input[type="date"], input[type="number"], input[type="file"], select { padding:9px 10px; border:1px solid #bfcddd; border-radius:5px; background:#fff; color:var(--task-ink); }
+        input[type="text"] { width:320px; }
+        input:focus, select:focus, .rte-editor:focus { outline:2px solid #8ab4e8; outline-offset:1px; border-color:#3b78bd; }
 
         .group-check-grid { display: flex; flex-wrap: wrap; gap: 10px; }
-        .group-check-grid label { display: inline-flex; align-items: center; gap: 6px; background: white; border: 1px solid #ddd; padding: 6px 12px; border-radius: 5px; cursor: pointer; }
+        .group-check-grid label { display:inline-flex; align-items:center; gap:6px; background:#f9fbfe; border:1px solid #d7e1ec; padding:7px 11px; border-radius:6px; cursor:pointer; }
 
         .btn-sm { padding: 5px 12px; font-size: 0.82em; }
-        .icon-btn { display:inline-flex; align-items:center; justify-content:center; min-width:34px; height:32px; border-radius:6px; text-decoration:none; color:white; background:#005a9e; border:none; font-size:0.95em; cursor:pointer; vertical-align:middle; }
-        .icon-btn:hover { background:#004670; }
+        .icon-btn { display:inline-flex; align-items:center; justify-content:center; text-decoration:none; font-size:.95rem; cursor:pointer; vertical-align:middle; }
+        .icon-btn:hover, .task-action:hover { filter:brightness(.9); }
 
-        .panel { background:#f9f9f9;border:1px solid #ddd;padding:20px;border-radius:6px; }
+        .panel { background:#f8fafc; border:1px solid #dbe5ef; padding:20px; border-radius:8px; }
 
         /* Reuse modal */
         .modal-overlay { display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.5); z-index:9999; align-items:center; justify-content:center; }
         .modal-overlay.active { display:flex; }
-        .modal { background:white; border-radius:8px; padding:24px; width:500px; max-width:95vw; box-shadow:0 8px 32px rgba(0,0,0,0.25); }
+        .modal { background:white; border-radius:12px; padding:24px; width:560px; max-width:95vw; box-shadow:0 14px 42px rgba(24,48,77,.3); }
         .modal h3 { margin:0 0 16px 0; color:#005a9e; font-size:1em; }
         .modal .mform-group { margin-bottom:14px; }
         .modal .mform-group label { display:block; font-weight:bold; font-size:0.88em; margin-bottom:4px; }
@@ -87,6 +105,7 @@
         .bank-title { font-weight:700; color:#1f3b57; margin-bottom:4px; }
         .bank-meta { font-size:0.82em; color:#5f6f82; margin-bottom:4px; }
         .bank-steps { font-size:0.82em; color:#475569; }
+        @media (max-width:760px) { .page { width:min(100% - 24px, 1480px); padding-top:18px; } .card { padding:16px; } .form-row { display:grid; grid-template-columns:1fr; } input[type="text"] { width:100%; } .topbar { padding:10px 12px; } .topbar-links { overflow-x:auto; max-width:100%; } }
     </style>
 </head>
 <body>
@@ -113,7 +132,13 @@
 
     <div class="card" style="margin-bottom: 18px;">
         <h3>Add New Task</h3>
-        <p style="margin:0 0 14px;"><a class="btn btn-primary" href="/subjects/{{ subject_id }}/custom_word_task">✨ No-code Word Task Builder</a></p>
+        {% if subject_name.lower().startswith('word') %}
+        <p style="margin:0 0 14px;"><a class="btn btn-primary" href="/subjects/{{ subject_id }}/custom_word_task">No-code Word Task Builder</a></p>
+        {% elif subject_name.lower().startswith('html') %}
+        <p style="margin:0 0 14px;"><a class="btn btn-primary" href="/subjects/{{ subject_id }}/custom_html_task">No-code HTML Task Builder</a></p>
+        {% elif subject_name.lower().startswith('excel') %}
+        <p style="margin:0 0 14px;"><a class="btn btn-primary" href="/subjects/{{ subject_id }}/custom_excel_task">No-code Excel Task Builder</a></p>
+        {% endif %}
 
         <div style="margin-bottom:15px;">
             <button type="button" onclick="showPanel('practical')" id="btn_practical"
@@ -260,8 +285,10 @@
         </p>
     </div>
 
+    <section class="card">
     <h3>Existing Tasks</h3>
-    <table border="1" style="border-collapse:collapse;width:100%;">
+    <div class="task-table-wrap">
+    <table class="task-table">
         <thead>
             <tr>
                 <th>Task</th>
@@ -275,10 +302,12 @@
                 <th>Actions</th>
             </tr>
         </thead>
-        <tbody>
+    <tbody>
             {{ task_list | safe }}
-        </tbody>
+    </tbody>
     </table>
+    </div>
+    </section>
 </div>
 
 <script>

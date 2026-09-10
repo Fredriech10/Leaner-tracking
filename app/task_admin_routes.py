@@ -394,23 +394,24 @@ def register_task_admin_routes(app):
         task_list = ""
         for task_id, task_name, assign_date, marking_script, task_type, theory_test_id, allow_multiple, max_attempts, is_active, question_text, sample_file_name, marking_setup_id, practical_mode, simulator_key, group_list, teacher_list in tasks:
             if task_type == "theory":
-                type_label = '<span style="background:#0078D4;color:white;padding:2px 6px;border-radius:10px;font-size:0.8em;">📝 Theory</span>'
+                type_label = '<span class="task-type-badge task-type-theory">Theory</span>'
                 script_label = f"Test ID: {theory_test_id}"
             else:
-                type_label = '<span style="background:#107C10;color:white;padding:2px 6px;border-radius:10px;font-size:0.8em;">📁 Practical</span>'
+                type_label = '<span class="task-type-badge task-type-practical">Practical</span>'
                 if practical_mode == "simulator":
                     simulator_title = simulator_catalog.get(simulator_key or "", {}).get("title", simulator_key or "Simulator")
-                    script_label = f'<span style="color:#005a9e;">Simulator: {escape(simulator_title)}</span>'
+                    script_label = f'<span class="task-marker task-marker-simulator">Simulator: {escape(simulator_title)}</span>'
                 else:
-                    script_label = marking_script if marking_script else '<span style="color:red;">None assigned</span>'
+                    script_label = marking_script if marking_script else '<span class="task-marker task-marker-missing">None assigned</span>'
                 if practical_mode == "upload" and marking_setup_id:
                     setup_name = next((title for setup_id, title in available_marking_setups if setup_id == marking_setup_id), None)
                     setup_label = escape(setup_name or f"Setup {marking_setup_id}")
-                    script_label += f'<br><span style="color:#005a9e;">Setup: {setup_label}</span> <a href="/marking_setups/{marking_setup_id}/test" class="icon-btn" title="Test this marking setup">🧪</a>'
+                    test_path = "html_marking_setups" if subject_name.lower().startswith("html") else "marking_setups"
+                    script_label += f'<br><span class="task-marker task-marker-setup">Setup: {setup_label}</span> <a href="/{test_path}/{marking_setup_id}/test" class="icon-btn" title="Test this marking setup">🧪</a>'
 
-            status_badge = '<span style="background:#c8f7c5;color:#107C10;padding:2px 8px;border-radius:10px;font-size:0.8em;">Active</span>' if is_active else '<span style="background:#f7c5c5;color:#A4262C;padding:2px 8px;border-radius:10px;font-size:0.8em;">Inactive</span>'
+            status_badge = '<span class="task-status task-status-active">Active</span>' if is_active else '<span class="task-status task-status-inactive">Inactive</span>'
             toggle_label = "⏸ Deactivate" if is_active else "▶ Activate"
-            toggle_style = "background:#ff8c00;color:white;" if is_active else "background:#107C10;color:white;"
+            toggle_class = "task-action-pause" if is_active else "task-action-activate"
             if task_type == "practical":
                 mode_label = "Simulator" if practical_mode == "simulator" else "Upload"
                 attempts_label = f"{mode_label} / " + ("Single" if not allow_multiple else f"Multiple ({max_attempts})")
@@ -419,32 +420,32 @@ def register_task_admin_routes(app):
 
             task_list += f"""
             <tr>
-                <td>{escape(task_name)} {type_label}</td>
-                <td>{assign_date}</td>
-                <td>{group_list or 'None'}</td>
-                <td>{teacher_list or 'None'}</td>
-                <td>{script_label}</td>
-                <td>{f'<a href="/tasks/{task_id}/sample_file" target="_blank">{escape(sample_file_name)}</a>' if sample_file_name else 'None'}</td>
+                <td class="task-name-cell"><strong>{escape(task_name)}</strong>{type_label}</td>
+                <td class="task-date-cell">{assign_date}</td>
+                <td>{group_list or '<span class="task-empty">No groups</span>'}</td>
+                <td>{teacher_list or '<span class="task-empty">No teachers</span>'}</td>
+                <td class="task-marker-cell">{script_label}</td>
+                <td>{f'<a href="/tasks/{task_id}/sample_file" target="_blank">{escape(sample_file_name)}</a>' if sample_file_name else '<span class="task-empty">No sample</span>'}</td>
                 <td>{attempts_label}</td>
                 <td>{status_badge}</td>
-                <td style="white-space:nowrap; vertical-align:middle;">
-                    {'<a href="/tasks/' + str(task_id) + '/edit" title="Edit task" class="btn btn-primary">✏️</a>' if task_type == 'practical' else ''}
-                    {'<a href="/tasks/' + str(task_id) + '/word_builder/edit" title="Edit no-code Word marking" class="btn btn-primary">🛠️</a>' if practical_mode == 'upload' and marking_script == 'marking_experiment_adapter' and marking_setup_id else ''}
+                <td class="task-actions">
+                    {'<a href="/tasks/' + str(task_id) + '/edit" title="Edit task" class="btn task-action task-action-edit">✏️</a>' if task_type == 'practical' else ''}
+                    {('<a href="/tasks/' + str(task_id) + ('/html_builder/edit' if subject_name.lower().startswith('html') else '/excel_builder/edit' if subject_name.lower().startswith('excel') else '/word_builder/edit') + '" title="Edit no-code marking" class="btn task-action task-action-builder">🛠️</a>') if practical_mode == 'upload' and marking_script == 'marking_experiment_adapter' and marking_setup_id else ''}
                     <a href="/tasks/{task_id}/preview" class="icon-btn" title="Preview learner view">👁</a>
-                    {'<button type="button" class="btn btn-success" title="Reuse: copy into a new task" onclick="openReuseTaskModal(' + str(task_id) + ', ' + repr(task_name) + ', ' + repr(marking_script or '') + ', ' + str(allow_multiple) + ', ' + str(max_attempts) + ', ' + repr(marking_setup_id or '') + ', ' + repr(practical_mode or 'upload') + ', ' + repr(simulator_key or '') + ')">📋</button>' if task_type == 'practical' else ''}
-                    <form method="post" action="/tasks/{task_id}/toggle" style="display:inline-flex; margin:0;">
+                    {'<button type="button" class="btn task-action task-action-copy" title="Reuse: copy into a new task" onclick="openReuseTaskModal(' + str(task_id) + ', ' + repr(task_name) + ', ' + repr(marking_script or '') + ', ' + str(allow_multiple) + ', ' + str(max_attempts) + ', ' + repr(marking_setup_id or '') + ', ' + repr(practical_mode or 'upload') + ', ' + repr(simulator_key or '') + ')">📋</button>' if task_type == 'practical' else ''}
+                    <form method="post" action="/tasks/{task_id}/toggle">
                         <input type="hidden" name="subject_id" value="{subject_id}">
-                        <button type="submit" title="{toggle_label}" class="btn" style="{toggle_style}">{'⏸' if is_active else '▶'}</button>
+                        <button type="submit" title="{toggle_label}" class="btn task-action {toggle_class}">{'⏸' if is_active else '▶'}</button>
                     </form>
-                    <form method="post" action="/tasks/{task_id}/clear_uploads" style="display:inline-flex; margin:0;"
+                    <form method="post" action="/tasks/{task_id}/clear_uploads"
                           onsubmit="return confirm('Clear ALL uploads for {escape(task_name)}? This cannot be undone.')">
                         <input type="hidden" name="subject_id" value="{subject_id}">
-                        <button type="submit" title="Clear uploads" class="btn btn-danger">🗑</button>
+                        <button type="submit" title="Clear uploads" class="btn task-action task-action-clear">🗑</button>
                     </form>
-                    <form method="post" style="display:inline-flex; margin:0;" onsubmit="return confirm('⚠️ WARNING: Delete task {escape(task_name)} and ALL STUDENT SUBMISSIONS?\n\nThis will permanently remove:\n- All student uploads and scores\n- Task from Group Results\n\nThis action CANNOT be undone!')">
+                    <form method="post" onsubmit="return confirm('⚠️ WARNING: Delete task {escape(task_name)} and ALL STUDENT SUBMISSIONS?\n\nThis will permanently remove:\n- All student uploads and scores\n- Task from Group Results\n\nThis action CANNOT be undone!')">
                         <input type="hidden" name="action" value="delete">
                         <input type="hidden" name="task_id" value="{task_id}">
-                        <button type="submit" title="Delete task" class="btn" style="background:#555;color:white;">🗑</button>
+                        <button type="submit" title="Delete task" class="btn task-action task-action-delete">🗑</button>
                     </form>
                 </td>
             </tr>

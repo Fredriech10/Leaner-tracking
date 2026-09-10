@@ -284,7 +284,9 @@ def build_attendance_history(cursor, username, group_name, days, login_map=None,
     excluded_dates = excluded_dates or set()
 
     for day in days:
-        weekday = datetime.strptime(day, "%Y-%m-%d").weekday()
+        # Days are stored in ISO format; fromisoformat avoids the expensive
+        # strptime parser for every learner/day cell on dashboard pages.
+        weekday = datetime.fromisoformat(day).weekday()
         login_time = login_map.get((username, day))
         override_status = (override_map.get((username, day)) or "").strip().lower()
         if day in excluded_dates:

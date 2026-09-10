@@ -18,6 +18,11 @@ def check_hyperlink_rule(rule: Dict[str, Any], file_path: Path) -> CheckerResult
     hyperlinks = _find_hyperlinks(document)
     # hyperlink entry schema (from XML): {"id": rId, "url": str|None, "text": str|None}
 
+    if check_type == "hyperlink_present":
+        expected_bool = expected if isinstance(expected, bool) else str(expected).strip().lower() not in {"false", "no", "0"}
+        actual = bool(hyperlinks)
+        return CheckerResult(passed=actual == expected_bool, actual=actual, details={"type": check_type})
+
     if check_type == "hyperlink_url":
         actual_urls = [h.get("url") for h in hyperlinks if h.get("url")]
         expected_val = expected.get("contains") if isinstance(expected, dict) else expected
@@ -35,6 +40,18 @@ def check_hyperlink_rule(rule: Dict[str, Any], file_path: Path) -> CheckerResult
         expected_str = str(expected_val).strip().lower()
         passed = any(expected_str in str(t).lower() for t in actual_texts)
         return CheckerResult(passed=passed, actual=actual_texts, details={"type": check_type, "expected": expected_val})
+
+    if check_type == "hyperlink_text_destination":
+        if not isinstance(expected, dict):
+            return CheckerResult(passed=False, details={"type": check_type, "reason": "Link text and destination are required."})
+        text = str(expected.get("text", "")).strip().lower()
+        destination = str(expected.get("destination", "")).strip().lower()
+        passed = bool(text and destination) and any(
+            text in str(link.get("text") or "").lower()
+            and destination in str(link.get("url") or "").lower()
+            for link in hyperlinks
+        )
+        return CheckerResult(passed=passed, actual=hyperlinks, details={"type": check_type, "expected": expected})
 
     return CheckerResult(passed=False, details={"reason": f"Unsupported hyperlink check type: {check_type}"})
 
@@ -90,4 +107,3 @@ def _find_hyperlinks(document: Document) -> List[Dict[str, Optional[str]]]:
         pass
 
     return hyperlinks
-

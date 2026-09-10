@@ -26,8 +26,17 @@
     .checks label { font-weight:400; display:flex; align-items:center; gap:6px; }
     .checks input { width:auto; }
     .criteria { border:1px solid var(--line); border-radius:6px; overflow:hidden; }
-    .criterion { display:grid; grid-template-columns:1.15fr 1.7fr minmax(220px,1fr) 34px; gap:8px; align-items:end; padding:12px; border-bottom:1px solid #e4e8ef; background:linear-gradient(90deg,#fff,#f9fbfe); }
+    .criterion { border-bottom:1px solid #e4e8ef; background:linear-gradient(90deg,#fff,#f9fbfe); }
     .criterion:last-child { border-bottom:0; }
+    .criterion-summary { width:100%; display:grid; grid-template-columns:auto minmax(0,1fr) auto; gap:10px; align-items:center; padding:11px 12px; border:0; background:transparent; color:#173f76; text-align:left; font:inherit; cursor:pointer; }
+    .criterion-summary:hover { background:#eef5ff; }
+    .criterion-number { font-size:.8rem; font-weight:700; color:#426b9f; white-space:nowrap; }
+    .criterion-title { overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+    .criterion-toggle { color:#426b9f; font-size:1rem; transition:transform .16s ease; }
+    .criterion:not(.is-collapsed) .criterion-summary { background:#eaf3ff; border-bottom:1px solid #d2e1f4; }
+    .criterion:not(.is-collapsed) .criterion-toggle { transform:rotate(180deg); }
+    .criterion-content { display:grid; grid-template-columns:1.15fr 1.7fr minmax(220px,1fr) 34px; gap:8px; align-items:end; padding:12px; }
+    .criterion.is-collapsed .criterion-content { display:none; }
     .criterion .field { gap:4px; }
     .criterion label { font-size:.76rem; color:#465367; }
     .criterion .remove { margin-bottom:0; height:35px; padding:0; background:#fff; color:#a4262c; border:1px solid #dca5a9; border-radius:3px; cursor:pointer; font-size:1.05rem; }
@@ -42,7 +51,7 @@
     .btn-primary, .btn-secondary { padding:9px 14px; border-radius:4px; text-decoration:none; cursor:pointer; font:inherit; }
     .notice { padding:11px 13px; margin-bottom:16px; background:#fff4e5; color:#7a3e00; border-left:4px solid #e68a00; }
     .criterion-note { margin-top:12px; padding:10px 12px; background:var(--soft); border-left:3px solid #5a8fd8; color:#435168; font-size:.88rem; }
-    @media (max-width:800px) { .grid { grid-template-columns:1fr; } .criterion { grid-template-columns:1fr 1fr; } .criterion-target, .criterion-details { grid-template-columns:1fr 1fr; } .criterion .remove { grid-column:span 2; } }
+    @media (max-width:800px) { .grid { grid-template-columns:1fr; } .criterion-content { grid-template-columns:1fr 1fr; } .criterion-target, .criterion-details { grid-template-columns:1fr 1fr; } .criterion .remove { grid-column:span 2; } }
   </style>
 </head>
 <body>
@@ -53,7 +62,7 @@
     </div>
     {% if error %}<div class="notice">{{ error }}</div>{% endif %}
     <form method="post" enctype="multipart/form-data" id="word-task-form">
-      <input type="hidden" name="criterion_count" id="criterion-count" value="1">
+      <input type="hidden" name="criterion_count" id="criterion-count" value="0">
       <section class="panel">
         <h2>1. Task and learner files</h2>
         <p class="help">The starter document is copied for every learner. The question paper and support files are available as downloads in the task.</p>
@@ -127,13 +136,14 @@
       if (rule.layout === 'boolean') return field(index, 'value', 'Expected state', { values: [['true', 'Yes - must be present'], ['false', 'No - must be absent']] });
       if (rule.layout === 'alignment') return field(index, 'value', 'Alignment', { values: alignments });
       if (rule.layout === 'orientation') return field(index, 'value', 'Orientation', { values: [['portrait', 'Portrait'], ['landscape', 'Landscape']] });
-      if (rule.layout === 'paper_size') return field(index, 'value', 'Paper size', { values: [['A4', 'A4']] });
-      if (rule.layout === 'line_spacing') return field(index, 'line_rule', 'Line spacing type', { values: [['exact', 'Exactly'], ['atLeast', 'At least']] }) + field(index, 'value', 'Value', { type: 'number', placeholder: 'e.g. 15' }) + field(index, 'line_unit', 'Unit', { values: [['pt', 'Points (pt)'], ['lines', 'Lines']] });
+      if (rule.layout === 'paper_size') return field(index, 'value', 'Paper size', { values: [['A4', 'A4'], ['Letter', 'Letter']] });
+      if (rule.layout === 'line_spacing') return field(index, 'line_rule', 'Line spacing type', { values: [['exact', 'Exactly'], ['atLeast', 'At least'], ['multiple', 'Multiple']] }) + field(index, 'value', 'Value', { type: 'number', placeholder: 'e.g. 1.5' }) + field(index, 'line_unit', 'Unit', { values: [['pt', 'Points (pt)'], ['lines', 'Lines']] });
       if (rule.layout === 'margins') return ['top', 'bottom', 'left', 'right'].map(side => field(index, side, `${side[0].toUpperCase()}${side.slice(1)} (cm)`, { type: 'number', placeholder: 'e.g. 2.54' })).join('');
       if (rule.layout === 'margin_side') return field(index, 'side', 'Margin side', { values: [['top', 'Top'], ['bottom', 'Bottom'], ['left', 'Left'], ['right', 'Right']] }) + field(index, 'value', 'Margin (cm)', { type: 'number', placeholder: 'e.g. 3' });
       if (rule.layout === 'page_border') return field(index, 'value', 'Border style', { values: borderStyles }) + field(index, 'value_2', 'Border colour', { values: [['', 'No colour criterion'], ...wordColours], required: false }) + field(index, 'value_3', 'First page only?', { values: yesNo });
       if (rule.layout === 'watermark') return field(index, 'value', 'Watermark text', { placeholder: 'e.g. CAT TEST', required: false }) + field(index, 'value_2', 'Watermark colour', { values: [['', 'No colour criterion'], ...wordColours], required: false }) + field(index, 'value_3', 'Watermark layout', { values: [['', 'No layout criterion'], ['diagonal', 'Diagonal'], ['horizontal', 'Horizontal']], required: false });
       if (rule.layout === 'header_text_alignment') return field(index, 'value', 'Header must contain', { placeholder: 'Leave blank to accept any learner name', required: false }) + field(index, 'value_2', 'Header alignment', { values: alignments });
+      if (rule.layout === 'header_date') return field(index, 'value', 'Date format', { values: [['dd/MMM/yyyy', 'dd/mmm/yyyy'], ['dd/MM/yyyy', 'dd/mm/yyyy'], ['d MMMM yyyy', 'd Month yyyy']] }) + field(index, 'value_2', 'Automatic field', { values: yesNo });
       if (rule.layout === 'page_number_template') return field(index, 'value', 'Page-number template', { values: [['plain_number_1', 'Plain Number 1 (left)'], ['plain_number_2', 'Plain Number 2 (centre)'], ['plain_number_3', 'Plain Number 3 (right)'], ['page_x_left', 'Page X (left)'], ['page_x_center', 'Page X (centre)'], ['page_x_right', 'Page X (right)'], ['page_x_of_y_left', 'Page X of Y (left)'], ['page_x_of_y_center', 'Page X of Y (centre)'], ['page_x_of_y_right', 'Page X of Y (right)']] }) + field(index, 'value_2', 'Insert in', { values: [['footer', 'Footer / bottom of page'], ['header', 'Header / top of page']] });
       if (rule.layout === 'page_number_format') return field(index, 'value', 'Number style', { values: [['1', '1, 2, 3'], ['a', 'a, b, c'], ['A', 'A, B, C'], ['i', 'i, ii, iii'], ['I', 'I, II, III']] });
       if (rule.layout === 'paragraph_border') return field(index, 'value', 'Border style', { values: borderStyles }) + field(index, 'value_2', 'Border colour', { values: wordColours }) + field(index, 'value_3', 'Width (pt)', { type: 'number', placeholder: 'e.g. 3' });
@@ -142,23 +152,38 @@
       if (rule.layout === 'table_merge') return field(index, 'row', 'Row', { type: 'number', placeholder: 'e.g. 5' }) + field(index, 'column', 'First column', { type: 'number', placeholder: 'e.g. 1' }) + field(index, 'column_end', 'Last column', { type: 'number', placeholder: 'e.g. 3' });
       if (rule.layout === 'table_dimensions') return field(index, 'row', 'Rows', { type: 'number', placeholder: 'e.g. 6' }) + field(index, 'column', 'Columns', { type: 'number', placeholder: 'e.g. 3' });
       if (rule.layout === 'table_row_shading') return field(index, 'row', 'Row', { type: 'number', placeholder: 'e.g. 1' }) + field(index, 'value', 'Shading colour', { values: wordColours });
+      if (rule.layout === 'table_row_any_shading') return field(index, 'row', 'Row', { type: 'number', placeholder: 'e.g. 1' });
       if (rule.layout === 'table_row_height') return field(index, 'row', 'Row', { type: 'number', placeholder: 'e.g. 3' }) + field(index, 'value', 'Height (cm)', { type: 'number', placeholder: 'e.g. 0.5' });
       if (rule.layout === 'row_change') return field(index, 'value', 'Row change from starter', { type: 'number', placeholder: 'Use 1 to add one row, -1 to delete one row' });
       if (rule.layout === 'table_vertical_alignment') return field(index, 'row', 'Row', { type: 'number', placeholder: 'e.g. 1' }) + field(index, 'column', 'Column', { type: 'number', placeholder: 'e.g. 1' }) + field(index, 'value', 'Vertical alignment', { values: [['top', 'Top'], ['center', 'Centre'], ['bottom', 'Bottom']] });
       if (rule.layout === 'table_text_direction') return field(index, 'row', 'Row', { type: 'number', placeholder: 'e.g. 1' }) + field(index, 'column', 'Column', { type: 'number', placeholder: 'e.g. 1' }) + field(index, 'value', 'Text direction', { values: [['btLr', 'Rotate all text 90 degrees'], ['tbRl', 'Rotate all text 270 degrees'], ['lrTb', 'Horizontal']] });
       if (rule.layout === 'image_border') return field(index, 'value', 'Border width (pt)', { type: 'number', placeholder: 'e.g. 2.25' }) + field(index, 'value_2', 'Border colour', { values: wordColours });
       if (rule.layout === 'document_property') return field(index, 'value', 'Property', { values: [['title', 'Title'], ['subject', 'Subject'], ['author', 'Author'], ['comments', 'Comments / description'], ['keywords', 'Keywords'], ['category', 'Category']] }) + field(index, 'value_2', 'Required text', { placeholder: 'e.g. Tourism Report' });
+      if (rule.layout === 'document_property_changed') return field(index, 'value', 'Property', { values: [['title', 'Title'], ['subject', 'Subject'], ['author', 'Author'], ['comments', 'Comments / description'], ['keywords', 'Keywords'], ['category', 'Category']] }) + field(index, 'value_2', 'Starter value that must be changed', { placeholder: 'e.g. Admin' });
       if (rule.layout === 'cover_page') return field(index, 'value', 'Cover-page title', { placeholder: 'e.g. Annual Tourism Report' }) + field(index, 'value_2', 'Author text', { placeholder: 'e.g. Fredriech Pretorius' }) + field(index, 'value_3', 'Abstract text', { placeholder: 'A distinctive phrase from the abstract' });
-      if (rule.layout === 'columns') return field(index, 'value', 'Number of columns', { type: 'number', placeholder: 'e.g. 5' }) + field(index, 'value_2', 'Spacing between columns (cm)', { type: 'number', placeholder: 'e.g. 0.5' });
+      if (rule.layout === 'columns') return field(index, 'value', 'Number of columns', { type: 'number', placeholder: 'e.g. 5' }) + field(index, 'value_2', 'Spacing between columns (cm)', { type: 'number', placeholder: 'Optional, e.g. 0.5', required: false });
+      if (rule.layout === 'column_spacing') return field(index, 'value', 'Number of columns', { type: 'number', placeholder: 'e.g. 5' }) + field(index, 'value_2', 'Spacing between columns (cm)', { type: 'number', placeholder: 'e.g. 0.5' });
       if (rule.layout === 'find_replace') return field(index, 'value', 'Find text (must no longer appear)', { placeholder: 'e.g. CAR' }) + field(index, 'value_2', 'Replacement text', { placeholder: 'e.g. MOTOR' }) + field(index, 'value_3', 'Minimum replacements', { type: 'number', placeholder: 'e.g. 3' });
-      if (rule.layout === 'style') return field(index, 'value', 'Required style', { values: [['Heading 1', 'Heading 1'], ['Heading 2', 'Heading 2'], ['Heading 3', 'Heading 3'], ['Title', 'Title'], ['Subtitle', 'Subtitle'], ['Normal', 'Normal']] });
-      if (rule.layout === 'style_count') return field(index, 'value', 'Required style', { values: [['Heading 1', 'Heading 1'], ['Heading 2', 'Heading 2'], ['Heading 3', 'Heading 3']] }) + field(index, 'value_2', 'Minimum headings', { type: 'number', placeholder: 'e.g. 13' }) + field(index, 'value_3', 'Heading texts (optional)', { placeholder: 'Comma-separated, e.g. Platypus, Axolotl' });
+      const styles = [['Heading 1', 'Heading 1'], ['Heading 2', 'Heading 2'], ['Heading 3', 'Heading 3'], ['Title', 'Title'], ['Subtitle', 'Subtitle'], ['Normal', 'Normal']];
+      if (rule.layout === 'style') return field(index, 'value', 'Required style', { values: styles });
+      if (rule.layout === 'style_count') return field(index, 'value', 'Required style', { values: styles }) + field(index, 'value_2', 'Minimum paragraphs', { type: 'number', placeholder: 'e.g. 13' }) + field(index, 'value_3', 'Paragraph texts (optional)', { placeholder: 'Comma-separated, e.g. Platypus, Axolotl' });
+      if (rule.layout === 'style_font_name') return field(index, 'value', 'Style to check', { values: styles }) + field(index, 'value_2', 'Required font', { values: fontNames });
+      if (rule.layout === 'style_boolean') return field(index, 'value', 'Style to check', { values: styles }) + field(index, 'value_2', 'Expected state', { values: yesNo });
+      if (rule.layout === 'style_underline_type') return field(index, 'value', 'Style to check', { values: styles }) + field(index, 'value_2', 'Underline type', { values: [['single', 'Single'], ['double', 'Double']] });
+      if (rule.layout === 'style_number') return field(index, 'value', 'Style to check', { values: styles }) + field(index, 'value_2', 'Spacing (pt)', { type: 'number', placeholder: 'e.g. 3' });
+      if (rule.layout === 'heading_followed_style') return field(index, 'value', 'Heading text', { placeholder: 'e.g. Introduction' }) + field(index, 'value_2', 'Required style', { values: styles });
+      if (rule.layout === 'text_count') return field(index, 'value', 'Whole word to count', { placeholder: 'e.g. guests' }) + field(index, 'value_2', 'Required count', { type: 'number', placeholder: 'e.g. 3' });
+      if (rule.layout === 'comment_anchor') return field(index, 'value', 'Text that must be commented on', { placeholder: 'e.g. Animal sections' }) + field(index, 'value_2', 'Comment must contain', { placeholder: 'Optional, e.g. Check the source', required: false });
+      if (rule.layout === 'footnote_symbol') return field(index, 'value', 'Text with the footnote', { placeholder: 'e.g. mobile marketing' }) + field(index, 'value_2', 'Symbol font', { values: [['Webdings', 'Webdings'], ['Wingdings', 'Wingdings'], ['Symbol', 'Symbol']] }) + field(index, 'value_3', 'Character code', { type: 'number', placeholder: 'e.g. 85' });
+      if (rule.layout === 'hyperlink_text_destination') return field(index, 'value', 'Link display text', { placeholder: 'e.g. biodiversity' }) + field(index, 'value_2', 'Link destination must contain', { placeholder: 'e.g. 1Bio_Data.docx' });
       if (rule.layout === 'merge_fields') return field(index, 'value', 'Required merge fields', { placeholder: 'Comma-separated, e.g. FirstName, Surname' });
       if (rule.layout === 'control_aliases') return field(index, 'value', 'Controls that must remain', { placeholder: 'Comma-separated, normally Title, Author' });
       if (rule.layout === 'number_format') return field(index, 'value', 'Number format', { values: [['decimal', '1, 2, 3'], ['upperLetter', 'A, B, C'], ['lowerLetter', 'a, b, c'], ['upperRoman', 'I, II, III'], ['lowerRoman', 'i, ii, iii']] });
       if (rule.layout === 'bullet_char') return field(index, 'value', 'Bullet type', { values: [['•', 'Standard bullet'], ['wingdings', 'Wingdings picture bullet']] });
       if (rule.layout === 'textbox_position') return field(index, 'value', 'Position', { values: [['right', 'Right side of page']] });
       if (rule.layout === 'list_style') return field(index, 'list_type', 'List type', { values: [['bullet', 'Bulleted'], ['number', 'Numbered']] }) + field(index, 'list_level', 'List level', { type: 'number', placeholder: '0 for first level' });
+      if (rule.layout === 'list_after_heading') return field(index, 'value', 'Heading above the list', { placeholder: 'e.g. Do' }) + field(index, 'value_2', 'Minimum list items', { type: 'number', placeholder: 'e.g. 5' });
+      if (rule.layout === 'list_symbol_after_heading') return field(index, 'value', 'Heading above the list', { placeholder: 'e.g. Do' }) + field(index, 'value_2', 'Symbol font', { values: [['Webdings', 'Webdings'], ['Wingdings', 'Wingdings'], ['Symbol', 'Symbol']] }) + field(index, 'value_3', 'Character code', { type: 'number', placeholder: 'e.g. 97' });
       return field(index, 'value', rule.value_label || 'Expected value', { type: rule.layout === 'number' ? 'number' : 'text', placeholder: rule.placeholder || '' });
     }
     function renderRule(row) {
@@ -183,14 +208,41 @@
       command.innerHTML = groups[area].map(([key, rule]) => `<option value="${key}">${rule.label}</option>`).join('');
       renderRule(row);
     }
-    function addCriterion(initial = null) {
+    function updateCriterionSummary(row) {
+      const index = Number(row.dataset.index) + 1;
+      const description = row.querySelector(`[name="description_${row.dataset.index}"]`).value.trim();
+      row.querySelector('.criterion-number').textContent = `Criterion ${index}`;
+      row.querySelector('.criterion-title').textContent = description || 'Enter the marking result label';
+    }
+    function activateCriterion(row, focus = false) {
+      criteria.querySelectorAll('.criterion:not([hidden])').forEach(item => {
+        item.classList.add('is-collapsed');
+        item.querySelector('.criterion-summary').setAttribute('aria-expanded', 'false');
+      });
+      row.classList.remove('is-collapsed');
+      row.querySelector('.criterion-summary').setAttribute('aria-expanded', 'true');
+      if (focus) {
+        requestAnimationFrame(() => {
+          row.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+          row.querySelector(`[name="area_${row.dataset.index}"]`).focus();
+        });
+      }
+    }
+    function addCriterion(initial = null, focus = false) {
       const index = Number(count.value);
       const row = document.createElement('div');
       row.className = 'criterion'; row.dataset.index = index;
-      row.innerHTML = `<div class="field"><label>Word area</label><select name="area_${index}" required>${Object.keys(groups).map(area => `<option value="${area}">${area}</option>`).join('')}</select></div><div class="field"><label>Command</label><select name="rule_${index}" required></select></div><div class="field"><label>Marking result label</label><input name="description_${index}" required placeholder="Shown in results, e.g. Cover page author and abstract completed"></div><button class="remove" type="button" title="Remove criterion">&times;</button><div class="criterion-target"></div><div class="criterion-details"></div>`;
-      row.querySelector(`[name="area_${index}"]`).addEventListener('change', () => renderCommands(row));
-      row.querySelector(`[name="rule_${index}"]`).addEventListener('change', () => renderRule(row));
-      row.querySelector('.remove').addEventListener('click', () => { row.querySelectorAll('input').forEach((input) => { input.required = false; input.value = ''; }); row.hidden = true; });
+      row.innerHTML = `<button class="criterion-summary" type="button" aria-expanded="true"><span class="criterion-number"></span><strong class="criterion-title">Enter the marking result label</strong><span class="criterion-toggle" aria-hidden="true">⌄</span></button><div class="criterion-content"><div class="field"><label>Word area</label><select name="area_${index}" required>${Object.keys(groups).map(area => `<option value="${area}">${area}</option>`).join('')}</select></div><div class="field"><label>Command</label><select name="rule_${index}" required></select></div><div class="field"><label>Marking result label</label><input name="description_${index}" required placeholder="Shown in results, e.g. Cover page author and abstract completed"></div><button class="remove" type="button" title="Remove criterion">&times;</button><div class="criterion-target"></div><div class="criterion-details"></div></div>`;
+      row.querySelector('.criterion-summary').addEventListener('click', () => activateCriterion(row, true));
+      row.querySelector(`[name="area_${index}"]`).addEventListener('change', () => { activateCriterion(row); renderCommands(row); });
+      row.querySelector(`[name="rule_${index}"]`).addEventListener('change', () => { activateCriterion(row); renderRule(row); });
+      row.querySelector(`[name="description_${index}"]`).addEventListener('input', () => updateCriterionSummary(row));
+      row.querySelector('.remove').addEventListener('click', () => {
+        row.querySelectorAll('input').forEach((input) => { input.required = false; input.value = ''; });
+        row.hidden = true;
+        const next = criteria.querySelector('.criterion:not([hidden])');
+        if (next) activateCriterion(next, true);
+      });
       criteria.appendChild(row);
       count.value = index + 1;
       renderCommands(row);
@@ -210,10 +262,16 @@
           if (input) input.value = value;
         }
       }
+      updateCriterionSummary(row);
+      activateCriterion(row, focus);
+      return row;
     }
-    document.getElementById('add-criterion').addEventListener('click', addCriterion);
+    document.getElementById('add-criterion').addEventListener('click', () => addCriterion(null, true));
     const initialCriteria = {{ initial_criteria|default([])|tojson }};
-    if (initialCriteria.length) initialCriteria.forEach(addCriterion); else addCriterion();
+    if (initialCriteria.length) {
+      const first = initialCriteria.map(addCriterion)[0];
+      if (first) activateCriterion(first, false);
+    } else addCriterion();
   </script>
 </body>
 </html>

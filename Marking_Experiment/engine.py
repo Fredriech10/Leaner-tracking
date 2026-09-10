@@ -14,30 +14,6 @@ from .checker_types import BaseChecker, CheckerResult
 from .marking_experiment import CheckResult, CheckOutcome, MarkingSession, format_feedback
 
 
-class ExcelChecker(BaseChecker):
-    program = "excel"
-
-    def check(
-        self,
-        domain: str,
-        check_type: str,
-        target: Dict[str, Any],
-        expected: Any,
-        file_path: Path,
-    ) -> CheckerResult:
-        return CheckerResult(
-            passed=False,
-            actual=None,
-            details={
-                "domain": domain,
-                "type": check_type,
-                "target": target,
-                "expected": expected,
-                "reason": "Excel checks are not implemented yet.",
-            },
-        )
-
-
 class HTMLChecker(BaseChecker):
     program = "html"
 
@@ -87,6 +63,8 @@ class AccessChecker(BaseChecker):
 
 
 from .word_checker import WordChecker
+from .html_checker import HTMLChecker
+from .excel_checker import ExcelChecker
 
 
 class MarkingEngine:

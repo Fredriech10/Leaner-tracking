@@ -1381,6 +1381,19 @@ def register_dashboard_routes(app):
         login_times = fetch_first_login_times(cursor, student_usernames, filtered_days)
         overrides = fetch_attendance_override_statuses(cursor, student_usernames, filtered_days)
 
+        # The dashboard calculates several attendance views from the same 21-day
+        # window. Reuse per-group metadata instead of querying it for every learner.
+        attendance_metadata_cache = {}
+
+        def get_group_attendance_metadata(group_name, days, scoped_teacher):
+            cache_key = (group_name or "", tuple(days), scoped_teacher or "")
+            if cache_key not in attendance_metadata_cache:
+                attendance_metadata_cache[cache_key] = (
+                    fetch_group_late_thresholds(cursor, group_name, days, teacher_username=scoped_teacher),
+                    fetch_class_checked_dates(cursor, group_name, teacher_username=scoped_teacher),
+                )
+            return attendance_metadata_cache[cache_key]
+
         group_att = []
         total_present_all = 0
         total_slots_all = 0
@@ -1399,8 +1412,7 @@ def register_dashboard_routes(app):
                 )
                 members = [(row[0], row[1] or row[0]) for row in cursor.fetchall()]
                 scope_days = [day for day in filtered_days if day not in excluded_days.get(group_name, set())]
-                late_cutoffs = fetch_group_late_thresholds(cursor, group_name, scope_days, teacher_username=scope_teacher)
-                class_checked_dates = fetch_class_checked_dates(cursor, group_name, teacher_username=scope_teacher)
+                late_cutoffs, class_checked_dates = get_group_attendance_metadata(group_name, scope_days, scope_teacher)
                 total_present = 0
                 total_absent = 0
                 for student_username, _student_name in members:
@@ -1440,8 +1452,7 @@ def register_dashboard_routes(app):
                 group_name = scope["group"]
                 members = group_members.get(group_name, [])
                 group_days = [day for day in filtered_days if day not in excluded_days.get(group_name, set())]
-                late_cutoffs = fetch_group_late_thresholds(cursor, group_name, group_days, teacher_username=teacher_scope)
-                class_checked_dates = fetch_class_checked_dates(cursor, group_name, teacher_username=teacher_scope)
+                late_cutoffs, class_checked_dates = get_group_attendance_metadata(group_name, group_days, teacher_scope)
                 total_present = 0
                 total_absent = 0
                 for student_username, _student_name in members:
@@ -1477,8 +1488,7 @@ def register_dashboard_routes(app):
         for uname, _full_name, group_name, learner_teacher, _grade in student_rows:
             group_days = [day for day in filtered_grade_days if day not in excluded_days_grade.get(group_name, set())]
             learner_scope = learner_teacher if role == "admin" and not selected_teacher else teacher_scope
-            late_cutoffs = fetch_group_late_thresholds(cursor, group_name, group_days, teacher_username=learner_scope)
-            class_checked_dates = fetch_class_checked_dates(cursor, group_name, teacher_username=learner_scope)
+            late_cutoffs, class_checked_dates = get_group_attendance_metadata(group_name, group_days, learner_scope)
             attendance_history = build_attendance_history(
                 cursor,
                 uname,
@@ -1558,8 +1568,7 @@ def register_dashboard_routes(app):
         for uname, full_name, group_name, learner_teacher, _grade in student_rows:
             group_days = [day for day in filtered_grade_days if day not in excluded_days_grade.get(group_name, set())]
             learner_scope = learner_teacher if role == "admin" and not selected_teacher else teacher_scope
-            late_cutoffs = fetch_group_late_thresholds(cursor, group_name, group_days, teacher_username=learner_scope)
-            class_checked_dates = fetch_class_checked_dates(cursor, group_name, teacher_username=learner_scope)
+            late_cutoffs, class_checked_dates = get_group_attendance_metadata(group_name, group_days, learner_scope)
             attendance_history = build_attendance_history(
                 cursor,
                 uname,

@@ -24,6 +24,7 @@ from app.task_admin_routes import register_task_admin_routes
 from app.custom_word_task_routes import register_custom_word_task_routes
 from app.custom_html_task_routes import register_custom_html_task_routes
 from app.custom_excel_task_routes import register_custom_excel_task_routes
+from app.custom_access_task_routes import register_custom_access_task_routes
 from app.task_runtime_routes import register_task_runtime_routes
 from app.theory_admin_routes import register_theory_admin_routes
 from app.theory_learner_routes import register_theory_learner_routes
@@ -46,6 +47,7 @@ register_task_admin_routes(app)
 register_custom_word_task_routes(app)
 register_custom_html_task_routes(app)
 register_custom_excel_task_routes(app)
+register_custom_access_task_routes(app)
 register_task_runtime_routes(app)
 register_theory_admin_routes(app)
 register_theory_learner_routes(app)

@@ -38,33 +38,10 @@ class HTMLChecker(BaseChecker):
         )
 
 
-class AccessChecker(BaseChecker):
-    program = "access"
-
-    def check(
-        self,
-        domain: str,
-        check_type: str,
-        target: Dict[str, Any],
-        expected: Any,
-        file_path: Path,
-    ) -> CheckerResult:
-        return CheckerResult(
-            passed=False,
-            actual=None,
-            details={
-                "domain": domain,
-                "type": check_type,
-                "target": target,
-                "expected": expected,
-                "reason": "Access checks are not implemented yet.",
-            },
-        )
-
-
 from .word_checker import WordChecker
 from .html_checker import HTMLChecker
 from .excel_checker import ExcelChecker
+from .access_checker import AccessChecker
 
 
 class MarkingEngine:

@@ -234,7 +234,7 @@ def mark_with_setup(filepath: str, marking_setup_id: int, learner_name: Optional
             "percentage": 0, "results": [], "error": f"Marking setup failed: {e}",
         }
     program = str(task_definition.get("program", "word")).lower()
-    extensions = {"word": (".docx",), "html": (".html", ".htm"), "excel": (".xlsx", ".xlsm")}.get(program, (".docx",))
+    extensions = {"word": (".docx",), "html": (".html", ".htm"), "excel": (".xlsx", ".xlsm"), "access": (".accdb", ".mdb")}.get(program, (".docx",))
     if not filepath.lower().endswith(extensions):
         expected_label = " or ".join(extensions)
         return {
@@ -251,7 +251,7 @@ def mark_with_setup(filepath: str, marking_setup_id: int, learner_name: Optional
                     question["expected"] = {**expected, "name": learner_name}
         baseline_path = None
         if starter_blob:
-            suffix = {"word": ".docx", "html": ".html", "excel": ".xlsx"}.get(program, ".docx")
+            suffix = {"word": ".docx", "html": ".html", "excel": ".xlsx", "access": ".accdb"}.get(program, ".docx")
             with tempfile.NamedTemporaryFile(delete=False, suffix=suffix) as handle:
                 handle.write(starter_blob)
                 baseline_path = handle.name

@@ -295,7 +295,7 @@ class ExcelMarker:
             safe_call(lambda: self._check_conditional_format(workbook), "Q2", "2.2", "Conditional formatting for Colour Code contains F with green fill", 3),
             safe_call(lambda: self._check_freeze_panes(workbook), "Q2", "2.3", "Freeze panes keeps headings and first 3 columns visible", 2),
             safe_call(lambda: self._check_summary_formula(workbook), "Q2", "2.4", "Summary!B2 totals Base Price from Investors", 3),
-            safe_call(lambda: self._check_print_setup(workbook), "Q2", "2.5", "Print setup and PDF export completed", 6),
+            safe_call(lambda: self._check_print_setup(workbook), "Q2", "2.5", "Print setup completed", 4),
         ]
 
     def _ws(self, workbook: Any, name: str) -> Any:
@@ -399,16 +399,7 @@ class ExcelMarker:
             mark += 1
         evidence.append(f"fit_columns_ok={fit_columns_ok}")
 
-        pdf_paths = [path for path in self.submission_dir.glob("*.pdf") if "invest" in path.stem.lower()]
-        pdf_exists = bool(pdf_paths)
-        pdf_name_ok = any(path.name.lower() == "investors.pdf" for path in pdf_paths)
-        if pdf_exists:
-            mark += 1
-        if pdf_name_ok:
-            mark += 1
-        evidence.append(f"pdf_exists={pdf_exists}; pdf_name_ok={pdf_name_ok}")
-
-        return MarkResult("Q2", "2.5", "Print setup and PDF export completed", 6, mark, mark == 6, "; ".join(evidence))
+        return MarkResult("Q2", "2.5", "Print setup completed", 4, mark, mark == 4, "; ".join(evidence))
 
 
 class AccessMarker:

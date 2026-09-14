@@ -8,6 +8,7 @@ from datetime import datetime
 
 from flask import redirect, render_template, request, session, url_for
 from werkzeug.utils import secure_filename
+from docx import Document
 
 from app.database import get_db, get_marking_db, get_teachers, get_user_role, log_activity
 from marking.tasks.marking_experiment_adapter import mark_with_setup
@@ -29,6 +30,40 @@ PAGE_NUMBER_TEMPLATES = (
     "page_x_left", "page_x_center", "page_x_right",
     "page_x_of_y_left", "page_x_of_y_center", "page_x_of_y_right",
 )
+
+
+def _starter_text_options(blob):
+    if not blob:
+        return []
+    path = None
+    try:
+        with tempfile.NamedTemporaryFile(delete=False, suffix=".docx") as handle:
+            handle.write(blob)
+            path = handle.name
+        document = Document(path)
+    except Exception:
+        return []
+    finally:
+        if path:
+            try:
+                os.unlink(path)
+            except OSError:
+                pass
+
+    seen = set()
+    options = []
+    for paragraph in document.paragraphs:
+        text = " ".join((paragraph.text or "").split())
+        if not text or len(text) < 3:
+            continue
+        key = text.lower()
+        if key in seen:
+            continue
+        seen.add(key)
+        options.append(text[:180])
+        if len(options) >= 250:
+            break
+    return options
 
 
 RULES = {
@@ -61,6 +96,8 @@ RULES = {
     "drop_cap": {"group": "Paragraph", "label": "Drop cap applied", "domain": "paragraph_formatting", "check_type": "drop_cap", "target": "text", "layout": "drop_cap_applied"},
     "drop_cap_position": {"group": "Paragraph", "label": "Drop cap position", "domain": "paragraph_formatting", "check_type": "drop_cap", "target": "text", "layout": "drop_cap_position"},
     "drop_cap_lines": {"group": "Paragraph", "label": "Drop cap lines to drop", "domain": "paragraph_formatting", "check_type": "drop_cap", "target": "text", "layout": "drop_cap_lines"},
+    "drop_cap_distance": {"group": "Paragraph", "label": "Drop cap distance from text", "domain": "paragraph_formatting", "check_type": "drop_cap_distance", "target": "text", "layout": "number", "value_label": "Distance (cm)", "placeholder": "e.g. 0.5"},
+    "keep_with_next": {"group": "Paragraph", "label": "Keep with next", "domain": "paragraph_formatting", "check_type": "keep_with_next", "target": "text", "layout": "boolean"},
     "paper_size": {"group": "Page layout", "label": "Paper size", "domain": "document", "check_type": "paper_size", "target": "none", "layout": "paper_size"},
     "orientation": {"group": "Page layout", "label": "Page orientation", "domain": "document", "check_type": "orientation", "target": "none", "layout": "orientation"},
     "margins": {"group": "Page layout", "label": "Custom margins", "domain": "document", "check_type": "margins", "target": "none", "layout": "margins"},
@@ -92,6 +129,7 @@ RULES = {
     "footer_text": {"group": "Header and footer", "label": "Footer text", "domain": "document", "check_type": "footer_text", "target": "none", "layout": "value", "value_label": "Footer must contain", "placeholder": "e.g. Page X of Y"},
     "footer_alignment": {"group": "Header and footer", "label": "Footer alignment", "domain": "document", "check_type": "footer_alignment", "target": "none", "layout": "alignment"},
     "first_page_footer": {"group": "Header and footer", "label": "Different first-page footer", "domain": "document", "check_type": "footer_differs", "target": "none", "layout": "boolean"},
+    "odd_even_footers": {"group": "Header and footer", "label": "Different odd/even footers", "domain": "document", "check_type": "odd_even_footers", "target": "none", "layout": "boolean"},
     "page_number_footer": {"group": "Header and footer", "label": "Page number in footer", "domain": "document", "check_type": "page_number_in_footer", "target": "none", "layout": "boolean"},
     "page_number_header": {"group": "Header and footer", "label": "Page number in header", "domain": "document", "check_type": "page_number_in_header", "target": "none", "layout": "boolean"},
     "page_number_first_footer": {"group": "Header and footer", "label": "Page number in first-page footer", "domain": "document", "check_type": "page_number_in_first_footer", "target": "none", "layout": "boolean"},
@@ -125,6 +163,7 @@ RULES = {
     "image_count": {"group": "Pictures and objects", "label": "Inserted picture count", "domain": "object", "check_type": "image_count", "target": "none", "layout": "number", "value_label": "Minimum pictures", "placeholder": "e.g. 1"},
     "image_width": {"group": "Pictures and objects", "label": "Picture width", "domain": "object", "check_type": "image_width", "target": "none", "layout": "number", "value_label": "Width (cm)", "placeholder": "e.g. 8"},
     "image_height": {"group": "Pictures and objects", "label": "Picture height", "domain": "object", "check_type": "image_height", "target": "none", "layout": "number", "value_label": "Height (cm)", "placeholder": "e.g. 6"},
+    "image_aspect_ratio_changed": {"group": "Pictures and objects", "label": "Picture aspect ratio changed", "domain": "object", "check_type": "image_aspect_ratio_changed", "target": "none", "layout": "boolean"},
     "image_grayscale": {"group": "Pictures and objects", "label": "Picture is grayscale", "domain": "object", "check_type": "image_grayscale", "target": "none", "layout": "boolean"},
     "image_reflection": {"group": "Pictures and objects", "label": "Picture reflection effect", "domain": "object", "check_type": "image_reflection", "target": "none", "layout": "boolean"},
     "image_alt_text": {"group": "Pictures and objects", "label": "Picture alt text", "domain": "object", "check_type": "image_alt_text", "target": "none", "layout": "value", "value_label": "Alt text must contain", "placeholder": "e.g. Tourism destination"},
@@ -163,6 +202,9 @@ RULES = {
     "toc_formal": {"group": "References", "label": "Formal table-of-contents style", "domain": "document", "check_type": "toc_formal", "target": "none", "layout": "boolean"},
     "heading_style": {"group": "Styles", "label": "Heading or paragraph style", "domain": "advanced", "check_type": "style_applied", "target": "text", "layout": "style"},
     "style_font_name": {"group": "Styles", "label": "Style font name", "domain": "advanced", "check_type": "style_font_name", "target": "none", "layout": "style_font_name"},
+    "style_based_on": {"group": "Styles", "label": "Style based on another style", "domain": "advanced", "check_type": "style_based_on", "target": "none", "layout": "style_based_on"},
+    "style_bold": {"group": "Styles", "label": "Style is bold", "domain": "advanced", "check_type": "style_bold", "target": "none", "layout": "style_boolean"},
+    "style_font_color": {"group": "Styles", "label": "Style font colour", "domain": "advanced", "check_type": "style_font_color", "target": "none", "layout": "style_font_color"},
     "style_underline": {"group": "Styles", "label": "Style underline", "domain": "advanced", "check_type": "style_underline", "target": "none", "layout": "style_boolean"},
     "style_shadow": {"group": "Styles", "label": "Style text shadow", "domain": "advanced", "check_type": "style_shadow", "target": "none", "layout": "style_boolean"},
     "style_underline_type": {"group": "Styles", "label": "Style underline type", "domain": "advanced", "check_type": "style_underline_type", "target": "none", "layout": "style_underline_type"},
@@ -172,6 +214,18 @@ RULES = {
     "heading_numbering": {"group": "Styles", "label": "Heading numbering format", "domain": "document", "check_type": "heading_number_format", "target": "text", "layout": "number_format"},
     "mail_merge_fields": {"group": "Mail merge", "label": "Mail merge fields", "domain": "document", "check_type": "mail_merge_fields", "target": "none", "layout": "merge_fields"},
     "mail_merge_source": {"group": "Mail merge", "label": "Mail merge data source", "domain": "document", "check_type": "mail_merge_source", "target": "none", "layout": "value", "value_label": "Data source filename", "placeholder": "e.g. Client List.xlsx"},
+    "form_text_max_length": {"group": "Forms", "label": "Text form-field maximum length", "domain": "document", "check_type": "form_text_max_length", "target": "none", "layout": "form_text_max_length"},
+    "form_dropdown_options": {"group": "Forms", "label": "Drop-down form-field options", "domain": "document", "check_type": "form_dropdown_options", "target": "none", "layout": "form_dropdown_options"},
+    "content_control_text": {"group": "Forms", "label": "Content control contains text", "domain": "document", "check_type": "content_control_text", "target": "none", "layout": "content_control_text"},
+    "document_property_text": {"group": "Document information", "label": "Document property contains text", "domain": "document", "check_type": "package_xml_contains", "target": "none", "layout": "document_property_text"},
+    "document_stored_text": {"group": "Document information", "label": "Document contains stored text", "domain": "document", "check_type": "package_xml_contains", "target": "none", "layout": "stored_text"},
+    "document_text_absent": {"group": "Editing", "label": "Text/list was removed", "domain": "document", "check_type": "package_xml_not_contains", "target": "none", "layout": "stored_text_absent"},
+    "table_cell_spacing_removed": {"group": "Tables", "label": "Table cell spacing removed", "domain": "document", "check_type": "table_cell_spacing_removed", "target": "none", "layout": "boolean"},
+    "table_formula_contains": {"group": "Tables", "label": "Table formula contains function", "domain": "document", "check_type": "table_formula_contains", "target": "none", "layout": "formula_function_name"},
+    "image_wrap_style": {"group": "Pictures and objects", "label": "Picture wrap style", "domain": "object", "check_type": "image_wrap_style", "target": "none", "layout": "image_wrap_style"},
+    "multilevel_list_level_count": {"group": "Lists", "label": "Multilevel list has items at level", "domain": "document", "check_type": "multilevel_list_level_count", "target": "none", "layout": "multilevel_list_level_count"},
+    "package_xml_contains": {"group": "Advanced", "label": "Advanced package text contains", "domain": "document", "check_type": "package_xml_contains", "target": "none", "layout": "package_xml_contains"},
+    "package_xml_not_contains": {"group": "Advanced", "label": "Advanced package text does not contain", "domain": "document", "check_type": "package_xml_not_contains", "target": "none", "layout": "package_xml_contains"},
     "hyperlink_present": {"group": "References", "label": "Hyperlink inserted", "domain": "object", "check_type": "hyperlink_present", "target": "none", "layout": "boolean"},
     "hyperlink_url": {"group": "References", "label": "Hyperlink destination", "domain": "object", "check_type": "hyperlink_url", "target": "none", "layout": "value", "value_label": "Destination must contain", "placeholder": "e.g. wikipedia.org or 1Bio_Data.docx"},
     "hyperlink_text": {"group": "References", "label": "Hyperlink display text", "domain": "object", "check_type": "hyperlink_text", "target": "none", "layout": "value", "value_label": "Link text must contain", "placeholder": "e.g. Visit the website"},
@@ -196,14 +250,20 @@ def _rule_from_form(index):
         return None
 
     definition = RULES[rule_key]
+    preset_values = definition.get("preset_values", {}) if isinstance(definition, dict) else {}
+    for key, value in preset_values.items():
+        values[key] = str(value)
     is_paragraph_rule = definition["domain"] == "paragraph_formatting"
     target_mode = values["target_mode"] or "contains_text"
-    if (definition["target"] == "text" or is_paragraph_rule) and not target_text and target_mode != "any_drop_cap":
+    if definition.get("preset_target"):
+        target_text = str(definition["preset_target"].get("value", target_text))
+        target_mode = str(definition["preset_target"].get("locator", target_mode))
+    if (definition["target"] == "text" or is_paragraph_rule) and not target_text and target_mode not in {"any_drop_cap", "any_paragraph"}:
         raise ValueError(f"Criterion {index + 1} needs target text to locate the change.")
 
     target = {}
     if is_paragraph_rule:
-        if target_mode not in {"contains_text", "after_heading", "any_drop_cap"}:
+        if target_mode not in {"contains_text", "after_heading", "any_drop_cap", "any_paragraph"}:
             raise ValueError("Select how the paragraph should be located.")
         target = {"locator": target_mode, "value": target_text}
     elif definition["target"] == "text":
@@ -212,7 +272,7 @@ def _rule_from_form(index):
         target = {"locator": "table_index", "value": max(0, int(target_text or "1") - 1)}
 
     layout = definition["layout"]
-    expected = values["value"]
+    expected = definition["preset_expected"] if "preset_expected" in definition else values["value"]
     if rule_key == "bibliography":
         expected = {"source_count": int(values["value"])}
     elif layout == "number":
@@ -231,6 +291,10 @@ def _rule_from_form(index):
         expected = {"style": values["value"], "minimum": int(values["value_2"]), "texts": [text.strip() for text in values["value_3"].split(",") if text.strip()]}
     elif layout == "style_font_name":
         expected = {"style": values["value"], "font": values["value_2"]}
+    elif layout == "style_based_on":
+        expected = {"style": values["value"], "based_on": values["value_2"]}
+    elif layout == "style_font_color":
+        expected = {"style": values["value"], "color": values["value_2"]}
     elif layout == "style_boolean":
         expected = {"style": values["value"], "value": values["value_2"].lower() not in {"false", "no", "0"}}
     elif layout == "text_count":
@@ -312,12 +376,32 @@ def _rule_from_form(index):
         expected = {"fields": [field.strip() for field in values["value"].split(",") if field.strip()]}
     elif layout == "control_aliases":
         expected = {"aliases": [alias.strip() for alias in values["value"].split(",") if alias.strip()]}
+    elif layout == "form_text_max_length":
+        expected = {"name": values["value"], "max_length": int(values["value_2"])}
+    elif layout == "form_dropdown_options":
+        expected = {"name": values["value"], "options": [item.strip() for item in values["value_2"].split(",") if item.strip()], "ordered": values["value_3"].lower() not in {"false", "no", "0"}}
+    elif layout == "content_control_text":
+        expected = {"alias": values["value"], "text": values["value_2"]}
+    elif layout == "package_xml_contains":
+        expected = {"part": values["value"], "text": values["value_2"]}
+    elif layout == "document_property_text":
+        expected = {"part": "", "text": values["value"]}
+    elif layout == "stored_text":
+        expected = {"part": "", "text": values["value"]}
+    elif layout == "stored_text_absent":
+        expected = {"part": "", "text": values["value"]}
+    elif layout == "formula_function_name":
+        expected = values["value"]
+    elif layout == "image_wrap_style":
+        expected = values["value"]
+    elif layout == "multilevel_list_level_count":
+        expected = {"level": int(values["value"]), "minimum": int(values["value_2"])}
 
     # Prevent unknown formatting values from entering stored marking definitions,
     # including requests submitted outside the browser form.
     if rule_key == "font_name" and expected not in FONT_NAMES:
         raise ValueError("Select a font from the supplied list.")
-    if rule_key in {"font_color", "paragraph_shading"} and str(expected if isinstance(expected, str) else expected.get("color", "")).lower() not in COLOUR_NAMES:
+    if rule_key in {"font_color", "paragraph_shading", "style_font_color"} and str(expected if isinstance(expected, str) else expected.get("color", "")).lower() not in COLOUR_NAMES:
         raise ValueError("Select a recognised Word colour.")
     if rule_key == "page_color" and str(expected).upper() not in PAGE_COLOURS:
         raise ValueError("Select a colour from the page-colour palette.")
@@ -482,12 +566,13 @@ def register_custom_word_task_routes(app):
         groups = [row[0] for row in conn.execute("SELECT DISTINCT group_name FROM users WHERE group_name IS NOT NULL ORDER BY group_name")]
 
         marking_conn = get_marking_db()
-        setup_row = marking_conn.execute("SELECT json_script_blob FROM marking_setups WHERE id = ?", (setup_id,)).fetchone()
+        setup_row = marking_conn.execute("SELECT json_script_blob, starter_file_blob FROM marking_setups WHERE id = ?", (setup_id,)).fetchone()
         if not setup_row:
             marking_conn.close()
             conn.close()
             return "Marking setup not found", 404
         setup = json.loads((setup_row[0] or b"{}").decode("utf-8"))
+        text_options = _starter_text_options(setup_row[1])
         initial_criteria = setup.get("builder_criteria") or []
         if not initial_criteria:
             marking_conn.close()
@@ -519,7 +604,7 @@ def register_custom_word_task_routes(app):
                 error = str(exc)
         marking_conn.close()
         conn.close()
-        return render_template("custom_word_task.html", subject_id=subject_id, subject_name=subject[0], groups=groups, teachers=get_teachers(), rules=RULES, font_names=FONT_NAMES, colour_names=COLOUR_NAMES, border_styles=BORDER_STYLES, page_colours=PAGE_COLOURS, section_break_types=SECTION_BREAK_TYPES, username=username, today=datetime.now().date().isoformat(), error=error, editing_task={"name": task_name, "assign_date": assign_date, "instructions": instructions, "is_active": is_active}, initial_criteria=initial_criteria)
+        return render_template("custom_word_task.html", subject_id=subject_id, subject_name=subject[0], groups=groups, teachers=get_teachers(), rules=RULES, font_names=FONT_NAMES, colour_names=COLOUR_NAMES, border_styles=BORDER_STYLES, page_colours=PAGE_COLOURS, section_break_types=SECTION_BREAK_TYPES, username=username, today=datetime.now().date().isoformat(), error=error, editing_task={"name": task_name, "assign_date": assign_date, "instructions": instructions, "is_active": is_active}, initial_criteria=initial_criteria, text_options=text_options)
 
     @app.route("/subjects/<int:subject_id>/custom_word_task", methods=["GET", "POST"])
     def custom_word_task(subject_id):
@@ -638,4 +723,5 @@ def register_custom_word_task_routes(app):
             error=error,
             editing_task=None,
             initial_criteria=[],
+            text_options=[],
         )

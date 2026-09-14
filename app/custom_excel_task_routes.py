@@ -13,16 +13,45 @@ RULES = {
     "fill_color": ("Formatting", "Cell fill colour", "fill_color"), "range_font_bold": ("Formatting", "Range font bold", "range_font_bold"), "range_fill_color": ("Formatting", "Range fill colour", "range_fill_color"), "border_side": ("Formatting", "Cell border side", "border_side"), "alignment": ("Formatting", "Cell alignment", "alignment"), "vertical_alignment": ("Formatting", "Vertical alignment", "vertical_alignment"), "wrap_text": ("Formatting", "Wrap text", "wrap_text"), "text_rotation": ("Formatting", "Text rotation", "text_rotation"), "indent": ("Formatting", "Cell indent", "indent"), "chart_count": ("Objects", "Minimum chart count", "chart_count"), "table_present": ("Tables", "Excel table present", "table_present"), "table_name": ("Tables", "Excel table name", "table_name"), "table_range": ("Tables", "Excel table range", "table_range"), "data_validation_range": ("Data", "Data validation range", "data_validation_range"),
     "font_size": ("Formatting", "Font size", "font_size"), "column_width": ("Layout", "Minimum column width", "column_width"), "row_height": ("Layout", "Minimum row height", "row_height"), "freeze_panes": ("Layout", "Freeze panes at cell", "freeze_panes"), "merged_range": ("Layout", "Merged cell range", "merged_range"), "sheet_tab_color": ("Workbook", "Worksheet tab colour", "sheet_tab_color"), "sheet_last": ("Workbook", "Worksheet is last", "sheet_last"), "table_style": ("Tables", "Excel table style", "table_style"),
     "sorted_range": ("Data", "Sorted column range", "sorted_range"), "multi_level_sort": ("Data", "Multi-level sort", "multi_level_sort"), "conditional_formatting_present": ("Data", "Conditional formatting present", "conditional_formatting_present"), "conditional_formatting_range": ("Data", "Conditional formatting range", "conditional_formatting_range"), "conditional_formatting_rule": ("Data", "Conditional-format rule", "conditional_formatting_rule"), "image_at_cell": ("Objects", "Image anchored at cell", "image_at_cell"), "image_dimensions": ("Objects", "Image dimensions", "image_dimensions"), "chart_title": ("Objects", "Chart title", "chart_title"), "chart_type": ("Objects", "Chart type", "chart_type"), "chart_legend_position": ("Objects", "Chart legend position", "chart_legend_position"), "chart_data_labels": ("Objects", "Chart data labels", "chart_data_labels"), "page_orientation": ("Print", "Page orientation", "page_orientation"), "fit_to_page": ("Print", "Fit worksheet to page", "fit_to_page"), "fit_to_width": ("Print", "Fit to pages wide", "fit_to_width"), "fit_to_height": ("Print", "Fit to pages tall", "fit_to_height"), "print_area": ("Print", "Print area", "print_area"), "print_title_rows": ("Print", "Repeated print title rows", "print_title_rows"), "page_margins": ("Print", "Page margin", "page_margins"), "manual_page_break": ("Print", "Manual page break", "manual_page_break"), "sheet_protected": ("Workbook", "Worksheet protection", "sheet_protected"),
+    "package_xml_contains": ("Advanced", "Workbook package contains preset evidence", "package_xml_contains"), "package_xml_not_contains": ("Advanced", "Workbook package does not contain preset evidence", "package_xml_not_contains"),
+    "prelim_icon_full_star_9": ("Prelim Spreadsheet Presets", "Icon-set Full Star threshold is 9", "package_xml_contains"),
+    "prelim_icon_half_star_4": ("Prelim Spreadsheet Presets", "Icon-set Half Star threshold is 4", "package_xml_contains"),
+    "prelim_icon_number_type": ("Prelim Spreadsheet Presets", "Icon-set thresholds use number type", "package_xml_contains"),
+    "prelim_icon_values_visible": ("Prelim Spreadsheet Presets", "Icon-set values remain visible", "package_xml_not_contains"),
+    "prelim_chart_range_a1_b6": ("Prelim Spreadsheet Presets", "Chart data range includes A1:B6", "package_xml_contains"),
+    "prelim_axis_number_people": ("Prelim Spreadsheet Presets", "Vertical axis title is Number of people", "package_xml_contains"),
+    "prelim_chart_picture_fill": ("Prelim Spreadsheet Presets", "Column is filled with supplied picture", "package_xml_contains"),
+    "prelim_validation_h2_h18": ("Prelim Spreadsheet Presets", "Data-validation source is H2:H18", "package_xml_contains"),
+    "prelim_chart_categories_a6_b12": ("Prelim Spreadsheet Presets", "Chart uses categories A6:B12", "package_xml_contains"),
+    "prelim_subtotal_inserted": ("Prelim Spreadsheet Presets", "Subtotal inserted at each change", "package_xml_contains"),
+    "prelim_subtotal_average": ("Prelim Spreadsheet Presets", "Subtotal uses Average function", "package_xml_contains"),
+}
+
+PRESET_VALUES = {
+    "prelim_icon_full_star_9": {"part": "", "text": "9"},
+    "prelim_icon_half_star_4": {"part": "", "text": "4"},
+    "prelim_icon_number_type": {"part": "", "text": "type=\"num\""},
+    "prelim_icon_values_visible": {"part": "", "text": "showValue=\"0\""},
+    "prelim_chart_range_a1_b6": {"part": "", "text": "A1:B6"},
+    "prelim_axis_number_people": {"part": "", "text": "Number of people"},
+    "prelim_chart_picture_fill": {"part": "", "text": "4Bachelors"},
+    "prelim_validation_h2_h18": {"part": "", "text": "$H$2:$H$18"},
+    "prelim_chart_categories_a6_b12": {"part": "", "text": "A6:B12"},
+    "prelim_subtotal_inserted": {"part": "", "text": "subtotal"},
+    "prelim_subtotal_average": {"part": "", "text": "SUBTOTAL(1"},
 }
 
 def _rule(index):
     key=request.form.get(f"rule_{index}",""); description=request.form.get(f"description_{index}","").strip()
     if key not in RULES or not description:return None
     sheet=request.form.get(f"sheet_{index}","").strip(); cell=request.form.get(f"cell_{index}","").strip().upper(); value=request.form.get(f"value_{index}","").strip(); check_type=RULES[key][2]
+    preset = PRESET_VALUES.get(key)
+    if preset is not None:
+        value = preset
     if check_type not in {"table_present","conditional_formatting_present"} and not value: raise ValueError(f"Criterion {index+1} needs an expected value.")
     if check_type in {"cell_value","cell_contains","formula_contains","formula_exact","formula_references","formula_function","formula_operator","formula_absolute_reference","formula_result","number_format","number_format_kind","decimal_places","font_name","font_bold","font_italic","font_underline","font_color","font_size","fill_color","range_font_bold","range_fill_color","border_side","alignment","vertical_alignment","wrap_text","text_rotation","indent","column_width","row_height"} and not cell: raise ValueError(f"Criterion {index+1} needs a cell reference.")
     if check_type=="chart_count": value=int(value)
-    return {"question_number":str(index+1),"description":description,"domain":"excel","type":check_type,"target":{k:v for k,v in {"sheet":sheet,"cell":cell}.items() if v},"expected":value,"marks":1,"builder_rule":key,"builder_values":{"sheet":sheet,"cell":cell,"value":str(value)},"builder_target":""}
+    return {"question_number":str(index+1),"description":description,"domain":"excel","type":check_type,"target":{k:v for k,v in {"sheet":sheet,"cell":cell}.items() if v},"expected":value,"marks":1,"builder_rule":key,"builder_values":{"sheet":sheet,"cell":cell,"value":str(value if not isinstance(value, dict) else value.get("text", ""))},"builder_target":""}
 
 def register_custom_excel_task_routes(app):
  @app.route('/subjects/<int:subject_id>/custom_excel_task',methods=['GET','POST'])

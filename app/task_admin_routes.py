@@ -412,6 +412,27 @@ def register_task_admin_routes(app):
             status_badge = '<span class="task-status task-status-active">Active</span>' if is_active else '<span class="task-status task-status-inactive">Inactive</span>'
             toggle_label = "⏸ Deactivate" if is_active else "▶ Activate"
             toggle_class = "task-action-pause" if is_active else "task-action-activate"
+            builder_edit_path = None
+            if practical_mode == "upload" and marking_setup_id and (
+                marking_script == "marking_experiment_adapter" or (subject_name.lower().startswith("word") and str(marking_script or "").startswith("gr12_prelim_p1_q"))
+            ):
+                setup_program = None
+                if marking_script == "marking_experiment_adapter":
+                    try:
+                        marking_conn = get_marking_db()
+                        setup_row = marking_conn.execute("SELECT json_script_blob FROM marking_setups WHERE id=?", (marking_setup_id,)).fetchone()
+                        marking_conn.close()
+                        setup_program = json.loads((setup_row[0] or b"{}").decode("utf-8")).get("program") if setup_row else None
+                    except Exception:
+                        setup_program = None
+                builder_suffix = (
+                    "/html_builder/edit" if subject_name.lower().startswith("html")
+                    else "/excel_builder/edit" if subject_name.lower().startswith("excel")
+                    else "/access_builder/edit" if subject_name.lower().startswith("access") or subject_name.lower().startswith("database")
+                    else "/word_builder/edit"
+                )
+                builder_edit_path = f"/tasks/{task_id}{builder_suffix}"
+
             if task_type == "practical":
                 mode_label = "Simulator" if practical_mode == "simulator" else "Upload"
                 attempts_label = f"{mode_label} / " + ("Single" if not allow_multiple else f"Multiple ({max_attempts})")
@@ -430,7 +451,7 @@ def register_task_admin_routes(app):
                 <td>{status_badge}</td>
                 <td class="task-actions">
                     {'<a href="/tasks/' + str(task_id) + '/edit" title="Edit task" class="btn task-action task-action-edit">✏️</a>' if task_type == 'practical' else ''}
-                    {('<a href="/tasks/' + str(task_id) + ('/html_builder/edit' if subject_name.lower().startswith('html') else '/excel_builder/edit' if subject_name.lower().startswith('excel') else '/access_builder/edit' if subject_name.lower().startswith('access') or subject_name.lower().startswith('database') else '/word_builder/edit') + '" title="Edit no-code marking" class="btn task-action task-action-builder">🛠️</a>') if practical_mode == 'upload' and marking_script == 'marking_experiment_adapter' and marking_setup_id else ''}
+                    {f'<a href="{builder_edit_path}" title="Edit no-code marking" class="btn task-action task-action-builder">🛠️</a>' if builder_edit_path else ''}
                     <a href="/tasks/{task_id}/preview" class="icon-btn" title="Preview learner view">👁</a>
                     {'<button type="button" class="btn task-action task-action-copy" title="Reuse: copy into a new task" onclick="openReuseTaskModal(' + str(task_id) + ', ' + repr(task_name) + ', ' + repr(marking_script or '') + ', ' + str(allow_multiple) + ', ' + str(max_attempts) + ', ' + repr(marking_setup_id or '') + ', ' + repr(practical_mode or 'upload') + ', ' + repr(simulator_key or '') + ')">📋</button>' if task_type == 'practical' else ''}
                     <form method="post" action="/tasks/{task_id}/toggle">

@@ -13,6 +13,7 @@ Filsk's question-level result format.
 from __future__ import annotations
 
 import json
+import importlib
 import os
 import sqlite3
 import tempfile
@@ -244,6 +245,12 @@ def mark_with_setup(filepath: str, marking_setup_id: int, learner_name: Optional
         }
 
     try:
+        external_script = task_definition.get("external_marker_script")
+        if external_script:
+            module = importlib.import_module(f"marking.tasks.{external_script}")
+            if learner_name and hasattr(module, "mark_for_learner"):
+                return module.mark_for_learner(filepath, learner_name)
+            return module.mark(filepath)
         if learner_name:
             for question in task_definition.get("questions", []):
                 expected = question.get("expected")

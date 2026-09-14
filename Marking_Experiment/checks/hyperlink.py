@@ -4,8 +4,10 @@ from __future__ import annotations
 
 from pathlib import Path
 from typing import Any, Dict, List, Optional
+from zipfile import ZipFile
 
 from docx import Document
+from lxml import etree
 
 from ..checker_types import CheckerResult
 
@@ -15,8 +17,11 @@ def check_hyperlink_rule(rule: Dict[str, Any], file_path: Path) -> CheckerResult
     check_type = str(rule.get("type", ""))
     expected = rule.get("expected")
 
-    hyperlinks = _find_hyperlinks(document)
+    hyperlinks = _find_hyperlinks(document, file_path)
     # hyperlink entry schema (from XML): {"id": rId, "url": str|None, "text": str|None}
+
+    def normalize(value: Any) -> str:
+        return "".join(str(value or "").lower().split())
 
     if check_type == "hyperlink_present":
         expected_bool = expected if isinstance(expected, bool) else str(expected).strip().lower() not in {"false", "no", "0"}
@@ -37,17 +42,17 @@ def check_hyperlink_rule(rule: Dict[str, Any], file_path: Path) -> CheckerResult
         expected_val = expected.get("contains") if isinstance(expected, dict) else expected
         if expected_val is None:
             return CheckerResult(passed=False, actual=actual_texts, details={"type": check_type, "reason": "No expected provided"})
-        expected_str = str(expected_val).strip().lower()
-        passed = any(expected_str in str(t).lower() for t in actual_texts)
+        expected_str = normalize(expected_val)
+        passed = any(expected_str in normalize(t) for t in actual_texts)
         return CheckerResult(passed=passed, actual=actual_texts, details={"type": check_type, "expected": expected_val})
 
     if check_type == "hyperlink_text_destination":
         if not isinstance(expected, dict):
             return CheckerResult(passed=False, details={"type": check_type, "reason": "Link text and destination are required."})
-        text = str(expected.get("text", "")).strip().lower()
+        text = normalize(expected.get("text", ""))
         destination = str(expected.get("destination", "")).strip().lower()
         passed = bool(text and destination) and any(
-            text in str(link.get("text") or "").lower()
+            text in normalize(link.get("text"))
             and destination in str(link.get("url") or "").lower()
             for link in hyperlinks
         )
@@ -56,18 +61,17 @@ def check_hyperlink_rule(rule: Dict[str, Any], file_path: Path) -> CheckerResult
     return CheckerResult(passed=False, details={"reason": f"Unsupported hyperlink check type: {check_type}"})
 
 
-def _find_hyperlinks(document: Document) -> List[Dict[str, Optional[str]]]:
+def _find_hyperlinks(document: Document, file_path: Path) -> List[Dict[str, Optional[str]]]:
     """Extract hyperlink destination and visible text.
 
     Notes:
     - docx's high-level API does not expose this directly.
     - We use raw XML extraction from paragraphs to keep it lightweight.
     """
-    from lxml import etree
-
     # Namespaces for hyperlink + relationships.
     WNS = "http://schemas.openxmlformats.org/wordprocessingml/2006/main"
     XLINK = "http://schemas.openxmlformats.org/officeDocument/2006/relationships"
+    PKG_REL = "http://schemas.openxmlformats.org/package/2006/relationships"
 
     # For mapping r:id -> target URL, read relationships from the document package.
     rels = {}
@@ -103,6 +107,27 @@ def _find_hyperlinks(document: Document) -> List[Dict[str, Optional[str]]]:
             except Exception:
                 continue
             hyperlinks.extend(iter_paragraph_hyperlinks(root))
+    except Exception:
+        pass
+
+    if hyperlinks:
+        return hyperlinks
+
+    try:
+        with ZipFile(file_path, "r") as zf:
+            rel_xml = zf.read("word/_rels/document.xml.rels")
+            doc_xml = zf.read("word/document.xml")
+        rel_root = etree.fromstring(rel_xml)
+        rels = {
+            rel.get("Id"): rel.get("Target")
+            for rel in rel_root.findall(f".//{{{PKG_REL}}}Relationship")
+            if "hyperlink" in (rel.get("Type") or "")
+        }
+        doc_root = etree.fromstring(doc_xml)
+        for hl in doc_root.findall(f".//{{{WNS}}}hyperlink"):
+            rid = hl.get(f"{{{XLINK}}}id")
+            texts = [node.text.strip() for node in hl.findall(f".//{{{WNS}}}t") if node.text and node.text.strip()]
+            hyperlinks.append({"id": rid or "", "url": rels.get(rid), "text": " ".join(texts) or None})
     except Exception:
         pass
 

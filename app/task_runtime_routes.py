@@ -48,6 +48,22 @@ def _load_task_practical_questions(cursor, task_id):
     return questions
 
 
+def _required_simulator_checkpoints(question):
+    """The initial Home tab is visible before a learner starts and is not a click."""
+    checkpoints = list(question.get("steps") or [])
+    if checkpoints and checkpoints[0] == "home":
+        checkpoints.pop(0)
+    return checkpoints
+
+
+def _simulator_trace(form_data, question_id):
+    try:
+        trace = json.loads(form_data.get(f"question_{question_id}_trace") or "[]")
+    except Exception:
+        return []
+    return [event for event in trace if isinstance(event, dict) and event.get("action")]
+
+
 def _score_word_caps_practical(questions, form_data):
     question_results = []
     total_score = 0
@@ -61,14 +77,16 @@ def _score_word_caps_practical(questions, form_data):
             actions = json.loads(form_data.get(f"question_{question['id']}_actions") or "[]")
         except Exception:
             actions = []
+        trace = _simulator_trace(form_data, question["id"])
         try:
             question_state = json.loads(form_data.get(f"question_{question['id']}_state") or "{}")
         except Exception:
             question_state = {}
         skip_flag = (form_data.get(f"question_{question['id']}_skipped") or "").strip() == "1"
-        expected_steps = question["steps"]
-        passed = actions[: len(expected_steps)] == expected_steps and len(actions) >= len(expected_steps) and not skip_flag
-        details = f"{len(actions)}/{len(expected_steps)} step(s) completed"
+        expected_steps = _required_simulator_checkpoints(question)
+        method_complete = actions == expected_steps
+        passed = method_complete and not skip_flag
+        details = f"{len(actions)}/{len(expected_steps)} required checkpoint(s) completed"
 
         if not skip_flag and question["title"] == "Replace":
             passed = (
@@ -230,14 +248,32 @@ def _score_word_caps_practical(questions, form_data):
             passed = bool(question_state.get("merge_field_inserted"))
             details = "Merge field inserted" if passed else "Merge field not inserted"
 
-        if passed and question.get("metadata", {}).get("requires_target_selection") and not question_state.get("target_selected"):
+        outcome_complete = passed
+        if not skip_flag and not method_complete:
+            passed = False
+            details = f"Required method not completed: {len(actions)}/{len(expected_steps)} checkpoint(s) in the prescribed order"
+        elif passed and question.get("metadata", {}).get("requires_target_selection") and not question_state.get("target_selected"):
             passed = False
             details = "Correct Word action used, but the required text or cursor position was not selected"
 
-        awarded = question["marks"] if passed else 0
+        wrong_actions = []
+        for event in trace:
+            if event.get("classification") != "wrong":
+                continue
+            action = str(event.get("action"))
+            if action not in wrong_actions:
+                wrong_actions.append(action)
+        metadata = question.get("metadata") or {}
+        free_misclicks = int(metadata.get("free_misclicks", 0) or 0)
+        penalty_per_misclick = float(metadata.get("penalty_per_misclick", 0) or 0)
+        maximum_penalty = float(metadata.get("max_misclick_penalty", question["marks"]) or 0)
+        penalty = min(max(0, len(wrong_actions) - free_misclicks) * penalty_per_misclick, maximum_penalty)
+        awarded = max(0, question["marks"] - penalty) if passed else 0
+        if passed and wrong_actions:
+            details += f"; {len(wrong_actions)} incorrect action(s), {penalty:g} mark deduction"
         total_score += awarded
         total_marks += question["marks"]
-        if passed:
+        if outcome_complete and passed:
             completed_count += 1
         if skip_flag:
             skipped_count += 1

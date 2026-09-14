@@ -34,6 +34,15 @@ def _sql_tokens(value: Any) -> list[str]:
     return [_normalise(token) for token in str(value or "").split(",") if _normalise(token)]
 
 
+def _access_color_is_blue(value: Any) -> bool:
+    try:
+        raw = int(value)
+    except Exception:
+        return False
+    red, green, blue = raw & 255, (raw >> 8) & 255, (raw >> 16) & 255
+    return blue >= 120 and blue > red and blue >= green
+
+
 class AccessChecker(BaseChecker):
     program = "access"
 
@@ -52,6 +61,14 @@ class AccessChecker(BaseChecker):
             if check_type == "table_exists":
                 actual = list(tables)
                 passed = wanted.casefold() in tables
+            elif check_type == "table_datasheet_gridline_blue":
+                table = tables.get(table_name.casefold())
+                actual = _property_value(table, "DatasheetGridlinesColor")
+                passed = _access_color_is_blue(actual)
+            elif check_type == "table_datasheet_cell_effect":
+                table = tables.get(table_name.casefold())
+                actual = _property_value(table, "DatasheetCellsEffect")
+                passed = str(actual) == wanted or (_normalise(wanted) in {"sunken", "2"} and str(actual) == "2")
             elif check_type.startswith("field_"):
                 table = tables.get(table_name.casefold())
                 field = _field(table, field_name)
@@ -173,6 +190,24 @@ class AccessChecker(BaseChecker):
                         elif check_type in {"form_caption_contains", "report_caption_contains"}:
                             actual = captions
                             passed = any(_normalise(wanted) in _normalise(value) for value in captions)
+                        elif check_type == "report_image_present":
+                            pictures = [
+                                str(getattr(control, "Picture", "") or "")
+                                for control in controls
+                                if str(getattr(control, "Picture", "") or "") or getattr(control, "ControlType", None) in {103, 108}
+                            ]
+                            actual = pictures
+                            passed = bool(pictures)
+                        elif check_type == "report_image_right":
+                            picture_controls = [
+                                control for control in controls
+                                if str(getattr(control, "Picture", "") or "") or getattr(control, "ControlType", None) in {103, 108}
+                            ]
+                            actual = [getattr(control, "Left", None) for control in picture_controls]
+                            passed = any(left is not None and int(left) > 5000 for left in actual)
+                        elif check_type == "report_sort_order":
+                            actual = str(getattr(obj, "OrderBy", "") or "")
+                            passed = _normalise(wanted) in _normalise(actual)
                         elif check_type == "form_image_contains":
                             actual = [str(getattr(control, "Picture", "") or "") for control in controls]
                             passed = any(_normalise(wanted) in _normalise(value) for value in actual)
@@ -188,6 +223,29 @@ class AccessChecker(BaseChecker):
                         elif check_type == "form_expression_contains":
                             actual = sources
                             passed = any(_normalise(wanted) in _normalise(value) for value in sources)
+                        elif check_type == "form_control_row_source_type":
+                            actual = [str(getattr(control, "RowSourceType", "") or "") for control in controls]
+                            passed = any(_normalise(wanted) == _normalise(value) for value in actual)
+                        elif check_type == "form_control_row_source_contains":
+                            actual = [str(getattr(control, "RowSource", "") or "") for control in controls]
+                            tokens = _sql_tokens(wanted)
+                            passed = any(all(token in _normalise(value) for token in tokens) for value in actual)
+                        elif check_type == "form_command_button_footer":
+                            buttons = [
+                                control for control in controls
+                                if getattr(control, "ControlType", None) == 104
+                                and getattr(control, "Section", None) in {2, 5}
+                            ]
+                            actual = [str(getattr(control, "Name", "") or "") for control in buttons]
+                            passed = bool(buttons)
+                        elif check_type == "form_button_closes":
+                            buttons = [control for control in controls if getattr(control, "ControlType", None) == 104]
+                            actual = [str(getattr(control, "OnClick", "") or "") for control in buttons]
+                            passed = any("close" in value.lower() for value in actual)
+                        elif check_type == "form_button_picture":
+                            buttons = [control for control in controls if getattr(control, "ControlType", None) == 104]
+                            actual = [str(getattr(control, "Picture", "") or "") for control in buttons]
+                            passed = any(value for value in actual)
                         elif check_type == "form_record_source":
                             actual = str(getattr(obj, "RecordSource", "") or "")
                             passed = _normalise(wanted) == _normalise(actual)

@@ -129,6 +129,12 @@ class HTMLChecker(BaseChecker):
             count = len(self._elements(document, "li")) if self._elements(document, list_tag) else 0
             actual = count
             passed = count >= int(expected)
+        elif check_type == "nested_list":
+            outer = str((expected if isinstance(expected, dict) else {}).get("outer", "ul")).casefold()
+            inner = str((expected if isinstance(expected, dict) else {}).get("inner", "ol")).casefold()
+            pattern = rf"<{outer}\b[\s\S]*?<li\b[\s\S]*?<{inner}\b[\s\S]*?</{inner}>[\s\S]*?</li>[\s\S]*?</{outer}>"
+            passed = re.search(pattern, source, re.I) is not None
+            actual = f"{outer}>{inner}" if passed else "nested list not found"
         elif check_type == "horizontal_rule":
             attribute = str((target or {}).get("attribute", ""))
             hrs = self._elements(document, "hr")
@@ -157,5 +163,11 @@ class HTMLChecker(BaseChecker):
             cells = self._elements(document, "td") + self._elements(document, "th")
             actual = [item["text"] for item in cells]
             passed = any(_normalise(expected_text) == _normalise(value) for value in actual)
+        elif check_type == "table_attribute":
+            attribute = str((expected if isinstance(expected, dict) else {}).get("attribute", "")).casefold()
+            value = str((expected if isinstance(expected, dict) else {}).get("value", ""))
+            tables = self._elements(document, "table")
+            actual = [item["attrs"].get(attribute, "") for item in tables]
+            passed = any(_normalise(value) == _normalise(item["attrs"].get(attribute, "")) for item in tables)
 
         return CheckerResult(passed=passed, actual=actual, details={"type": check_type, "target": target, "expected": expected})

@@ -4,6 +4,7 @@ from __future__ import annotations
 from pathlib import Path
 from typing import Any, Dict
 import re
+from zipfile import ZipFile
 from openpyxl.utils.cell import range_boundaries
 
 from openpyxl import load_workbook
@@ -13,6 +14,22 @@ from .checker_types import BaseChecker, CheckerResult
 
 class ExcelChecker(BaseChecker):
     program = "excel"
+
+    @staticmethod
+    def _chart_title_text(chart) -> str:
+        title = getattr(chart, "title", None)
+        if title is None:
+            return ""
+        values = []
+        try:
+            paragraphs = title.tx.rich.p if title.tx and title.tx.rich else []
+            for paragraph in paragraphs:
+                for run in getattr(paragraph, "r", []) or []:
+                    if getattr(run, "t", None):
+                        values.append(str(run.t))
+        except Exception:
+            pass
+        return "".join(values) or str(title)
 
     @staticmethod
     def _calculated_value(file_path: Path, sheet_name: str, cell_ref: str):
@@ -66,12 +83,33 @@ class ExcelChecker(BaseChecker):
             elif check_type == "worksheet_name":
                 actual = sheet.title
                 passed = actual.casefold() == wanted.casefold()
+            elif check_type in {"package_xml_contains", "package_xml_not_contains"}:
+                part = str((expected if isinstance(expected, dict) else {}).get("part", "")).strip()
+                required = str((expected if isinstance(expected, dict) else {"text": expected}).get("text", "")).strip().casefold()
+                matches = []
+                with ZipFile(file_path, "r") as archive:
+                    names = [part] if part else [name for name in archive.namelist() if name.endswith(".xml")]
+                    for name in names:
+                        try:
+                            text = archive.read(name).decode("utf-8", errors="ignore").casefold()
+                        except KeyError:
+                            continue
+                        if required and required in text:
+                            matches.append(name)
+                actual = matches
+                found = bool(matches)
+                passed = not found if check_type == "package_xml_not_contains" else found
             elif check_type == "cell_value":
                 actual = cell.value if cell else None
                 passed = str(actual or "").strip().casefold() == wanted.casefold()
             elif check_type == "cell_contains":
-                actual = cell.value if cell else None
-                passed = wanted.casefold() in str(actual or "").casefold()
+                if cell_ref and ":" in cell_ref:
+                    values = [item.value for row in sheet[cell_ref] for item in row]
+                    actual = values
+                    passed = any(wanted.casefold() in str(value or "").casefold() for value in values)
+                else:
+                    actual = cell.value if cell else None
+                    passed = wanted.casefold() in str(actual or "").casefold()
             elif check_type == "formula_contains":
                 actual = cell.value if cell else None
                 passed = isinstance(actual, str) and actual.startswith("=") and wanted.casefold() in actual.casefold()
@@ -268,7 +306,7 @@ class ExcelChecker(BaseChecker):
                 except ValueError:
                     passed = False
             elif check_type == "chart_title":
-                titles = [str(getattr(chart.title, "tx", "") or "") for chart in sheet._charts]
+                titles = [self._chart_title_text(chart) for chart in sheet._charts]
                 actual = titles
                 passed = any(wanted.casefold() in title.casefold() for title in titles)
             elif check_type == "chart_type":

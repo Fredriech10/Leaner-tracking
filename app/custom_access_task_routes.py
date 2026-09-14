@@ -11,6 +11,8 @@ from app.database import get_db, get_marking_db, get_teachers, get_user_role, lo
 
 RULES = {
     "table_exists": ("Tables", "Table exists", "table_exists"),
+    "table_datasheet_gridline_blue": ("Tables", "Datasheet gridline colour is blue", "table_datasheet_gridline_blue"),
+    "table_datasheet_cell_effect": ("Tables", "Datasheet cell effect", "table_datasheet_cell_effect"),
     "field_exists": ("Fields", "Field exists", "field_exists"),
     "field_size": ("Fields", "Field size", "field_size"),
     "field_data_type": ("Fields", "Field data type", "field_data_type"),
@@ -26,6 +28,7 @@ RULES = {
     "field_display_control": ("Fields", "Lookup display control", "field_display_control"),
     "primary_key": ("Keys", "Primary key includes field", "primary_key"),
     "query_exists": ("Queries", "Query exists", "query_exists"),
+    "query_sql_contains": ("Queries", "Query SQL contains text", "query_sql_contains"),
     "query_source_contains": ("Queries", "Query source table/query", "query_source_contains"),
     "query_fields": ("Queries", "Query includes fields", "query_fields"),
     "query_criteria_contains": ("Queries", "Query criterion contains", "query_criteria_contains"),
@@ -39,6 +42,11 @@ RULES = {
     "form_caption_style": ("Forms", "Form caption alignment/style", "form_caption_style"),
     "form_image_contains": ("Forms", "Form image file contains", "form_image_contains"),
     "form_expression_contains": ("Forms", "Form expression contains", "form_expression_contains"),
+    "form_control_row_source_type": ("Forms", "Form control row source type", "form_control_row_source_type"),
+    "form_control_row_source_contains": ("Forms", "Form control row source contains", "form_control_row_source_contains"),
+    "form_command_button_footer": ("Forms", "Command button in form footer", "form_command_button_footer"),
+    "form_button_closes": ("Forms", "Command button closes form", "form_button_closes"),
+    "form_button_picture": ("Forms", "Command button has picture", "form_button_picture"),
     "form_footer_control_source": ("Forms", "Form footer control source", "form_footer_control_source"),
     "form_footer_expression_contains": ("Forms", "Form footer expression contains", "form_footer_expression_contains"),
     "form_control_order": ("Forms", "Form control order", "form_control_order"),
@@ -46,6 +54,9 @@ RULES = {
     "report_record_source": ("Reports", "Report record source", "report_record_source"),
     "report_control_source": ("Reports", "Report contains bound control", "report_control_source"),
     "report_caption_contains": ("Reports", "Report caption contains", "report_caption_contains"),
+    "report_image_present": ("Reports", "Report image present", "report_image_present"),
+    "report_image_right": ("Reports", "Report image on right", "report_image_right"),
+    "report_sort_order": ("Reports", "Report sort order contains", "report_sort_order"),
     "report_group_control": ("Reports", "Report grouped field", "report_group_control"),
     "report_group_order": ("Reports", "Report grouping order", "report_group_order"),
     "report_control_order": ("Reports", "Report control order", "report_control_order"),
@@ -53,11 +64,11 @@ RULES = {
 }
 
 _FIELD_RULES = {key for key, value in RULES.items() if value[0] == "Fields"}
-_TABLE_RULES = {"table_exists", "primary_key"}
+_TABLE_RULES = {"table_exists", "table_datasheet_gridline_blue", "table_datasheet_cell_effect", "primary_key"}
 _QUERY_RULES = {key for key, value in RULES.items() if value[0] == "Queries"}
 _FORM_RULES = {key for key, value in RULES.items() if value[0] == "Forms"}
 _REPORT_RULES = {key for key, value in RULES.items() if value[0] == "Reports"}
-_AUTO_VALUE_RULES = {"field_exists", "field_lookup_present"}
+_AUTO_VALUE_RULES = {"field_exists", "field_lookup_present", "table_datasheet_gridline_blue", "form_command_button_footer", "form_button_closes", "form_button_picture", "report_image_present", "report_image_right"}
 
 
 def _rule_from_form(index: int):
@@ -77,7 +88,7 @@ def _rule_from_form(index: int):
         raise ValueError(f"Criterion {index + 1} needs a table and field name.")
     if check_type == "primary_key" and (not table or not field):
         raise ValueError(f"Criterion {index + 1} needs a table and key field.")
-    if check_type == "table_exists" and not table:
+    if check_type in _TABLE_RULES and check_type != "primary_key" and not table:
         raise ValueError(f"Criterion {index + 1} needs a table name.")
     if check_type in _QUERY_RULES and not query:
         raise ValueError(f"Criterion {index + 1} needs a query name.")

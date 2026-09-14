@@ -21,6 +21,7 @@ RULES = {
     "list_exists": ("Lists", "List type present", "list_exists"),
     "list_item_contains": ("Lists", "List item text", "list_item_contains"),
     "list_minimum_items": ("Lists", "Minimum list items", "list_minimum_items"),
+    "nested_list": ("Lists", "Nested list structure", "nested_list"),
     "horizontal_rule": ("Layout", "Horizontal rule", "horizontal_rule"),
     "line_break": ("Layout", "Line break", "line_break"),
     "link_href": ("Links", "Link destination", "link_href"),
@@ -29,6 +30,7 @@ RULES = {
     "image_src": ("Images", "Image source", "image_src"),
     "image_alt": ("Images", "Image alternative text", "image_alt"),
     "table_cell_text": ("Tables", "Table cell text", "table_cell_text"),
+    "table_attribute": ("Tables", "Table attribute", "table_attribute"),
 }
 
 
@@ -44,16 +46,20 @@ def _rule_from_form(index):
     _, _, check_type = RULES[key]
     target = {k: v for k, v in {"tag": tag, "text": text, "attribute": attribute}.items() if v}
     expected = value
-    if check_type == "element_attribute":
+    if check_type in {"element_attribute", "table_attribute"}:
         if not tag or not attribute or not value:
-            raise ValueError("Element attribute criteria need a tag, attribute and expected value.")
+            raise ValueError("Attribute criteria need a tag, attribute and expected value.")
         expected = {"attribute": attribute, "value": value}
+        if check_type == "table_attribute":
+            target["tag"] = "table"
     elif check_type in {"element_text", "element_has_child_tag", "document_title", "body_background_color", "html_comment_contains", "list_exists", "list_item_contains", "link_href", "link_text", "image_src", "image_alt", "table_cell_text"} and not value:
         raise ValueError(f"Criterion {index + 1} needs an expected value.")
     elif check_type == "list_minimum_items":
         if tag not in {"ul", "ol"} or not value.isdigit():
             raise ValueError("Minimum list items needs list type (ul or ol) and a whole number.")
         expected = int(value)
+    elif check_type == "nested_list":
+        expected = {"outer": tag or "ul", "inner": value or "ol"}
     elif check_type == "horizontal_rule" and attribute and not value:
         raise ValueError("A horizontal-rule attribute needs an expected value.")
     return {"question_number": str(index + 1), "description": description, "domain": "html", "type": check_type, "target": target, "expected": expected, "marks": 1, "builder_rule": key, "builder_values": {"tag": tag, "value": value, "attribute": attribute}, "builder_target": text}

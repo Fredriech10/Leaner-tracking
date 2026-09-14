@@ -453,6 +453,7 @@
 <form method="post" id="wordCapsForm">
     {% for question in task_practical_questions %}
     <input type="hidden" name="question_{{ question.id }}_actions" id="question_{{ question.id }}_actions" value="[]">
+    <input type="hidden" name="question_{{ question.id }}_trace" id="question_{{ question.id }}_trace" value="[]">
     <input type="hidden" name="question_{{ question.id }}_skipped" id="question_{{ question.id }}_skipped" value="0">
     <input type="hidden" name="question_{{ question.id }}_state" id="question_{{ question.id }}_state" value="{}">
     {% endfor %}
@@ -482,7 +483,7 @@
         <div class="tab-strip">
             <div class="file-tab">File</div>
             {% for tab in simulator_definition.shell.tabs %}
-            <div class="word-tab{% if tab.id == simulator_definition.shell.default_tab %} active{% endif %}" data-tab-id="{{ tab.id }}" onclick="switchTab('{{ tab.id }}')">{{ tab.label }}</div>
+            <div class="word-tab{% if tab.id == simulator_definition.shell.default_tab %} active{% endif %}" data-tab-id="{{ tab.id }}" onclick="handleTabClick('{{ tab.id }}')">{{ tab.label }}</div>
             {% endfor %}
         </div>
 
@@ -585,7 +586,7 @@ const shellConfig = {{ simulator_definition.shell | tojson }};
 const questions = {{ task_practical_questions|tojson }};
 let activeQuestionIndex = 0;
 let transitionLock = false;
-const state = questions.map(question => ({ id: question.id, actions: [], skipped: false, complete: false, awarded: 0, docState: {} }));
+const state = questions.map(question => ({ id: question.id, actions: [], trace: [], skipped: false, complete: false, awarded: 0, docState: {} }));
 const storageKey = `word_caps_progress_{{ learner_full_name|replace(" ", "_") }}_{{ task_name|replace(" ", "_") }}`;
 
 function currentQuestion() { return questions[activeQuestionIndex]; }
@@ -624,6 +625,7 @@ function restoreProgress() {
         parsed.state.forEach((savedItem, index) => {
             if (!state[index] || !savedItem) return;
             state[index].actions = Array.isArray(savedItem.actions) ? savedItem.actions : [];
+            state[index].trace = Array.isArray(savedItem.trace) ? savedItem.trace : [];
             state[index].skipped = !!savedItem.skipped;
             state[index].complete = !!savedItem.complete;
             state[index].awarded = Number(savedItem.awarded || 0);
@@ -646,6 +648,7 @@ function ensureDocState(index) {
 function syncHiddenFields(index) {
     const q = questions[index];
     document.getElementById(`question_${q.id}_actions`).value = JSON.stringify(state[index].actions);
+    document.getElementById(`question_${q.id}_trace`).value = JSON.stringify(state[index].trace || []);
     document.getElementById(`question_${q.id}_skipped`).value = state[index].skipped ? "1" : "0";
     document.getElementById(`question_${q.id}_state`).value = JSON.stringify(state[index].docState || {});
     saveProgress();
@@ -655,6 +658,11 @@ function switchTab(tabId) {
     document.querySelectorAll('.word-ribbon[data-ribbon-tab]').forEach(ribbon => ribbon.classList.toggle('active', ribbon.dataset.ribbonTab === tabId));
     positionFloatingDialogs();
     closeAllMiniMenus();
+}
+function handleTabClick(tabId) {
+    const wasActive = document.querySelector(`.word-tab[data-tab-id="${tabId}"]`)?.classList.contains("active");
+    switchTab(tabId);
+    if (!wasActive && !transitionLock) recordAction(tabId);
 }
 function closeAllMiniMenus() { document.querySelectorAll('.mini-menu.open').forEach(menu => menu.classList.remove('open')); }
 function setFindDialogMode(index, mode) {
@@ -775,6 +783,7 @@ function renderCurrentQuestion() {
     document.querySelectorAll("[data-document-target]").forEach(control => control.addEventListener("click", function(){
         const isCorrect = this.dataset.documentTarget === "correct";
         s.docState.target_selected = isCorrect;
+        addTraceEvent(s, isCorrect ? "selection:correct" : "selection:incorrect", isCorrect ? "neutral" : "wrong");
         s.docState.selection_message = isCorrect ? "" : "That is not the required selection. Try again.";
         syncHiddenFields(activeQuestionIndex);
         renderAll();
@@ -1199,8 +1208,33 @@ function renderQuestionWorkspace() {
     }
     root.innerHTML = `<div class="doc-note">Use the highlighted Word ribbon controls to complete this question.</div>`;
 }
+function requiredCheckpoints(q) {
+    const checkpoints = Array.isArray(q.steps) ? [...q.steps] : [];
+    if (checkpoints[0] === "home") checkpoints.shift();
+    return checkpoints;
+}
+function checkpointsComplete(q, s) {
+    const checkpoints = requiredCheckpoints(q);
+    return s.actions.length === checkpoints.length && s.actions.every((action, index) => action === checkpoints[index]);
+}
+function addTraceEvent(s, action, classification) {
+    s.trace.push({ action, classification, at: new Date().toISOString() });
+}
+function recordSimulatorEvent(q, s, controlId) {
+    const expected = requiredCheckpoints(q)[s.actions.length];
+    if (controlId === expected) {
+        s.actions.push(controlId);
+        addTraceEvent(s, controlId, "correct");
+        return "correct";
+    }
+    // Dialog Apply buttons support the taught route but are not yet separate seeded checkpoints.
+    const classification = controlId.endsWith("_apply") ? "neutral" : "wrong";
+    addTraceEvent(s, controlId, classification);
+    return classification;
+}
 function evaluateQuestion(q, s) {
     if (q.metadata && q.metadata.requires_target_selection && !s.docState.target_selected) return false;
+    if (!checkpointsComplete(q, s)) return false;
     if (q.title === "Replace") return !!s.docState.replace_done && (s.docState.preview_text || "").trim().toUpperCase() === "MOTOR MOTOR BUS MOTOR";
     if (q.title === "Insert Table") return !!s.docState.table && Number(s.docState.table.columns) === 3 && Number(s.docState.table.rows) === 6;
     if (q.title === "Add Table Row") return Number(s.docState.table_rows || 0) === 4 && Number(s.docState.table_columns || 0) === 3;
@@ -1258,6 +1292,7 @@ function recordAction(controlId) {
     if (s.complete || transitionLock) return;
     ensureDocState(activeQuestionIndex);
     if (q.metadata && q.metadata.requires_target_selection && !s.docState.target_selected) {
+        addTraceEvent(s, "selection_required:" + controlId, "wrong");
         s.docState.selection_message = "Select the required text or place the cursor before using a Word command.";
         syncHiddenFields(activeQuestionIndex);
         renderAll();
@@ -1267,6 +1302,7 @@ function recordAction(controlId) {
         s.skipped = false;
         s.awarded = 0;
     }
+    recordSimulatorEvent(q, s, controlId);
     if (q.title === "Font Size" && controlId === "home.font_size") { s.docState.font_size = Number(s.docState.pending_size || 11); s.docState.size_dialog_open = false; }
     if (q.title === "Bold Text" && controlId === "home.bold") { s.docState.bold_applied = true; }
     if (q.title === "Italic Text" && controlId === "home.italic") { s.docState.italic_applied = true; }
@@ -1378,7 +1414,6 @@ function recordAction(controlId) {
         s.docState.merge_field_inserted = s.docState.field_name === "FirstName";
         s.docState.field_dialog_open = false;
     }
-    if (!s.actions.includes(controlId)) s.actions.push(controlId);
     syncHiddenFields(activeQuestionIndex);
     if (evaluateQuestion(q, s)) {
         s.complete = true;

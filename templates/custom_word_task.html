@@ -63,6 +63,11 @@
     {% if error %}<div class="notice">{{ error }}</div>{% endif %}
     <form method="post" enctype="multipart/form-data" id="word-task-form">
       <input type="hidden" name="criterion_count" id="criterion-count" value="0">
+      <datalist id="starter-text-options">
+        {% for text in text_options|default([]) %}
+          <option value="{{ text }}">
+        {% endfor %}
+      </datalist>
       <section class="panel">
         <h2>1. Task and learner files</h2>
         <p class="help">The starter document is copied for every learner. The question paper and support files are available as downloads in the task.</p>
@@ -109,6 +114,7 @@
     const borderStyles = {{ border_styles|tojson }}.map(value => [value, value.replace(/\b\w/g, letter => letter.toUpperCase())]);
     const pageColours = {{ page_colours|tojson }}.map(value => [value, `#${value}`]);
     const sectionBreakTypes = {{ section_break_types|tojson }}.map(value => [value, value.replace(/([A-Z])/g, ' $1').replace(/^./, letter => letter.toUpperCase())]);
+    const textOptions = {{ text_options|default([])|tojson }};
     const groups = Object.entries(ruleCatalog).reduce((all, [key, rule]) => {
       (all[rule.group] ||= []).push([key, rule]); return all;
     }, {});
@@ -118,7 +124,7 @@
       const values = options.values;
       const input = values
         ? `<select name="${name}_${index}" ${options.required === false ? '' : 'required'}>${values.map(([value, text]) => `<option value="${value}">${text}</option>`).join('')}</select>`
-        : `<input name="${name}_${index}" type="${type}" ${type === 'number' ? 'step="any"' : ''} placeholder="${placeholder}" ${options.required === false ? '' : 'required'}>`;
+        : `<input name="${name}_${index}" type="${type}" ${options.list ? `list="${options.list}"` : ''} ${type === 'number' ? 'step="any"' : ''} placeholder="${placeholder}" ${options.required === false ? '' : 'required'}>`;
       return `<div class="field"><label>${label}</label>${input}</div>`;
     }
     function detailsFor(index, rule) {
@@ -166,9 +172,11 @@
       if (rule.layout === 'find_replace') return field(index, 'value', 'Find text (must no longer appear)', { placeholder: 'e.g. CAR' }) + field(index, 'value_2', 'Replacement text', { placeholder: 'e.g. MOTOR' }) + field(index, 'value_3', 'Minimum replacements', { type: 'number', placeholder: 'e.g. 3' });
       const styles = [['Heading 1', 'Heading 1'], ['Heading 2', 'Heading 2'], ['Heading 3', 'Heading 3'], ['Title', 'Title'], ['Subtitle', 'Subtitle'], ['Normal', 'Normal']];
       if (rule.layout === 'style') return field(index, 'value', 'Required style', { values: styles });
-      if (rule.layout === 'style_count') return field(index, 'value', 'Required style', { values: styles }) + field(index, 'value_2', 'Minimum paragraphs', { type: 'number', placeholder: 'e.g. 13' }) + field(index, 'value_3', 'Paragraph texts (optional)', { placeholder: 'Comma-separated, e.g. Platypus, Axolotl' });
+      if (rule.layout === 'style_count') return field(index, 'value', 'Required style', { placeholder: 'e.g. Heading 1 or OnlineCareers' }) + field(index, 'value_2', 'Minimum paragraphs', { type: 'number', placeholder: 'e.g. 5' }) + field(index, 'value_3', 'Paragraph texts (optional)', { placeholder: 'Comma-separated words that must use this style' });
       if (rule.layout === 'style_font_name') return field(index, 'value', 'Style to check', { values: styles }) + field(index, 'value_2', 'Required font', { values: fontNames });
-      if (rule.layout === 'style_boolean') return field(index, 'value', 'Style to check', { values: styles }) + field(index, 'value_2', 'Expected state', { values: yesNo });
+      if (rule.layout === 'style_based_on') return field(index, 'value', 'Style to check', { placeholder: 'e.g. OnlineCareers' }) + field(index, 'value_2', 'Based on style', { values: styles });
+      if (rule.layout === 'style_boolean') return field(index, 'value', 'Style to check', { placeholder: 'e.g. OnlineCareers' }) + field(index, 'value_2', 'Expected state', { values: yesNo });
+      if (rule.layout === 'style_font_color') return field(index, 'value', 'Style to check', { placeholder: 'e.g. OnlineCareers' }) + field(index, 'value_2', 'Font colour', { values: wordColours });
       if (rule.layout === 'style_underline_type') return field(index, 'value', 'Style to check', { values: styles }) + field(index, 'value_2', 'Underline type', { values: [['single', 'Single'], ['double', 'Double']] });
       if (rule.layout === 'style_number') return field(index, 'value', 'Style to check', { values: styles }) + field(index, 'value_2', 'Spacing (pt)', { type: 'number', placeholder: 'e.g. 3' });
       if (rule.layout === 'heading_followed_style') return field(index, 'value', 'Heading text', { placeholder: 'e.g. Introduction' }) + field(index, 'value_2', 'Required style', { values: styles });
@@ -177,6 +185,16 @@
       if (rule.layout === 'footnote_symbol') return field(index, 'value', 'Text with the footnote', { placeholder: 'e.g. mobile marketing' }) + field(index, 'value_2', 'Symbol font', { values: [['Webdings', 'Webdings'], ['Wingdings', 'Wingdings'], ['Symbol', 'Symbol']] }) + field(index, 'value_3', 'Character code', { type: 'number', placeholder: 'e.g. 85' });
       if (rule.layout === 'hyperlink_text_destination') return field(index, 'value', 'Link display text', { placeholder: 'e.g. biodiversity' }) + field(index, 'value_2', 'Link destination must contain', { placeholder: 'e.g. 1Bio_Data.docx' });
       if (rule.layout === 'merge_fields') return field(index, 'value', 'Required merge fields', { placeholder: 'Comma-separated, e.g. FirstName, Surname' });
+      if (rule.layout === 'form_text_max_length') return field(index, 'value', 'Field name/bookmark', { placeholder: 'e.g. Name' }) + field(index, 'value_2', 'Maximum length', { type: 'number', placeholder: 'e.g. 25' });
+      if (rule.layout === 'form_dropdown_options') return field(index, 'value', 'Field name/bookmark', { placeholder: 'Optional, e.g. StudyType', required: false }) + field(index, 'value_2', 'Options', { placeholder: 'Comma-separated, in order' }) + field(index, 'value_3', 'Order matters?', { values: yesNo });
+      if (rule.layout === 'content_control_text') return field(index, 'value', 'Control alias/title', { placeholder: 'e.g. Document Title' }) + field(index, 'value_2', 'Required text', { placeholder: 'e.g. 29' });
+      if (rule.layout === 'document_property_text') return field(index, 'value', 'Required property text', { placeholder: 'e.g. Final' });
+      if (rule.layout === 'stored_text') return field(index, 'value', 'Required text', { placeholder: 'e.g. Reliable sources' });
+      if (rule.layout === 'stored_text_absent') return field(index, 'value', 'Text that must be gone', { placeholder: 'e.g. Full-time, Part-time, Freelance' });
+      if (rule.layout === 'formula_function_name') return field(index, 'value', 'Formula/function', { values: [['AVERAGE', 'AVERAGE'], ['SUM', 'SUM'], ['COUNT', 'COUNT'], ['MIN', 'MIN'], ['MAX', 'MAX']] });
+      if (rule.layout === 'image_wrap_style') return field(index, 'value', 'Wrap style', { values: [['square', 'Square'], ['tight', 'Tight'], ['inline', 'In line with text'], ['topBottom', 'Top and bottom'], ['behind', 'Behind text'], ['front', 'In front of text']] });
+      if (rule.layout === 'multilevel_list_level_count') return field(index, 'value', 'List level', { values: [['0', 'Level 1'], ['1', 'Level 2'], ['2', 'Level 3']] }) + field(index, 'value_2', 'Minimum items at that level', { type: 'number', placeholder: 'e.g. 6' });
+      if (rule.layout === 'package_xml_contains') return field(index, 'value', 'Package part', { placeholder: 'e.g. word/document.xml or blank for all', required: false }) + field(index, 'value_2', 'XML/text must contain', { placeholder: 'e.g. w:evenAndOddHeaders' });
       if (rule.layout === 'control_aliases') return field(index, 'value', 'Controls that must remain', { placeholder: 'Comma-separated, normally Title, Author' });
       if (rule.layout === 'number_format') return field(index, 'value', 'Number format', { values: [['decimal', '1, 2, 3'], ['upperLetter', 'A, B, C'], ['lowerLetter', 'a, b, c'], ['upperRoman', 'I, II, III'], ['lowerRoman', 'i, ii, iii']] });
       if (rule.layout === 'bullet_char') return field(index, 'value', 'Bullet type', { values: [['•', 'Standard bullet'], ['wingdings', 'Wingdings picture bullet']] });
@@ -192,11 +210,11 @@
       const target = row.querySelector('.criterion-target');
       target.hidden = rule.target === 'none';
       if (rule.domain === 'paragraph_formatting') {
-        const modes = [['contains_text', 'Text contained in the paragraph'], ['after_heading', 'The paragraph below a heading']];
+        const modes = [['contains_text', 'Text contained in the paragraph'], ['after_heading', 'The paragraph below a heading'], ['any_paragraph', 'Any matching paragraph in the document']];
         if (rule.check_type === 'drop_cap') modes.push(['any_drop_cap', 'Any drop cap in the document']);
-        target.innerHTML = field(index, 'target_mode', 'Locate paragraph by', { values: modes }) + field(index, 'target', 'Paragraph text or heading', { placeholder: 'Text in the paragraph, or the heading above it', required: false });
+        target.innerHTML = field(index, 'target_mode', 'Locate paragraph by', { values: modes }) + field(index, 'target', 'Paragraph text or heading', { placeholder: 'Start typing or choose from the starter document', required: false, list: 'starter-text-options' });
       }
-      else if (rule.target === 'text') target.innerHTML = field(index, 'target', 'Text / heading to locate', { placeholder: 'Exact text already in the starter document' });
+      else if (rule.target === 'text') target.innerHTML = field(index, 'target', 'Text / heading to locate', { placeholder: 'Start typing or choose from the starter document', list: 'starter-text-options' });
       if (rule.target === 'table') target.innerHTML = field(index, 'target', 'Table number', { type: 'number', placeholder: 'e.g. 1' });
       if (rule.target === 'none') target.innerHTML = '';
       row.querySelector('.criterion-details').innerHTML = detailsFor(index, rule);

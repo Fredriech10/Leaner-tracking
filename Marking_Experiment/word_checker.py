@@ -5,6 +5,7 @@ from __future__ import annotations
 import logging
 import re
 import hashlib
+import struct
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Tuple
 
@@ -54,6 +55,32 @@ def _read_docx_part(file_path: Path, part_name: str) -> Optional[str]:
             return zf.read(part_name).decode("utf-8")
     except Exception:
         return None
+
+
+def _png_size(blob: bytes) -> Optional[Tuple[int, int]]:
+    if blob.startswith(b"\x89PNG\r\n\x1a\n") and len(blob) >= 24:
+        return struct.unpack(">II", blob[16:24])
+    return None
+
+
+def _jpeg_size(blob: bytes) -> Optional[Tuple[int, int]]:
+    if not blob.startswith(b"\xff\xd8"):
+        return None
+    index = 2
+    while index + 9 < len(blob):
+        if blob[index] != 0xFF:
+            index += 1
+            continue
+        marker = blob[index + 1]
+        if marker in {0xC0, 0xC1, 0xC2, 0xC3, 0xC5, 0xC6, 0xC7, 0xC9, 0xCA, 0xCB, 0xCD, 0xCE, 0xCF}:
+            return struct.unpack(">HH", blob[index + 5:index + 9])[::-1]
+        length = struct.unpack(">H", blob[index + 2:index + 4])[0]
+        index += 2 + length
+    return None
+
+
+def _image_size(blob: bytes) -> Optional[Tuple[int, int]]:
+    return _png_size(blob) or _jpeg_size(blob)
 
 
 class WordChecker(BaseChecker):
@@ -671,6 +698,11 @@ class WordChecker(BaseChecker):
         target: Dict[str, Any],
         expected: Any,
     ) -> CheckerResult:
+        if check_type == "item_count" and not (target or {}).get("value"):
+            actual = sum(1 for paragraph in document.paragraphs if self._get_list_properties(paragraph, document) is not None)
+            expected_count = int(expected.get("minimum", expected) if isinstance(expected, dict) else expected)
+            return CheckerResult(passed=actual >= expected_count, actual=actual, details={"type": check_type})
+
         paragraphs = self._find_paragraphs(document, target)
         if not paragraphs:
             return CheckerResult(passed=False, details={"reason": "List target not found."})
@@ -846,7 +878,8 @@ class WordChecker(BaseChecker):
             return False, {"reason": "No drop cap (framePr) found"}
         drop_cap = frame_pr.get(f"{{{WNS}}}dropCap", "")
         lines = frame_pr.get(f"{{{WNS}}}lines", "")
-        actual = {"dropCap": drop_cap, "lines": lines}
+        h_space = frame_pr.get(f"{{{WNS}}}hSpace")
+        actual = {"dropCap": drop_cap, "lines": lines, "hSpace": h_space}
         applied = bool(drop_cap) and drop_cap != "none"
         if isinstance(expected, dict) and expected.get("applied") is False:
             return not applied, actual
@@ -955,6 +988,8 @@ class WordChecker(BaseChecker):
             return CheckerResult(passed=passed, actual={"font": font, "character": character}, details={"type": check_type})
 
         paragraphs = self._find_paragraphs(document, target)
+        if not paragraphs and check_type in {"drop_cap", "drop_cap_distance", "line_spacing", "keep_with_next"}:
+            paragraphs = [paragraph for paragraph in document.paragraphs if paragraph.text.strip()]
         if not paragraphs:
             return CheckerResult(passed=False, details={"reason": "Paragraph target not found."})
         paragraph = paragraphs[0]
@@ -1010,6 +1045,20 @@ class WordChecker(BaseChecker):
                     passed = False
             else:
                 passed = str(raw_ls) == str(expected)
+            if not passed and isinstance(expected, dict) and not (target or {}).get("value"):
+                exp_val = float(expected.get("value", 0))
+                exp_rule = str(expected.get("rule", "exact")).lower()
+                for p in document.paragraphs:
+                    candidate_ls = p.paragraph_format.line_spacing
+                    candidate_rule = p.paragraph_format.line_spacing_rule
+                    if candidate_ls is None:
+                        continue
+                    candidate_pt = emu_to_pt(int(candidate_ls)) if isinstance(candidate_ls, (int, float)) and candidate_ls > 100 else float(candidate_ls)
+                    candidate_rule_ok = exp_rule != "exact" or candidate_rule is None or "EXACT" in str(candidate_rule).upper()
+                    if candidate_rule_ok and compare_numeric(candidate_pt, exp_val, tolerance=TOLERANCE_PT, unit="pt"):
+                        passed = True
+                        actual = {"rule": str(candidate_rule), "value_pt": round(candidate_pt, 2), "matched_any_paragraph": True}
+                        break
 
         elif check_type == "space_before":
             sb = paragraph.paragraph_format.space_before
@@ -1099,6 +1148,10 @@ class WordChecker(BaseChecker):
             actual = bool(paragraph.paragraph_format.keep_with_next)
             expected_bool = self._parse_boolean(expected)
             passed = actual if expected_bool is None else actual == expected_bool
+            if not passed and not (target or {}).get("value"):
+                any_keep = any(bool(p.paragraph_format.keep_with_next) for p in document.paragraphs)
+                actual = any_keep
+                passed = any_keep if expected_bool is None else any_keep == expected_bool
             return CheckerResult(passed=passed, actual=actual, details={"type": check_type})
 
         elif check_type == "keep_lines_together":
@@ -1145,6 +1198,22 @@ class WordChecker(BaseChecker):
 
         elif check_type == "drop_cap":
             passed, actual = self._check_drop_cap(paragraph, expected)
+
+        elif check_type == "drop_cap_distance":
+            drop_ok, drop_actual = self._check_drop_cap(paragraph, {"applied": True})
+            if not drop_ok and (target or {}).get("locator") == "any_drop_cap":
+                for candidate in document.paragraphs:
+                    drop_ok, drop_actual = self._check_drop_cap(candidate, {"applied": True})
+                    if drop_ok:
+                        break
+            actual = dict(drop_actual or {})
+            h_space = actual.get("hSpace")
+            try:
+                actual_cm = round(int(h_space) / 567, 2) if h_space is not None else None
+                actual["distance_cm"] = actual_cm
+                passed = drop_ok and actual_cm is not None and compare_numeric(actual_cm, float(expected), tolerance=TOLERANCE_CM, unit="cm")
+            except Exception:
+                passed = False
 
         else:
             return CheckerResult(passed=False, details={"reason": "Unsupported paragraph formatting check."})
@@ -1474,6 +1543,142 @@ class WordChecker(BaseChecker):
         file_path: Path,
     ) -> CheckerResult:
         section = document.sections[0]  # Assume first section
+        if check_type in {"package_xml_contains", "package_xml_not_contains"}:
+            exp = expected if isinstance(expected, dict) else {"text": str(expected)}
+            required = str(exp.get("text", "")).strip().lower()
+            part = str(exp.get("part", "")).strip()
+            matches = []
+            try:
+                with ZipFile(file_path, "r") as zf:
+                    names = [part] if part else [name for name in zf.namelist() if name.endswith(".xml")]
+                    for name in names:
+                        try:
+                            text = zf.read(name).decode("utf-8", errors="ignore")
+                        except KeyError:
+                            continue
+                        if required and required in text.lower():
+                            matches.append(name)
+            except Exception as exc:
+                return CheckerResult(False, details={"reason": f"Document package not readable: {exc}"})
+            found = bool(matches)
+            passed = not found if check_type == "package_xml_not_contains" else found
+            return CheckerResult(passed=passed, actual=matches, details={"type": check_type, "required": required})
+
+        if check_type == "odd_even_footers":
+            settings_xml = _read_docx_part(file_path, "word/settings.xml") or ""
+            actual = "evenAndOddHeaders" in settings_xml
+            expected_bool = self._parse_boolean(expected)
+            passed = actual if expected_bool is None else actual == expected_bool
+            return CheckerResult(passed=passed, actual=actual, details={"type": check_type})
+
+        if check_type == "content_control_text":
+            if not isinstance(expected, dict):
+                return CheckerResult(False, details={"reason": "Content control alias/title and text are required."})
+            alias = str(expected.get("alias", "")).strip().lower()
+            required = str(expected.get("text", "")).strip().lower()
+            xml = _read_docx_part(file_path, "word/document.xml") or ""
+            try:
+                root = etree.fromstring(xml.encode("utf-8"))
+            except Exception:
+                return CheckerResult(False, details={"reason": "Document XML not readable."})
+            actual = []
+            for sdt in root.xpath(".//w:sdt", namespaces=NAMESPACES):
+                tags = [value.lower() for value in sdt.xpath("./w:sdtPr/w:alias/@w:val | ./w:sdtPr/w:tag/@w:val", namespaces=NAMESPACES)]
+                text = " ".join(node.text for node in sdt.xpath(".//w:t", namespaces=NAMESPACES) if node.text)
+                alias_ok = (
+                    not alias
+                    or any(alias in tag for tag in tags)
+                    or (alias == "document title" and any(tag == "title" for tag in tags))
+                )
+                if alias_ok and (not required or required in text.lower()):
+                    actual.append({"alias": tags, "text": text})
+            return CheckerResult(passed=bool(actual), actual=actual, details={"type": check_type})
+
+        if check_type == "form_text_max_length":
+            if not isinstance(expected, dict):
+                return CheckerResult(False, details={"reason": "Form field name and maximum length are required."})
+            wanted_name = str(expected.get("name", "")).strip().lower()
+            wanted_length = int(expected.get("max_length", 0))
+            xml = _read_docx_part(file_path, "word/document.xml") or ""
+            try:
+                root = etree.fromstring(xml.encode("utf-8"))
+            except Exception:
+                return CheckerResult(False, details={"reason": "Document XML not readable."})
+            actual = []
+            for ffdata in root.xpath(".//w:ffData", namespaces=NAMESPACES):
+                name = " ".join(ffdata.xpath("./w:name/@w:val", namespaces=NAMESPACES)).lower()
+                max_values = ffdata.xpath(".//w:maxLength/@w:val", namespaces=NAMESPACES)
+                if max_values:
+                    actual.append({"name": name, "max_length": max_values[0]})
+                    if (not wanted_name or wanted_name in name) and int(max_values[0]) == wanted_length:
+                        return CheckerResult(True, actual, {"type": check_type})
+            return CheckerResult(False, actual, {"type": check_type})
+
+        if check_type == "form_dropdown_options":
+            if not isinstance(expected, dict):
+                return CheckerResult(False, details={"reason": "Drop-down options are required."})
+            wanted_name = str(expected.get("name", "")).strip().lower()
+            wanted_options = [str(item).strip().lower() for item in expected.get("options", []) if str(item).strip()]
+            ordered = expected.get("ordered", True)
+            xml = _read_docx_part(file_path, "word/document.xml") or ""
+            try:
+                root = etree.fromstring(xml.encode("utf-8"))
+            except Exception:
+                return CheckerResult(False, details={"reason": "Document XML not readable."})
+            actual = []
+            for ffdata in root.xpath(".//w:ffData", namespaces=NAMESPACES):
+                name = " ".join(ffdata.xpath("./w:name/@w:val", namespaces=NAMESPACES)).lower()
+                entries = [value.strip().lower() for value in ffdata.xpath(".//w:listEntry/@w:val", namespaces=NAMESPACES)]
+                if entries:
+                    actual.append({"name": name, "options": entries})
+                    name_ok = not wanted_name or wanted_name in name
+                    options_ok = entries == wanted_options if ordered else all(item in entries for item in wanted_options)
+                    if name_ok and options_ok:
+                        return CheckerResult(True, actual, {"type": check_type})
+            return CheckerResult(False, actual, {"type": check_type})
+
+        if check_type == "table_cell_spacing_removed":
+            xml = _read_docx_part(file_path, "word/document.xml") or ""
+            actual = "tblCellSpacing" in xml
+            expected_bool = self._parse_boolean(expected)
+            should_be_removed = True if expected_bool is None else expected_bool
+            return CheckerResult(passed=(not actual) if should_be_removed else actual, actual={"cell_spacing_present": actual}, details={"type": check_type})
+
+        if check_type == "table_formula_contains":
+            required = str(expected or "").strip().lower()
+            xml = _read_docx_part(file_path, "word/document.xml") or ""
+            try:
+                root = etree.fromstring(xml.encode("utf-8"))
+                instructions = " ".join(root.xpath(".//w:instrText/text() | .//w:fldSimple/@w:instr", namespaces=NAMESPACES))
+            except Exception:
+                instructions = xml
+            actual = {"field_instructions": instructions[:500]}
+            passed = bool(required) and required in instructions.lower()
+            if not passed and required == "average":
+                average_rows = []
+                for table in document.tables:
+                    for row in table.rows:
+                        cells = [cell.text.strip() for cell in row.cells]
+                        if any("average" in cell.lower() for cell in cells):
+                            has_result = any(re.search(r"\d", cell) for cell in cells)
+                            average_rows.append({"cells": cells, "has_result": has_result})
+                actual["average_rows"] = average_rows
+                passed = any(row["has_result"] for row in average_rows)
+            return CheckerResult(passed=passed, actual=actual, details={"type": check_type, "required": required})
+
+        if check_type == "multilevel_list_level_count":
+            if not isinstance(expected, dict):
+                return CheckerResult(False, details={"reason": "List level and minimum count are required."})
+            level = int(expected.get("level", 0))
+            minimum = int(expected.get("minimum", 1))
+            xml = _read_docx_part(file_path, "word/document.xml") or ""
+            try:
+                root = etree.fromstring(xml.encode("utf-8"))
+                count = len(root.xpath(f".//w:p[w:pPr/w:numPr/w:ilvl[@w:val='{level}']]", namespaces=NAMESPACES))
+            except Exception:
+                count = 0
+            return CheckerResult(passed=count >= minimum, actual={"level": level, "count": count}, details={"type": check_type, "minimum": minimum})
+
         if check_type == "paper_size":
             # Expected can be either a string (e.g. "A4") or a dict like {"size":"A4","orientation":"Portrait"}
             paper_expected = expected
@@ -1509,8 +1714,10 @@ class WordChecker(BaseChecker):
             return CheckerResult(passed=False, details={"reason": "Unsupported paper_size format."})
 
         if check_type == "orientation":
-            actual = "portrait" if section.orientation == 0 else "landscape"
-            passed = actual == str(expected).lower()
+            expected_orientation = str(expected).lower()
+            orientations = ["portrait" if sec.orientation == 0 else "landscape" for sec in document.sections]
+            actual = orientations[0] if len(orientations) == 1 else orientations
+            passed = expected_orientation in orientations
             return CheckerResult(passed=passed, actual=actual, details={"type": check_type})
         if check_type == "margins":
             cm_to_emu = 360000
@@ -1705,6 +1912,17 @@ class WordChecker(BaseChecker):
             if check_type == "header_date_field":
                 expected_format = str(expected.get("format", "") if isinstance(expected, dict) else expected).strip().lower()
                 actual_format = instruction_text.lower()
+                if not has_date:
+                    xml = _read_docx_part(file_path, "word/document.xml") or ""
+                    try:
+                        root = etree.fromstring(xml.encode("utf-8"))
+                        body_instructions = " ".join(root.xpath(".//w:instrText/text() | .//w:fldSimple/@w:instr", namespaces=NAMESPACES))
+                    except Exception:
+                        body_instructions = ""
+                    if "DATE" in body_instructions.upper():
+                        instruction_text = body_instructions
+                        actual_format = instruction_text.lower()
+                        has_date = True
                 passed = has_date and (not expected_format or expected_format in actual_format)
                 return CheckerResult(passed=passed, actual={"field": instruction_text, "header_text": header_text}, details={"type": check_type})
             right_aligned = False
@@ -2204,8 +2422,10 @@ class WordChecker(BaseChecker):
                 return CheckerResult(passed=any(pattern in instructions for pattern in patterns), actual=instructions, details={"type": check_type})
             toc_styles = root.xpath(".//w:p[w:pPr/w:pStyle[starts-with(@w:val, 'TOC')]]", namespaces=NAMESPACES) if root is not None else []
             dot_leaders = root.xpath(".//w:pPr/w:tabs/w:tab[@w:val='right'][@w:leader='dot']", namespaces=NAMESPACES) if root is not None else []
-            actual = {"toc_styles": len(toc_styles), "dot_leaders": len(dot_leaders)}
-            return CheckerResult(passed=bool(toc_styles) and bool(dot_leaders), actual=actual, details={"type": check_type})
+            toc_xml = " ".join(etree.tostring(paragraph, encoding="unicode") for paragraph in toc_styles)
+            decorated = "<w:u" in toc_xml or "<w:smallCaps" in toc_xml
+            actual = {"toc_styles": len(toc_styles), "dot_leaders": len(dot_leaders), "decorated": decorated}
+            return CheckerResult(passed=bool(toc_styles) and bool(dot_leaders) and decorated, actual=actual, details={"type": check_type})
         if check_type == "footnote_text":
             xml = _read_docx_part(file_path, "word/footnotes.xml") or ""
             root = etree.fromstring(xml.encode("utf-8")) if xml else None
@@ -2323,6 +2543,21 @@ class WordChecker(BaseChecker):
         if check_type == "style_font_name":
             actual = style.font.name
             passed = bool(actual) and actual.lower() == str(expected.get("font", "")).lower()
+        elif check_type == "style_based_on":
+            actual = style.base_style.name if style.base_style else ""
+            passed = actual.lower().replace(" ", "") == str(expected.get("based_on", "")).lower().replace(" ", "")
+        elif check_type == "style_bold":
+            actual = bool(style.font.bold)
+            passed = actual == bool(expected.get("value"))
+        elif check_type == "style_font_color":
+            color = None
+            theme = None
+            node = style.element.find(".//w:rPr/w:color", namespaces=NAMESPACES)
+            if node is not None:
+                color = normalize_hex_color(node.get(qn("w:val")) or "")
+                theme = node.get(qn("w:themeColor"))
+            actual = color or theme or ""
+            passed = self._match_color(expected.get("color", ""), color, theme)
         elif check_type == "style_underline":
             actual = bool(style.font.underline)
             passed = actual == bool(expected.get("value"))
@@ -2415,6 +2650,57 @@ class WordChecker(BaseChecker):
         if check_type == "image_count":
             expected_count = int(expected.get("count", expected) if isinstance(expected, dict) else expected)
             return CheckerResult(passed=len(pictures) >= expected_count, actual=len(pictures), details={"type": check_type})
+
+        if check_type == "image_wrap_style":
+            expected_style = str(expected or "").strip().lower()
+            wrap_map = {
+                "square": ".//wp:wrapSquare",
+                "tight": ".//wp:wrapTight",
+                "inline": ".//wp:inline",
+                "topbottom": ".//wp:wrapTopAndBottom",
+                "behind": ".//wp:anchor[@behindDoc='1']",
+                "front": ".//wp:anchor[@behindDoc='0']",
+            }
+            xpath = wrap_map.get(expected_style)
+            if not xpath:
+                return CheckerResult(False, actual=None, details={"type": check_type, "reason": "Unknown wrap style."})
+            matches = root.xpath(xpath, namespaces=ns)
+            return CheckerResult(passed=bool(matches), actual={"style": expected_style, "matches": len(matches)}, details={"type": check_type})
+
+        if check_type == "image_aspect_ratio_changed":
+            expected_bool = self._parse_boolean(expected)
+            wanted = True if expected_bool is None else expected_bool
+            rels = {}
+            try:
+                with ZipFile(file_path, "r") as zf:
+                    rel_root = etree.fromstring(zf.read("word/_rels/document.xml.rels"))
+                    for rel in rel_root:
+                        rid = rel.get("Id")
+                        target_name = rel.get("Target", "")
+                        if rid and target_name.startswith("media/"):
+                            rels[rid] = f"word/{target_name}"
+                    checks = []
+                    for drawing in root.xpath(".//w:drawing", namespaces=NAMESPACES):
+                        blip = drawing.find(".//a:blip", namespaces=ns)
+                        extent = drawing.find(".//wp:extent", namespaces=ns)
+                        rid = blip.get("{http://schemas.openxmlformats.org/officeDocument/2006/relationships}embed") if blip is not None else None
+                        if not rid or extent is None or rid not in rels:
+                            continue
+                        natural = _image_size(zf.read(rels[rid]))
+                        if not natural:
+                            continue
+                        cx = int(extent.get("cx", "0") or 0)
+                        cy = int(extent.get("cy", "0") or 0)
+                        if cx <= 0 or cy <= 0:
+                            continue
+                        natural_ratio = natural[0] / natural[1]
+                        display_ratio = cx / cy
+                        changed = abs(natural_ratio - display_ratio) > 0.05
+                        checks.append({"media": rels[rid], "natural_ratio": round(natural_ratio, 3), "display_ratio": round(display_ratio, 3), "changed": changed})
+            except Exception as exc:
+                return CheckerResult(False, details={"type": check_type, "reason": str(exc)})
+            passed = any(item["changed"] == wanted for item in checks)
+            return CheckerResult(passed=passed, actual=checks, details={"type": check_type})
 
         if check_type == "image_changed_from_starter":
             baseline_path = target.get("baseline_path")
@@ -2707,7 +2993,7 @@ class WordChecker(BaseChecker):
             return self._check_style_applied(document, target, expected)
         if domain == "advanced" and check_type == "style_count":
             return self._check_style_count(document, expected)
-        if domain == "advanced" and check_type in {"style_font_name", "style_underline", "style_shadow", "style_underline_type", "style_character_spacing", "paragraph_after_heading_style"}:
+        if domain == "advanced" and check_type in {"style_font_name", "style_based_on", "style_bold", "style_font_color", "style_underline", "style_shadow", "style_underline_type", "style_character_spacing", "paragraph_after_heading_style"}:
             return self._check_style_format(document, check_type, expected)
         if domain == "object":
             return self._check_object(document, check_type, target, expected, file_path)
